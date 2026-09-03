@@ -11,7 +11,7 @@ Designed & Developed by Duje Maleš
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
 (function(){
   'use strict';
-  window.__YARDIVO_BUILD__='20260903-dev-v5.2-supplier-account';
+  window.__YARDIVO_BUILD__='20260903-dev-v5.2.1-supplier-button-fix';
   const nativeFetch=window.fetch?.bind(window);
   if(nativeFetch){
     window.fetch=function(input,init){
@@ -35,8 +35,8 @@ Designed & Developed by Duje Maleš
     const old=document.getElementById('yardivoSyncErrorBox'); if(old) old.remove();
     const badge=document.createElement('div');
     badge.id='yardivoBuildBadge';
-    badge.textContent='YARDIVO DEV · BUILD V5.2';
-    badge.title='20260903-dev-v5.2-supplier-account';
+    badge.textContent='YARDIVO DEV · BUILD V5.2.1';
+    badge.title='20260903-dev-v5.2.1-supplier-button-fix';
     badge.style.cssText='position:fixed;right:8px;bottom:8px;z-index:2147483646;font:700 10px/1.2 system-ui;padding:5px 7px;border-radius:6px;background:#0d1b29;color:#94a9b9;border:1px solid #26435a;opacity:.72;pointer-events:none';
     document.body.appendChild(badge);
   },{once:true});
@@ -30963,7 +30963,7 @@ window.YardivoSmartAdminSettings={inject,save,render};
 
 <!-- YARDIVO DEV V5.2 · ADMIN SUPPLIER ACCOUNT -->
 <style id="yardivo-supplier-account-admin-style">
-#yardivoSupplierAccountBtn{margin-top:10px;width:100%;background:#153d2b;border:1px solid #2e8058;color:#e8fff1}
+#yardivoSupplierAccountBtn{display:block!important;margin-top:10px;width:100%;background:#153d2b!important;border:1px solid #2e8058!important;color:#e8fff1!important;padding:11px 14px;border-radius:7px;font-weight:950;cursor:pointer}
 #yardivoSupplierAccountModal{position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;background:rgba(2,8,12,.82);backdrop-filter:blur(8px);padding:18px}
 #yardivoSupplierAccountModal.open{display:flex}
 #yardivoSupplierAccountModal .ysa-card{width:min(760px,96vw);max-height:92vh;overflow:auto;background:#0d1820;border:1px solid #315064;border-radius:16px;box-shadow:0 28px 90px #000b}
@@ -30985,7 +30985,7 @@ window.YardivoSmartAdminSettings={inject,save,render};
 <script id="yardivo-supplier-account-admin-v52">
 (function(){
 'use strict';
-const isAdmin=()=>String(window.currentSession?.role||'').toLowerCase()==='admin';
+const isAdmin=()=>{try{return String((typeof currentSession!=='undefined'?currentSession?.role:'')||window.currentSession?.role||'').toLowerCase().trim()==='admin'}catch(e){return false}};
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function slug(v){
   return String(v||'dobavljac').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
