@@ -11,7 +11,7 @@ Designed & Developed by Duje Maleš
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
 (function(){
   'use strict';
-  window.__YARDIVO_BUILD__='20260903-dev-v5.3.2-login-stable';
+  window.__YARDIVO_BUILD__='20260903-dev-v5.3.4-global-warehouse-sync';
   const nativeFetch=window.fetch?.bind(window);
   if(nativeFetch){
     window.fetch=function(input,init){
@@ -35,12 +35,26 @@ Designed & Developed by Duje Maleš
     const old=document.getElementById('yardivoSyncErrorBox'); if(old) old.remove();
     const badge=document.createElement('div');
     badge.id='yardivoBuildBadge';
-    badge.textContent='YARDIVO DEV · BUILD V5.3.2';
-    badge.title='20260903-dev-v5.3.2-login-stable';
+    badge.textContent='YARDIVO DEV · BUILD V5.3.4';
+    badge.title='20260903-dev-v5.3.4-global-warehouse-sync';
     badge.style.cssText='position:fixed;right:8px;bottom:8px;z-index:2147483646;font:700 10px/1.2 system-ui;padding:5px 7px;border-radius:6px;background:#0d1b29;color:#94a9b9;border:1px solid #26435a;opacity:.72;pointer-events:none';
     document.body.appendChild(badge);
   },{once:true});
 })();
+
+window.addEventListener('load',()=>{
+  try{
+    yardivoLoadDynamicWarehousesIntoSystem();
+    setTimeout(()=>yardivoRefreshAllWarehouseUi(),250);
+  }catch(e){}
+});
+window.addEventListener('yardivo:login',()=>{
+  try{
+    yardivoLoadDynamicWarehousesIntoSystem();
+    setTimeout(()=>yardivoRefreshAllWarehouseUi(),250);
+  }catch(e){}
+});
+
 </script>
 <script id="yardivo-first-paint-bootstrap-v1">
 (function(){
@@ -11492,28 +11506,126 @@ function canChangeReceptionStatus(){
 function locationLabel(code){
   return code==='DU'?'Dugopolje':'Velika Gorica';
 }
+function yardivoLoadDynamicWarehousesIntoSystem(){
+  try{
+    const rows=JSON.parse(localStorage.getItem('yardivo_dynamic_warehouses_v1')||'[]');
+    if(!Array.isArray(rows))return;
+    rows.forEach(x=>{
+      const code=String(x?.code||'').trim().toUpperCase();
+      const loc=x?.location==='DU'?'Dugopolje':'Velika Gorica';
+      if(!code)return;
+      if(typeof WAREHOUSES!=='undefined'){
+        if(!WAREHOUSES[code]){
+          WAREHOUSES[code]={
+            code,
+            location:loc,
+            name:String(x?.name||code),
+            ramps:Number(x?.ramps)||null,
+            receptionStart:null,
+            receptionEnd:null
+          };
+        }else{
+          WAREHOUSES[code].location=loc;
+          WAREHOUSES[code].name=String(x?.name||WAREHOUSES[code].name||code);
+          if(x?.ramps!==undefined)WAREHOUSES[code].ramps=Number(x.ramps)||null;
+        }
+      }
+    });
+  }catch(e){console.warn('YARDIVO dynamic warehouse load',e)}
+}
 function warehousesForLocation(code){
-  return code==='DU'
-    ? ['W201','W203','W204']
-    : ['W101','W103','W104'];
+  yardivoLoadDynamicWarehousesIntoSystem();
+  try{
+    const wanted=code==='DU'?'dugopolje':'velika gorica';
+    return Object.values(WAREHOUSES||{})
+      .filter(w=>String(w?.location||'').toLowerCase()===wanted)
+      .map(w=>String(w.code))
+      .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  }catch(e){
+    return code==='DU'?['W201','W203','W204']:['W101','W103','W104'];
+  }
 }
 function defaultWarehouseForLocation(code){
-  return code==='DU'?'W201':'W101';
+  const rows=warehousesForLocation(code);
+  return rows[0]||(code==='DU'?'W201':'W101');
 }
 function currentAllowedWarehouses(){
   return currentSession?.location?warehousesForLocation(currentSession.location):[];
 }
 function warehouseOptionLabel(code){
-  const map={
-    W101:'W101 · Ambijent',
-    W103:'W103 · Svježe i hlađeno',
-    W104:'W104 · Smrznuto',
-    W201:'W201 · Ambijent',
-    W203:'W203 · Svježe i hlađeno',
-    W204:'W204 · Smrznuto'
-  };
-  return map[code]||code;
+  yardivoLoadDynamicWarehousesIntoSystem();
+  try{
+    const w=WAREHOUSES?.[code];
+    return w?`${w.code} · ${w.name||w.code}`:code;
+  }catch(e){return code}
 }
+
+function yardivoRefreshAllWarehouseUi(){
+  yardivoLoadDynamicWarehousesIntoSystem();
+
+  const currentLoc=(typeof currentSession!=='undefined'&&currentSession?.location)||'VG';
+  const allCodes=[...new Set([...warehousesForLocation('VG'),...warehousesForLocation('DU')])];
+
+  function refill(sel,{location=null,includeAll=null,includePlaceholder=null}={}){
+    if(!sel)return;
+    const old=sel.value;
+    const hadAll=[...sel.options].some(o=>o.value==='ALL');
+    const hadPlaceholder=[...sel.options].some(o=>o.value==='');
+    const loc=location||(
+      sel.dataset?.warehouseLocation ||
+      (sel.id==='globalWarehouse' ? null : currentLoc)
+    );
+    const codes=loc?warehousesForLocation(loc):allCodes;
+    let out='';
+    if(includePlaceholder===true || (includePlaceholder===null && hadPlaceholder)) out+='<option value="">Odaberi skladište...</option>';
+    if(includeAll===true || (includeAll===null && hadAll)) out+='<option value="ALL">Sva skladišta</option>';
+
+    if(loc){
+      out+=codes.map(c=>`<option value="${c}">${warehouseOptionLabel(c)}</option>`).join('');
+    }else{
+      out+='<optgroup label="Velika Gorica">'+warehousesForLocation('VG').map(c=>`<option value="${c}">${warehouseOptionLabel(c)}</option>`).join('')+'</optgroup>';
+      out+='<optgroup label="Dugopolje">'+warehousesForLocation('DU').map(c=>`<option value="${c}">${warehouseOptionLabel(c)}</option>`).join('')+'</optgroup>';
+    }
+    sel.innerHTML=out;
+    if([...sel.options].some(o=>o.value===old))sel.value=old;
+  }
+
+  // Main/global selector: always all warehouses.
+  refill(document.getElementById('globalWarehouse'),{location:null});
+
+  // Known location-bound selectors used across YARDIVO.
+  [
+    'warehouseFilter','annWarehouse','announcementWarehouse','savedWarehouseFilter',
+    'dailyMapWarehouseSelect','weeklyMapWarehouse','uaWarehouse'
+  ].forEach(id=>refill(document.getElementById(id),{location:currentLoc}));
+
+  // Generic safety net: any other select that already contains warehouse codes
+  // is refreshed too, preserving whether it had ALL/placeholder.
+  document.querySelectorAll('select').forEach(sel=>{
+    if([
+      'loginRole','globalWarehouse','warehouseFilter','annWarehouse','announcementWarehouse',
+      'savedWarehouseFilter','dailyMapWarehouseSelect','weeklyMapWarehouse','uaWarehouse',
+      'ysaLocation','ywaLocation'
+    ].includes(sel.id))return;
+    const vals=[...sel.options].map(o=>String(o.value||''));
+    const looksWarehouse=vals.some(v=>/^W\d{3,4}$/.test(v)) || /warehouse|sklad/i.test(sel.id||'');
+    if(looksWarehouse)refill(sel,{location:currentLoc});
+  });
+
+  try{renderWarehouseCards?.()}catch(e){}
+  try{renderRampe?.()}catch(e){}
+  try{renderDockOverview?.()}catch(e){}
+  try{renderDailyMap?.()}catch(e){}
+  try{renderWeeklyMap?.()}catch(e){}
+  try{renderOverview?.()}catch(e){}
+  try{render?.()}catch(e){}
+
+  if(typeof yardivoRenderSupplierWarehousePicker==='function'){
+    try{yardivoRenderSupplierWarehousePicker()}catch(e){}
+  }
+}
+window.yardivoRefreshAllWarehouseUi=yardivoRefreshAllWarehouseUi;
+
 function buildWarehouseOptionsForLocation(location,{includeAll=false,includePlaceholder=false}={}){
   const allowed=warehousesForLocation(location);
   let html='';
@@ -31058,21 +31170,24 @@ function ensure(){
 
 function yardivoSupplierWarehouseRows(){
   const loc=document.getElementById('ysaLocation')?.value||'DU';
-  const base=loc==='DU'
-    ? [{code:'W101',name:'W101'},{code:'W201',name:'W201'}]
-    : [{code:'W101',name:'W101'},{code:'W201',name:'W201'}];
   try{
-    const dyn=JSON.parse(localStorage.getItem('yardivo_dynamic_warehouses_v1')||'[]');
-    if(Array.isArray(dyn))dyn.filter(x=>x.location===loc).forEach(x=>{
-      if(x?.code && !base.some(b=>b.code===x.code))base.push({code:x.code,name:x.name||x.code});
-    });
+    if(typeof yardivoLoadDynamicWarehousesIntoSystem==='function')yardivoLoadDynamicWarehousesIntoSystem();
+    if(typeof warehousesForLocation==='function'){
+      return warehousesForLocation(loc).map(code=>{
+        const w=(typeof WAREHOUSES!=='undefined'?WAREHOUSES?.[code]:null);
+        return {code,name:w?.name||code};
+      });
+    }
   }catch(e){}
-  return base;
+  return (loc==='DU'?['W201','W203','W204']:['W101','W103','W104']).map(code=>({code,name:code}));
 }
 function yardivoRenderSupplierWarehousePicker(){
   const host=document.getElementById('ysaWarehousePicker'); if(!host)return;
   const rows=yardivoSupplierWarehouseRows();
-  host.innerHTML='<label style="display:flex;flex-direction:row;align-items:center;gap:8px;margin-bottom:9px"><input id="ysaAllWarehouses" type="checkbox" style="width:auto"> SVA SKLADIŠTA TE LOKACIJE</label>'+
+  const loc=document.getElementById('ysaLocation')?.value||'DU';
+  const locName=loc==='DU'?'DUGOPOLJE':'VELIKA GORICA';
+  host.innerHTML='<div style="margin-bottom:8px;font-size:10px;font-weight:950;color:#d8e7ef">SKLADIŠTA · '+locName+'</div>'+
+    '<label style="display:flex;flex-direction:row;align-items:center;gap:8px;margin-bottom:9px"><input id="ysaAllWarehouses" type="checkbox" style="width:auto"> OZNAČI SVA SKLADIŠTA</label>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px">'+
     rows.map(w=>'<label style="display:flex;flex-direction:row;align-items:center;gap:8px;padding:8px;border:1px solid #294252;border-radius:7px"><input type="checkbox" name="ysaWarehouse" value="'+esc(w.code)+'" style="width:auto"><span><strong>'+esc(w.code)+'</strong><br><small>'+esc(w.name||'')+'</small></span></label>').join('')+
     '</div>';
@@ -31171,10 +31286,29 @@ function ensureWarehouseAdmin(){
     if(rows.some(x=>x.code===code))return alert('To skladište već postoji.');
     rows.push({location,code,name,ramps});
     localStorage.setItem(KEY,JSON.stringify(rows));
+    try{
+      if(typeof WAREHOUSES!=='undefined'){
+        WAREHOUSES[code]={
+          code,
+          location:location==='DU'?'Dugopolje':'Velika Gorica',
+          name,
+          ramps,
+          receptionStart:null,
+          receptionEnd:null
+        };
+      }
+    }catch(e){}
     document.getElementById('ywaMsg').textContent='Dodano: '+code+' · '+name;
     document.getElementById('ywaCode').value='';
     document.getElementById('ywaName').value='';
     document.getElementById('ywaRamps').value='';
+    try{
+      if(typeof window.yardivoRefreshAllWarehouseUi==='function'){
+        window.yardivoRefreshAllWarehouseUi();
+      }else if(typeof yardivoRenderSupplierWarehousePicker==='function'){
+        yardivoRenderSupplierWarehousePicker();
+      }
+    }catch(e){}
   };
 }
 window.addEventListener('yardivo:login',()=>setTimeout(ensureWarehouseAdmin,200));
