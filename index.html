@@ -11,7 +11,7 @@ Designed & Developed by Duje Maleš
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
 (function(){
   'use strict';
-  window.__YARDIVO_BUILD__='20260903-dev-v5.4.1-role-scope-final';
+  window.__YARDIVO_BUILD__='20260903-dev-v5.4.2-create-user-button-fix';
   const nativeFetch=window.fetch?.bind(window);
   if(nativeFetch){
     window.fetch=function(input,init){
@@ -35,8 +35,8 @@ Designed & Developed by Duje Maleš
     const old=document.getElementById('yardivoSyncErrorBox'); if(old) old.remove();
     const badge=document.createElement('div');
     badge.id='yardivoBuildBadge';
-    badge.textContent='YARDIVO DEV · BUILD V5.4.1';
-    badge.title='20260903-dev-v5.4.1-role-scope-final';
+    badge.textContent='YARDIVO DEV · BUILD V5.4.2';
+    badge.title='20260903-dev-v5.4.2-create-user-button-fix';
     badge.style.cssText='position:fixed;right:8px;bottom:8px;z-index:2147483646;font:700 10px/1.2 system-ui;padding:5px 7px;border-radius:6px;background:#0d1b29;color:#94a9b9;border:1px solid #26435a;opacity:.72;pointer-events:none';
     document.body.appendChild(badge);
   },{once:true});
@@ -20162,6 +20162,10 @@ async function create(){
   const warehouses=yardivoSelectedInternalUserWarehouses();
   if(password.length<6){alert('Password mora imati najmanje 6 znakova.');return}
   if(!warehouses.length){alert('Odaberi barem jedno skladište za korisnika.');return}
+  if(location==='ALL'&&!['admin','manager','inventory'].includes(assignedRole)){
+    alert('Sve lokacije mogu imati samo Admin, Voditelj ili Upravljanje zalihama.');
+    return;
+  }
   try{
     await invoke('create',{username,password,role,location,warehouses});
     document.getElementById('muUser').value='';document.getElementById('muPass').value='';
@@ -24977,6 +24981,7 @@ function normRole(r){
   if(r==='porta'||r==='portir')return'gate';
   if(r==='prijam')return'reception';
   if(r==='zalihe'||r.includes('zalih'))return'inventory';
+  if(r==='management'||r==='voditelj')return'manager';
   return r;
 }
 function errorBox(){return document.getElementById('loginError')}
@@ -30337,11 +30342,12 @@ async function invokeUsers(action,payload={}){
   const {data,error}=await c.functions.invoke('yardivo-admin-users',{body:{action,...payload}});
   if(error)throw error;
   if(data?.error)throw new Error(data.error);
+  if(data && Object.prototype.hasOwnProperty.call(data,'data'))return data.data;
   return data||{};
 }
 function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function roleLabel(r){return ({admin:'Admin',inventory:'Upravljanje zalihama',reception:'Prijam',gate:'Porta'})[normRole(r)]||r||'—'}
-function locLabel(l){return l==='DU'?'Dugopolje':l==='VG'?'Velika Gorica':l||'—'}
+function roleLabel(r){return ({admin:'Admin',manager:'Voditelj',inventory:'Upravljanje zalihama',reception:'Prijam',gate:'Porta',supplier:'Dobavljač'})[normRole(r)]||r||'—'}
+function locLabel(l){return l==='DU'?'Dugopolje':l==='VG'?'Velika Gorica':l==='ALL'?'Sve lokacije':l||'—'}
 
 async function renderProfiles(){
   const host=document.getElementById('masterUserList');
@@ -30349,7 +30355,7 @@ async function renderProfiles(){
   host.innerHTML='<div class="master-note">Učitavanje profila sa servera…</div>';
   try{
     const res=await invokeUsers('list');
-    const users=Array.isArray(res.users)?res.users:[];
+    const users=Array.isArray(res)?res:(Array.isArray(res?.users)?res.users:[]);
     host.innerHTML=
       `<div class="yardivo-profile-list-title"><span>PROFILI NA SERVERU</span><span class="yardivo-profile-count">${users.length}</span></div>`+
       '<div class="master-user-row"><strong>Korisnik</strong><strong>Rola</strong><strong>Lokacija</strong><strong>Status</strong><strong>Akcije</strong></div>'+
@@ -30417,7 +30423,7 @@ async function createProfile(){
 
   if(!/^[a-z0-9._-]{3,40}$/.test(username)){alert('Username mora imati najmanje 3 znaka.');return}
   if(password.length<6){alert('Password mora imati najmanje 6 znakova.');return}
-  if(!['admin','inventory','reception','gate'].includes(assignedRole)){alert('Odaberi valjanu rolu.');return}
+  if(!['admin','manager','inventory','reception','gate'].includes(assignedRole)){alert('Odaberi valjanu rolu.');return}
   if(!warehouses.length){alert('Odaberi barem jedno skladište za korisnika.');return}
 
   try{
@@ -30444,7 +30450,14 @@ function setupUsers(){
   const roleSelect=document.getElementById('muRole');
   roleSelect?.querySelector('option[value="management"]')?.remove();
   const btn=document.getElementById('muSave');
-  if(btn)btn.textContent='KREIRAJ KORISNIČKI PROFIL';
+  if(btn){
+    btn.textContent='KREIRAJ KORISNIČKI PROFIL';
+    btn.type='button';
+    btn.onclick=(ev)=>{
+      ev?.preventDefault?.();
+      createProfile();
+    };
+  }
   renderProfiles();
 }
 
