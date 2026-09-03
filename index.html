@@ -11,7 +11,7 @@ Designed & Developed by Duje Maleš
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
 (function(){
   'use strict';
-  window.__YARDIVO_BUILD__='20260903-dev-v5.4.5-role-user-admin-clean-fix';
+  window.__YARDIVO_BUILD__='20260903-dev-v5.4.7-create-profile-click-final-fix';
   const nativeFetch=window.fetch?.bind(window);
   if(nativeFetch){
     window.fetch=function(input,init){
@@ -35,8 +35,8 @@ Designed & Developed by Duje Maleš
     const old=document.getElementById('yardivoSyncErrorBox'); if(old) old.remove();
     const badge=document.createElement('div');
     badge.id='yardivoBuildBadge';
-    badge.textContent='YARDIVO DEV · BUILD V5.4.5';
-    badge.title='20260903-dev-v5.4.5-role-user-admin-clean-fix';
+    badge.textContent='YARDIVO DEV · BUILD V5.4.7';
+    badge.title='20260903-dev-v5.4.7-create-profile-click-final-fix';
     badge.style.cssText='position:fixed;right:8px;bottom:8px;z-index:2147483646;font:700 10px/1.2 system-ui;padding:5px 7px;border-radius:6px;background:#0d1b29;color:#94a9b9;border:1px solid #26435a;opacity:.72;pointer-events:none';
     document.body.appendChild(badge);
   },{once:true});
@@ -14434,12 +14434,13 @@ body[data-yms-role="gate"] [data-home-target="operations"]{display:none!importan
 </style>
 <script id="yardivo-notifications-incidents-final">
 (function(){
-  const NOTIF_ROLES=new Set(['admin','inventory','reception']);
+  const NOTIF_ROLES=new Set(['admin','manager','inventory','reception']);
 
   function role(){
     let r='';
     try{r=String(currentSession?.role||window.currentSession?.role||'').toLowerCase().trim()}catch(e){}
     if(r==='zalihe'||r==='upravljanje zalihama')r='inventory';
+    if(r==='management'||r==='voditelj')r='manager';
     if(r==='prijam')r='reception';
     if(r==='porta'||r==='portir')r='gate';
     return r;
@@ -14632,6 +14633,7 @@ body[data-yms-role="gate"] [data-home-target="operations"]{display:none!importan
     let r='';
     try{r=String(currentSession?.role||window.currentSession?.role||'').toLowerCase().trim()}catch(e){}
     if(r==='zalihe'||r==='upravljanje zalihama')r='inventory';
+    if(r==='management'||r==='voditelj')r='manager';
     if(r==='prijam')r='reception';
     if(r==='porta'||r==='portir')r='gate';
     return r;
@@ -30305,7 +30307,10 @@ async function renderProfiles(){
 }
 
 async function createProfile(){
-  if(!admin())return;
+  if(!admin()){
+    alert('Kreiranje korisničkog profila dostupno je samo Adminu. Ako si prijavljen kao Admin, odjavi se i ponovno prijavi.');
+    return;
+  }
   const username=(document.getElementById('muUser')?.value||'').trim().toLowerCase();
   const password=document.getElementById('muPass')?.value||'';
   const assignedRole=normRole(document.getElementById('muRole')?.value||'');
@@ -30328,11 +30333,14 @@ async function createProfile(){
   }
 }
 
-/* Block the old local-user create handler. Only Supabase Auth + server mapping can create users. */
+/* Canonical create-profile button owner.
+   Prevent the legacy local-user handler, but do not use stopImmediatePropagation:
+   later UI/button bindings remain functional. */
 document.addEventListener('click',e=>{
   const btn=e.target.closest?.('#muSave');
-  if(!btn||!admin())return;
-  e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+  if(!btn)return;
+  e.preventDefault();
+  e.stopPropagation();
   createProfile();
 },true);
 
@@ -31690,6 +31698,346 @@ window.YardivoV545UserAdmin={
   loginRoles:ensureLoginRoles,
   warehouses:renderWarehousePicker
 };
+})();
+</script>
+
+
+<script id="yardivo-v546-notification-event-bridge">
+(function(){
+'use strict';
+
+const KEY='yardivo_live_notifications_v1';
+const TARGETS=['admin','manager','inventory','reception'];
+const SNAP='yardivo_notification_ann_snapshot_v546';
+
+function normRole(v){
+  v=String(v||'').trim().toLowerCase();
+  if(v==='management'||v==='voditelj')return'manager';
+  if(v==='zalihe'||v==='upravljanje zalihama')return'inventory';
+  if(v==='prijam')return'reception';
+  if(v==='porta'||v==='portir')return'gate';
+  return v;
+}
+function role(){
+  try{return normRole((typeof currentSession!=='undefined'?currentSession:window.currentSession)?.role)}
+  catch(e){return normRole(window.currentSession?.role)}
+}
+function anns(){
+  try{return Array.isArray(announcements)?announcements:[]}
+  catch(e){return[]}
+}
+function loadNotifications(){
+  try{
+    const a=JSON.parse(localStorage.getItem(KEY)||'[]');
+    return Array.isArray(a)?a:[];
+  }catch(e){return[]}
+}
+function saveNotifications(a){
+  try{localStorage.setItem(KEY,JSON.stringify(a.slice(-500)))}catch(e){}
+  try{
+    if(typeof putCloudState==='function'){
+      Promise.resolve(putCloudState(KEY,JSON.stringify(a.slice(-500)))).catch(()=>{});
+    }
+  }catch(e){}
+  try{window.YardivoNotifications?.render?.()}catch(e){}
+}
+function clean(v){return String(v??'').trim()}
+function aid(a){return clean(a?.id)}
+function status(a){return clean(a?.status||'Najavljen')}
+function signature(a){
+  return {
+    id:aid(a),
+    status:status(a),
+    date:clean(a?.date),
+    time:clean(a?.time),
+    dock:clean(a?.dock),
+    warehouse:clean(a?.warehouse),
+    supplier:clean(a?.supplier),
+    orderNumber:clean(a?.orderNumber),
+    plate:clean(a?.plannedPlate||a?.vehiclePlate||a?.plate||a?.registration),
+    updatedAt:clean(a?.updatedAt||a?.modifiedAt||a?.changedAt||a?.createdAt)
+  };
+}
+function loadSnap(){
+  try{
+    const x=JSON.parse(sessionStorage.getItem(SNAP)||'{}');
+    return x&&typeof x==='object'?x:{};
+  }catch(e){return{}}
+}
+function saveSnap(x){
+  try{sessionStorage.setItem(SNAP,JSON.stringify(x))}catch(e){}
+}
+function eventId(type,a,extra=''){
+  const s=signature(a);
+  const raw=[type,s.id,s.status,s.date,s.time,s.dock,s.updatedAt,extra].join('|');
+  let h=2166136261;
+  for(let i=0;i<raw.length;i++){h^=raw.charCodeAt(i);h=Math.imul(h,16777619)}
+  return 'Y546-'+type+'-'+(h>>>0).toString(16);
+}
+function push(type,title,body,a,extra={}){
+  const id=eventId(type,a,extra?.previousStatus||'');
+  const q=loadNotifications();
+  if(q.some(n=>String(n.id)===id))return false;
+  const now=new Date().toISOString();
+  q.push({
+    id,
+    event:type,
+    title,
+    body,
+    at:now,
+    createdAt:now,
+    roles:[...TARGETS],
+    readBy:{},
+    supplier:a?.supplier||'',
+    announcementId:a?.id||'',
+    orderNumber:a?.orderNumber||'',
+    warehouse:a?.warehouse||'',
+    dock:a?.dock||'',
+    date:a?.date||'',
+    time:a?.time||'',
+    plate:a?.plannedPlate||a?.vehiclePlate||a?.plate||a?.registration||'',
+    ...extra
+  });
+  saveNotifications(q);
+  return true;
+}
+function annText(a){
+  return `${a?.supplier||'Dobavljač'} · ${a?.date||'—'} ${a?.time||'—'} · ${a?.warehouse||'—'} · R${a?.dock||'—'}${a?.orderNumber?' · '+a.orderNumber:''}`;
+}
+function emitNew(a){
+  push(
+    'ANNOUNCEMENT_CREATED',
+    'NOVA NAJAVA',
+    annText(a),
+    a
+  );
+}
+function emitStatus(a,oldStatus,newStatus){
+  push(
+    'ANNOUNCEMENT_STATUS_CHANGED',
+    `STATUS NAJAVE · ${String(newStatus||'PROMIJENJEN').toUpperCase()}`,
+    `${annText(a)} · ${oldStatus||'—'} → ${newStatus||'—'}`,
+    a,
+    {previousStatus:oldStatus||'',newStatus:newStatus||''}
+  );
+}
+
+/*
+  This scanner observes the canonical announcement array after local actions
+  and after cloud sync. Session snapshot prevents old records from becoming
+  "new" on login. Deterministic IDs stop the same event being inserted twice
+  in one shared notification store.
+*/
+let initialized=false;
+let last={};
+
+function seed(){
+  const next={};
+  anns().forEach(a=>{
+    const s=signature(a);
+    if(s.id)next[s.id]=s;
+  });
+  last=next;
+  saveSnap(next);
+  initialized=true;
+}
+function scan(){
+  if(!currentSession?.role)return;
+  const current={};
+  anns().forEach(a=>{
+    const s=signature(a);
+    if(!s.id)return;
+    current[s.id]=s;
+    const prev=last[s.id];
+
+    if(initialized && !prev){
+      emitNew(a);
+    }else if(initialized && prev && prev.status!==s.status){
+      emitStatus(a,prev.status,s.status);
+    }
+  });
+  last=current;
+  saveSnap(current);
+}
+function start(){
+  if(!currentSession?.role)return;
+  const remembered=loadSnap();
+  if(Object.keys(remembered).length){
+    last=remembered;
+    initialized=true;
+    scan();
+  }else{
+    seed();
+  }
+}
+
+/* Hard access rule: notification center is internal and never shown to Gate or Supplier. */
+function applyAccess(){
+  const r=role();
+  const show=TARGETS.includes(r);
+  const bell=document.getElementById('notifBell');
+  if(bell)bell.style.setProperty('display',show?'inline-flex':'none','important');
+  const nav=document.querySelector('[data-view="operations"]');
+  if(nav)nav.style.setProperty('display',show?'flex':'none','important');
+  document.querySelectorAll('[data-home-target="operations"]').forEach(el=>{
+    el.style.setProperty('display',show?'flex':'none','important');
+  });
+  if(!show)document.getElementById('notifPanel')?.classList.remove('open');
+}
+
+window.addEventListener('yardivo:login',()=>{
+  setTimeout(()=>{applyAccess();start()},100);
+});
+window.addEventListener('yardivo:data-synced',()=>{
+  setTimeout(()=>{scan();applyAccess()},80);
+});
+window.addEventListener('load',()=>{
+  setTimeout(()=>{applyAccess();start()},1000);
+});
+
+/* Catch local actions quickly without replacing business handlers. */
+setInterval(()=>{
+  if(!currentSession?.role)return;
+  scan();
+  applyAccess();
+},700);
+
+window.YardivoNotificationBridgeV546={
+  scan,
+  seed,
+  applyAccess,
+  targets:[...TARGETS]
+};
+})();
+</script>
+
+
+<style id="yardivo-v547-create-profile-button-interaction">
+body[data-yardivo-role="admin"] #masterUserAdmin{
+  position:relative!important;
+  z-index:50!important;
+  pointer-events:auto!important;
+}
+body[data-yardivo-role="admin"] #masterUserAdmin .master-settings-body,
+body[data-yardivo-role="admin"] #masterUserAdmin .master-admin-grid,
+body[data-yardivo-role="admin"] #masterUserAdmin .master-admin-grid>div,
+body[data-yardivo-role="admin"] #masterUserAdmin .form-grid{
+  position:relative!important;
+  pointer-events:auto!important;
+}
+body[data-yardivo-role="admin"] #muSave{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  cursor:pointer!important;
+  position:relative!important;
+  z-index:2147483000!important;
+  min-height:42px!important;
+  touch-action:manipulation!important;
+  user-select:none!important;
+}
+body[data-yardivo-role="admin"] #muSave::before,
+body[data-yardivo-role="admin"] #muSave::after{
+  pointer-events:none!important;
+}
+</style>
+<script id="yardivo-v547-create-profile-button-owner">
+(function(){
+'use strict';
+
+function role(){
+  try{return String((typeof currentSession!=='undefined'?currentSession:window.currentSession)?.role||'').toLowerCase().trim()}
+  catch(e){return String(window.currentSession?.role||'').toLowerCase().trim()}
+}
+function isAdmin(){return role()==='admin'}
+
+function repair(){
+  const panel=document.getElementById('masterUserAdmin');
+  const old=document.getElementById('muSave');
+  if(!panel||!old)return;
+
+  panel.style.setProperty('pointer-events','auto','important');
+  let p=old.parentElement;
+  while(p && p!==document.body){
+    p.style?.setProperty?.('pointer-events','auto','important');
+    if(p===panel)break;
+    p=p.parentElement;
+  }
+
+  /*
+    Replace the legacy button node once. This removes every stale onclick,
+    disabled state and listener that may have been attached by older modules.
+  */
+  let btn=old;
+  if(old.dataset.yardivoV547!=='1'){
+    btn=old.cloneNode(true);
+    btn.dataset.yardivoV547='1';
+    old.replaceWith(btn);
+  }
+
+  btn.type='button';
+  btn.disabled=false;
+  btn.hidden=false;
+  btn.removeAttribute('disabled');
+  btn.removeAttribute('aria-disabled');
+  btn.removeAttribute('inert');
+  btn.textContent='KREIRAJ KORISNIČKI PROFIL';
+  btn.style.setProperty('display','inline-flex','important');
+  btn.style.setProperty('visibility','visible','important');
+  btn.style.setProperty('opacity','1','important');
+  btn.style.setProperty('pointer-events','auto','important');
+  btn.style.setProperty('cursor','pointer','important');
+  btn.style.setProperty('position','relative','important');
+  btn.style.setProperty('z-index','2147483000','important');
+
+  btn.onclick=function(ev){
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    if(!isAdmin()){
+      alert('Samo Admin može kreirati korisničke profile.');
+      return false;
+    }
+
+    const api=window.YardivoServerProfiles;
+    if(!api || typeof api.create!=='function'){
+      alert('YARDIVO modul za kreiranje korisnika nije učitan. Napravi Ctrl+F5 i pokušaj ponovno.');
+      return false;
+    }
+
+    Promise.resolve(api.create()).catch(err=>{
+      console.error('YARDIVO create profile',err);
+      alert('Kreiranje korisnika nije uspjelo: '+(err?.message||err));
+    });
+    return false;
+  };
+}
+
+function apply(){
+  if(!isAdmin())return;
+  repair();
+}
+
+document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,0),{once:true});
+window.addEventListener('load',()=>{
+  setTimeout(apply,100);
+  setTimeout(apply,800);
+});
+window.addEventListener('yardivo:login',()=>{
+  setTimeout(apply,80);
+  setTimeout(apply,400);
+});
+document.addEventListener('click',e=>{
+  if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"]')){
+    setTimeout(apply,40);
+    setTimeout(apply,200);
+  }
+},true);
+
+window.YardivoCreateProfileButtonV547={repair:apply};
 })();
 </script>
 
