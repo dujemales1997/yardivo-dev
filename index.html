@@ -11,7 +11,7 @@ Designed & Developed by Duje Maleš
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
 (function(){
   'use strict';
-  window.__YARDIVO_BUILD__='20260903-dev-v5.3.4-global-warehouse-sync';
+  window.__YARDIVO_BUILD__='20260903-dev-v5.3.7-location-lock';
   const nativeFetch=window.fetch?.bind(window);
   if(nativeFetch){
     window.fetch=function(input,init){
@@ -35,8 +35,8 @@ Designed & Developed by Duje Maleš
     const old=document.getElementById('yardivoSyncErrorBox'); if(old) old.remove();
     const badge=document.createElement('div');
     badge.id='yardivoBuildBadge';
-    badge.textContent='YARDIVO DEV · BUILD V5.3.4';
-    badge.title='20260903-dev-v5.3.4-global-warehouse-sync';
+    badge.textContent='YARDIVO DEV · BUILD V5.3.7';
+    badge.title='20260903-dev-v5.3.7-location-lock';
     badge.style.cssText='position:fixed;right:8px;bottom:8px;z-index:2147483646;font:700 10px/1.2 system-ui;padding:5px 7px;border-radius:6px;background:#0d1b29;color:#94a9b9;border:1px solid #26435a;opacity:.72;pointer-events:none';
     document.body.appendChild(badge);
   },{once:true});
@@ -5929,6 +5929,15 @@ html.yardivo-welcome-complete #yardivoWelcomeBar{
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="yardivo-build" content="2026-09-02-online-v4-defensive-guard">
+
+<style id="yardivo-v537-location-lock-style">
+#homeLocationSelect:disabled{
+  opacity:1!important;
+  cursor:not-allowed!important;
+  filter:none!important;
+}
+</style>
+
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -11533,7 +11542,7 @@ function yardivoLoadDynamicWarehousesIntoSystem(){
     });
   }catch(e){console.warn('YARDIVO dynamic warehouse load',e)}
 }
-function warehousesForLocation(code){
+function allWarehousesForLocation(code){
   yardivoLoadDynamicWarehousesIntoSystem();
   try{
     const wanted=code==='DU'?'dugopolje':'velika gorica';
@@ -11544,6 +11553,20 @@ function warehousesForLocation(code){
   }catch(e){
     return code==='DU'?['W201','W203','W204']:['W101','W103','W104'];
   }
+}
+function warehousesForLocation(code){
+  const all=allWarehousesForLocation(code);
+  try{
+    const s=(typeof currentSession!=='undefined'?currentSession:window.currentSession);
+    const assigned=Array.isArray(s?.warehouses)
+      ? s.warehouses.map(x=>String(x).trim().toUpperCase()).filter(Boolean)
+      : [];
+    const sameLocation=String(s?.location||'').toUpperCase()===String(code||'').toUpperCase();
+    if(sameLocation && assigned.length){
+      return all.filter(w=>assigned.includes(String(w).toUpperCase()));
+    }
+  }catch(e){}
+  return all;
 }
 function defaultWarehouseForLocation(code){
   const rows=warehousesForLocation(code);
@@ -11590,8 +11613,8 @@ function yardivoRefreshAllWarehouseUi(){
     if([...sel.options].some(o=>o.value===old))sel.value=old;
   }
 
-  // Main/global selector: always all warehouses.
-  refill(document.getElementById('globalWarehouse'),{location:null});
+  // Main/global selector follows logged user's location + assigned warehouses.
+  refill(document.getElementById('globalWarehouse'),{location:currentLoc});
 
   // Known location-bound selectors used across YARDIVO.
   [
@@ -12553,7 +12576,11 @@ function addNavAndView(){
 }
 function renderArchive(){const host=document.getElementById('incidentGallery');if(!host)return;let a=(typeof incidents!=='undefined'&&Array.isArray(incidents)?incidents:[]);const d=document.getElementById('iaDate')?.value,s=document.getElementById('iaSupplier')?.value,w=document.getElementById('iaWarehouse')?.value,v=document.getElementById('iaSeverity')?.value;a=a.filter(x=>x.photo&&(!d||x.date===d)&&(!s||x.supplier===s)&&(!w||x.warehouse===w)&&(!v||x.severity===v));const sup=document.getElementById('iaSupplier');if(sup&&sup.options.length<=1)[...new Set((typeof incidents!=='undefined'&&Array.isArray(incidents)?incidents:[]).map(x=>x.supplier).filter(Boolean))].sort().forEach(x=>sup.add(new Option(x,x)));document.getElementById('incidentArchiveCount').textContent=`${a.length} fotografija`;host.innerHTML=a.length?a.map(i=>`<article class="incident-photo-card" data-iid="${i.id}"><img src="${i.photo}" alt="Fotografija incidenta"><div class="body"><strong>${i.supplier||'—'}</strong>${i.date||'—'} · ${i.warehouse||'—'}<br>${i.type||'Incident'} · ${i.severity||'—'}<br>Status: ${i.status||'Otvoren'} · ${Number(i.value||0).toFixed(2)} €</div></article>`).join(''):'<div class="overview-empty">Nema fotografija za odabrane filtre.</div>';host.querySelectorAll('[data-iid]').forEach(c=>c.onclick=()=>{const i=(typeof incidents!=='undefined'&&Array.isArray(incidents)?incidents:[]).find(x=>String(x.id)===c.dataset.iid);if(i)alert(`${i.supplier}\n${i.date} · ${i.warehouse||'—'}\n${i.type} · ${i.severity}\nStatus: ${i.status||'Otvoren'}\nOdgovoran: ${i.owner||'—'}\nŠteta: ${Number(i.value||0).toFixed(2)} €\n\n${i.note||''}`)});}
 
-function addSettings(){const grid=document.querySelector('#settings .settings-grid');if(!grid||document.getElementById('masterUserAdmin'))return;grid.insertAdjacentHTML('afterbegin',`<section class="panel" id="masterUserAdmin"><div class="panel-head"><div><h2>KORISNICI, ROLE I PERMISSIONS</h2><small>Admin kreira račune i dodjeljuje pristup</small></div></div><div class="master-settings-body"><div class="master-admin-grid"><div><div class="form-grid"><label>Ime i prezime<input id="muName"></label><label>Username<input id="muUser" autocomplete="off"></label><label>Privremena lozinka<input id="muPass" type="password" autocomplete="new-password"></label><label>Rola<select id="muRole"><option value="inventory">Upravljanje zalihama</option><option value="reception">Prijam</option><option value="gate">Porta</option><option value="management">Voditelj</option><option value="admin">Admin</option></select></label><label>Lokacija<select id="muLocation"><option value="DU">Dugopolje</option><option value="VG">Velika Gorica</option></select></label><label>Status<select id="muStatus"><option value="active">Aktivan</option><option value="disabled">Deaktiviran</option></select></label></div><div class="master-perms" id="muPerms"></div><button class="primary" id="muSave" type="button" style="margin-top:10px">KREIRAJ KORISNIKA</button></div><div><div class="master-note">Rola određuje osnovni pristup. Individualne permissions mogu dodatno uključiti sekcije za konkretnog korisnika.</div><div id="masterUserList" style="margin-top:10px"></div></div></div></div></section>
+function addSettings(){const grid=document.querySelector('#settings .settings-grid');if(!grid||document.getElementById('masterUserAdmin'))return;grid.insertAdjacentHTML('afterbegin',`<section class="panel" id="masterUserAdmin"><div class="panel-head"><div><h2>KORISNICI, ROLE I PERMISSIONS</h2><small>Admin kreira račune i dodjeljuje pristup</small></div></div><div class="master-settings-body"><div class="master-admin-grid"><div><div class="form-grid"><label>Ime i prezime<input id="muName"></label><label>Username<input id="muUser" autocomplete="off"></label><label>Privremena lozinka<input id="muPass" type="password" autocomplete="new-password"></label><label>Rola<select id="muRole"><option value="inventory">Upravljanje zalihama</option><option value="reception">Prijam</option><option value="gate">Porta</option><option value="management">Voditelj</option><option value="admin">Admin</option></select></label><label>Lokacija<select id="muLocation"><option value="DU">Dugopolje</option><option value="VG">Velika Gorica</option></select></label>
+<label>SKLADIŠTA
+  <div id="muWarehousePicker" style="margin-top:6px;padding:9px;border:1px solid #304958;border-radius:8px;background:#09131a;min-height:44px"></div>
+</label>
+<label>Status<select id="muStatus"><option value="active">Aktivan</option><option value="disabled">Deaktiviran</option></select></label></div><div class="master-perms" id="muPerms"></div><button class="primary" id="muSave" type="button" style="margin-top:10px">KREIRAJ KORISNIKA</button></div><div><div class="master-note">Rola određuje osnovni pristup. Individualne permissions mogu dodatno uključiti sekcije za konkretnog korisnika.</div><div id="masterUserList" style="margin-top:10px"></div></div></div></div></section>
 <section class="panel" id="yardivoFontSettings" data-yardivo-settings="inventory reception"><div class="panel-head"><div><h2>VELIČINA TEKSTA U POLJIMA I TABLICAMA</h2><small>Postavka ostaje spremljena na uređaju</small></div></div><div class="master-settings-body"><div style="display:flex;align-items:center;gap:8px"><button class="secondary" id="fontMinus">A−</button><input id="fontRange" type="range" min="80" max="150" step="5" style="flex:1"><button class="secondary" id="fontPlus">A+</button><button class="secondary" id="fontReset">100%</button><strong id="fontPct">100%</strong></div><div class="font-demo">Primjer teksta u ćelijama i poljima</div></div></section>
 
 <section class="panel"><div class="panel-head"><div><h2>GOOGLE SHEETS · CENTRALNA BAZA</h2><small>Apps Script Web App endpoint</small></div><span id="sheetState" class="master-sync-state warn">NIJE POVEZANO</span></div><div class="master-settings-body"><label>Apps Script Web App URL<input id="sheetUrl" placeholder="https://script.google.com/macros/s/.../exec"></label><div style="display:flex;gap:8px;margin-top:10px"><button class="primary" id="sheetSave" type="button">SPREMI POVEZNICU</button><button class="secondary" id="sheetTest" type="button">TEST VEZE</button><button class="secondary" id="sheetPush" type="button">SINKRONIZIRAJ SADA</button></div><div class="master-note" style="margin-top:10px">Sinkronizacija šalje najave, incidente i korisnike centralnom endpointu. Endpoint mora implementirati spremanje u Google Sheets i autorizaciju.</div></div></section>`);setupSettings();}
@@ -12567,7 +12594,49 @@ function applyFont(p){
  const r=document.getElementById('fontRange'),l=document.getElementById('fontPct');
  if(r)r.value=p;if(l)l.textContent=p+'%';
 }
-async function createUser(){if(String(currentSession?.role||'').toLowerCase()!=='admin'){toast('error','PRISTUP','Samo Admin može kreirati korisnike.');return}const username=muUser.value.trim().toLowerCase(),pass=muPass.value;if(!username||pass.length<4){toast('error','KORISNIK','Upiši username i lozinku od najmanje 4 znaka.');return}let a=users();if(a.some(x=>x.username===username)){toast('error','KORISNIK','Username već postoji.');return}a.push({id:Date.now(),name:muName.value.trim()||username,username,passwordHash:await sha256(pass),role:muRole.value,location:muLocation.value,status:muStatus.value,permissions:[...document.querySelectorAll('#muPerms input:checked')].map(x=>x.value),createdAt:new Date().toISOString()});saveUsers(a);muName.value=muUser.value=muPass.value='';renderUsers();toast('success','KORISNIK','Novi korisnik je spremljen.')}
+
+function yardivoInternalUserWarehouseRows(){
+  const loc=document.getElementById('muLocation')?.value||'DU';
+  try{
+    if(typeof yardivoLoadDynamicWarehousesIntoSystem==='function')yardivoLoadDynamicWarehousesIntoSystem();
+    if(typeof warehousesForLocation==='function'){
+      return allWarehousesForLocation(loc).map(code=>{
+        const w=(typeof WAREHOUSES!=='undefined'?WAREHOUSES?.[code]:null);
+        return {code,name:w?.name||code};
+      });
+    }
+  }catch(e){}
+  return (loc==='DU'?['W201','W203','W204']:['W101','W103','W104']).map(code=>({code,name:code}));
+}
+function yardivoRenderInternalUserWarehousePicker(selected=[]){
+  const host=document.getElementById('muWarehousePicker'); if(!host)return;
+  const rows=yardivoInternalUserWarehouseRows();
+  const selectedSet=new Set(Array.isArray(selected)?selected:[]);
+  host.innerHTML=
+    '<label style="display:flex;flex-direction:row;align-items:center;gap:8px;margin-bottom:8px">'+
+      '<input id="muAllWarehouses" type="checkbox" style="width:auto"> SVA SKLADIŠTA LOKACIJE'+
+    '</label>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:6px">'+
+      rows.map(w=>'<label style="display:flex;flex-direction:row;align-items:center;gap:8px;padding:7px;border:1px solid #294252;border-radius:7px">'+
+        '<input type="checkbox" name="muWarehouse" value="'+String(w.code).replace(/"/g,'&quot;')+'" style="width:auto" '+(selectedSet.has(w.code)?'checked':'')+'>'+
+        '<span><strong>'+String(w.code)+'</strong><br><small>'+String(w.name||w.code)+'</small></span>'+
+      '</label>').join('')+
+    '</div>';
+  const all=host.querySelector('#muAllWarehouses');
+  const boxes=[...host.querySelectorAll('input[name="muWarehouse"]')];
+  if(all){
+    all.checked=boxes.length>0&&boxes.every(b=>b.checked);
+    all.onchange=()=>boxes.forEach(b=>b.checked=all.checked);
+  }
+  boxes.forEach(b=>b.onchange=()=>{
+    if(all)all.checked=boxes.length>0&&boxes.every(x=>x.checked);
+  });
+}
+function yardivoSelectedInternalUserWarehouses(){
+  return [...document.querySelectorAll('#muWarehousePicker input[name="muWarehouse"]:checked')].map(x=>x.value);
+}
+
+async function createUser(){if(String(currentSession?.role||'').toLowerCase()!=='admin'){toast('error','PRISTUP','Samo Admin može kreirati korisnike.');return}const username=muUser.value.trim().toLowerCase(),pass=muPass.value;if(!username||pass.length<4){toast('error','KORISNIK','Upiši username i lozinku od najmanje 4 znaka.');return}let a=users();if(a.some(x=>x.username===username)){toast('error','KORISNIK','Username već postoji.');return}a.push({id:Date.now(),name:muName.value.trim()||username,username,passwordHash:await sha256(pass),role:muRole.value,location:muLocation.value,warehouses:yardivoSelectedInternalUserWarehouses(),status:muStatus.value,permissions:[...document.querySelectorAll('#muPerms input:checked')].map(x=>x.value),createdAt:new Date().toISOString()});saveUsers(a);muName.value=muUser.value=muPass.value='';renderUsers();toast('success','KORISNIK','Novi korisnik je spremljen.')}
 function renderUsers(){const h=document.getElementById('masterUserList');if(!h)return;const a=users();h.innerHTML='<div class="master-user-row"><strong>Korisnik</strong><strong>Rola</strong><strong>Lokacija</strong><strong>Status</strong><strong>Akcije</strong></div>'+a.map(u=>`<div class="master-user-row"><div><strong>${u.name}</strong><br><small>${u.username}</small></div><div>${ROLE_LABEL[u.role]||u.role}</div><div>${u.location}</div><div>${u.status==='active'?'AKTIVAN':'DEAKTIVIRAN'}</div><div><button class="action" data-toggle-user="${u.id}">${u.status==='active'?'DEAKT.':'AKTIV.'}</button> <button class="action danger" data-del-user="${u.id}">OBRIŠI</button></div></div>`).join('');h.querySelectorAll('[data-toggle-user]').forEach(b=>b.onclick=()=>{let a=users(),u=a.find(x=>x.id==b.dataset.toggleUser);if(u){u.status=u.status==='active'?'disabled':'active';saveUsers(a);renderUsers()}});h.querySelectorAll('[data-del-user]').forEach(b=>b.onclick=()=>{if(confirm('Obrisati korisnika?')){saveUsers(users().filter(x=>x.id!=b.dataset.delUser));renderUsers()}})}
 
 function setSheetState(ok){const e=document.getElementById('sheetState');if(!e)return;e.className='master-sync-state '+(ok?'ok':'warn');e.textContent=ok?'KONFIGURIRANO':'NIJE POVEZANO'}
@@ -12649,111 +12718,114 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <!-- removed insecure legacy role override: yardivo-role-dropdown-authoritative-final -->
 <script id="yardivo-location-selection-final-fix">
 (function(){
-  function validLocation(v){return v==='VG'||v==='DU'}
+'use strict';
 
-  function syncLocationFromSelect(force){
-    const sel=document.getElementById('homeLocationSelect');
-    if(!sel)return false;
-    const loc=sel.value;
+function validLocation(v){return v==='VG'||v==='DU'}
 
-    if(!validLocation(loc))return false;
+function session(){
+  try{
+    return (typeof currentSession!=='undefined' ? currentSession : window.currentSession) || null;
+  }catch(e){
+    return window.currentSession || null;
+  }
+}
 
-    try{
-      if(typeof currentSession==='undefined'||!currentSession){
-        currentSession={user:'dujemales',role:'admin',location:loc,loginAt:new Date().toISOString(),rememberMe:false};
-      }else if(force || !validLocation(currentSession.location)){
-        currentSession.location=loc;
-      }
-      try{window.currentSession=currentSession}catch(e){}
+function locationLabel(loc){
+  return loc==='DU'?'Dugopolje':loc==='VG'?'Velika Gorica':loc;
+}
 
-      // Persist selected location
+/*
+  SECURITY / RBAC RULE:
+  The logged user's location comes from yardivo_user_access through
+  yardivo_my_profile(). The home dropdown must never be allowed to
+  change currentSession.location.
+*/
+function lockHomeLocationToProfile(){
+  const s=session();
+  if(!s || !validLocation(String(s.location||'').toUpperCase()))return false;
+
+  const assigned=String(s.location).toUpperCase();
+  const sel=document.getElementById('homeLocationSelect');
+
+  if(sel){
+    // Show only the location assigned by Admin.
+    sel.innerHTML=`<option value="${assigned}">${locationLabel(assigned)}</option>`;
+    sel.value=assigned;
+    sel.disabled=true;
+    sel.setAttribute('aria-disabled','true');
+    sel.title='Lokacija je dodijeljena korisničkom računu od strane Admina.';
+  }
+
+  // Keep session immutable from UI.
+  try{
+    s.location=assigned;
+    if(typeof currentSession!=='undefined')currentSession=s;
+    window.currentSession=s;
+  }catch(e){}
+
+  // Active warehouse must belong to assigned location AND to user's allowed warehouses.
+  try{
+    const allowed=typeof warehousesForLocation==='function'
+      ? warehousesForLocation(assigned)
+      : (Array.isArray(s.warehouses)?s.warehouses:[]);
+    const current=String(typeof activeWarehouse!=='undefined' ? activeWarehouse : '');
+    const next=allowed.includes(current) ? current : (allowed[0] || '');
+    if(next){
+      activeWarehouse=next;
       try{
         if(typeof safeStorage!=='undefined'&&safeStorage?.setItem){
-          safeStorage.setItem('yardivo_last_location',loc);
+          safeStorage.setItem('studenac_active_warehouse',next);
         }else{
-          localStorage.setItem('yardivo_last_location',loc);
+          localStorage.setItem('studenac_active_warehouse',next);
         }
       }catch(e){}
-
-      // Set appropriate default warehouse
-      try{
-        activeWarehouse=(loc==='DU')?'W201':'W101';
-        if(typeof safeStorage!=='undefined'&&safeStorage?.setItem){
-          safeStorage.setItem('studenac_active_warehouse',activeWarehouse);
-        }
-      }catch(e){}
-
-      // Persist actual session used by original app
-      try{
-        if(typeof persistCurrentSession==='function')persistCurrentSession();
-      }catch(e){}
-
-      try{
-        if(typeof syncWarehouseSelectorsToLoginLocation==='function')syncWarehouseSelectorsToLoginLocation();
-      }catch(e){}
-
-      try{
-        if(typeof updateHomeLocationUI==='function')updateHomeLocationUI();
-      }catch(e){}
-
-      const warning=document.getElementById('homeLocationWarning');
-      warning?.classList.remove('show');
-
-      // Hard unlock visual cards
-      document.querySelectorAll('#homeMenuGrid .home-menu-card').forEach(card=>{
-        card.classList.remove('locked');
-        card.removeAttribute('aria-disabled');
-      });
-
-      return true;
-    }catch(e){
-      console.error('YARDIVO location sync error',e);
-      return false;
     }
+  }catch(e){}
+
+  try{window.yardivoRefreshAllWarehouseUi?.()}catch(e){}
+  try{window.syncWarehouseSelectorsToLoginLocation?.()}catch(e){}
+  try{window.updateHomeLocationUI?.()}catch(e){}
+
+  const warning=document.getElementById('homeLocationWarning');
+  warning?.classList.remove('show');
+
+  return true;
+}
+
+// Block any attempt to switch location from the UI.
+document.addEventListener('change',function(e){
+  const sel=e.target;
+  if(sel?.id!=='homeLocationSelect')return;
+  const s=session();
+  if(!s)return;
+  const assigned=String(s.location||'').toUpperCase();
+  if(validLocation(assigned)){
+    sel.value=assigned;
   }
+},true);
 
-  const select=document.getElementById('homeLocationSelect');
-  if(select){
-    // Use both change and input so browser/autofill/custom UI always works.
-    select.addEventListener('change',()=>syncLocationFromSelect(true),true);
-    select.addEventListener('input',()=>syncLocationFromSelect(true),true);
+document.addEventListener('input',function(e){
+  const sel=e.target;
+  if(sel?.id!=='homeLocationSelect')return;
+  const s=session();
+  if(!s)return;
+  const assigned=String(s.location||'').toUpperCase();
+  if(validLocation(assigned)){
+    sel.value=assigned;
   }
+},true);
 
-  // Before opening a home card, adopt visible selected location if original session missed it.
-  document.getElementById('homeMenuGrid')?.addEventListener('click',function(e){
-    const card=e.target.closest('[data-home-target]');
-    if(!card)return;
-
-    let chosen=false;
-    try{chosen=typeof homeLocationChosen==='function'&&homeLocationChosen()}catch(err){}
-    if(!chosen){
-      const ok=syncLocationFromSelect(true);
-      if(!ok){
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        document.getElementById('homeLocationWarning')?.classList.add('show');
-      }
-    }
-  },true);
-
-  // When home menu becomes visible, synchronize a valid select value with the session.
-  function refresh(){
-    const home=document.getElementById('homeMenu');
-    if(home?.classList.contains('active')){
-      const sel=document.getElementById('homeLocationSelect');
-      if(sel&&validLocation(sel.value)){
-        let chosen=false;
-        try{chosen=typeof homeLocationChosen==='function'&&homeLocationChosen()}catch(e){}
-        if(!chosen)syncLocationFromSelect(true);
-      }
-    }
+window.addEventListener('yardivo:login',()=>setTimeout(lockHomeLocationToProfile,60));
+window.addEventListener('load',()=>setTimeout(lockHomeLocationToProfile,300));
+document.addEventListener('click',e=>{
+  if(e.target.closest?.('[data-home-target],#homeMenu,[data-view]')){
+    setTimeout(lockHomeLocationToProfile,30);
   }
+},true);
 
-  window.addEventListener('load',()=>setTimeout(refresh,100));
-  setTimeout(refresh,300);
-
-  // Public debug helper
-  window.syncYardivoLocation=()=>syncLocationFromSelect(true);
+window.YardivoLocationLock={
+  apply:lockHomeLocationToProfile
+};
 })();
 </script>
 <script id="yardivo-admin-create-user-case-fix">
@@ -13251,8 +13323,9 @@ async function loadServerProfile(c){
   const p=Array.isArray(data)?data[0]:data;
   if(!p||!p.active)throw new Error('Račun nije aktivan.');
   const role=normRole(p.app_role);
-  if(!['admin','inventory','reception','gate'].includes(role))throw new Error('Račun nema valjanu YARDIVO rolu.');
-  return {username:String(p.username||''),role,location:String(p.location||'VG')};
+  if(!['admin','inventory','reception','gate','supplier'].includes(role))throw new Error('Račun nema valjanu YARDIVO rolu.');
+  const warehouses=Array.isArray(p.warehouses)?p.warehouses.map(x=>String(x).trim().toUpperCase()).filter(Boolean):[];
+  return {username:String(p.username||''),role,location:String(p.location||'VG'),warehouses};
 }
 async function authoritativeLogin(){
   const username=(document.getElementById('loginUser')?.value||'').trim().toLowerCase();
@@ -13269,10 +13342,10 @@ async function authoritativeLogin(){
     if(p.username.toLowerCase()!==username)throw new Error('Identitet korisnika se ne podudara.');
     const chosenRole=normRole(document.getElementById('loginRole')?.value||'');
     if(chosenRole!==p.role){
-      const labels={admin:'Admin',inventory:'Upravljanje zalihama',reception:'Prijam',gate:'Porta'};
+      const labels={admin:'Admin',inventory:'Upravljanje zalihama',reception:'Prijam',gate:'Porta',supplier:'Dobavljač'};
       throw new Error(`KRIVA ROLA|Dodijeljena rola ovom korisniku je: ${labels[p.role]||p.role}`);
     }
-    const session={user:p.username,username:p.username,role:p.role,location:p.location,authUserId:data.user.id,loginAt:new Date().toISOString(),rememberMe:true,serverAuthorized:true};
+    const session={user:p.username,username:p.username,role:p.role,location:p.location,warehouses:p.warehouses||[],authUserId:data.user.id,loginAt:new Date().toISOString(),rememberMe:true,serverAuthorized:true};
     persistAppSession(session);
     try{localStorage.setItem('yardivo_last_location',p.location)}catch(e){}
     if(typeof enterApp==='function')enterApp();
@@ -20019,9 +20092,11 @@ async function create(){
   const password=document.getElementById('muPass')?.value||'';
   const role=document.getElementById('muRole')?.value||'';
   const location=document.getElementById('muLocation')?.value||'VG';
+  const warehouses=yardivoSelectedInternalUserWarehouses();
   if(password.length<6){alert('Password mora imati najmanje 6 znakova.');return}
+  if(!warehouses.length){alert('Odaberi barem jedno skladište za korisnika.');return}
   try{
-    await invoke('create',{username,password,role,location});
+    await invoke('create',{username,password,role,location,warehouses});
     document.getElementById('muUser').value='';document.getElementById('muPass').value='';
     await render();
     try{showYmsToast?.('success','KORISNIK','Korisnik je kreiran u Supabase Authu.')}catch(e){}
@@ -24941,7 +25016,7 @@ async function authenticate(){
   if(!p||!p.active)throw new Error('KORISNIČKI RAČUN NIJE AKTIVAN.');
 
   const assignedRole=normRole(p.app_role);
-  if(!['admin','inventory','reception','gate'].includes(assignedRole)){
+  if(!['admin','inventory','reception','gate','supplier'].includes(assignedRole)){
     throw new Error('KORISNIK NEMA VALJANU YARDIVO ROLU.');
   }
   if(selectedRole!==assignedRole){
@@ -24953,6 +25028,7 @@ async function authenticate(){
     username:String(p.username||username),
     role:assignedRole,
     location:String(p.location||'VG'),
+    warehouses:Array.isArray(p.warehouses)?p.warehouses.map(x=>String(x).trim().toUpperCase()).filter(Boolean):[],
     authUserId:auth.user?.id||'',
     loginAt:new Date().toISOString(),
     rememberMe:!!document.getElementById('rememberMe')?.checked,
@@ -24962,8 +25038,10 @@ async function authenticate(){
 
   /* Canonical online bootstrap: login is complete only when the database session is valid.
      The Edge sync receives this exact JWT; no stale or anonymous browser session can write. */
-  if(!window.YardivoSupabase?.authenticate)throw new Error('ONLINE BAZA NIJE SPREMNA.');
-  await window.YardivoSupabase.authenticate(auth.access_token,auth.refresh_token);
+  if(assignedRole!=='supplier'){
+    if(!window.YardivoSupabase?.authenticate)throw new Error('ONLINE BAZA NIJE SPREMNA.');
+    await window.YardivoSupabase.authenticate(auth.access_token,auth.refresh_token);
+  }
 
   return session;
 }
@@ -24989,6 +25067,11 @@ async function login(){
 
     try{window.YardivoRoleStableFinal?.apply?.()}catch(_){}
     try{window.YardivoExactRBAC?.apply?.()}catch(_){}
+    if(session.role==='supplier'){
+      try{window.YardivoSupplierPortal?.open?.()}catch(_){}
+    }else{
+      try{window.yardivoRefreshAllWarehouseUi?.()}catch(_){}
+    }
     return true;
   }catch(e){
     let msg=String(e?.message||'PRIJAVA NIJE USPJELA.');
@@ -30263,13 +30346,15 @@ async function createProfile(){
   const password=document.getElementById('muPass')?.value||'';
   const assignedRole=normRole(document.getElementById('muRole')?.value||'');
   const location=document.getElementById('muLocation')?.value||'VG';
+  const warehouses=yardivoSelectedInternalUserWarehouses();
 
   if(!/^[a-z0-9._-]{3,40}$/.test(username)){alert('Username mora imati najmanje 3 znaka.');return}
   if(password.length<6){alert('Password mora imati najmanje 6 znakova.');return}
   if(!['admin','inventory','reception','gate'].includes(assignedRole)){alert('Odaberi valjanu rolu.');return}
+  if(!warehouses.length){alert('Odaberi barem jedno skladište za korisnika.');return}
 
   try{
-    await invokeUsers('create',{username,password,role:assignedRole,location});
+    await invokeUsers('create',{username,password,role:assignedRole,location,warehouses});
     const u=document.getElementById('muUser'),p=document.getElementById('muPass'),n=document.getElementById('muName');
     if(u)u.value='';if(p)p.value='';if(n)n.value='';
     await renderProfiles();
@@ -31173,7 +31258,7 @@ function yardivoSupplierWarehouseRows(){
   try{
     if(typeof yardivoLoadDynamicWarehousesIntoSystem==='function')yardivoLoadDynamicWarehousesIntoSystem();
     if(typeof warehousesForLocation==='function'){
-      return warehousesForLocation(loc).map(code=>{
+      return allWarehousesForLocation(loc).map(code=>{
         const w=(typeof WAREHOUSES!=='undefined'?WAREHOUSES?.[code]:null);
         return {code,name:w?.name||code};
       });
@@ -31223,6 +31308,7 @@ async function save(){
   const location=document.getElementById('ysaLocation').value;
   const warehouses=yardivoSelectedSupplierWarehouses();
   if(!supplier_name)return alert('Odaberi dobavljača.');
+  if(!warehouses.length)return alert('Odaberi barem jedno skladište za korisnika.');
   if(!username)return alert('Upiši korisničko ime.');
   if(password.length<6)return alert('Privremena lozinka mora imati najmanje 6 znakova.');
   if(!warehouses.length)return alert('Odaberi barem jedno skladište za dobavljača.');
@@ -31305,7 +31391,11 @@ function ensureWarehouseAdmin(){
     try{
       if(typeof window.yardivoRefreshAllWarehouseUi==='function'){
         window.yardivoRefreshAllWarehouseUi();
-      }else if(typeof yardivoRenderSupplierWarehousePicker==='function'){
+      }
+      if(typeof yardivoRenderInternalUserWarehousePicker==='function'){
+        yardivoRenderInternalUserWarehousePicker([]);
+      }
+      if(typeof yardivoRenderSupplierWarehousePicker==='function'){
         yardivoRenderSupplierWarehousePicker();
       }
     }catch(e){}
@@ -31315,6 +31405,92 @@ window.addEventListener('yardivo:login',()=>setTimeout(ensureWarehouseAdmin,200)
 document.addEventListener('click',e=>{
   if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(ensureWarehouseAdmin,120);
 },true);
+})();
+</script>
+
+
+<script id="yardivo-v535-internal-user-location-bind">
+(function(){
+  function bind(){
+    const loc=document.getElementById('muLocation');
+    if(loc && !loc.dataset.yardivoWhBind){
+      loc.dataset.yardivoWhBind='1';
+      loc.addEventListener('change',()=>yardivoRenderInternalUserWarehousePicker([]));
+      yardivoRenderInternalUserWarehousePicker([]);
+    }
+  }
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,300));
+  window.addEventListener('yardivo:login',()=>setTimeout(bind,200));
+  document.addEventListener('click',e=>{
+    if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(bind,120);
+  },true);
+})();
+</script>
+
+
+<style id="yardivo-v536-supplier-portal-style">
+#yardivoSupplierPortal{
+  display:none;position:fixed;inset:0;z-index:99990;background:#071119;color:#e8f1f5;
+  overflow:auto;padding:24px;box-sizing:border-box
+}
+#yardivoSupplierPortal .ysp-shell{max-width:900px;margin:0 auto}
+#yardivoSupplierPortal .ysp-card{border:1px solid #294252;background:#0b1821;border-radius:12px;padding:18px}
+#yardivoSupplierPortal .ysp-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+#yardivoSupplierPortal .ysp-grid{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:12px}
+#yardivoSupplierPortal label{display:flex;flex-direction:column;gap:6px;font-size:10px;font-weight:900;color:#a9bbc6}
+#yardivoSupplierPortal select,#yardivoSupplierPortal input{width:100%;box-sizing:border-box}
+#yardivoSupplierPortal .ysp-note{margin-top:14px;padding:10px;border:1px solid #31543d;border-radius:8px;background:#0e251a;color:#c9ead5;font-size:10px}
+@media(max-width:760px){#yardivoSupplierPortal .ysp-grid{grid-template-columns:1fr}}
+</style>
+<div id="yardivoSupplierPortal">
+  <div class="ysp-shell">
+    <div class="ysp-card">
+      <div class="ysp-head">
+        <div><h2 style="margin:0">YARDIVO · DOBAVLJAČ</h2><small id="yspUser"></small></div>
+        <button type="button" id="yspLogout">ODJAVA</button>
+      </div>
+      <div class="ysp-grid">
+        <label>SKLADIŠTE
+          <select id="yspWarehouse"></select>
+        </label>
+        <label>DATUM DOSTAVE
+          <input id="yspDate" type="date">
+        </label>
+        <label>TERMIN
+          <input id="yspTime" type="time" step="900">
+        </label>
+      </div>
+      <div class="ysp-note">
+        Dobavljač vidi samo skladišta koja mu je Admin dodijelio. Slanje termina u bazu spajamo u sljedećem backend koraku.
+      </div>
+      <button type="button" id="yspSend" class="primary" style="margin-top:14px">POŠALJI ZAHTJEV ZA TERMIN</button>
+    </div>
+  </div>
+</div>
+<script id="yardivo-v536-supplier-portal">
+(function(){
+'use strict';
+function role(){try{return String(currentSession?.role||window.currentSession?.role||'').toLowerCase()}catch(e){return''}}
+function openSupplierPortal(){
+  if(role()!=='supplier')return false;
+  const p=document.getElementById('yardivoSupplierPortal'); if(!p)return false;
+  p.style.display='block';
+  const s=(typeof currentSession!=='undefined'?currentSession:window.currentSession)||{};
+  document.getElementById('yspUser').textContent=String(s.username||s.user||'');
+  const wh=document.getElementById('yspWarehouse');
+  const rows=Array.isArray(s.warehouses)?s.warehouses:[];
+  wh.innerHTML=rows.map(code=>`<option value="${code}">${typeof warehouseOptionLabel==='function'?warehouseOptionLabel(code):code}</option>`).join('');
+  return true;
+}
+window.YardivoSupplierPortal={open:openSupplierPortal};
+window.addEventListener('yardivo:login',()=>setTimeout(openSupplierPortal,80));
+document.getElementById('yspSend')?.addEventListener('click',()=>{
+  alert('Supplier login i ograničenje skladišta rade. Spremanje termina u Supabase spajamo sljedeće.');
+});
+document.getElementById('yspLogout')?.addEventListener('click',()=>{
+  try{document.getElementById('logoutBtn')?.click()}catch(e){}
+  location.reload();
+});
 })();
 </script>
 
