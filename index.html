@@ -11,7 +11,7 @@ Designed & Developed by Duje Maleš
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
 (function(){
   'use strict';
-  window.__YARDIVO_BUILD__='20260903-dev-v5.3-supplier-warehouse-ui';
+  window.__YARDIVO_BUILD__='20260903-dev-v5.3.1-login-freeze-fix';
   const nativeFetch=window.fetch?.bind(window);
   if(nativeFetch){
     window.fetch=function(input,init){
@@ -35,8 +35,8 @@ Designed & Developed by Duje Maleš
     const old=document.getElementById('yardivoSyncErrorBox'); if(old) old.remove();
     const badge=document.createElement('div');
     badge.id='yardivoBuildBadge';
-    badge.textContent='YARDIVO DEV · BUILD V5.3';
-    badge.title='20260903-dev-v5.3-supplier-warehouse-ui';
+    badge.textContent='YARDIVO DEV · BUILD V5.3.1';
+    badge.title='20260903-dev-v5.3.1-login-freeze-fix';
     badge.style.cssText='position:fixed;right:8px;bottom:8px;z-index:2147483646;font:700 10px/1.2 system-ui;padding:5px 7px;border-radius:6px;background:#0d1b29;color:#94a9b9;border:1px solid #26435a;opacity:.72;pointer-events:none';
     document.body.appendChild(badge);
   },{once:true});
@@ -31194,7 +31194,11 @@ function enhanceSupplierModal(){
     loc.dataset.wh53='1';
     loc.addEventListener('change',refreshWarehousePicker);
   }
-  if(document.getElementById('ysaWarehousePicker'))refreshWarehousePicker();
+  const picker=document.getElementById('ysaWarehousePicker');
+  if(picker && !picker.dataset.ready53){
+    picker.dataset.ready53='1';
+    refreshWarehousePicker();
+  }
 }
 
 function ensureAddWarehousePanel(){
@@ -31352,9 +31356,43 @@ window.addEventListener('yardivo:login',()=>setTimeout(init,120));
 document.addEventListener('click',e=>{
   if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"],#yardivoSupplierAccountBtn'))setTimeout(init,80);
 },true);
-new MutationObserver(()=>{if(document.getElementById('settings'))init()}).observe(document.documentElement,{childList:true,subtree:true});
+let __v53InitTimer=0;
+new MutationObserver(()=>{
+  clearTimeout(__v53InitTimer);
+  __v53InitTimer=setTimeout(()=>{
+    ensureSupplierLoginOption();
+    if(document.getElementById('settings'))ensureAddWarehousePanel();
+    if(document.getElementById('ysaWarehousePicker') && !document.getElementById('ysaWarehousePicker').dataset.ready53)enhanceSupplierModal();
+  },120);
+}).observe(document.documentElement,{childList:true,subtree:true});
 
 window.YardivoWarehouseAdminV53={all:allWarehouses,refresh:refreshWarehouseDropdowns};
+})();
+</script>
+
+
+<style id="yardivo-v531-login-safety">
+#loginOverlay{pointer-events:auto!important}
+#loginOverlay .login-card,#loginOverlay .login-box,#loginOverlay form,
+#loginUser,#loginPass,#loginRole,#rememberMe,#loginSubmitBtn,#loginChangePasswordBtn{
+  pointer-events:auto!important;
+}
+#yardivoSupplierAccountModal:not(.open){display:none!important;pointer-events:none!important}
+</style>
+<script id="yardivo-v531-login-safety-script">
+(function(){
+'use strict';
+function unlockLogin(){
+  const overlay=document.getElementById('loginOverlay');
+  if(!overlay)return;
+  overlay.style.pointerEvents='auto';
+  ['loginUser','loginPass','loginRole','rememberMe','loginSubmitBtn','loginChangePasswordBtn'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.style.pointerEvents='auto';}
+  });
+}
+document.addEventListener('DOMContentLoaded',unlockLogin);
+window.addEventListener('load',()=>setTimeout(unlockLogin,100));
 })();
 </script>
 
