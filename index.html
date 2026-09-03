@@ -11,7 +11,7 @@ Designed & Developed by Duje Maleš
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
 (function(){
   'use strict';
-  window.__YARDIVO_BUILD__='20260903-dev-v5.3.1-login-freeze-fix';
+  window.__YARDIVO_BUILD__='20260903-dev-v5.3.2-login-stable';
   const nativeFetch=window.fetch?.bind(window);
   if(nativeFetch){
     window.fetch=function(input,init){
@@ -35,8 +35,8 @@ Designed & Developed by Duje Maleš
     const old=document.getElementById('yardivoSyncErrorBox'); if(old) old.remove();
     const badge=document.createElement('div');
     badge.id='yardivoBuildBadge';
-    badge.textContent='YARDIVO DEV · BUILD V5.3.1';
-    badge.title='20260903-dev-v5.3.1-login-freeze-fix';
+    badge.textContent='YARDIVO DEV · BUILD V5.3.2';
+    badge.title='20260903-dev-v5.3.2-login-stable';
     badge.style.cssText='position:fixed;right:8px;bottom:8px;z-index:2147483646;font:700 10px/1.2 system-ui;padding:5px 7px;border-radius:6px;background:#0d1b29;color:#94a9b9;border:1px solid #26435a;opacity:.72;pointer-events:none';
     document.body.appendChild(badge);
   },{once:true});
@@ -5915,28 +5915,6 @@ html.yardivo-welcome-complete #yardivoWelcomeBar{
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="yardivo-build" content="2026-09-02-online-v4-defensive-guard">
-
-<style id="yardivo-v53-supplier-warehouse-style">
-#ysaWarehousePicker .ysa-wh-all{display:flex;align-items:center;gap:8px;margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid #243845;color:#d9ebdf;font-size:10px;font-weight:900}
-#ysaWarehousePicker .ysa-wh-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px}
-#ysaWarehousePicker .ysa-wh{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #294252;border-radius:7px;background:#0c1921;color:#d9e5ea}
-#ysaWarehousePicker input{width:auto!important}
-#yardivoWarehouseAdmin .ywa-grid{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:10px}
-#yardivoWarehouseAdmin label{display:flex;flex-direction:column;gap:6px;font-size:9px;font-weight:900;color:#9fb2be}
-#yardivoWarehouseAdmin input,#yardivoWarehouseAdmin select{width:100%;box-sizing:border-box}
-#yardivoWarehouseList{margin-top:12px;display:grid;gap:6px}
-#yardivoWarehouseList .ywa-row{display:grid;grid-template-columns:110px 1fr 140px 90px;gap:8px;align-items:center;padding:8px 10px;border:1px solid #253f4f;border-radius:7px;background:#0a1720;font-size:10px}
-#supplierPortal{display:none}
-#supplierPortal .supplier-booking-grid{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:10px;padding:14px}
-#supplierPortal .supplier-booking-grid label{display:flex;flex-direction:column;gap:6px;font-size:9px;font-weight:900;color:#9eb3c0}
-#supplierPortal .supplier-booking-grid input,#supplierPortal .supplier-booking-grid select{width:100%;box-sizing:border-box}
-#supplierPortal .supplier-note{margin:0 14px 14px;padding:11px;border:1px solid #294c38;background:#10251b;border-radius:8px;color:#c7e8d3;font-size:10px}
-@media(max-width:900px){
- #yardivoWarehouseAdmin .ywa-grid,#supplierPortal .supplier-booking-grid{grid-template-columns:1fr}
- #yardivoWarehouseList .ywa-row{grid-template-columns:1fr}
-}
-</style>
-
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -31057,7 +31035,7 @@ function ensure(){
             <label>LOKACIJA<select id="ysaLocation"><option value="DU">Dugopolje</option><option value="VG">Velika Gorica</option></select></label>
             <div style="grid-column:1/-1">
               <label>SKLADIŠTA DOSTUPNA DOBAVLJAČU</label>
-              <div id="ysaWarehousePicker" style="margin-top:6px;padding:10px;border:1px solid #304958;border-radius:8px;background:#09131a"></div>
+              <div id="ysaWarehousePicker" style="margin-top:7px;padding:10px;border:1px solid #304958;border-radius:8px;background:#09131a"></div>
             </div>
           </div>
           <div class="ysa-note">Rola se automatski postavlja na <strong>supplier</strong>. Auth račun koristi interni login <strong>username@yardivo.local</strong>; kontakt e-mail ostaje poslovni kontakt dobavljača.</div>
@@ -31073,9 +31051,38 @@ function ensure(){
       if(!u.dataset.manual)u.value=slug(e.target.value);
     });
     document.getElementById('ysaUsername').addEventListener('input',e=>e.target.dataset.manual='1');
+    document.getElementById('ysaLocation').addEventListener('change',yardivoRenderSupplierWarehousePicker);
     document.getElementById('yardivoSupplierAccountSave').onclick=save;
   }
 }
+
+function yardivoSupplierWarehouseRows(){
+  const loc=document.getElementById('ysaLocation')?.value||'DU';
+  const base=loc==='DU'
+    ? [{code:'W101',name:'W101'},{code:'W201',name:'W201'}]
+    : [{code:'W101',name:'W101'},{code:'W201',name:'W201'}];
+  try{
+    const dyn=JSON.parse(localStorage.getItem('yardivo_dynamic_warehouses_v1')||'[]');
+    if(Array.isArray(dyn))dyn.filter(x=>x.location===loc).forEach(x=>{
+      if(x?.code && !base.some(b=>b.code===x.code))base.push({code:x.code,name:x.name||x.code});
+    });
+  }catch(e){}
+  return base;
+}
+function yardivoRenderSupplierWarehousePicker(){
+  const host=document.getElementById('ysaWarehousePicker'); if(!host)return;
+  const rows=yardivoSupplierWarehouseRows();
+  host.innerHTML='<label style="display:flex;flex-direction:row;align-items:center;gap:8px;margin-bottom:9px"><input id="ysaAllWarehouses" type="checkbox" style="width:auto"> SVA SKLADIŠTA TE LOKACIJE</label>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px">'+
+    rows.map(w=>'<label style="display:flex;flex-direction:row;align-items:center;gap:8px;padding:8px;border:1px solid #294252;border-radius:7px"><input type="checkbox" name="ysaWarehouse" value="'+esc(w.code)+'" style="width:auto"><span><strong>'+esc(w.code)+'</strong><br><small>'+esc(w.name||'')+'</small></span></label>').join('')+
+    '</div>';
+  const all=host.querySelector('#ysaAllWarehouses');
+  all.onclick=()=>host.querySelectorAll('input[name="ysaWarehouse"]').forEach(x=>x.checked=all.checked);
+}
+function yardivoSelectedSupplierWarehouses(){
+  return [...document.querySelectorAll('#ysaWarehousePicker input[name="ysaWarehouse"]:checked')].map(x=>x.value);
+}
+
 function open(){
   if(!isAdmin())return;
   ensure();
@@ -31084,6 +31091,7 @@ function open(){
   ['ysaUsername','ysaPassword','ysaContactName','ysaContactEmail','ysaContactPhone'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ysaUsername').dataset.manual='';
   document.getElementById('ysaLocation').value='DU';
+  yardivoRenderSupplierWarehousePicker();
   const m=document.getElementById('yardivoSupplierAccountModal');m.classList.add('open');m.setAttribute('aria-hidden','false');
 }
 function close(){
@@ -31098,10 +31106,11 @@ async function save(){
   const contact_email=document.getElementById('ysaContactEmail').value.trim();
   const contact_phone=document.getElementById('ysaContactPhone').value.trim();
   const location=document.getElementById('ysaLocation').value;
-  const warehouses=(typeof selectedSupplierWarehouses==='function'?selectedSupplierWarehouses():[...document.querySelectorAll('#ysaWarehousePicker input[name="ysaWarehouse"]:checked')].map(x=>x.value));
+  const warehouses=yardivoSelectedSupplierWarehouses();
   if(!supplier_name)return alert('Odaberi dobavljača.');
   if(!username)return alert('Upiši korisničko ime.');
   if(password.length<6)return alert('Privremena lozinka mora imati najmanje 6 znakova.');
+  if(!warehouses.length)return alert('Odaberi barem jedno skladište za dobavljača.');
   if(!contact_name)return alert('Upiši kontakt osobu.');
   if(!contact_email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact_email))return alert('Upiši ispravan kontakt e-mail.');
   const b=document.getElementById('yardivoSupplierAccountSave');b.disabled=true;b.textContent='SPREMANJE…';
@@ -31122,277 +31131,56 @@ new MutationObserver(()=>{if(document.getElementById('masterUserAdmin'))ensure()
 </script>
 
 
-<script id="yardivo-v53-supplier-warehouse-ui">
-(function(){
-'use strict';
-
-const DYN_WH_KEY='yardivo_dynamic_warehouses_v1';
-
-function sessionRole(){
-  try{return String((typeof currentSession!=='undefined'?currentSession?.role:'')||window.currentSession?.role||'').toLowerCase().trim()}
-  catch(e){return''}
-}
-function isAdmin(){return sessionRole()==='admin'}
-function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function locLong(v){return v==='DU'?'Dugopolje':'Velika Gorica'}
-
-function loadDynamicWarehouses(){
-  try{
-    const arr=JSON.parse(localStorage.getItem(DYN_WH_KEY)||'[]');
-    if(!Array.isArray(arr))return[];
-    arr.forEach(w=>{
-      if(!w?.code)return;
-      try{
-        if(typeof WAREHOUSES!=='undefined'&&!WAREHOUSES[w.code]){
-          WAREHOUSES[w.code]={
-            code:w.code,
-            location:locLong(w.location),
-            name:w.name||w.code,
-            ramps:Number(w.ramps)||null,
-            receptionStart:null,
-            receptionEnd:null
-          };
-        }
-      }catch(e){}
-    });
-    return arr;
-  }catch(e){return[]}
-}
-function allWarehouses(){
-  loadDynamicWarehouses();
-  try{return Object.values(WAREHOUSES||{})}catch(e){return[]}
-}
-function locCodeFromWarehouse(w){
-  const x=String(w?.location||'').toLowerCase();
-  return x.includes('dug')?'DU':'VG';
-}
-
-function refreshWarehousePicker(){
-  const host=document.getElementById('ysaWarehousePicker');
-  const loc=document.getElementById('ysaLocation')?.value||'DU';
-  if(!host)return;
-  const rows=allWarehouses().filter(w=>locCodeFromWarehouse(w)===loc);
-  host.innerHTML=`
-    <label class="ysa-wh-all"><input type="checkbox" id="ysaAllWarehouses"> SVA SKLADIŠTA · ${esc(locLong(loc))}</label>
-    <div class="ysa-wh-list">
-      ${rows.map(w=>`<label class="ysa-wh"><input type="checkbox" name="ysaWarehouse" value="${esc(w.code)}"> <span><strong>${esc(w.code)}</strong><br><small>${esc(w.name||'')}</small></span></label>`).join('')||'<small>Nema definiranih skladišta za ovu lokaciju.</small>'}
-    </div>`;
-  const all=host.querySelector('#ysaAllWarehouses');
-  all?.addEventListener('change',()=>host.querySelectorAll('input[name="ysaWarehouse"]').forEach(x=>x.checked=all.checked));
-  host.querySelectorAll('input[name="ysaWarehouse"]').forEach(x=>x.addEventListener('change',()=>{
-    const boxes=[...host.querySelectorAll('input[name="ysaWarehouse"]')];
-    if(all)all.checked=boxes.length>0&&boxes.every(b=>b.checked);
-  }));
-}
-function selectedSupplierWarehouses(){
-  return [...document.querySelectorAll('#ysaWarehousePicker input[name="ysaWarehouse"]:checked')].map(x=>x.value);
-}
-
-function enhanceSupplierModal(){
-  const loc=document.getElementById('ysaLocation');
-  if(loc&&!loc.dataset.wh53){
-    loc.dataset.wh53='1';
-    loc.addEventListener('change',refreshWarehousePicker);
-  }
-  const picker=document.getElementById('ysaWarehousePicker');
-  if(picker && !picker.dataset.ready53){
-    picker.dataset.ready53='1';
-    refreshWarehousePicker();
-  }
-}
-
-function ensureAddWarehousePanel(){
-  const grid=document.querySelector('#settings .settings-grid');
-  if(!grid||document.getElementById('yardivoWarehouseAdmin'))return;
-  const sec=document.createElement('section');
-  sec.className='panel';
-  sec.id='yardivoWarehouseAdmin';
-  sec.innerHTML=`
-    <div class="panel-head"><div><h2>DODAJ SKLADIŠTE</h2><small>Admin dodaje nova skladišta po lokaciji</small></div></div>
-    <div class="master-settings-body">
-      <div class="ywa-grid">
-        <label>LOKACIJA<select id="ywaLocation"><option value="DU">Dugopolje</option><option value="VG">Velika Gorica</option></select></label>
-        <label>OZNAKA SKLADIŠTA<input id="ywaCode" placeholder="npr. W202" autocomplete="off"></label>
-        <label>NAZIV<input id="ywaName" placeholder="npr. Ambijent 2" autocomplete="off"></label>
-        <label>BROJ RAMPI · OPCIONALNO<input id="ywaRamps" type="number" min="0" max="99" placeholder="npr. 6"></label>
-      </div>
-      <button class="primary" type="button" id="ywaSave" style="margin-top:10px">DODAJ SKLADIŠTE</button>
-      <div id="yardivoWarehouseList"></div>
-    </div>`;
-  const userPanel=document.getElementById('masterUserAdmin');
-  if(userPanel)userPanel.insertAdjacentElement('afterend',sec);else grid.prepend(sec);
-  document.getElementById('ywaSave').onclick=saveWarehouse;
-  renderWarehouseAdmin();
-  sec.style.display=isAdmin()?'':'none';
-}
-function renderWarehouseAdmin(){
-  const host=document.getElementById('yardivoWarehouseList');if(!host)return;
-  const rows=allWarehouses().sort((a,b)=>String(a.code).localeCompare(String(b.code)));
-  host.innerHTML=rows.map(w=>`<div class="ywa-row"><strong>${esc(w.code)}</strong><span>${esc(w.name||'')}</span><span>${esc(w.location||'')}</span><span>${w.ramps?esc(w.ramps)+' rampi':'—'}</span></div>`).join('');
-}
-function saveWarehouse(){
-  if(!isAdmin())return alert('Samo Admin može dodavati skladišta.');
-  const location=document.getElementById('ywaLocation').value;
-  const code=String(document.getElementById('ywaCode').value||'').trim().toUpperCase();
-  const name=String(document.getElementById('ywaName').value||'').trim();
-  const ramps=Number(document.getElementById('ywaRamps').value||0)||null;
-  if(!/^W\d{3,4}$/.test(code))return alert('Oznaka skladišta mora biti npr. W202.');
-  if(!name)return alert('Upiši naziv skladišta.');
-  if(allWarehouses().some(w=>String(w.code).toUpperCase()===code))return alert('Skladište '+code+' već postoji.');
-  const arr=loadDynamicWarehouses();
-  arr.push({location,code,name,ramps});
-  localStorage.setItem(DYN_WH_KEY,JSON.stringify(arr));
-  try{
-    WAREHOUSES[code]={code,location:locLong(location),name,ramps,receptionStart:null,receptionEnd:null};
-  }catch(e){}
-  document.getElementById('ywaCode').value='';
-  document.getElementById('ywaName').value='';
-  document.getElementById('ywaRamps').value='';
-  renderWarehouseAdmin();
-  refreshWarehousePicker();
-  refreshWarehouseDropdowns();
-  try{renderWarehouseCards?.()}catch(e){}
-  try{showYmsToast?.('success','SKLADIŠTE DODANO',code+' · '+name)}catch(e){alert('Skladište je dodano.')}
-}
-function refreshWarehouseDropdowns(){
-  const rows=allWarehouses();
-  const build=(withAll=true)=>{
-    const vg=rows.filter(w=>locCodeFromWarehouse(w)==='VG');
-    const du=rows.filter(w=>locCodeFromWarehouse(w)==='DU');
-    return `${withAll?'<option value="ALL">Sva skladišta</option>':''}
-      <optgroup label="Velika Gorica">${vg.map(w=>`<option value="${esc(w.code)}">${esc(w.code)} · ${esc(w.name||'')}</option>`).join('')}</optgroup>
-      <optgroup label="Dugopolje">${du.map(w=>`<option value="${esc(w.code)}">${esc(w.code)} · ${esc(w.name||'')}</option>`).join('')}</optgroup>`;
-  };
-  const gw=document.getElementById('globalWarehouse');
-  if(gw){const cur=gw.value;gw.innerHTML=build(true);if([...gw.options].some(o=>o.value===cur))gw.value=cur}
-  ['announcementWarehouse','uaWarehouse'].forEach(id=>{
-    const s=document.getElementById(id);if(!s)return;
-    const cur=s.value;s.innerHTML=build(false);if([...s.options].some(o=>o.value===cur))s.value=cur;
-  });
-}
-
-function ensureSupplierLoginOption(){
-  const s=document.getElementById('loginRole');if(!s)return;
-  if(![...s.options].some(o=>o.value==='supplier')){
-    const o=document.createElement('option');o.value='supplier';o.textContent='Dobavljač';s.appendChild(o);
-  }
-}
-
-function ensureSupplierPortal(){
-  if(document.getElementById('supplierPortal'))return;
-  const main=document.querySelector('.main');if(!main)return;
-  const sec=document.createElement('section');
-  sec.id='supplierPortal';sec.className='view';
-  sec.innerHTML=`
-    <section class="panel">
-      <div class="panel-head"><div><h2>PORTAL DOBAVLJAČA</h2><small>Odabir termina dostave za dodijeljena skladišta</small></div></div>
-      <div class="supplier-booking-grid">
-        <label>SKLADIŠTE<select id="supplierBookingWarehouse"></select></label>
-        <label>DATUM DOSTAVE<input id="supplierBookingDate" type="date"></label>
-        <label>TERMIN<input id="supplierBookingTime" type="time" step="900"></label>
-      </div>
-      <div class="supplier-note">Dobavljač će vidjeti samo skladišta koja mu je Admin dodijelio. Spremanje termina i potvrda od Zaliha bit će spojeni na DEV bazu u backend koraku.</div>
-      <div style="padding:0 14px 14px"><button class="primary" type="button" id="supplierBookingSave">POŠALJI ZAHTJEV ZA TERMIN</button></div>
-    </section>`;
-  main.appendChild(sec);
-  document.getElementById('supplierBookingSave').onclick=()=>alert('UI je spreman. Backend spremanje termina spajamo u sljedećem koraku.');
-}
-function supplierRoleUI(){
-  if(sessionRole()!=='supplier')return;
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  const p=document.getElementById('supplierPortal');
-  if(p){p.style.display='block';p.classList.add('active')}
-  document.querySelector('.sidebar')?.style.setProperty('display','none','important');
-  const wh=document.getElementById('supplierBookingWarehouse');
-  if(wh&&!wh.options.length)wh.innerHTML=allWarehouses().map(w=>`<option value="${esc(w.code)}">${esc(w.code)} · ${esc(w.name||'')}</option>`).join('');
-}
-
-function patchSupplierSavePayload(){
-  const btn=document.getElementById('yardivoSupplierAccountSave');
-  if(!btn||btn.dataset.v53)return;
-  btn.dataset.v53='1';
-  btn.addEventListener('click',()=>{
-    const warehouses=selectedSupplierWarehouses();
-    if(!warehouses.length){
-      setTimeout(()=>{},0);
-      // Existing handler will still run; we block at capture layer below.
-    }
-  },true);
-}
-document.addEventListener('click',e=>{
-  if(e.target?.id==='yardivoSupplierAccountSave'){
-    const warehouses=selectedSupplierWarehouses();
-    if(!warehouses.length){
-      e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-      alert('Odaberi barem jedno skladište za dobavljača.');
-      return;
-    }
-    // Store UI assignment locally for now; backend will persist this in next step.
-    try{
-      const key='yardivo_supplier_pending_warehouse_assignment_v1';
-      localStorage.setItem(key,JSON.stringify({
-        supplier:document.getElementById('ysaSupplier')?.value||'',
-        username:document.getElementById('ysaUsername')?.value||'',
-        location:document.getElementById('ysaLocation')?.value||'',
-        warehouses
-      }));
-    }catch(_){}
-  }
-},true);
-
-function init(){
-  loadDynamicWarehouses();
-  ensureSupplierLoginOption();
-  ensureAddWarehousePanel();
-  ensureSupplierPortal();
-  enhanceSupplierModal();
-  refreshWarehouseDropdowns();
-  supplierRoleUI();
-}
-
-document.addEventListener('DOMContentLoaded',()=>setTimeout(init,500));
-window.addEventListener('load',()=>setTimeout(init,900));
-window.addEventListener('yardivo:login',()=>setTimeout(init,120));
-document.addEventListener('click',e=>{
-  if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"],#yardivoSupplierAccountBtn'))setTimeout(init,80);
-},true);
-let __v53InitTimer=0;
-new MutationObserver(()=>{
-  clearTimeout(__v53InitTimer);
-  __v53InitTimer=setTimeout(()=>{
-    ensureSupplierLoginOption();
-    if(document.getElementById('settings'))ensureAddWarehousePanel();
-    if(document.getElementById('ysaWarehousePicker') && !document.getElementById('ysaWarehousePicker').dataset.ready53)enhanceSupplierModal();
-  },120);
-}).observe(document.documentElement,{childList:true,subtree:true});
-
-window.YardivoWarehouseAdminV53={all:allWarehouses,refresh:refreshWarehouseDropdowns};
-})();
-</script>
-
-
-<style id="yardivo-v531-login-safety">
-#loginOverlay{pointer-events:auto!important}
-#loginOverlay .login-card,#loginOverlay .login-box,#loginOverlay form,
-#loginUser,#loginPass,#loginRole,#rememberMe,#loginSubmitBtn,#loginChangePasswordBtn{
-  pointer-events:auto!important;
-}
-#yardivoSupplierAccountModal:not(.open){display:none!important;pointer-events:none!important}
+<style id="yardivo-v532-warehouse-admin-style">
+#yardivoWarehouseAdmin{display:none}
+#yardivoWarehouseAdmin .ywa-grid{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:10px}
+#yardivoWarehouseAdmin label{display:flex;flex-direction:column;gap:6px}
+@media(max-width:850px){#yardivoWarehouseAdmin .ywa-grid{grid-template-columns:1fr}}
 </style>
-<script id="yardivo-v531-login-safety-script">
+<script id="yardivo-v532-warehouse-admin">
 (function(){
 'use strict';
-function unlockLogin(){
-  const overlay=document.getElementById('loginOverlay');
-  if(!overlay)return;
-  overlay.style.pointerEvents='auto';
-  ['loginUser','loginPass','loginRole','rememberMe','loginSubmitBtn','loginChangePasswordBtn'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el){el.style.pointerEvents='auto';}
-  });
+const KEY='yardivo_dynamic_warehouses_v1';
+function role(){try{return String(currentSession?.role||'').toLowerCase()}catch(e){return''}}
+function ensureWarehouseAdmin(){
+  if(role()!=='admin')return;
+  const panel=document.getElementById('masterUserAdmin');
+  if(!panel||document.getElementById('yardivoWarehouseAdmin'))return;
+  panel.insertAdjacentHTML('afterend',`
+    <section class="panel" id="yardivoWarehouseAdmin" style="display:block">
+      <div class="panel-head"><div><h2>DODAJ SKLADIŠTE</h2><small>Admin dodaje skladište po lokaciji</small></div></div>
+      <div class="master-settings-body">
+        <div class="ywa-grid">
+          <label>LOKACIJA<select id="ywaLocation"><option value="DU">Dugopolje</option><option value="VG">Velika Gorica</option></select></label>
+          <label>OZNAKA SKLADIŠTA<input id="ywaCode" placeholder="npr. W202" autocomplete="off"></label>
+          <label>NAZIV<input id="ywaName" placeholder="npr. W202 Ambijent" autocomplete="off"></label>
+          <label>BROJ RAMPI · OPCIONALNO<input id="ywaRamps" type="number" min="0" max="99"></label>
+        </div>
+        <button id="ywaSave" class="primary" type="button" style="margin-top:10px">DODAJ SKLADIŠTE</button>
+        <div id="ywaMsg" style="margin-top:8px;font-size:10px"></div>
+      </div>
+    </section>`);
+  document.getElementById('ywaSave').onclick=()=>{
+    const location=document.getElementById('ywaLocation').value;
+    const code=String(document.getElementById('ywaCode').value||'').trim().toUpperCase();
+    const name=String(document.getElementById('ywaName').value||'').trim();
+    const ramps=Number(document.getElementById('ywaRamps').value||0)||null;
+    if(!/^W\d{3,4}$/.test(code))return alert('Oznaka mora biti npr. W202.');
+    if(!name)return alert('Upiši naziv skladišta.');
+    let rows=[]; try{rows=JSON.parse(localStorage.getItem(KEY)||'[]');if(!Array.isArray(rows))rows=[]}catch(e){rows=[]}
+    if(rows.some(x=>x.code===code))return alert('To skladište već postoji.');
+    rows.push({location,code,name,ramps});
+    localStorage.setItem(KEY,JSON.stringify(rows));
+    document.getElementById('ywaMsg').textContent='Dodano: '+code+' · '+name;
+    document.getElementById('ywaCode').value='';
+    document.getElementById('ywaName').value='';
+    document.getElementById('ywaRamps').value='';
+  };
 }
-document.addEventListener('DOMContentLoaded',unlockLogin);
-window.addEventListener('load',()=>setTimeout(unlockLogin,100));
+window.addEventListener('yardivo:login',()=>setTimeout(ensureWarehouseAdmin,200));
+document.addEventListener('click',e=>{
+  if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(ensureWarehouseAdmin,120);
+},true);
 })();
 </script>
 
