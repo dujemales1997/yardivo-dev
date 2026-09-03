@@ -11,7 +11,7 @@ Designed & Developed by Duje Maleš
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
 (function(){
   'use strict';
-  window.__YARDIVO_BUILD__='20260903-dev-v5.4.2-create-user-button-fix';
+  window.__YARDIVO_BUILD__='20260903-dev-v5.4.4-login-manager-fix';
   const nativeFetch=window.fetch?.bind(window);
   if(nativeFetch){
     window.fetch=function(input,init){
@@ -35,8 +35,8 @@ Designed & Developed by Duje Maleš
     const old=document.getElementById('yardivoSyncErrorBox'); if(old) old.remove();
     const badge=document.createElement('div');
     badge.id='yardivoBuildBadge';
-    badge.textContent='YARDIVO DEV · BUILD V5.4.2';
-    badge.title='20260903-dev-v5.4.2-create-user-button-fix';
+    badge.textContent='YARDIVO DEV · BUILD V5.4.4';
+    badge.title='20260903-dev-v5.4.4-login-manager-fix';
     badge.style.cssText='position:fixed;right:8px;bottom:8px;z-index:2147483646;font:700 10px/1.2 system-ui;padding:5px 7px;border-radius:6px;background:#0d1b29;color:#94a9b9;border:1px solid #26435a;opacity:.72;pointer-events:none';
     document.body.appendChild(badge);
   },{once:true});
@@ -6426,6 +6426,7 @@ var currentSession=null;
 <label>Uloga
       <select id="loginRole">
 <option value="admin">Admin</option>
+<option value="manager">Voditelj</option>
 <option value="reception">Prijam</option>
 <option value="inventory">Zalihe</option>
 <option value="porta">Porta</option>
@@ -20119,73 +20120,7 @@ document.addEventListener('click',()=>setTimeout(enforce,0),true);
 setInterval(enforce,2500);
 })();
 </script>
-<script id="yardivo-server-user-admin">
-(function(){
-'use strict';
-async function invoke(action,payload={}){
-  const c=await window.YardivoAuth.client();
-  const {data,error}=await c.functions.invoke('yardivo-admin-users',{body:{action,...payload}});
-  if(error)throw error;if(data?.error)throw new Error(data.error);return data;
-}
-function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-async function render(){
-  const host=document.getElementById('masterUserList');if(!host||String(currentSession?.role||'')!=='admin')return;
-  host.innerHTML='<div class="master-note">Učitavanje korisnika sa servera…</div>';
-  try{
-    const r=await invoke('list');const a=r.users||[];
-    host.innerHTML='<div class="master-user-row"><strong>Korisnik</strong><strong>Rola</strong><strong>Lokacija</strong><strong>Status</strong><strong>Akcije</strong></div>'+
-    a.map(u=>`<div class="master-user-row"><div><strong>${esc(u.username)}</strong></div><div>${esc(u.app_role)}</div><div>${esc(u.location)}</div><div>${u.active?'AKTIVAN':'DEAKTIVIRAN'}</div><div><button class="action" data-srv-toggle="${u.auth_user_id}" data-active="${u.active}">${u.active?'DEAKT.':'AKTIV.'}</button> <button class="action" data-srv-password="${u.auth_user_id}" data-srv-user="${esc(u.username)}">PROMIJENI ŠIFRU</button> ${u.username==='dujemales'?'':`<button class="action danger" data-srv-del="${u.auth_user_id}">OBRIŠI</button>`}</div></div>`).join('');
-    host.querySelectorAll('[data-srv-toggle]').forEach(b=>b.onclick=async()=>{try{await invoke('update',{auth_user_id:b.dataset.srvToggle,active:b.dataset.active!=='true'});await render()}catch(e){alert(e.message)}});
-    host.querySelectorAll('[data-srv-password]').forEach(b=>b.onclick=async()=>{
-      const username=b.dataset.srvUser||'korisnik';
-      const next=window.prompt(`NOVA ŠIFRA · ${username}\nUpiši novu šifru (najmanje 6 znakova).`);
-      if(next===null)return;
-      if(String(next).length<6){alert('Šifra mora imati najmanje 6 znakova.');return}
-      const again=window.prompt(`POTVRDA ŠIFRE · ${username}\nPonovno upiši novu šifru.`);
-      if(again===null)return;
-      if(next!==again){alert('Šifre se ne podudaraju.');return}
-      if(!confirm(`Promijeniti šifru za korisnika "${username}"?`))return;
-      b.disabled=true;
-      try{await invoke('password',{auth_user_id:b.dataset.srvPassword,password:next});alert(`Šifra za korisnika "${username}" je uspješno promijenjena.`)}
-      catch(e){alert('Promjena šifre nije uspjela: '+(e?.message||e))}
-      finally{b.disabled=false}
-    });
-    host.querySelectorAll('[data-srv-del]').forEach(b=>b.onclick=async()=>{if(confirm('Trajno obrisati korisnika?'))try{await invoke('delete',{auth_user_id:b.dataset.srvDel});await render()}catch(e){alert(e.message)}});
-  }catch(e){host.innerHTML=`<div class="master-note warn">Greška: ${esc(e.message)}</div>`}
-}
-async function create(){
-  if(String(currentSession?.role||'')!=='admin')return;
-  const username=document.getElementById('muUser')?.value.trim().toLowerCase()||'';
-  const password=document.getElementById('muPass')?.value||'';
-  const role=document.getElementById('muRole')?.value||'';
-  const location=document.getElementById('muLocation')?.value||'VG';
-  const warehouses=yardivoSelectedInternalUserWarehouses();
-  if(password.length<6){alert('Password mora imati najmanje 6 znakova.');return}
-  if(!warehouses.length){alert('Odaberi barem jedno skladište za korisnika.');return}
-  if(location==='ALL'&&!['admin','manager','inventory'].includes(assignedRole)){
-    alert('Sve lokacije mogu imati samo Admin, Voditelj ili Upravljanje zalihama.');
-    return;
-  }
-  try{
-    await invoke('create',{username,password,role,location,warehouses});
-    document.getElementById('muUser').value='';document.getElementById('muPass').value='';
-    await render();
-    try{showYmsToast?.('success','KORISNIK','Korisnik je kreiran u Supabase Authu.')}catch(e){}
-  }catch(e){alert('Kreiranje korisnika nije uspjelo: '+e.message)}
-}
-function bind(){
-  const btn=document.getElementById('muSave');
-  if(btn){btn.onclick=create;btn.textContent='KREIRAJ SIGURNI KORISNIČKI RAČUN'}
-  const management=document.querySelector('#muRole option[value="management"]');management?.remove();
-  render();
-}
-document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,350));
-window.addEventListener('load',()=>setTimeout(bind,700));
-const mo=new MutationObserver(()=>{if(document.getElementById('muSave')&&!document.getElementById('muSave').dataset.serverBound){document.getElementById('muSave').dataset.serverBound='1';bind()}});
-mo.observe(document.documentElement,{childList:true,subtree:true});
-window.YardivoUserAdmin={render,create};
-})();
-</script>
+
 <script id="yardivo-final-settings-rbac-20260831">
 (function(){
 'use strict';
@@ -31575,42 +31510,264 @@ document.getElementById('yspLogout')?.addEventListener('click',()=>{
 </script>
 
 
-<script id="yardivo-v541-role-scope-user-admin">
+
+
+
+<script id="yardivo-v543-user-admin-hard-fix">
 (function(){
 'use strict';
 
-function normalizeRole(v){
+function norm(v){
   v=String(v||'').trim().toLowerCase();
-  if(v==='management'||v==='voditelj')return'manager';
+  if(v==='management'||v==='voditelj') return 'manager';
   return v;
 }
-function refreshLocationOptions(){
+
+function isAdmin(){
+  try{
+    const s=(typeof currentSession!=='undefined'?currentSession:window.currentSession)||{};
+    return norm(s.role)==='admin';
+  }catch(e){
+    return norm(window.currentSession?.role)==='admin';
+  }
+}
+
+function ensureRoleOptions(){
+  const sel=document.getElementById('muRole');
+  if(!sel) return null;
+
+  const current=norm(sel.value);
+  const roles=[
+    ['inventory','Upravljanje zalihama'],
+    ['reception','Prijam'],
+    ['gate','Porta'],
+    ['manager','Voditelj'],
+    ['admin','Admin']
+  ];
+
+  const wanted=new Map(roles);
+  [...sel.options].forEach(o=>{
+    const val=norm(o.value);
+    if(!wanted.has(val)) o.remove();
+    else o.value=val;
+  });
+
+  roles.forEach(([value,label])=>{
+    let o=[...sel.options].find(x=>x.value===value);
+    if(!o){
+      o=document.createElement('option');
+      o.value=value;
+      sel.appendChild(o);
+    }
+    o.textContent=label;
+  });
+
+  if(wanted.has(current)) sel.value=current;
+  return sel;
+}
+
+function ensureLocationOptions(){
   const roleSel=document.getElementById('muRole');
   const locSel=document.getElementById('muLocation');
-  if(!roleSel||!locSel)return;
-  const r=normalizeRole(roleSel.value);
-  const mayUseAll=['admin','manager','inventory'].includes(r);
-  let allOpt=[...locSel.options].find(o=>o.value==='ALL');
-  if(mayUseAll){
-    if(!allOpt){
-      allOpt=document.createElement('option');
-      allOpt.value='ALL';
-      allOpt.textContent='Sve lokacije';
-      locSel.appendChild(allOpt);
-    }
-  }else{
-    if(allOpt){
-      if(locSel.value==='ALL')locSel.value='DU';
-      allOpt.remove();
-    }
-  }
-  try{yardivoRenderInternalUserWarehousePicker([])}catch(e){}
+  if(!roleSel||!locSel) return;
+
+  const role=norm(roleSel.value);
+  const old=String(locSel.value||'DU').toUpperCase();
+  const canAll=['admin','manager','inventory'].includes(role);
+
+  const values=canAll
+    ? [['DU','Dugopolje'],['VG','Velika Gorica'],['ALL','Sve lokacije']]
+    : [['DU','Dugopolje'],['VG','Velika Gorica']];
+
+  locSel.innerHTML='';
+  values.forEach(([value,label])=>{
+    const o=document.createElement('option');
+    o.value=value;
+    o.textContent=label;
+    locSel.appendChild(o);
+  });
+
+  locSel.value=values.some(x=>x[0]===old)?old:'DU';
 }
-document.addEventListener('change',e=>{
-  if(e.target?.id==='muRole')refreshLocationOptions();
+
+function renderWarehouses(){
+  const host=document.getElementById('muWarehousePicker');
+  if(!host) return;
+
+  try{
+    if(typeof window.yardivoRenderInternalUserWarehousePicker==='function'){
+      window.yardivoRenderInternalUserWarehousePicker([]);
+      return;
+    }
+    if(typeof yardivoRenderInternalUserWarehousePicker==='function'){
+      yardivoRenderInternalUserWarehousePicker([]);
+      return;
+    }
+  }catch(e){}
+
+  const loc=String(document.getElementById('muLocation')?.value||'DU').toUpperCase();
+  const fallback = loc==='ALL'
+    ? [
+        ['W201','Dugopolje'],['W203','Dugopolje'],['W204','Dugopolje'],
+        ['W101','Velika Gorica'],['W103','Velika Gorica'],['W104','Velika Gorica']
+      ]
+    : loc==='DU'
+      ? [['W201','Dugopolje'],['W203','Dugopolje'],['W204','Dugopolje']]
+      : [['W101','Velika Gorica'],['W103','Velika Gorica'],['W104','Velika Gorica']];
+
+  host.innerHTML=
+    '<label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-weight:900">'+
+      '<input id="muAllWarehouses" type="checkbox" style="width:auto"> SVA SKLADIŠTA'+
+    '</label>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:6px">'+
+      fallback.map(([code,place])=>
+        '<label style="display:flex;align-items:center;gap:8px;padding:7px;border:1px solid #294252;border-radius:7px">'+
+          '<input type="checkbox" name="muWarehouse" value="'+code+'" style="width:auto">'+
+          '<span><strong>'+code+'</strong><br><small>'+place+'</small></span>'+
+        '</label>'
+      ).join('')+
+    '</div>';
+
+  const all=host.querySelector('#muAllWarehouses');
+  const boxes=[...host.querySelectorAll('input[name="muWarehouse"]')];
+  if(all) all.onchange=()=>boxes.forEach(b=>b.checked=all.checked);
+  boxes.forEach(b=>b.onchange=()=>{
+    if(all) all.checked=boxes.length>0&&boxes.every(x=>x.checked);
+  });
+}
+
+function bindCreateButton(){
+  const btn=document.getElementById('muSave');
+  if(!btn) return;
+
+  btn.type='button';
+  btn.disabled=false;
+  btn.removeAttribute('disabled');
+  btn.style.pointerEvents='auto';
+  btn.style.opacity='1';
+  btn.textContent='KREIRAJ KORISNIČKI PROFIL';
+
+  btn.onclick=function(ev){
+    ev.preventDefault();
+    ev.stopPropagation();
+    if(!isAdmin()){
+      alert('Samo Admin može kreirati korisničke profile.');
+      return false;
+    }
+    if(window.YardivoServerProfiles?.create){
+      window.YardivoServerProfiles.create();
+    }else{
+      alert('Modul za kreiranje korisnika nije učitan. Osvježi stranicu i pokušaj ponovno.');
+    }
+    return false;
+  };
+}
+
+function applyAll(){
+  if(!document.getElementById('masterUserAdmin')) return;
+  ensureRoleOptions();
+  ensureLocationOptions();
+  renderWarehouses();
+  bindCreateButton();
+}
+
+document.addEventListener('change',function(e){
+  if(e.target?.id==='muRole'){
+    ensureLocationOptions();
+    renderWarehouses();
+    bindCreateButton();
+  }
+  if(e.target?.id==='muLocation'){
+    renderWarehouses();
+    bindCreateButton();
+  }
 },true);
-window.addEventListener('load',()=>setTimeout(refreshLocationOptions,300));
-window.addEventListener('yardivo:login',()=>setTimeout(refreshLocationOptions,200));
+
+document.addEventListener('click',function(e){
+  if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"]')){
+    setTimeout(applyAll,80);
+    setTimeout(applyAll,300);
+  }
+},true);
+
+window.addEventListener('yardivo:login',()=>setTimeout(applyAll,120));
+window.addEventListener('load',()=>{
+  setTimeout(applyAll,300);
+  setTimeout(applyAll,1000);
+});
+
+const obs=new MutationObserver((mutations)=>{
+  let relevant=false;
+  for(const m of mutations){
+    for(const n of m.addedNodes){
+      if(n.nodeType===1 && (
+        n.id==='masterUserAdmin' ||
+        n.querySelector?.('#masterUserAdmin') ||
+        n.id==='muRole' ||
+        n.id==='muLocation' ||
+        n.id==='muSave'
+      )){
+        relevant=true;
+        break;
+      }
+    }
+    if(relevant) break;
+  }
+  if(relevant) setTimeout(applyAll,0);
+});
+obs.observe(document.body,{childList:true,subtree:true});
+
+window.YardivoUserAdminUI={refresh:applyAll};
+})();
+</script>
+
+
+<script id="yardivo-v544-login-manager-guard">
+(function(){
+'use strict';
+function ensureManagerLoginRole(){
+  const candidates=[
+    document.getElementById('loginRole'),
+    document.getElementById('roleSelect'),
+    document.getElementById('userRole')
+  ].filter(Boolean);
+
+  if(!candidates.length){
+    document.querySelectorAll('select').forEach(sel=>{
+      const vals=[...sel.options].map(o=>String(o.value||'').toLowerCase());
+      if(vals.includes('admin') && (vals.includes('inventory')||vals.includes('reception')||vals.includes('supplier'))){
+        candidates.push(sel);
+      }
+    });
+  }
+
+  candidates.forEach(sel=>{
+    [...sel.options].forEach(o=>{
+      const v=String(o.value||'').toLowerCase();
+      if(v==='management'||v==='voditelj')o.value='manager';
+    });
+
+    let opt=[...sel.options].find(o=>String(o.value||'').toLowerCase()==='manager');
+    if(!opt){
+      opt=document.createElement('option');
+      opt.value='manager';
+      opt.textContent='Voditelj';
+      const admin=[...sel.options].find(o=>String(o.value||'').toLowerCase()==='admin');
+      if(admin?.nextSibling) sel.insertBefore(opt,admin.nextSibling);
+      else sel.appendChild(opt);
+    }else{
+      opt.value='manager';
+      opt.textContent='Voditelj';
+    }
+  });
+}
+window.addEventListener('load',()=>setTimeout(ensureManagerLoginRole,100));
+document.addEventListener('click',e=>{
+  if(e.target?.closest?.('#loginScreen,.login-card,[data-login]'))setTimeout(ensureManagerLoginRole,0);
+},true);
+const mo=new MutationObserver(()=>ensureManagerLoginRole());
+mo.observe(document.body,{childList:true,subtree:true});
+window.YardivoEnsureManagerLoginRole=ensureManagerLoginRole;
 })();
 </script>
 
