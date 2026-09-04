@@ -11,7 +11,7 @@ Designed & Developed by Duje Maleš
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
 (function(){
   'use strict';
-  window.__YARDIVO_BUILD__='20260903-dev-v5.4.7-create-profile-click-final-fix';
+  window.__YARDIVO_BUILD__='20260904-dev-v5.4.9-supplier-portal-ui';
   const nativeFetch=window.fetch?.bind(window);
   if(nativeFetch){
     window.fetch=function(input,init){
@@ -35,8 +35,8 @@ Designed & Developed by Duje Maleš
     const old=document.getElementById('yardivoSyncErrorBox'); if(old) old.remove();
     const badge=document.createElement('div');
     badge.id='yardivoBuildBadge';
-    badge.textContent='YARDIVO DEV · BUILD V5.4.7';
-    badge.title='20260903-dev-v5.4.7-create-profile-click-final-fix';
+    badge.textContent='YARDIVO DEV · BUILD V5.4.9';
+    badge.title='20260904-dev-v5.4.9-supplier-portal-ui';
     badge.style.cssText='position:fixed;right:8px;bottom:8px;z-index:2147483646;font:700 10px/1.2 system-ui;padding:5px 7px;border-radius:6px;background:#0d1b29;color:#94a9b9;border:1px solid #26435a;opacity:.72;pointer-events:none';
     document.body.appendChild(badge);
   },{once:true});
@@ -17888,28 +17888,7 @@ document.addEventListener('click',e=>{
 window.YardivoExpandedSchedule={open,close,render};
 })();
 </script>
-<script id="yardivo-cross-role-notifications-v1">
-(function(){
-'use strict';
-function role(){let r='';try{r=String(currentSession?.role||'').toLowerCase().trim()}catch(e){}if(r==='prijam')r='reception';if(r==='zalihe'||r==='upravljanje zalihama')r='inventory';return r}
-function load(){try{let a=JSON.parse(localStorage.getItem('yardivo_live_notifications_v1')||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}}
-function save(a){try{localStorage.setItem('yardivo_live_notifications_v1',JSON.stringify(a))}catch(e){}try{putCloudState?.('yardivo_live_notifications_v1',JSON.stringify(a))}catch(e){}try{YardivoNotifications?.render?.()}catch(e){}}
-function getA(id){try{return announcements.find(a=>String(a.id)===String(id))}catch(e){return null}}
-function send(target,event,title,body,a,x={}){let q=load(),now=new Date().toISOString();q.push({id:'XR-'+Date.now()+'-'+Math.random().toString(36).slice(2),event,title,body,at:now,createdAt:now,roles:[target],readBy:{},supplier:a?.supplier||'',announcementId:a?.id||'',orderNumber:a?.orderNumber||'',warehouse:a?.warehouse||'',dock:a?.dock||'',date:a?.date||'',time:a?.time||'',...x});save(q)}
-function lab(s){return s==='Na rampi'?'NA RAMPI':s==='Zaprimljeno'?'ZAPRIMLJEN':s==='Odbijen'?'ODBIJEN':String(s).toUpperCase()}
-const os=window.setReceivingAnnouncementStatus;
-if(typeof os==='function'){window.setReceivingAnnouncementStatus=function(id,next){let before=getA(id)?.status,out=os.apply(this,arguments),a=getA(id);if(role()==='reception'&&a&&before!==next&&['Na rampi','Zaprimljeno','Odbijen'].includes(next))send('inventory','RECEIVING_STATUS','PRIJAM · '+lab(next),`${a.supplier||'Dobavljač'} · ${a.date||''} ${a.time||''} · R${a.dock||'—'} · ${lab(next)}`,a,{receivingStatus:next});return out}}
-function hook(){
- let api=window.YardivoInventoryReschedule;if(!api||api.__xr)return;
- let oo=api.open,oc=api.commit;
- api.open=function(id,p){let a=getA(id);if(a)window.__xrBefore={id:String(id),date:a.date,time:a.time,dock:Number(a.dock),supplier:a.supplier||''};return oo.apply(this,arguments)};
- api.commit=function(){let b=window.__xrBefore,out=oc.apply(this,arguments);if(role()==='inventory'&&b)setTimeout(()=>{let a=getA(b.id);if(a&&(a.date!==b.date||a.time!==b.time||Number(a.dock)!==b.dock))send('reception','INVENTORY_RESCHEDULE','ZALIHE · PROMJENA TERMINA',`${a.supplier||b.supplier} · ${b.date} ${b.time} R${b.dock} → ${a.date} ${a.time} R${a.dock}`,a);window.__xrBefore=null},60);return out};api.__xr=true
-}
-let known=null;
-function watch(){if(!currentSession?.role)return;let now=new Set((announcements||[]).map(a=>String(a.id)));if(known===null){known=now;return}if(role()==='inventory')now.forEach(id=>{if(!known.has(id)){let a=getA(id);if(a)send('reception','INVENTORY_ANNOUNCEMENT','ZALIHE · NOVA NAJAVA',`${a.supplier||'Dobavljač'} · ${a.date||''} ${a.time||''} · R${a.dock||'—'}${a.orderNumber?' · '+a.orderNumber:''}`,a)}});known=now}
-window.addEventListener('load',()=>setTimeout(()=>{known=new Set((announcements||[]).map(a=>String(a.id)));hook()},1200));setInterval(()=>{hook();watch()},700);
-})();
-</script>
+
 <script data-disabled-by="yardivo-v30" id="yardivo-live-yard-digital-twin-v1" type="text/plain">
 (function(){
 'use strict';
@@ -18083,9 +18062,9 @@ const NOTIF_KEY='yardivo_live_notifications_v1';
 const DEFAULT_CFG={enabled:true,mode:'AUTO_SAFE',lateThreshold:20,horizonMinutes:240,maxShiftMinutes:240,scanSeconds:30};
 let selectedLogId=null,lastScanAt=0,scanBusy=false,lastSignature='';
 
-function role(){let r='';try{r=String(currentSession?.role||'').toLowerCase().trim()}catch(e){}if(r==='prijam')r='reception';if(r==='zalihe'||r==='upravljanje zalihama')r='inventory';if(r==='porta'||r==='portir')r='gate';return r}
+function role(){let r='';try{r=String(currentSession?.role||'').toLowerCase().trim()}catch(e){}if(r==='prijam')r='reception';if(r==='zalihe'||r==='upravljanje zalihama')r='inventory';if(r==='management'||r==='voditelj')r='manager';if(r==='porta'||r==='portir')r='gate';return r}
 function canManage(){return ['admin','inventory'].includes(role())}
-function canView(){return ['admin','inventory','reception'].includes(role())}
+function canView(){return ['admin','manager','inventory','reception'].includes(role())}
 function user(){try{return currentSession?.username||currentSession?.user||role()||'YARDIVO'}catch(e){return role()||'YARDIVO'}}
 function loadCfg(){try{return {...DEFAULT_CFG,...JSON.parse(localStorage.getItem(CFG_KEY)||'{}')}}catch(e){return {...DEFAULT_CFG}}}
 function applySmartUiState(c=loadCfg()){
@@ -18225,7 +18204,7 @@ function applyReplan(a,problem,c){
  const ls=logs();ls.push(log);saveLogs(ls);
  refreshAll();
  const msg=`${a.supplier||'Dobavljač'}: ${old.date} ${old.time} R${old.dock} → ${c.date} ${c.time} R${c.dock}. ${problem.reason} Automatski izračunato · pouzdanost ${conf}%.`;
- notification(['admin','inventory','reception'],'YARDIVO JE AUTOMATSKI PROMIJENIO TERMIN / RAMPU',msg,a,log);
+ notification(['admin','manager','inventory','reception'],'YARDIVO JE AUTOMATSKI PROMIJENIO TERMIN / RAMPU',msg,a,log);
  showAlert(log);
  selectedLogId=log.id;renderSection();
  return log;
@@ -18265,7 +18244,7 @@ function scan(force=false){
        if(!already){
          const l={id:Date.now()+'-NO-'+a.id,at:new Date().toISOString(),announcementId:a.id,supplier:a.supplier||'',warehouse:a.warehouse||'W101',old:{date:a.date,time:a.time,dock:Number(a.dock)},newSlot:null,problemType:problem.type,reason:problem.reason,status:'NO_SAFE_SLOT',confidence:0,acknowledgedBy:[]};
          const ls=logs();ls.push(l);saveLogs(ls);
-         notification(['admin','inventory','reception'],'YARDIVO · NEMA SIGURNOG TERMINA',`${a.supplier||'Dobavljač'} · ${problem.reason} Nije pronađen siguran slobodan termin.`,a,l);
+         notification(['admin','manager','inventory','reception'],'YARDIVO · NEMA SIGURNOG TERMINA',`${a.supplier||'Dobavljač'} · ${problem.reason} Nije pronađen siguran slobodan termin.`,a,l);
        }
        continue;
      }
@@ -30306,7 +30285,9 @@ async function renderProfiles(){
   }
 }
 
+let yardivoCreateProfileBusy=false;
 async function createProfile(){
+  if(yardivoCreateProfileBusy)return;
   if(!admin()){
     alert('Kreiranje korisničkog profila dostupno je samo Adminu. Ako si prijavljen kao Admin, odjavi se i ponovno prijavi.');
     return;
@@ -30323,6 +30304,9 @@ async function createProfile(){
   if(!warehouses.length){alert('Odaberi barem jedno skladište za korisnika.');return}
 
   try{
+    yardivoCreateProfileBusy=true;
+    const createBtn=document.getElementById('muSave');
+    if(createBtn){createBtn.disabled=true;createBtn.textContent='KREIRAM PROFIL...'}
     await invokeUsers('create',{username,password,role:assignedRole,location,warehouses});
     const u=document.getElementById('muUser'),p=document.getElementById('muPass'),n=document.getElementById('muName');
     if(u)u.value='';if(p)p.value='';if(n)n.value='';
@@ -30330,19 +30314,15 @@ async function createProfile(){
     try{showYmsToast?.('success','KORISNIK KREIRAN',`${username} · ${roleLabel(assignedRole)}`)}catch(_){}
   }catch(e){
     alert('Kreiranje korisnika nije uspjelo: '+e.message);
+  }finally{
+    yardivoCreateProfileBusy=false;
+    const createBtn=document.getElementById('muSave');
+    if(createBtn){createBtn.disabled=false;createBtn.removeAttribute('disabled');createBtn.textContent='KREIRAJ KORISNIČKI PROFIL'}
+    try{window.YardivoCreateProfileV548?.sync?.()}catch(_){}
   }
 }
 
-/* Canonical create-profile button owner.
-   Prevent the legacy local-user handler, but do not use stopImmediatePropagation:
-   later UI/button bindings remain functional. */
-document.addEventListener('click',e=>{
-  const btn=e.target.closest?.('#muSave');
-  if(!btn)return;
-  e.preventDefault();
-  e.stopPropagation();
-  createProfile();
-},true);
+
 
 function setupUsers(){
   if(!admin())return;
@@ -30352,10 +30332,8 @@ function setupUsers(){
   if(btn){
     btn.textContent='KREIRAJ KORISNIČKI PROFIL';
     btn.type='button';
-    btn.onclick=(ev)=>{
-      ev?.preventDefault?.();
-      createProfile();
-    };
+    btn.disabled=false;
+    btn.removeAttribute('disabled');
   }
   renderProfiles();
 }
@@ -31407,71 +31385,8 @@ document.addEventListener('click',e=>{
 </script>
 
 
-<style id="yardivo-v536-supplier-portal-style">
-#yardivoSupplierPortal{
-  display:none;position:fixed;inset:0;z-index:99990;background:#071119;color:#e8f1f5;
-  overflow:auto;padding:24px;box-sizing:border-box
-}
-#yardivoSupplierPortal .ysp-shell{max-width:900px;margin:0 auto}
-#yardivoSupplierPortal .ysp-card{border:1px solid #294252;background:#0b1821;border-radius:12px;padding:18px}
-#yardivoSupplierPortal .ysp-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
-#yardivoSupplierPortal .ysp-grid{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:12px}
-#yardivoSupplierPortal label{display:flex;flex-direction:column;gap:6px;font-size:10px;font-weight:900;color:#a9bbc6}
-#yardivoSupplierPortal select,#yardivoSupplierPortal input{width:100%;box-sizing:border-box}
-#yardivoSupplierPortal .ysp-note{margin-top:14px;padding:10px;border:1px solid #31543d;border-radius:8px;background:#0e251a;color:#c9ead5;font-size:10px}
-@media(max-width:760px){#yardivoSupplierPortal .ysp-grid{grid-template-columns:1fr}}
-</style>
-<div id="yardivoSupplierPortal">
-  <div class="ysp-shell">
-    <div class="ysp-card">
-      <div class="ysp-head">
-        <div><h2 style="margin:0">YARDIVO · DOBAVLJAČ</h2><small id="yspUser"></small></div>
-        <button type="button" id="yspLogout">ODJAVA</button>
-      </div>
-      <div class="ysp-grid">
-        <label>SKLADIŠTE
-          <select id="yspWarehouse"></select>
-        </label>
-        <label>DATUM DOSTAVE
-          <input id="yspDate" type="date">
-        </label>
-        <label>TERMIN
-          <input id="yspTime" type="time" step="900">
-        </label>
-      </div>
-      <div class="ysp-note">
-        Dobavljač vidi samo skladišta koja mu je Admin dodijelio. Slanje termina u bazu spajamo u sljedećem backend koraku.
-      </div>
-      <button type="button" id="yspSend" class="primary" style="margin-top:14px">POŠALJI ZAHTJEV ZA TERMIN</button>
-    </div>
-  </div>
-</div>
-<script id="yardivo-v536-supplier-portal">
-(function(){
-'use strict';
-function role(){try{return String(currentSession?.role||window.currentSession?.role||'').toLowerCase()}catch(e){return''}}
-function openSupplierPortal(){
-  if(role()!=='supplier')return false;
-  const p=document.getElementById('yardivoSupplierPortal'); if(!p)return false;
-  p.style.display='block';
-  const s=(typeof currentSession!=='undefined'?currentSession:window.currentSession)||{};
-  document.getElementById('yspUser').textContent=String(s.username||s.user||'');
-  const wh=document.getElementById('yspWarehouse');
-  const rows=Array.isArray(s.warehouses)?s.warehouses:[];
-  wh.innerHTML=rows.map(code=>`<option value="${code}">${typeof warehouseOptionLabel==='function'?warehouseOptionLabel(code):code}</option>`).join('');
-  return true;
-}
-window.YardivoSupplierPortal={open:openSupplierPortal};
-window.addEventListener('yardivo:login',()=>setTimeout(openSupplierPortal,80));
-document.getElementById('yspSend')?.addEventListener('click',()=>{
-  alert('Supplier login i ograničenje skladišta rade. Spremanje termina u Supabase spajamo sljedeće.');
-});
-document.getElementById('yspLogout')?.addEventListener('click',()=>{
-  try{document.getElementById('logoutBtn')?.click()}catch(e){}
-  location.reload();
-});
-})();
-</script>
+
+
 
 
 
@@ -31702,342 +31617,848 @@ window.YardivoV545UserAdmin={
 </script>
 
 
-<script id="yardivo-v546-notification-event-bridge">
+
+
+
+
+
+
+
+<style id="yardivo-v548-create-profile-button">
+#muSave{
+  pointer-events:auto!important;
+  cursor:pointer!important;
+  opacity:1!important;
+  visibility:visible!important;
+  position:relative!important;
+  z-index:1000!important;
+}
+#yardivoMuSaveProxy{
+  position:fixed!important;
+  z-index:2147483647!important;
+  margin:0!important;
+  box-sizing:border-box!important;
+  border:0!important;
+  border-radius:6px!important;
+  background:#1688ff!important;
+  color:#fff!important;
+  font:900 11px/1.1 Arial,sans-serif!important;
+  letter-spacing:.2px!important;
+  cursor:pointer!important;
+  display:none;
+  align-items:center!important;
+  justify-content:center!important;
+  box-shadow:0 4px 14px rgba(0,0,0,.28)!important;
+}
+#yardivoMuSaveProxy:disabled{opacity:.68!important;cursor:wait!important}
+</style>
+<script id="yardivo-v548-create-profile-hard-owner">
+(function(){
+'use strict';
+let firing=false;
+
+function norm(v){
+  v=String(v||'').trim().toLowerCase();
+  if(v==='voditelj'||v==='management')return'manager';
+  if(v==='prijam')return'reception';
+  if(v==='porta'||v==='portir')return'gate';
+  if(v==='zalihe'||v==='upravljanje zalihama')return'inventory';
+  return v;
+}
+function role(){
+  try{return norm((typeof currentSession!=='undefined'?currentSession:window.currentSession)?.role)}
+  catch(e){return norm(window.currentSession?.role)}
+}
+function admin(){return role()==='admin'}
+
+function native(){return document.getElementById('muSave')}
+function visible(el){
+  if(!el)return false;
+  const r=el.getBoundingClientRect();
+  const s=getComputedStyle(el);
+  return r.width>20&&r.height>20&&s.display!=='none'&&s.visibility!=='hidden'&&r.bottom>0&&r.top<innerHeight;
+}
+function invoke(){
+  if(firing)return;
+  if(!admin()){alert('Samo Admin može kreirati korisničke profile.');return}
+  const api=window.YardivoServerProfiles;
+  if(!api||typeof api.create!=='function'){
+    alert('Modul za kreiranje korisnika nije učitan. Napravi Ctrl+F5.');
+    return;
+  }
+  firing=true;
+  const p=document.getElementById('yardivoMuSaveProxy');
+  const b=native();
+  if(p){p.disabled=true;p.textContent='KREIRAM PROFIL...'}
+  if(b){b.disabled=true;b.textContent='KREIRAM PROFIL...'}
+  Promise.resolve(api.create()).catch(err=>{
+    console.error('YARDIVO create profile',err);
+    alert('Kreiranje korisnika nije uspjelo: '+(err?.message||err));
+  }).finally(()=>{
+    firing=false;
+    if(p){p.disabled=false;p.textContent='KREIRAJ KORISNIČKI PROFIL'}
+    if(b){b.disabled=false;b.removeAttribute('disabled');b.textContent='KREIRAJ KORISNIČKI PROFIL'}
+    sync();
+  });
+}
+function proxy(){
+  let p=document.getElementById('yardivoMuSaveProxy');
+  if(!p){
+    p=document.createElement('button');
+    p.id='yardivoMuSaveProxy';
+    p.type='button';
+    p.textContent='KREIRAJ KORISNIČKI PROFIL';
+    p.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();invoke()},true);
+    document.body.appendChild(p);
+  }
+  return p;
+}
+function sync(){
+  const b=native(),p=proxy();
+  if(!admin()||!visible(b)){
+    p.style.display='none';
+    return;
+  }
+  b.type='button';
+  b.disabled=false;
+  b.removeAttribute('disabled');
+  b.removeAttribute('inert');
+  b.style.setProperty('pointer-events','auto','important');
+  b.style.setProperty('opacity','1','important');
+  b.style.setProperty('visibility','visible','important');
+  b.textContent='KREIRAJ KORISNIČKI PROFIL';
+
+  const r=b.getBoundingClientRect();
+  p.style.left=r.left+'px';
+  p.style.top=r.top+'px';
+  p.style.width=r.width+'px';
+  p.style.height=r.height+'px';
+  p.style.display='flex';
+}
+
+/* Direct native binding, in case no overlay exists. */
+document.addEventListener('click',e=>{
+  if(e.target?.closest?.('#muSave')){
+    e.preventDefault();e.stopPropagation();
+    invoke();
+  }
+},true);
+
+/* Coordinate fallback: catches the click even when another transparent element is on top. */
+document.addEventListener('click',e=>{
+  if(!admin())return;
+  const b=native();
+  if(!visible(b))return;
+  const r=b.getBoundingClientRect();
+  if(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom){
+    if(e.target?.closest?.('#yardivoMuSaveProxy,#muSave'))return;
+    e.preventDefault();e.stopPropagation();
+    invoke();
+  }
+},true);
+
+window.addEventListener('scroll',sync,true);
+window.addEventListener('resize',sync);
+window.addEventListener('yardivo:login',()=>setTimeout(sync,100));
+window.addEventListener('load',()=>{setTimeout(sync,300);setTimeout(sync,1200)});
+document.addEventListener('click',e=>{
+  if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"]')){
+    setTimeout(sync,60);setTimeout(sync,250);
+  }
+},true);
+setInterval(sync,700);
+
+window.YardivoCreateProfileV548={sync,invoke};
+})();
+</script>
+
+<script id="yardivo-v548-full-operational-notifications">
 (function(){
 'use strict';
 
 const KEY='yardivo_live_notifications_v1';
+const SNAP='yardivo_full_news_snapshot_v548';
 const TARGETS=['admin','manager','inventory','reception'];
-const SNAP='yardivo_notification_ann_snapshot_v546';
 
-function normRole(v){
-  v=String(v||'').trim().toLowerCase();
-  if(v==='management'||v==='voditelj')return'manager';
-  if(v==='zalihe'||v==='upravljanje zalihama')return'inventory';
-  if(v==='prijam')return'reception';
-  if(v==='porta'||v==='portir')return'gate';
-  return v;
-}
-function role(){
-  try{return normRole((typeof currentSession!=='undefined'?currentSession:window.currentSession)?.role)}
-  catch(e){return normRole(window.currentSession?.role)}
-}
-function anns(){
-  try{return Array.isArray(announcements)?announcements:[]}
+function A(){try{return Array.isArray(announcements)?announcements:[]}catch(e){return[]}}
+function safe(v){return v===undefined||v===null?'':String(v)}
+function norm(v){return safe(v).trim()}
+function load(){
+  try{const x=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(x)?x:[]}
   catch(e){return[]}
 }
-function loadNotifications(){
-  try{
-    const a=JSON.parse(localStorage.getItem(KEY)||'[]');
-    return Array.isArray(a)?a:[];
-  }catch(e){return[]}
-}
-function saveNotifications(a){
-  try{localStorage.setItem(KEY,JSON.stringify(a.slice(-500)))}catch(e){}
-  try{
-    if(typeof putCloudState==='function'){
-      Promise.resolve(putCloudState(KEY,JSON.stringify(a.slice(-500)))).catch(()=>{});
-    }
-  }catch(e){}
+function save(q){
+  q=q.slice(-1200);
+  try{localStorage.setItem(KEY,JSON.stringify(q))}catch(e){}
+  try{if(typeof putCloudState==='function')Promise.resolve(putCloudState(KEY,JSON.stringify(q))).catch(()=>{})}catch(e){}
   try{window.YardivoNotifications?.render?.()}catch(e){}
 }
-function clean(v){return String(v??'').trim()}
-function aid(a){return clean(a?.id)}
-function status(a){return clean(a?.status||'Najavljen')}
-function signature(a){
+function loadSnap(){
+  try{const x=JSON.parse(sessionStorage.getItem(SNAP)||'{}');return x&&typeof x==='object'?x:{}}
+  catch(e){return{}}
+}
+function saveSnap(x){try{sessionStorage.setItem(SNAP,JSON.stringify(x))}catch(e){}}
+function idOf(a){return norm(a?.id)}
+function plate(a){return norm(a?.arrivalPlate||a?.plannedPlate||a?.vehiclePlate||a?.plate||a?.registration)}
+function driver(a){return norm(a?.arrivalDriver||a?.plannedDriver||a?.driverNameCanonical||a?.driver||a?.driverName)}
+function state(a){
   return {
-    id:aid(a),
-    status:status(a),
-    date:clean(a?.date),
-    time:clean(a?.time),
-    dock:clean(a?.dock),
-    warehouse:clean(a?.warehouse),
-    supplier:clean(a?.supplier),
-    orderNumber:clean(a?.orderNumber),
-    plate:clean(a?.plannedPlate||a?.vehiclePlate||a?.plate||a?.registration),
-    updatedAt:clean(a?.updatedAt||a?.modifiedAt||a?.changedAt||a?.createdAt)
+    id:idOf(a),
+    supplier:norm(a?.supplier),
+    orderNumber:norm(a?.orderNumber),
+    date:norm(a?.date),
+    time:norm(a?.time),
+    actualDate:norm(a?.actualDate),
+    actualTime:norm(a?.actualTime),
+    warehouse:norm(a?.warehouse),
+    dock:norm(a?.dock),
+    status:norm(a?.status||'Najavljen'),
+    arrivalType:norm(a?.arrivalType),
+    approvalStatus:norm(a?.approvalStatus),
+    plate:plate(a),
+    driver:driver(a),
+    pallets:norm(a?.pallets),
+    sku:norm(a?.sku),
+    checkinAt:norm(a?.checkinAt),
+    arrivalRecordedAt:norm(a?.arrivalRecordedAt),
+    actualArrivalAt:norm(a?.actualArrivalAt||a?.arrivalAt),
+    gateEnteredAt:norm(a?.gateEnteredAt||a?.enteredAt),
+    yardArrivalAt:norm(a?.yardArrivalAt),
+    dockArrivalAt:norm(a?.dockArrivalAt||a?.dockAt),
+    unloadStartAt:norm(a?.unloadStartAt),
+    receivedAt:norm(a?.receivedAt),
+    rejectedAt:norm(a?.rejectedAt),
+    finishedAt:norm(a?.finishedAt),
+    checkoutAt:norm(a?.checkoutAt),
+    waitingAt:norm(a?.waitingAt),
+    calledAt:norm(a?.calledAt)
   };
 }
-function loadSnap(){
-  try{
-    const x=JSON.parse(sessionStorage.getItem(SNAP)||'{}');
-    return x&&typeof x==='object'?x:{};
-  }catch(e){return{}}
+function base(s){
+  return `${s.supplier||'Dobavljač'}${s.orderNumber?' · '+s.orderNumber:''} · ${s.date||'—'} ${s.time||'—'} · ${s.warehouse||'—'}${s.dock?' · R'+s.dock:''}`;
 }
-function saveSnap(x){
-  try{sessionStorage.setItem(SNAP,JSON.stringify(x))}catch(e){}
-}
-function eventId(type,a,extra=''){
-  const s=signature(a);
-  const raw=[type,s.id,s.status,s.date,s.time,s.dock,s.updatedAt,extra].join('|');
+function hash(v){
   let h=2166136261;
-  for(let i=0;i<raw.length;i++){h^=raw.charCodeAt(i);h=Math.imul(h,16777619)}
-  return 'Y546-'+type+'-'+(h>>>0).toString(16);
+  v=safe(v);
+  for(let i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}
+  return (h>>>0).toString(16);
 }
-function push(type,title,body,a,extra={}){
-  const id=eventId(type,a,extra?.previousStatus||'');
-  const q=loadNotifications();
-  if(q.some(n=>String(n.id)===id))return false;
+function push(event,title,body,s,extra={}){
+  const marker=JSON.stringify([event,s.id,s.status,s.date,s.time,s.dock,s.approvalStatus,extra]);
+  const id='NEWS-'+hash(marker);
+  const q=load();
+  if(q.some(n=>String(n.id)===id))return;
   const now=new Date().toISOString();
   q.push({
-    id,
-    event:type,
-    title,
-    body,
-    at:now,
-    createdAt:now,
-    roles:[...TARGETS],
-    readBy:{},
-    supplier:a?.supplier||'',
-    announcementId:a?.id||'',
-    orderNumber:a?.orderNumber||'',
-    warehouse:a?.warehouse||'',
-    dock:a?.dock||'',
-    date:a?.date||'',
-    time:a?.time||'',
-    plate:a?.plannedPlate||a?.vehiclePlate||a?.plate||a?.registration||'',
+    id,event,title,body,at:now,createdAt:now,
+    roles:[...TARGETS],readBy:{},
+    announcementId:s.id,supplier:s.supplier,orderNumber:s.orderNumber,
+    warehouse:s.warehouse,dock:s.dock,date:s.date,time:s.time,plate:s.plate,
     ...extra
   });
-  saveNotifications(q);
-  return true;
+  save(q);
 }
-function annText(a){
-  return `${a?.supplier||'Dobavljač'} · ${a?.date||'—'} ${a?.time||'—'} · ${a?.warehouse||'—'} · R${a?.dock||'—'}${a?.orderNumber?' · '+a.orderNumber:''}`;
+function diff(oldS,newS){
+  const changes=[];
+  const add=(k,label)=>{if(oldS[k]!==newS[k])changes.push({k,label,from:oldS[k],to:newS[k]})};
+
+  add('status','Status');
+  add('approvalStatus','Odobrenje');
+  add('date','Datum termina');
+  add('time','Vrijeme termina');
+  add('warehouse','Skladište');
+  add('dock','Rampa');
+  add('actualDate','Stvarni datum');
+  add('actualTime','Stvarno vrijeme');
+  add('plate','Registracija');
+  add('driver','Vozač');
+  add('pallets','Palete');
+  add('sku','SKU');
+  add('checkinAt','Prijava dolaska');
+  add('arrivalRecordedAt','Evidentiran dolazak');
+  add('actualArrivalAt','Stvarni dolazak');
+  add('gateEnteredAt','Ulazak kroz portu');
+  add('yardArrivalAt','Ulazak u dvorište');
+  add('waitingAt','Čekanje');
+  add('calledAt','Poziv na rampu');
+  add('dockArrivalAt','Dolazak na rampu');
+  add('unloadStartAt','Početak istovara');
+  add('receivedAt','Zaprimanje robe');
+  add('rejectedAt','Odbijanje');
+  add('finishedAt','Završetak');
+  add('checkoutAt','Izlazak');
+
+  return changes;
 }
-function emitNew(a){
-  push(
-    'ANNOUNCEMENT_CREATED',
-    'NOVA NAJAVA',
-    annText(a),
-    a
-  );
-}
-function emitStatus(a,oldStatus,newStatus){
-  push(
-    'ANNOUNCEMENT_STATUS_CHANGED',
-    `STATUS NAJAVE · ${String(newStatus||'PROMIJENJEN').toUpperCase()}`,
-    `${annText(a)} · ${oldStatus||'—'} → ${newStatus||'—'}`,
-    a,
-    {previousStatus:oldStatus||'',newStatus:newStatus||''}
-  );
+function classify(c,s){
+  if(c.k==='status')return [`STATUS · ${s.status.toUpperCase()}`,`${base(s)} · ${c.from||'—'} → ${c.to||'—'}`];
+  if(c.k==='approvalStatus')return [`NENAJAVLJENI · ODLUKA`,`${base(s)} · odobrenje ${c.from||'—'} → ${c.to||'—'}`];
+  if(c.k==='date'||c.k==='time')return ['PROMJENA TERMINA',`${base(s)} · ${c.label}: ${c.from||'—'} → ${c.to||'—'}`];
+  if(c.k==='warehouse'||c.k==='dock')return ['PROMJENA LOKACIJE / RAMPE',`${base(s)} · ${c.label}: ${c.from||'—'} → ${c.to||'—'}`];
+  if(c.k==='gateEnteredAt')return ['ULAZAK KROZ PORTU',`${base(s)} · vozilo je ušlo kroz portu.`];
+  if(c.k==='yardArrivalAt')return ['DOLAZAK U DVORIŠTE',`${base(s)} · vozilo je evidentirano u dvorištu.`];
+  if(c.k==='checkinAt'||c.k==='arrivalRecordedAt'||c.k==='actualArrivalAt'||c.k==='actualDate'||c.k==='actualTime')return ['PRIJAVA DOLASKA',`${base(s)} · evidentiran stvarni dolazak.`];
+  if(c.k==='waitingAt')return ['VOZILO ČEKA',`${base(s)} · vozilo je prešlo u čekanje.`];
+  if(c.k==='calledAt')return ['POZVAN NA RAMPU',`${base(s)} · vozilo je pozvano na rampu.`];
+  if(c.k==='dockArrivalAt')return ['VOZILO NA RAMPI',`${base(s)} · evidentiran dolazak na rampu.`];
+  if(c.k==='unloadStartAt')return ['ISTOVAR ZAPOČEO',`${base(s)} · započeo je istovar.`];
+  if(c.k==='receivedAt')return ['ROBA ZAPRIMLJENA',`${base(s)} · zaprimanje je evidentirano.`];
+  if(c.k==='rejectedAt')return ['DOSTAVA ODBIJENA',`${base(s)} · odbijanje je evidentirano.`];
+  if(c.k==='finishedAt')return ['PROCES ZAVRŠEN',`${base(s)} · obrada dostave je završena.`];
+  if(c.k==='checkoutAt')return ['IZLAZAK VOZILA',`${base(s)} · vozilo je izašlo.`];
+  if(c.k==='plate'||c.k==='driver')return ['PROMJENA PODATAKA DOLASKA',`${base(s)} · ${c.label}: ${c.from||'—'} → ${c.to||'—'}`];
+  return ['PROMJENA NA NAJAVI',`${base(s)} · ${c.label}: ${c.from||'—'} → ${c.to||'—'}`];
 }
 
-/*
-  This scanner observes the canonical announcement array after local actions
-  and after cloud sync. Session snapshot prevents old records from becoming
-  "new" on login. Deterministic IDs stop the same event being inserted twice
-  in one shared notification store.
-*/
-let initialized=false;
-let last={};
+let snap=loadSnap();
+let initialized=Object.keys(snap).length>0;
 
 function seed(){
-  const next={};
-  anns().forEach(a=>{
-    const s=signature(a);
-    if(s.id)next[s.id]=s;
-  });
-  last=next;
-  saveSnap(next);
+  snap={};
+  A().forEach(a=>{const s=state(a);if(s.id)snap[s.id]=s});
+  saveSnap(snap);
   initialized=true;
 }
 function scan(){
-  if(!currentSession?.role)return;
-  const current={};
-  anns().forEach(a=>{
-    const s=signature(a);
-    if(!s.id)return;
-    current[s.id]=s;
-    const prev=last[s.id];
+  if(!window.currentSession?.role && typeof currentSession==='undefined')return;
+  const next={};
+  A().forEach(a=>{
+    const s=state(a); if(!s.id)return;
+    next[s.id]=s;
+    const old=snap[s.id];
 
-    if(initialized && !prev){
-      emitNew(a);
-    }else if(initialized && prev && prev.status!==s.status){
-      emitStatus(a,prev.status,s.status);
+    if(initialized && !old){
+      const ua=s.arrivalType.toUpperCase()==='UNANNOUNCED';
+      push(
+        ua?'UNANNOUNCED_CREATED':'ANNOUNCEMENT_CREATED',
+        ua?'NENAJAVLJENI DOLAZAK':'NOVA NAJAVA',
+        base(s)+(ua?' · zahtjev nenajavljenog dolaska.':' · kreirana nova najava.'),
+        s
+      );
+      return;
+    }
+
+    if(initialized && old){
+      const changes=diff(old,s);
+      changes.forEach(c=>{
+        const [title,body]=classify(c,s);
+        push('ANNOUNCEMENT_NEWS',title,body,s,{field:c.k,from:c.from,to:c.to});
+      });
     }
   });
-  last=current;
-  saveSnap(current);
+  snap=next;
+  saveSnap(snap);
 }
+
 function start(){
-  if(!currentSession?.role)return;
-  const remembered=loadSnap();
-  if(Object.keys(remembered).length){
-    last=remembered;
-    initialized=true;
-    scan();
-  }else{
-    seed();
-  }
+  if(!initialized)seed();
+  else scan();
 }
 
-/* Hard access rule: notification center is internal and never shown to Gate or Supplier. */
-function applyAccess(){
-  const r=role();
-  const show=TARGETS.includes(r);
-  const bell=document.getElementById('notifBell');
-  if(bell)bell.style.setProperty('display',show?'inline-flex':'none','important');
-  const nav=document.querySelector('[data-view="operations"]');
-  if(nav)nav.style.setProperty('display',show?'flex':'none','important');
-  document.querySelectorAll('[data-home-target="operations"]').forEach(el=>{
-    el.style.setProperty('display',show?'flex':'none','important');
-  });
-  if(!show)document.getElementById('notifPanel')?.classList.remove('open');
-}
+window.addEventListener('load',()=>setTimeout(start,1200));
+window.addEventListener('yardivo:login',()=>setTimeout(start,150));
+window.addEventListener('yardivo:data-synced',()=>setTimeout(scan,100));
+setInterval(scan,650);
 
-window.addEventListener('yardivo:login',()=>{
-  setTimeout(()=>{applyAccess();start()},100);
-});
-window.addEventListener('yardivo:data-synced',()=>{
-  setTimeout(()=>{scan();applyAccess()},80);
-});
-window.addEventListener('load',()=>{
-  setTimeout(()=>{applyAccess();start()},1000);
-});
-
-/* Catch local actions quickly without replacing business handlers. */
-setInterval(()=>{
-  if(!currentSession?.role)return;
-  scan();
-  applyAccess();
-},700);
-
-window.YardivoNotificationBridgeV546={
-  scan,
-  seed,
-  applyAccess,
-  targets:[...TARGETS]
+window.YardivoFullOperationalNotificationsV548={
+  scan,seed,targets:[...TARGETS]
 };
 })();
 </script>
 
 
-<style id="yardivo-v547-create-profile-button-interaction">
-body[data-yardivo-role="admin"] #masterUserAdmin{
-  position:relative!important;
-  z-index:50!important;
-  pointer-events:auto!important;
+<style id="yardivo-v549-supplier-portal-style">
+#yardivoSupplierPortal{
+  display:none;position:fixed;inset:0;z-index:999999;background:#f4f7fb;color:#132238;
+  overflow:auto;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif
 }
-body[data-yardivo-role="admin"] #masterUserAdmin .master-settings-body,
-body[data-yardivo-role="admin"] #masterUserAdmin .master-admin-grid,
-body[data-yardivo-role="admin"] #masterUserAdmin .master-admin-grid>div,
-body[data-yardivo-role="admin"] #masterUserAdmin .form-grid{
-  position:relative!important;
-  pointer-events:auto!important;
+#yardivoSupplierPortal *{box-sizing:border-box}
+#yardivoSupplierPortal .ysp-layout{min-height:100vh;display:grid;grid-template-columns:240px 1fr}
+#yardivoSupplierPortal .ysp-side{
+  position:sticky;top:0;height:100vh;padding:22px 16px;background:#10243f;color:#fff;
+  display:flex;flex-direction:column;gap:18px
 }
-body[data-yardivo-role="admin"] #muSave{
-  display:inline-flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  visibility:visible!important;
-  opacity:1!important;
-  pointer-events:auto!important;
-  cursor:pointer!important;
-  position:relative!important;
-  z-index:2147483000!important;
-  min-height:42px!important;
-  touch-action:manipulation!important;
-  user-select:none!important;
+#yardivoSupplierPortal .ysp-brand{font-size:25px;font-weight:1000;letter-spacing:1px}
+#yardivoSupplierPortal .ysp-brand b{color:#2586ff}
+#yardivoSupplierPortal .ysp-subbrand{font-size:9px;color:#9fb3ca;font-weight:900;letter-spacing:1.2px;margin-top:3px}
+#yardivoSupplierPortal .ysp-userbox{padding:12px;border:1px solid #294563;border-radius:10px;background:#152c4c}
+#yardivoSupplierPortal .ysp-userbox strong{display:block;font-size:11px}
+#yardivoSupplierPortal .ysp-userbox small{display:block;color:#aac0d7;margin-top:4px;font-size:8px}
+#yardivoSupplierPortal .ysp-nav{display:grid;gap:7px}
+#yardivoSupplierPortal .ysp-nav button{
+  width:100%;padding:12px;border:0;border-radius:8px;background:transparent;color:#d9e5f0;text-align:left;
+  font-size:10px;font-weight:950;cursor:pointer
 }
-body[data-yardivo-role="admin"] #muSave::before,
-body[data-yardivo-role="admin"] #muSave::after{
-  pointer-events:none!important;
+#yardivoSupplierPortal .ysp-nav button.active{background:#1477ef;color:#fff}
+#yardivoSupplierPortal .ysp-nav button:hover{background:#1a3659}
+#yardivoSupplierPortal .ysp-side-bottom{margin-top:auto;display:grid;gap:7px}
+#yardivoSupplierPortal .ysp-logout{padding:11px;border:1px solid #385978;border-radius:8px;background:transparent;color:#fff;font-weight:900;cursor:pointer}
+#yardivoSupplierPortal .ysp-main{padding:24px 28px 36px;min-width:0}
+#yardivoSupplierPortal .ysp-top{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:18px
+}
+#yardivoSupplierPortal .ysp-top h1{margin:0;font-size:22px}
+#yardivoSupplierPortal .ysp-top p{margin:5px 0 0;color:#6c7c90;font-size:10px}
+#yardivoSupplierPortal .ysp-badge{
+  padding:7px 10px;border-radius:999px;background:#e5f1ff;color:#0865ce;font-size:8px;font-weight:1000
+}
+#yardivoSupplierPortal .ysp-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+#yardivoSupplierPortal .ysp-kpi{padding:14px;background:#fff;border:1px solid #dce5ef;border-radius:12px}
+#yardivoSupplierPortal .ysp-kpi small{display:block;color:#78899b;font-size:8px;font-weight:950}
+#yardivoSupplierPortal .ysp-kpi strong{display:block;margin-top:5px;font-size:22px}
+#yardivoSupplierPortal .ysp-card{background:#fff;border:1px solid #dce5ef;border-radius:12px;padding:16px}
+#yardivoSupplierPortal .ysp-card h2{margin:0 0 4px;font-size:15px}
+#yardivoSupplierPortal .ysp-card .muted{margin:0 0 14px;color:#76879a;font-size:9px}
+#yardivoSupplierPortal .ysp-view{display:none}
+#yardivoSupplierPortal .ysp-view.active{display:block}
+#yardivoSupplierPortal .ysp-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+#yardivoSupplierPortal label{display:flex;flex-direction:column;gap:5px;font-size:8px;font-weight:950;color:#617387}
+#yardivoSupplierPortal input,#yardivoSupplierPortal select,#yardivoSupplierPortal textarea{
+  width:100%;padding:10px 11px;border:1px solid #cbd7e4;border-radius:8px;background:#fff;color:#17263a;
+  font-size:10px;outline:none
+}
+#yardivoSupplierPortal textarea{min-height:82px;resize:vertical}
+#yardivoSupplierPortal input:focus,#yardivoSupplierPortal select:focus,#yardivoSupplierPortal textarea:focus{
+  border-color:#2586ff;box-shadow:0 0 0 3px rgba(37,134,255,.10)
+}
+#yardivoSupplierPortal .span2{grid-column:1/-1}
+#yardivoSupplierPortal .ysp-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+#yardivoSupplierPortal .btn-primary{
+  border:0;border-radius:8px;background:#1477ef;color:#fff;padding:11px 16px;font-size:9px;font-weight:1000;cursor:pointer
+}
+#yardivoSupplierPortal .btn-secondary{
+  border:1px solid #c8d5e3;border-radius:8px;background:#fff;color:#243750;padding:10px 14px;font-size:9px;font-weight:950;cursor:pointer
+}
+#yardivoSupplierPortal .ysp-info{
+  margin-top:12px;padding:10px 12px;border:1px solid #cfe0f4;background:#f1f7ff;border-radius:8px;
+  color:#315270;font-size:9px;line-height:1.5
+}
+#yardivoSupplierPortal .ysp-table-wrap{overflow:auto;border:1px solid #dce5ef;border-radius:10px}
+#yardivoSupplierPortal table{width:100%;border-collapse:collapse;min-width:780px}
+#yardivoSupplierPortal th,#yardivoSupplierPortal td{padding:11px;border-bottom:1px solid #e7edf4;text-align:left;font-size:9px}
+#yardivoSupplierPortal th{background:#f7f9fc;color:#6a7d91;font-size:8px}
+#yardivoSupplierPortal tr:last-child td{border-bottom:0}
+#yardivoSupplierPortal .status{
+  display:inline-flex;padding:5px 8px;border-radius:999px;background:#e8f2ff;color:#146ed8;font-size:8px;font-weight:950
+}
+#yardivoSupplierPortal .status.done{background:#e9f7ee;color:#28844b}
+#yardivoSupplierPortal .status.wait{background:#fff3dc;color:#9b6811}
+#yardivoSupplierPortal .ysp-empty{padding:28px;text-align:center;color:#8192a4;font-size:10px}
+#yardivoSupplierPortal .ysp-delivery-card{
+  display:grid;grid-template-columns:1.2fr .8fr;gap:14px;padding:14px;border:1px solid #dce5ef;border-radius:10px;margin-bottom:10px
+}
+#yardivoSupplierPortal .ysp-delivery-card h3{margin:0 0 5px;font-size:12px}
+#yardivoSupplierPortal .ysp-delivery-meta{font-size:9px;color:#6f8194;line-height:1.55}
+#yardivoSupplierPortal .ysp-progress{display:flex;align-items:center;gap:5px;overflow:auto;padding:6px 0}
+#yardivoSupplierPortal .ysp-step{min-width:74px;text-align:center;font-size:7px;color:#8a9aac}
+#yardivoSupplierPortal .ysp-step i{display:block;width:12px;height:12px;border-radius:50%;margin:0 auto 5px;background:#d9e1ea}
+#yardivoSupplierPortal .ysp-step.done{color:#1a72d7;font-weight:950}
+#yardivoSupplierPortal .ysp-step.done i{background:#1d80ee}
+#yardivoSupplierPortal .ysp-settings-row{display:flex;align-items:center;justify-content:space-between;gap:14px}
+#yardivoSupplierPortal .ysp-lang{display:flex;gap:6px}
+#yardivoSupplierPortal .ysp-lang button{
+  border:1px solid #cad7e5;background:#fff;border-radius:7px;padding:8px 11px;font-size:9px;font-weight:950;cursor:pointer
+}
+#yardivoSupplierPortal .ysp-lang button.active{background:#1477ef;color:#fff;border-color:#1477ef}
+@media(max-width:900px){
+  #yardivoSupplierPortal .ysp-layout{grid-template-columns:1fr}
+  #yardivoSupplierPortal .ysp-side{position:relative;height:auto}
+  #yardivoSupplierPortal .ysp-nav{grid-template-columns:repeat(2,1fr)}
+  #yardivoSupplierPortal .ysp-side-bottom{margin-top:0}
+  #yardivoSupplierPortal .ysp-kpis{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:600px){
+  #yardivoSupplierPortal .ysp-main{padding:16px}
+  #yardivoSupplierPortal .ysp-form{grid-template-columns:1fr}
+  #yardivoSupplierPortal .span2{grid-column:auto}
+  #yardivoSupplierPortal .ysp-kpis{grid-template-columns:1fr 1fr}
+  #yardivoSupplierPortal .ysp-delivery-card{grid-template-columns:1fr}
 }
 </style>
-<script id="yardivo-v547-create-profile-button-owner">
+
+<div id="yardivoSupplierPortal" aria-hidden="true">
+  <div class="ysp-layout">
+    <aside class="ysp-side">
+      <div>
+        <div class="ysp-brand">YARDI<b>VO</b></div>
+        <div class="ysp-subbrand" data-i18n="supplierPortal">SUPPLIER PORTAL</div>
+      </div>
+      <div class="ysp-userbox">
+        <strong id="yspUser">—</strong>
+        <small id="yspScope">—</small>
+      </div>
+      <nav class="ysp-nav">
+        <button type="button" class="active" data-ysp-view="new" data-i18n="navNew">NAJAVA</button>
+        <button type="button" data-ysp-view="history" data-i18n="navHistory">POVIJEST NAJAVA</button>
+        <button type="button" data-ysp-view="status" data-i18n="navStatus">STANJE NAJAVE I ISPORUKE</button>
+        <button type="button" data-ysp-view="settings" data-i18n="navSettings">POSTAVKE</button>
+      </nav>
+      <div class="ysp-side-bottom">
+        <button type="button" id="yspLogout" class="ysp-logout" data-i18n="logout">ODJAVA</button>
+      </div>
+    </aside>
+
+    <main class="ysp-main">
+      <div class="ysp-top">
+        <div>
+          <h1 id="yspTitle">Nova najava</h1>
+          <p id="yspSubtitle">Pošaljite zahtjev za termin dostave u dodijeljeno skladište.</p>
+        </div>
+        <div class="ysp-badge">YARDIVO DEV · SUPPLIER</div>
+      </div>
+
+      <div class="ysp-kpis">
+        <div class="ysp-kpi"><small data-i18n="kpiWarehouses">DODIJELJENA SKLADIŠTA</small><strong id="yspKpiWh">0</strong></div>
+        <div class="ysp-kpi"><small data-i18n="kpiActive">AKTIVNE NAJAVE</small><strong id="yspKpiActive">0</strong></div>
+        <div class="ysp-kpi"><small data-i18n="kpiPending">ČEKA POTVRDU</small><strong id="yspKpiPending">0</strong></div>
+        <div class="ysp-kpi"><small data-i18n="kpiDone">ZAVRŠENE</small><strong id="yspKpiDone">0</strong></div>
+      </div>
+
+      <section class="ysp-view active" data-ysp-section="new">
+        <div class="ysp-card">
+          <h2 data-i18n="newTitle">Nova najava dostave</h2>
+          <p class="muted" data-i18n="newHelp">Unesite podatke o planiranoj isporuci. Termin postaje operativan nakon potvrde.</p>
+          <div class="ysp-form">
+            <label><span data-i18n="warehouse">SKLADIŠTE</span>
+              <select id="yspWarehouse"></select>
+            </label>
+            <label><span data-i18n="orderNo">BROJ NARUDŽBE / PO</span>
+              <input id="yspOrder" autocomplete="off">
+            </label>
+            <label><span data-i18n="deliveryDate">DATUM DOSTAVE</span>
+              <input id="yspDate" type="date">
+            </label>
+            <label><span data-i18n="time">ŽELJENI TERMIN</span>
+              <input id="yspTime" type="time" step="900">
+            </label>
+            <label><span data-i18n="plate">REGISTRACIJA VOZILA</span>
+              <input id="yspPlate" autocomplete="off">
+            </label>
+            <label><span data-i18n="driver">VOZAČ</span>
+              <input id="yspDriver" autocomplete="off">
+            </label>
+            <label><span data-i18n="pallets">BROJ PALETA</span>
+              <input id="yspPallets" type="number" min="0" step="1">
+            </label>
+            <label><span data-i18n="reference">REFERENCA / OTPREMNICA</span>
+              <input id="yspReference" autocomplete="off">
+            </label>
+            <label class="span2"><span data-i18n="note">NAPOMENA</span>
+              <textarea id="yspNote"></textarea>
+            </label>
+          </div>
+          <div class="ysp-info" data-i18n="submitInfo">
+            Dobavljač može odabrati samo skladišta koja mu je dodijelio Admin. Poslani termin mora potvrditi operativni tim.
+          </div>
+          <div class="ysp-actions">
+            <button type="button" class="btn-secondary" id="yspClear" data-i18n="clear">OČISTI</button>
+            <button type="button" class="btn-primary" id="yspSend" data-i18n="send">POŠALJI NAJAVU</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="ysp-view" data-ysp-section="history">
+        <div class="ysp-card">
+          <h2 data-i18n="historyTitle">Povijest najava</h2>
+          <p class="muted" data-i18n="historyHelp">Pregled svih najava koje ste poslali kroz Supplier portal.</p>
+          <div class="ysp-table-wrap">
+            <table>
+              <thead><tr>
+                <th data-i18n="id">ID</th><th data-i18n="dateTerm">DATUM / TERMIN</th>
+                <th data-i18n="warehouse">SKLADIŠTE</th><th data-i18n="orderNo">BROJ NARUDŽBE / PO</th>
+                <th data-i18n="status">STATUS</th><th data-i18n="dock">RAMPA</th>
+              </tr></thead>
+              <tbody id="yspHistoryBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="ysp-view" data-ysp-section="status">
+        <div class="ysp-card">
+          <h2 data-i18n="statusTitle">Stanje najave i isporuke</h2>
+          <p class="muted" data-i18n="statusHelp">Pratite potvrdu termina i operativni status svake aktivne isporuke.</p>
+          <div id="yspStatusList"></div>
+        </div>
+      </section>
+
+      <section class="ysp-view" data-ysp-section="settings">
+        <div class="ysp-card">
+          <h2 data-i18n="settingsTitle">Postavke</h2>
+          <p class="muted" data-i18n="settingsHelp">Jedina korisnička postavka Supplier portala je jezik sučelja.</p>
+          <div class="ysp-settings-row">
+            <div>
+              <strong data-i18n="language">JEZIK SUČELJA</strong>
+              <div class="muted" style="margin:4px 0 0" data-i18n="languageHelp">Promjena jezika primjenjuje se odmah.</div>
+            </div>
+            <div class="ysp-lang">
+              <button type="button" data-lang="hr">HRVATSKI</button>
+              <button type="button" data-lang="en">ENGLISH</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script id="yardivo-v549-supplier-portal">
 (function(){
 'use strict';
 
-function role(){
-  try{return String((typeof currentSession!=='undefined'?currentSession:window.currentSession)?.role||'').toLowerCase().trim()}
-  catch(e){return String(window.currentSession?.role||'').toLowerCase().trim()}
+const I18N={
+  hr:{
+    supplierPortal:'SUPPLIER PORTAL',navNew:'NAJAVA',navHistory:'POVIJEST NAJAVA',
+    navStatus:'STANJE NAJAVE I ISPORUKE',navSettings:'POSTAVKE',logout:'ODJAVA',
+    newPage:'Nova najava',newSub:'Pošaljite zahtjev za termin dostave u dodijeljeno skladište.',
+    historyPage:'Povijest najava',historySub:'Pregled svih prethodno poslanih najava.',
+    statusPage:'Stanje najave i isporuke',statusSub:'Pratite potvrdu termina i tijek aktivne isporuke.',
+    settingsPage:'Postavke',settingsSub:'Odaberite hrvatski ili engleski jezik.',
+    kpiWarehouses:'DODIJELJENA SKLADIŠTA',kpiActive:'AKTIVNE NAJAVE',kpiPending:'ČEKA POTVRDU',kpiDone:'ZAVRŠENE',
+    newTitle:'Nova najava dostave',newHelp:'Unesite podatke o planiranoj isporuci. Termin postaje operativan nakon potvrde.',
+    warehouse:'SKLADIŠTE',orderNo:'BROJ NARUDŽBE / PO',deliveryDate:'DATUM DOSTAVE',time:'ŽELJENI TERMIN',
+    plate:'REGISTRACIJA VOZILA',driver:'VOZAČ',pallets:'BROJ PALETA',reference:'REFERENCA / OTPREMNICA',note:'NAPOMENA',
+    submitInfo:'Dobavljač može odabrati samo skladišta koja mu je dodijelio Admin. Poslani termin mora potvrditi operativni tim.',
+    clear:'OČISTI',send:'POŠALJI NAJAVU',historyTitle:'Povijest najava',
+    historyHelp:'Pregled svih najava koje ste poslali kroz Supplier portal.',id:'ID',dateTerm:'DATUM / TERMIN',
+    status:'STATUS',dock:'RAMPA',statusTitle:'Stanje najave i isporuke',
+    statusHelp:'Pratite potvrdu termina i operativni status svake aktivne isporuke.',
+    settingsTitle:'Postavke',settingsHelp:'Jedina korisnička postavka Supplier portala je jezik sučelja.',
+    language:'JEZIK SUČELJA',languageHelp:'Promjena jezika primjenjuje se odmah.',
+    pending:'Čeka potvrdu',confirmed:'Potvrđeno',done:'Završeno',noHistory:'Još nema poslanih najava.',
+    noActive:'Nema aktivnih isporuka.',created:'Najava je spremljena u Supplier portalu.',
+    required:'Odaberi skladište, datum i termin.',dockUnknown:'Nije dodijeljena',
+    stepRequest:'Najava',stepConfirmed:'Potvrda',stepArrival:'Dolazak',stepDock:'Rampa',stepReceiving:'Zaprimanje',stepDone:'Završeno'
+  },
+  en:{
+    supplierPortal:'SUPPLIER PORTAL',navNew:'ANNOUNCEMENT',navHistory:'ANNOUNCEMENT HISTORY',
+    navStatus:'ANNOUNCEMENT & DELIVERY STATUS',navSettings:'SETTINGS',logout:'LOG OUT',
+    newPage:'New announcement',newSub:'Request a delivery appointment for an assigned warehouse.',
+    historyPage:'Announcement history',historySub:'Review all previously submitted announcements.',
+    statusPage:'Announcement & delivery status',statusSub:'Track appointment confirmation and active delivery progress.',
+    settingsPage:'Settings',settingsSub:'Choose Croatian or English.',
+    kpiWarehouses:'ASSIGNED WAREHOUSES',kpiActive:'ACTIVE ANNOUNCEMENTS',kpiPending:'AWAITING CONFIRMATION',kpiDone:'COMPLETED',
+    newTitle:'New delivery announcement',newHelp:'Enter the planned delivery details. The appointment becomes operational after confirmation.',
+    warehouse:'WAREHOUSE',orderNo:'PURCHASE ORDER / PO',deliveryDate:'DELIVERY DATE',time:'REQUESTED TIME',
+    plate:'VEHICLE REGISTRATION',driver:'DRIVER',pallets:'NUMBER OF PALLETS',reference:'REFERENCE / DELIVERY NOTE',note:'NOTE',
+    submitInfo:'Suppliers can select only warehouses assigned by Admin. The requested appointment must be confirmed by the operations team.',
+    clear:'CLEAR',send:'SUBMIT ANNOUNCEMENT',historyTitle:'Announcement history',
+    historyHelp:'Review all announcements submitted through the Supplier portal.',id:'ID',dateTerm:'DATE / TIME',
+    status:'STATUS',dock:'DOCK',statusTitle:'Announcement & delivery status',
+    statusHelp:'Track appointment confirmation and the operational status of each active delivery.',
+    settingsTitle:'Settings',settingsHelp:'The only user setting in the Supplier portal is the interface language.',
+    language:'INTERFACE LANGUAGE',languageHelp:'The language change is applied immediately.',
+    pending:'Awaiting confirmation',confirmed:'Confirmed',done:'Completed',noHistory:'No announcements have been submitted yet.',
+    noActive:'No active deliveries.',created:'Announcement saved in the Supplier portal.',
+    required:'Select a warehouse, date and time.',dockUnknown:'Not assigned',
+    stepRequest:'Request',stepConfirmed:'Confirmed',stepArrival:'Arrival',stepDock:'Dock',stepReceiving:'Receiving',stepDone:'Completed'
+  }
+};
+
+let lang='hr';
+const escapeHtml=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+function session(){
+  try{return (typeof currentSession!=='undefined'?currentSession:window.currentSession)||{}}
+  catch(e){return window.currentSession||{}}
 }
-function isAdmin(){return role()==='admin'}
-
-function repair(){
-  const panel=document.getElementById('masterUserAdmin');
-  const old=document.getElementById('muSave');
-  if(!panel||!old)return;
-
-  panel.style.setProperty('pointer-events','auto','important');
-  let p=old.parentElement;
-  while(p && p!==document.body){
-    p.style?.setProperty?.('pointer-events','auto','important');
-    if(p===panel)break;
-    p=p.parentElement;
-  }
-
-  /*
-    Replace the legacy button node once. This removes every stale onclick,
-    disabled state and listener that may have been attached by older modules.
-  */
-  let btn=old;
-  if(old.dataset.yardivoV547!=='1'){
-    btn=old.cloneNode(true);
-    btn.dataset.yardivoV547='1';
-    old.replaceWith(btn);
-  }
-
-  btn.type='button';
-  btn.disabled=false;
-  btn.hidden=false;
-  btn.removeAttribute('disabled');
-  btn.removeAttribute('aria-disabled');
-  btn.removeAttribute('inert');
-  btn.textContent='KREIRAJ KORISNIČKI PROFIL';
-  btn.style.setProperty('display','inline-flex','important');
-  btn.style.setProperty('visibility','visible','important');
-  btn.style.setProperty('opacity','1','important');
-  btn.style.setProperty('pointer-events','auto','important');
-  btn.style.setProperty('cursor','pointer','important');
-  btn.style.setProperty('position','relative','important');
-  btn.style.setProperty('z-index','2147483000','important');
-
-  btn.onclick=function(ev){
-    ev.preventDefault();
-    ev.stopPropagation();
-
-    if(!isAdmin()){
-      alert('Samo Admin može kreirati korisničke profile.');
-      return false;
-    }
-
-    const api=window.YardivoServerProfiles;
-    if(!api || typeof api.create!=='function'){
-      alert('YARDIVO modul za kreiranje korisnika nije učitan. Napravi Ctrl+F5 i pokušaj ponovno.');
-      return false;
-    }
-
-    Promise.resolve(api.create()).catch(err=>{
-      console.error('YARDIVO create profile',err);
-      alert('Kreiranje korisnika nije uspjelo: '+(err?.message||err));
-    });
-    return false;
+function role(){return String(session().role||'').toLowerCase()}
+function storageKey(){
+  const s=session();
+  return 'yardivo_supplier_portal_v549_'+String(s.authUserId||s.username||s.user||'supplier');
+}
+function languageKey(){
+  const s=session();
+  return 'yardivo_supplier_language_v549_'+String(s.authUserId||s.username||s.user||'supplier');
+}
+function loadRows(){
+  try{
+    const x=JSON.parse(localStorage.getItem(storageKey())||'[]');
+    return Array.isArray(x)?x:[];
+  }catch(e){return[]}
+}
+function saveRows(rows){
+  localStorage.setItem(storageKey(),JSON.stringify(rows.slice(-300)));
+}
+function t(k){return I18N[lang]?.[k]||I18N.hr[k]||k}
+function labelStatus(v){
+  const s=String(v||'').toLowerCase();
+  if(s==='completed'||s==='završeno'||s==='zavrseno')return t('done');
+  if(s==='confirmed'||s==='potvrđeno'||s==='potvrdeno')return t('confirmed');
+  return t('pending');
+}
+function whLabel(code){
+  try{return typeof warehouseOptionLabel==='function'?warehouseOptionLabel(code):code}
+  catch(e){return code}
+}
+function setLang(next){
+  lang=next==='en'?'en':'hr';
+  try{localStorage.setItem(languageKey(),lang)}catch(e){}
+  document.querySelectorAll('#yardivoSupplierPortal [data-i18n]').forEach(el=>{
+    const k=el.getAttribute('data-i18n');
+    if(I18N[lang]?.[k])el.textContent=I18N[lang][k];
+  });
+  document.querySelectorAll('#yardivoSupplierPortal [data-lang]').forEach(b=>{
+    b.classList.toggle('active',b.dataset.lang===lang);
+  });
+  const active=document.querySelector('#yardivoSupplierPortal .ysp-nav button.active')?.dataset.yspView||'new';
+  setPageText(active);
+  render();
+}
+function setPageText(view){
+  const map={
+    new:['newPage','newSub'],
+    history:['historyPage','historySub'],
+    status:['statusPage','statusSub'],
+    settings:['settingsPage','settingsSub']
   };
+  const pair=map[view]||map.new;
+  document.getElementById('yspTitle').textContent=t(pair[0]);
+  document.getElementById('yspSubtitle').textContent=t(pair[1]);
 }
-
-function apply(){
-  if(!isAdmin())return;
-  repair();
+function show(view){
+  document.querySelectorAll('#yardivoSupplierPortal [data-ysp-view]').forEach(b=>b.classList.toggle('active',b.dataset.yspView===view));
+  document.querySelectorAll('#yardivoSupplierPortal [data-ysp-section]').forEach(s=>s.classList.toggle('active',s.dataset.yspSection===view));
+  setPageText(view);
+  render();
 }
-
-document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,0),{once:true});
-window.addEventListener('load',()=>{
-  setTimeout(apply,100);
-  setTimeout(apply,800);
-});
-window.addEventListener('yardivo:login',()=>{
-  setTimeout(apply,80);
-  setTimeout(apply,400);
-});
-document.addEventListener('click',e=>{
-  if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"]')){
-    setTimeout(apply,40);
-    setTimeout(apply,200);
+function currentWarehouses(){
+  const s=session();
+  return Array.isArray(s.warehouses)?s.warehouses.map(x=>String(x).trim().toUpperCase()).filter(Boolean):[];
+}
+function renderWarehouses(){
+  const el=document.getElementById('yspWarehouse'); if(!el)return;
+  const rows=currentWarehouses();
+  el.innerHTML=rows.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(whLabel(c))}</option>`).join('');
+}
+function renderHistory(){
+  const body=document.getElementById('yspHistoryBody'); if(!body)return;
+  const rows=loadRows().slice().reverse();
+  if(!rows.length){
+    body.innerHTML=`<tr><td colspan="6"><div class="ysp-empty">${escapeHtml(t('noHistory'))}</div></td></tr>`;
+    return;
   }
+  body.innerHTML=rows.map(x=>`
+    <tr>
+      <td><strong>${escapeHtml(x.id)}</strong></td>
+      <td>${escapeHtml(x.date)} · ${escapeHtml(x.time)}</td>
+      <td>${escapeHtml(whLabel(x.warehouse))}</td>
+      <td>${escapeHtml(x.order||'—')}</td>
+      <td><span class="status ${String(x.status).toLowerCase()==='completed'?'done':'wait'}">${escapeHtml(labelStatus(x.status))}</span></td>
+      <td>${escapeHtml(x.dock||t('dockUnknown'))}</td>
+    </tr>`).join('');
+}
+function progressIndex(x){
+  const s=String(x.status||'').toLowerCase();
+  if(s==='completed')return 5;
+  if(s==='receiving')return 4;
+  if(s==='dock')return 3;
+  if(s==='arrival')return 2;
+  if(s==='confirmed')return 1;
+  return 0;
+}
+function renderStatus(){
+  const host=document.getElementById('yspStatusList'); if(!host)return;
+  const rows=loadRows().filter(x=>String(x.status||'').toLowerCase()!=='completed').slice().reverse();
+  if(!rows.length){host.innerHTML=`<div class="ysp-empty">${escapeHtml(t('noActive'))}</div>`;return}
+  const steps=['stepRequest','stepConfirmed','stepArrival','stepDock','stepReceiving','stepDone'];
+  host.innerHTML=rows.map(x=>{
+    const idx=progressIndex(x);
+    return `<div class="ysp-delivery-card">
+      <div>
+        <h3>${escapeHtml(x.id)} · ${escapeHtml(x.order||'—')}</h3>
+        <div class="ysp-delivery-meta">
+          ${escapeHtml(x.date)} · ${escapeHtml(x.time)}<br>
+          ${escapeHtml(whLabel(x.warehouse))} · ${escapeHtml(x.dock||t('dockUnknown'))}<br>
+          ${escapeHtml(x.plate||'—')} · ${escapeHtml(x.driver||'—')}
+        </div>
+      </div>
+      <div>
+        <span class="status ${idx===5?'done':'wait'}">${escapeHtml(labelStatus(x.status))}</span>
+        <div class="ysp-progress">
+          ${steps.map((k,i)=>`<div class="ysp-step ${i<=idx?'done':''}"><i></i>${escapeHtml(t(k))}</div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderKpis(){
+  const rows=loadRows();
+  document.getElementById('yspKpiWh').textContent=currentWarehouses().length;
+  document.getElementById('yspKpiActive').textContent=rows.filter(x=>String(x.status).toLowerCase()!=='completed').length;
+  document.getElementById('yspKpiPending').textContent=rows.filter(x=>String(x.status).toLowerCase()==='pending').length;
+  document.getElementById('yspKpiDone').textContent=rows.filter(x=>String(x.status).toLowerCase()==='completed').length;
+}
+function render(){
+  renderWarehouses();renderHistory();renderStatus();renderKpis();
+}
+function clearForm(){
+  ['yspOrder','yspDate','yspTime','yspPlate','yspDriver','yspPallets','yspReference','yspNote'].forEach(id=>{
+    const e=document.getElementById(id); if(e)e.value='';
+  });
+}
+function submit(){
+  const warehouse=document.getElementById('yspWarehouse')?.value||'';
+  const date=document.getElementById('yspDate')?.value||'';
+  const time=document.getElementById('yspTime')?.value||'';
+  if(!warehouse||!date||!time){alert(t('required'));return}
+  const rows=loadRows();
+  const now=new Date();
+  const id='SUP-'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+String(now.getTime()).slice(-6);
+  rows.push({
+    id,warehouse,date,time,status:'pending',dock:'',
+    order:document.getElementById('yspOrder')?.value.trim()||'',
+    plate:document.getElementById('yspPlate')?.value.trim().toUpperCase()||'',
+    driver:document.getElementById('yspDriver')?.value.trim()||'',
+    pallets:document.getElementById('yspPallets')?.value||'',
+    reference:document.getElementById('yspReference')?.value.trim()||'',
+    note:document.getElementById('yspNote')?.value.trim()||'',
+    createdAt:now.toISOString()
+  });
+  saveRows(rows);
+  clearForm();
+  render();
+  alert(t('created'));
+  show('history');
+}
+function open(){
+  if(role()!=='supplier')return false;
+  const p=document.getElementById('yardivoSupplierPortal'); if(!p)return false;
+  const s=session();
+  try{lang=localStorage.getItem(languageKey())==='en'?'en':'hr'}catch(e){lang='hr'}
+  document.body.setAttribute('data-yardivo-role','supplier');
+  p.style.display='block';
+  p.setAttribute('aria-hidden','false');
+  document.getElementById('yspUser').textContent=String(s.username||s.user||'Dobavljač');
+  document.getElementById('yspScope').textContent=
+    String(s.location||'—')+' · '+currentWarehouses().join(', ');
+  setLang(lang);
+  show('new');
+  return true;
+}
+function close(){
+  const p=document.getElementById('yardivoSupplierPortal');
+  if(p){p.style.display='none';p.setAttribute('aria-hidden','true')}
+}
+
+document.addEventListener('click',e=>{
+  const nav=e.target.closest?.('#yardivoSupplierPortal [data-ysp-view]');
+  if(nav){show(nav.dataset.yspView);return}
+  const lb=e.target.closest?.('#yardivoSupplierPortal [data-lang]');
+  if(lb){setLang(lb.dataset.lang);return}
 },true);
 
-window.YardivoCreateProfileButtonV547={repair:apply};
+document.getElementById('yspSend')?.addEventListener('click',submit);
+document.getElementById('yspClear')?.addEventListener('click',clearForm);
+document.getElementById('yspLogout')?.addEventListener('click',()=>{
+  try{document.getElementById('logoutBtn')?.click()}catch(e){}
+  close();
+  location.reload();
+});
+window.addEventListener('yardivo:login',()=>setTimeout(open,80));
+window.addEventListener('load',()=>{if(role()==='supplier')setTimeout(open,200)});
+
+window.YardivoSupplierPortal={open,close,render,setLanguage:setLang};
 })();
 </script>
 
