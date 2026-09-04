@@ -11,7 +11,7 @@ Designed & Developed by Duje Maleš
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
 (function(){
   'use strict';
-  window.__YARDIVO_BUILD__='20260904-dev-v5.6.0-supplier-live-sync';
+  window.__YARDIVO_BUILD__='20260904-dev-v5.7.0-supplier-approval-workflow';
   const nativeFetch=window.fetch?.bind(window);
   if(nativeFetch){
     window.fetch=function(input,init){
@@ -35,8 +35,8 @@ Designed & Developed by Duje Maleš
     const old=document.getElementById('yardivoSyncErrorBox'); if(old) old.remove();
     const badge=document.createElement('div');
     badge.id='yardivoBuildBadge';
-    badge.textContent='YARDIVO DEV · BUILD V5.6.0';
-    badge.title='20260904-dev-v5.6.0-supplier-live-sync';
+    badge.textContent='YARDIVO DEV · BUILD V5.7.0';
+    badge.title='20260904-dev-v5.7.0-supplier-approval-workflow';
     badge.style.cssText='position:fixed;right:8px;bottom:8px;z-index:2147483646;font:700 10px/1.2 system-ui;padding:5px 7px;border-radius:6px;background:#0d1b29;color:#94a9b9;border:1px solid #26435a;opacity:.72;pointer-events:none';
     document.body.appendChild(badge);
   },{once:true});
@@ -32240,6 +32240,7 @@ window.YardivoFullOperationalNotificationsV548={
 
 <style id="yardivo-v551-supplier-accounts-admin-style">
 #yardivoSupplierAccountsAdmin{
+  display:none;
   margin-top:16px;padding:16px;border:1px solid #294252;border-radius:10px;background:#07131d
 }
 #yardivoSupplierAccountsAdmin h3{margin:0 0 4px;font-size:13px;color:#fff}
@@ -32485,6 +32486,11 @@ function labelStatus(v){
   const s=String(v||'').toLowerCase();
   if(s==='completed'||s==='završeno'||s==='zavrseno')return t('done');
   if(s==='confirmed'||s==='potvrđeno'||s==='potvrdeno')return t('confirmed');
+  if(s==='revision_requested')return lang==='en'?'Correction requested':'Vraćeno na doradu';
+  if(s==='rejected')return lang==='en'?'Rejected':'Odbijeno';
+  if(s==='arrival')return lang==='en'?'Arrived':'Stigao';
+  if(s==='dock')return lang==='en'?'At dock':'Na rampi';
+  if(s==='receiving')return lang==='en'?'Receiving':'Zaprimanje';
   return t('pending');
 }
 function whLabel(code){
@@ -32584,10 +32590,12 @@ function renderStatus(){
           ${escapeHtml(x.date)} · ${escapeHtml(x.time)}<br>
           ${escapeHtml(whLabel(x.warehouse))} · ${escapeHtml(x.dock||t('dockUnknown'))}<br>
           ${escapeHtml(x.plate||'—')} · ${escapeHtml(x.driver||'—')}
+          ${x.reviewNote?`<br><strong style="color:#ffc36b">YARDIVO: ${escapeHtml(x.reviewNote)}</strong>`:''}
         </div>
       </div>
       <div>
         <span class="status ${idx===5?'done':'wait'}">${escapeHtml(labelStatus(x.status))}</span>
+        ${String(x.status||'').toLowerCase()==='revision_requested'?`<div style="margin-top:7px"><button type="button" class="btn-secondary" data-ysp-revise="${escapeHtml(x.id)}">ISPRAVI I PONOVNO POŠALJI</button></div>`:''}
         <div class="ysp-progress">
           ${steps.map((k,i)=>`<div class="ysp-step ${i<=idx?'done':''}"><i></i>${escapeHtml(t(k))}</div>`).join('')}
         </div>
@@ -32651,6 +32659,40 @@ function upsertCanonicalYardivoFromSupplier(row){
   }catch(e){console.error('Supplier→YARDIVO mirror',e)}
 }
 
+async function reviseRequest(id){
+  const rows=loadRows();
+  const x=rows.find(r=>String(r.id)===String(id)); if(!x)return;
+  if(String(x.status||'').toLowerCase()!=='revision_requested')return;
+
+  const date=prompt(lang==='en'?'Delivery date (YYYY-MM-DD):':'Datum dostave (YYYY-MM-DD):',x.date||'');if(date===null)return;
+  const time=prompt(lang==='en'?'Requested time (HH:MM):':'Željeni termin (HH:MM):',x.time||'');if(time===null)return;
+  const palletsText=prompt(lang==='en'?'Pallet count:':'Broj paleta:',String(x.pallets||''));if(palletsText===null)return;
+  const skuText=prompt(lang==='en'?'SKU count:':'Broj SKU-ova:',String(x.skuCount||''));if(skuText===null)return;
+  const orderNo=prompt(lang==='en'?'Purchase order (optional):':'Broj narudžbe (opcionalno):',x.order||'');if(orderNo===null)return;
+  const pallets=Number(palletsText),skuCount=Number(skuText);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time)||!Number.isInteger(pallets)||pallets<1||!Number.isInteger(skuCount)||skuCount<1){
+    alert(lang==='en'?'Check date, time, pallet count and SKU count.':'Provjeri datum, termin, broj paleta i broj SKU-ova.');
+    return;
+  }
+  try{
+    const server=await window.YardivoSupplierLiveSync.call('resubmit',{
+      client_id:String(x.id),warehouse:String(x.warehouse||'').toUpperCase(),
+      delivery_date:date,requested_time:time,pallets,sku_count:skuCount,
+      order_number:String(orderNo||'').trim().toUpperCase()
+    });
+    x.date=server.delivery_date||date;
+    x.time=String(server.requested_time||time).slice(0,5);
+    x.pallets=server.pallets||pallets;
+    x.skuCount=server.sku_count||skuCount;
+    x.order=server.order_number||'';
+    x.status=server.status||'pending';
+    x.reviewNote='';
+    x.updatedAt=server.updated_at||new Date().toISOString();
+    saveRows(rows);render();
+    alert(lang==='en'?'Announcement resubmitted.':'Najava je ponovno poslana na odobrenje.');
+  }catch(e){alert((lang==='en'?'Resubmission failed:\\n':'Ponovno slanje nije uspjelo:\\n')+(e?.message||e))}
+}
+
 async function editVehicle(id){
   const rows=loadRows();
   const x=rows.find(r=>String(r.id)===String(id)); if(!x)return;
@@ -32679,44 +32721,33 @@ async function submit(){
   const date=document.getElementById('yspDate')?.value||'';
   const time=document.getElementById('yspTime')?.value||'';
   const pallets=Number(document.getElementById('yspPallets')?.value||0);
-
-  if(!warehouse||!order||!date||!time||!pallets){alert(t('required'));return}
-  if(!/^6W[A-Z0-9._/-]*$/i.test(order)){alert(t('orderInvalid'));document.getElementById('yspOrder')?.focus();return}
-  if(pallets<1){alert(t('palletsInvalid'));document.getElementById('yspPallets')?.focus();return}
-
-  const allowed=currentWarehouses();
-  if(!allowed.includes(String(warehouse).toUpperCase())){
-    alert(lang==='en'?'This warehouse is not assigned to your account.':'Ovo skladište nije dodijeljeno vašem accountu.');
-    renderWarehouses();return;
+  const skuCount=Number(document.getElementById('yspSkuCount')?.value||0);
+  if(!warehouse||!date||!time||!Number.isInteger(pallets)||pallets<1||!Number.isInteger(skuCount)||skuCount<1){
+    alert(lang==='en'?'Warehouse, delivery date, time, pallet count and SKU count are required.':'Skladište, datum dostave, termin, broj paleta i broj SKU-ova su obavezni.');
+    return;
   }
-
-  const rows=loadRows();
-  const now=new Date();
+  const allowed=window.YardivoSupplierV561?.allAssignedWarehouses?.()||currentWarehouses();
+  if(!allowed.includes(String(warehouse).toUpperCase())){
+    alert(lang==='en'?'This warehouse is not assigned to your account.':'Ovo skladište nije dodijeljeno vašem accountu.');return;
+  }
+  const rows=loadRows(),now=new Date();
   const id='SUP-'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+String(now.getTime()).slice(-6);
   const row={
-    id,warehouse,date,time,status:'pending',dock:'',order,pallets,
+    id,warehouse,date,time,status:'pending',dock:'',order,pallets,skuCount,
     plate:document.getElementById('yspPlate')?.value.trim().toUpperCase()||'',
+    trailerPlate:document.getElementById('yspTrailerPlate')?.value.trim().toUpperCase()||'',
     driver:document.getElementById('yspDriver')?.value.trim()||'',
+    driverContact:document.getElementById('yspDriverContact')?.value.trim()||'',
     reference:document.getElementById('yspReference')?.value.trim()||'',
-    note:document.getElementById('yspNote')?.value.trim()||'',
-    createdAt:now.toISOString()
+    note:document.getElementById('yspNote')?.value.trim()||'',createdAt:now.toISOString()
   };
   try{
     if(window.YardivoSupplierLiveSync?.pushSupplierRow){
       const serverRow=await window.YardivoSupplierLiveSync.pushSupplierRow(row);
       if(serverRow?.id)row.serverId=serverRow.id;
     }
-  }catch(e){
-    alert((lang==='en'?'Announcement was not sent to YARDIVO:\n':'Najava nije poslana u YARDIVO:\n')+(e?.message||e));
-    return;
-  }
-  rows.push(row);
-  saveRows(rows);
-  upsertCanonicalYardivoFromSupplier(row);
-  clearForm();
-  render();
-  alert(t('created'));
-  show('history');
+  }catch(e){alert((lang==='en'?'Announcement was not sent to YARDIVO:\n':'Najava nije poslana u YARDIVO:\n')+(e?.message||e));return}
+  rows.push(row);saveRows(rows);clearForm();render();alert(t('created'));show('history');
 }
 function open(){
   if(role()!=='supplier')return false;
@@ -32745,6 +32776,8 @@ document.addEventListener('click',e=>{
   if(lb){setLang(lb.dataset.lang);return}
   const evb=e.target.closest?.('#yardivoSupplierPortal [data-ysp-edit-vehicle]');
   if(evb){editVehicle(evb.dataset.yspEditVehicle);return}
+  const rb=e.target.closest?.('#yardivoSupplierPortal [data-ysp-revise]');
+  if(rb){reviseRequest(rb.dataset.yspRevise);return}
 },true);
 
 document.getElementById('yspSend')?.addEventListener('click',submit);
@@ -32757,7 +32790,7 @@ document.getElementById('yspLogout')?.addEventListener('click',()=>{
 window.addEventListener('yardivo:login',()=>setTimeout(open,80));
 window.addEventListener('load',()=>{if(role()==='supplier')setTimeout(open,200)});
 
-window.YardivoSupplierPortal={open,close,render,setLanguage:setLang,editVehicle,mirrorToYardivo:upsertCanonicalYardivoFromSupplier};
+window.YardivoSupplierPortal={open,close,render,setLanguage:setLang,editVehicle,reviseRequest,mirrorToYardivo:upsertCanonicalYardivoFromSupplier,submitV561:submit};
 })();
 </script>
 
@@ -32798,8 +32831,11 @@ function supplierRowFromLocal(row){
     delivery_date:row.date,
     requested_time:row.time,
     pallets:Number(row.pallets||0),
+    sku_count:Number(row.skuCount||0),
     vehicle_plate:String(row.plate||'').toUpperCase(),
+    trailer_plate:String(row.trailerPlate||'').toUpperCase(),
     driver_name:String(row.driver||''),
+    driver_contact:String(row.driverContact||''),
     delivery_note:String(row.reference||''),
     note:String(row.note||'')
   };
@@ -32813,7 +32849,9 @@ async function pushVehicle(row){
   return await call('vehicle',{
     client_id:String(row.id),
     vehicle_plate:String(row.plate||'').toUpperCase(),
-    driver_name:String(row.driver||'')
+    trailer_plate:String(row.trailerPlate||'').toUpperCase(),
+    driver_name:String(row.driver||''),
+    driver_contact:String(row.driverContact||'')
   });
 }
 async function pullSupplier(){
@@ -32830,9 +32868,10 @@ async function pullSupplier(){
       const old=map.get(String(x.client_id))||{};
       map.set(String(x.client_id),{
         ...old,id:x.client_id,warehouse:x.warehouse,date:x.delivery_date,time:x.requested_time,
-        order:x.order_number,pallets:x.pallets,plate:x.vehicle_plate||'',driver:x.driver_name||'',
-        reference:x.delivery_note||'',note:x.note||'',dock:x.dock||'',
-        status:x.status||'pending',createdAt:x.created_at,updatedAt:x.updated_at
+        order:x.order_number||'',pallets:x.pallets,skuCount:x.sku_count||0,
+        plate:x.vehicle_plate||'',trailerPlate:x.trailer_plate||'',driver:x.driver_name||'',
+        driverContact:x.driver_contact||'',reference:x.delivery_note||'',note:x.note||'',dock:x.dock||'',
+        reviewNote:x.review_note||'',status:x.status||'pending',createdAt:x.created_at,updatedAt:x.updated_at
       });
     });
     localStorage.setItem(key,JSON.stringify([...map.values()]));
@@ -32840,24 +32879,66 @@ async function pullSupplier(){
   }catch(e){console.error('Supplier pull',e)}
 }
 
+function stableSupplierAnnouncementId(serverId){
+  const s=String(serverId||'');
+  let h=2166136261;
+  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}
+  return 700000000+(Math.abs(h>>>0)%199999999);
+}
 function mirrorInternal(x){
   try{
     if(typeof announcements==='undefined'||!Array.isArray(announcements)||typeof saveAnnouncements!=='function')return;
-    let a=announcements.find(v=>String(v.supplierDeliveryId||'')===String(x.id));
+    const approved=['confirmed','arrival','dock','receiving','completed'].includes(String(x.status||'').toLowerCase());
+    const existingIndex=announcements.findIndex(v=>String(v.supplierDeliveryId||'')===String(x.id));
+
+    if(!approved){
+      // Pending/revision/rejected supplier requests stay ONLY in "Najave dobavljača".
+      // If a previously approved record is later rejected, remove it from operational maps.
+      if(existingIndex>=0 && ['rejected'].includes(String(x.status||'').toLowerCase())){
+        announcements.splice(existingIndex,1);
+      }
+      return;
+    }
+
+    const internalStatus={
+      confirmed:'Najavljen',
+      arrival:'Stigao',
+      dock:'Na rampi',
+      receiving:'Zaprimanje',
+      completed:'Zaprimljeno'
+    }[String(x.status||'').toLowerCase()]||'Najavljen';
+
     const base={
-      supplierDeliveryId:x.id,supplierPortalId:x.client_id,supplierSource:'supplier_live',
+      supplierDeliveryId:x.id,
+      supplierPortalId:x.client_id,
+      supplierSource:'supplier_live',
       supplier:x.supplier_name||x.supplier_username||'Supplier',
-      orderNumber:x.order_number,warehouse:x.warehouse,date:x.delivery_date,time:x.requested_time,
-      pallets:Number(x.pallets||0),plannedPlate:x.vehicle_plate||'',plannedDriver:x.driver_name||'',
-      reference:x.delivery_note||'',supplierNote:x.note||'',dock:x.dock||'',
-      status:x.status==='confirmed'?'U dolasku':x.status==='completed'?'Zaprimljeno':
-             x.status==='rejected'?'Odbijeno':'Čeka potvrdu',
+      orderNumber:x.order_number||'',
+      warehouse:x.warehouse,
+      date:x.delivery_date,
+      time:String(x.requested_time||'').slice(0,5),
+      pallets:Number(x.pallets||0),
+      sku:Number(x.sku_count||0),
+      plannedPlate:x.vehicle_plate||'',
+      trailerPlate:x.trailer_plate||'',
+      plannedDriver:x.driver_name||'',
+      driverContact:x.driver_contact||'',
+      reference:x.delivery_note||'',
+      supplierNote:x.note||'',
+      dock:x.dock||'',
+      status:internalStatus,
+      supplierApprovalStatus:x.status,
+      supplierReviewNote:x.review_note||'',
       updatedAt:x.updated_at
     };
-    if(a)Object.assign(a,base);
+    if(existingIndex>=0)Object.assign(announcements[existingIndex],base);
     else announcements.push({
-      id:Date.now()+Math.floor(Math.random()*1000),createdAt:x.created_at,
-      createdBy:'supplier:'+String(x.supplier_username||''),duration:60,sku:0,responsible:'',...base
+      id:stableSupplierAnnouncementId(x.id),
+      createdAt:x.created_at,
+      createdBy:'supplier:'+String(x.supplier_username||''),
+      duration:60,
+      responsible:'',
+      ...base
     });
   }catch(e){console.error('Supplier internal mirror',e)}
 }
@@ -32882,6 +32963,380 @@ window.YardivoSupplierLiveSync={call,pushSupplierRow,pushVehicle,pullSupplier,pu
 window.addEventListener('yardivo:login',()=>setTimeout(syncNow,500));
 window.addEventListener('load',()=>setTimeout(syncNow,1600));
 setInterval(syncNow,5000);
+})();
+</script>
+
+
+<style id="yardivo-v561-supplier-pro-style">
+#yardivoSupplierPortal .ysp-form{
+  background:linear-gradient(180deg,rgba(13,31,44,.98),rgba(7,20,29,.98));
+  border:1px solid #27495e;border-radius:14px;padding:18px;
+  box-shadow:0 18px 50px rgba(0,0,0,.24)
+}
+#yardivoSupplierPortal .ysp-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#yardivoSupplierPortal .ysp-field{display:flex;flex-direction:column;gap:6px}
+#yardivoSupplierPortal .ysp-field.span2{grid-column:1/-1}
+#yardivoSupplierPortal .ysp-field-title{font-size:8px;font-weight:950;letter-spacing:.09em;color:#8da8ba}
+#yardivoSupplierPortal .ysp-required{color:#69c7ff}
+#yardivoSupplierPortal .ysp-optional{font-size:7px;color:#617d8f;font-weight:800}
+#yardivoSupplierPortal .ysp-field input,#yardivoSupplierPortal .ysp-field select,#yardivoSupplierPortal .ysp-field textarea{
+  width:100%;box-sizing:border-box;background:#07131c;border:1px solid #29485b;color:#edf7fc;
+  border-radius:9px;padding:11px 12px;outline:none;font-size:10px
+}
+#yardivoSupplierPortal .ysp-field input:focus,#yardivoSupplierPortal .ysp-field select:focus,#yardivoSupplierPortal .ysp-field textarea:focus{
+  border-color:#4ba8dd;box-shadow:0 0 0 2px rgba(75,168,221,.12)
+}
+#yardivoSupplierPortal .ysp-section-title{grid-column:1/-1;margin:5px 0 -2px;padding-top:8px;border-top:1px solid #183444;
+ font-size:8px;font-weight:950;letter-spacing:.12em;color:#5f8499}
+#yardivoSupplierPortal .ysp-helper{font-size:8px;color:#648193;line-height:1.45}
+#yardivoSupplierPortal .ysp-form-actions{display:flex;justify-content:flex-end;margin-top:14px}
+#yardivoSupplierPortal .ysp-form-actions .btn-primary{min-width:190px;padding:11px 15px}
+@media(max-width:720px){#yardivoSupplierPortal .ysp-form-grid{grid-template-columns:1fr}#yardivoSupplierPortal .ysp-field.span2,#yardivoSupplierPortal .ysp-section-title{grid-column:1}}
+</style>
+
+<script id="yardivo-v561-supplier-pro-ui">
+(function(){
+'use strict';
+
+function sessionObj(){
+  try{return (typeof currentSession!=='undefined'?currentSession:window.currentSession)||{}}catch(e){return window.currentSession||{}}
+}
+function allAssignedWarehouses(){
+  const s=sessionObj();
+  const assigned=Array.isArray(s.warehouses)?s.warehouses.map(x=>String(x).trim().toUpperCase()).filter(Boolean):[];
+  if(String(s.location||'').toUpperCase()==='ALL'){
+    try{
+      if(typeof yardivoLoadDynamicWarehousesIntoSystem==='function')yardivoLoadDynamicWarehousesIntoSystem();
+      const both=[...new Set([
+        ...(typeof allWarehousesForLocation==='function'?allWarehousesForLocation('VG'):[]),
+        ...(typeof allWarehousesForLocation==='function'?allWarehousesForLocation('DU'):[])
+      ])].map(x=>String(x).trim().toUpperCase()).filter(Boolean);
+      if(both.length)return both.sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+    }catch(_){}
+    return ['W101','W103','W104','W201','W203','W204'];
+  }
+  return assigned.sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+}
+function rebuild(){
+  const form=document.querySelector('#yardivoSupplierPortal .ysp-form');
+  if(!form||form.dataset.v561==='1')return;
+  form.dataset.v561='1';
+  form.innerHTML=`
+    <div class="ysp-form-grid">
+      <div class="ysp-field">
+        <div class="ysp-field-title">SKLADIŠTE <span class="ysp-required">*</span></div>
+        <select id="yspWarehouse"></select>
+        <div class="ysp-helper">Prikazana su sva skladišta dodijeljena vašem Supplier accountu.</div>
+      </div>
+      <div class="ysp-field">
+        <div class="ysp-field-title">DATUM DOSTAVE <span class="ysp-required">*</span></div>
+        <input id="yspDate" type="date" required>
+      </div>
+      <div class="ysp-field">
+        <div class="ysp-field-title">ŽELJENI TERMIN <span class="ysp-required">*</span></div>
+        <input id="yspTime" type="time" step="900" required>
+      </div>
+      <div class="ysp-field">
+        <div class="ysp-field-title">BROJ PALETA <span class="ysp-required">*</span></div>
+        <input id="yspPallets" type="number" min="1" step="1" inputmode="numeric" required>
+      </div>
+      <div class="ysp-field">
+        <div class="ysp-field-title">BROJ SKU-OVA <span class="ysp-required">*</span></div>
+        <input id="yspSkuCount" type="number" min="1" step="1" inputmode="numeric" required>
+      </div>
+      <div class="ysp-field">
+        <div class="ysp-field-title">BROJ NARUDŽBE <span class="ysp-optional">OPCIONALNO</span></div>
+        <input id="yspOrder" autocomplete="off" placeholder="npr. 6W...">
+      </div>
+
+      <div class="ysp-section-title">TRANSPORT · MOŽE SE DODATI NAKNADNO</div>
+      <div class="ysp-field">
+        <div class="ysp-field-title">TABLICE KAMIONA <span class="ysp-optional">OPCIONALNO</span></div>
+        <input id="yspPlate" autocomplete="off" placeholder="npr. ZG 1234 AB">
+      </div>
+      <div class="ysp-field">
+        <div class="ysp-field-title">TABLICE PRIKOLICE <span class="ysp-optional">OPCIONALNO</span></div>
+        <input id="yspTrailerPlate" autocomplete="off" placeholder="npr. ZG 5678 CD">
+      </div>
+      <div class="ysp-field">
+        <div class="ysp-field-title">VOZAČ <span class="ysp-optional">OPCIONALNO</span></div>
+        <input id="yspDriver" autocomplete="off">
+      </div>
+      <div class="ysp-field">
+        <div class="ysp-field-title">KONTAKT VOZAČA <span class="ysp-optional">OPCIONALNO</span></div>
+        <input id="yspDriverContact" type="tel" autocomplete="off" placeholder="+385 ...">
+      </div>
+
+      <div class="ysp-section-title">DODATNI PODACI</div>
+      <div class="ysp-field">
+        <div class="ysp-field-title">OTPREMNICA / REFERENCA <span class="ysp-optional">OPCIONALNO</span></div>
+        <input id="yspReference" autocomplete="off">
+      </div>
+      <div class="ysp-field span2">
+        <div class="ysp-field-title">NAPOMENA <span class="ysp-optional">OPCIONALNO</span></div>
+        <textarea id="yspNote" rows="3"></textarea>
+      </div>
+    </div>
+    <div class="ysp-form-actions"><button type="button" class="btn-primary" id="yspSubmit">POŠALJI NAJAVU</button></div>`;
+  const sel=document.getElementById('yspWarehouse');
+  const ws=allAssignedWarehouses();
+  if(sel)sel.innerHTML='<option value="">ODABERI SKLADIŠTE</option>'+ws.map(w=>`<option value="${w}">${w}</option>`).join('');
+  document.getElementById('yspSubmit')?.addEventListener('click',()=>window.YardivoSupplierPortal?.submitV561?.());
+}
+function init(){setTimeout(rebuild,80)}
+window.addEventListener('load',init);
+window.addEventListener('yardivo:login',init);
+const oldOpen=window.YardivoSupplierPortal?.open;
+if(oldOpen)window.YardivoSupplierPortal.open=function(){const r=oldOpen.apply(this,arguments);setTimeout(rebuild,20);return r};
+window.YardivoSupplierV561={rebuild,allAssignedWarehouses};
+})();
+</script>
+
+
+<style id="yardivo-v570-supplier-requests-style">
+#supplierRequests .ysr-hero{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
+#supplierRequests .ysr-kpis{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;margin-bottom:12px}
+#supplierRequests .ysr-kpi{padding:11px;border:1px solid #203b50;background:#091824;border-radius:8px}
+#supplierRequests .ysr-kpi small{display:block;color:#7791a4;font-size:7px;font-weight:950}
+#supplierRequests .ysr-kpi strong{display:block;margin-top:4px;font-size:20px}
+#supplierRequests .ysr-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+#supplierRequests .ysr-toolbar select,#supplierRequests .ysr-toolbar input{min-width:160px}
+#supplierRequests .ysr-table-wrap{overflow:auto;border:1px solid #20394c;border-radius:8px}
+#supplierRequests table{width:100%;min-width:1180px;border-collapse:collapse}
+#supplierRequests th,#supplierRequests td{padding:9px;border-bottom:1px solid #183343;text-align:left;font-size:8.5px;vertical-align:top}
+#supplierRequests th{background:#0b1d2a;color:#7894a8;font-size:7.5px;letter-spacing:.04em}
+#supplierRequests tr:last-child td{border-bottom:0}
+#supplierRequests .ysr-status{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:7.5px;font-weight:950;background:#473814;color:#ffd66e}
+#supplierRequests .ysr-status.confirmed{background:#173f2a;color:#9be0b7}
+#supplierRequests .ysr-status.rejected{background:#482126;color:#ffabb2}
+#supplierRequests .ysr-status.revision_requested{background:#3b2f52;color:#d6bcff}
+#supplierRequests .ysr-actions{display:flex;flex-wrap:wrap;gap:5px}
+#supplierRequests .ysr-actions button{padding:6px 8px;border:1px solid #31536a;border-radius:6px;background:#0b1b26;color:#dceaf3;font-size:7.5px;font-weight:950;cursor:pointer}
+#supplierRequests .ysr-actions button.primary{border-color:#2c8153;background:#123520;color:#b7efca}
+#supplierRequests .ysr-actions button.warn{border-color:#7f6429;color:#ffdb82}
+#supplierRequests .ysr-actions button.danger{border-color:#75333b;color:#ffb6bc}
+#supplierRequests .ysr-empty{padding:24px;text-align:center;color:#698398}
+#supplierRequests .ysr-note{max-width:220px;color:#8ea4b3;line-height:1.4}
+@media(max-width:900px){#supplierRequests .ysr-kpis{grid-template-columns:repeat(2,1fr)}}
+</style>
+
+<script id="yardivo-v570-supplier-approval-workflow">
+(function(){
+'use strict';
+
+const escapeY=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+let cache=[];
+
+function currentRoleY(){
+  try{return String((typeof currentSession!=='undefined'?currentSession:window.currentSession)?.role||'').toLowerCase()}
+  catch(e){return String(window.currentSession?.role||'').toLowerCase()}
+}
+function canReview(){return ['admin','manager','management','inventory'].includes(currentRoleY())}
+function statusLabelY(s){
+  return ({
+    pending:'ČEKA POTVRDU',
+    revision_requested:'VRAĆENO NA DORADU',
+    confirmed:'ODOBRENO',
+    arrival:'STIGAO',
+    dock:'NA RAMPI',
+    receiving:'ZAPRIMANJE',
+    completed:'ZAVRŠENO',
+    rejected:'ODBIJENO'
+  })[String(s||'').toLowerCase()]||String(s||'—').toUpperCase();
+}
+function ensureUi(){
+  if(document.getElementById('supplierRequests'))return;
+
+  const navAnchor=document.querySelector('.nav-btn[data-view="announcements"]');
+  if(navAnchor){
+    navAnchor.insertAdjacentHTML('beforebegin',
+      '<button class="nav-btn" data-view="supplierRequests"><span>⇄</span> Najave dobavljača <b class="nav-badge" id="supplierRequestsBadge" style="display:none">0</b></button>');
+  }
+
+  const anchor=document.getElementById('announcements');
+  const view=document.createElement('section');
+  view.id='supplierRequests';
+  view.className='view';
+  view.innerHTML=`
+    <div class="section-title ysr-hero">
+      <div><h1>NAJAVE DOBAVLJAČA</h1><p>Zahtjevi dobavljača prije ulaska u operativne YARDIVO mape</p></div>
+      <button class="secondary" id="ysrRefresh" type="button">OSVJEŽI</button>
+    </div>
+    <div class="ysr-kpis">
+      <div class="ysr-kpi"><small>ČEKA POTVRDU</small><strong id="ysrPending">0</strong></div>
+      <div class="ysr-kpi"><small>VRAĆENO NA DORADU</small><strong id="ysrRevision">0</strong></div>
+      <div class="ysr-kpi"><small>ODOBRENO</small><strong id="ysrApproved">0</strong></div>
+      <div class="ysr-kpi"><small>DANAS</small><strong id="ysrToday">0</strong></div>
+    </div>
+    <section class="panel">
+      <div class="ysr-toolbar">
+        <select id="ysrStatusFilter">
+          <option value="">Svi statusi</option><option value="pending">Čeka potvrdu</option>
+          <option value="revision_requested">Vraćeno na doradu</option><option value="confirmed">Odobreno</option>
+          <option value="rejected">Odbijeno</option>
+        </select>
+        <select id="ysrWarehouseFilter"><option value="">Sva skladišta</option></select>
+        <input id="ysrSearch" placeholder="Dobavljač / najava / narudžba">
+      </div>
+      <div class="ysr-table-wrap"><table>
+        <thead><tr>
+          <th>DOBAVLJAČ</th><th>SKLADIŠTE</th><th>DATUM / TERMIN</th><th>PALETE / SKU</th>
+          <th>NARUDŽBA</th><th>TRANSPORT</th><th>STATUS</th><th>NAPOMENA</th><th>AKCIJE</th>
+        </tr></thead>
+        <tbody id="ysrBody"><tr><td colspan="9"><div class="ysr-empty">Učitavanje...</div></td></tr></tbody>
+      </table></div>
+    </section>`;
+  (anchor?.parentNode||document.querySelector('.main'))?.insertBefore(view,anchor||null);
+
+  document.querySelector('.nav-btn[data-view="supplierRequests"]')?.addEventListener('click',()=>{
+    if(typeof openAppView==='function')openAppView('supplierRequests');
+    else{
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      view.classList.add('active');
+    }
+    load();
+  });
+
+  document.getElementById('ysrRefresh')?.addEventListener('click',load);
+  ['ysrStatusFilter','ysrWarehouseFilter','ysrSearch'].forEach(id=>document.getElementById(id)?.addEventListener('input',render));
+  document.getElementById('ysrBody')?.addEventListener('click',handleAction);
+  applyAccess();
+}
+function applyAccess(){
+  const show=canReview();
+  const b=document.querySelector('.nav-btn[data-view="supplierRequests"]');
+  if(b)b.style.display=show?'':'none';
+  if(!show && document.getElementById('supplierRequests')?.classList.contains('active')){
+    try{openAppView('homeMenu')}catch(_){}
+  }
+}
+async function load(){
+  ensureUi();applyAccess();
+  if(!canReview())return;
+  const body=document.getElementById('ysrBody');
+  if(body)body.innerHTML='<tr><td colspan="9"><div class="ysr-empty">Učitavanje...</div></td></tr>';
+  try{
+    cache=await window.YardivoSupplierLiveSync.call('list_internal')||[];
+    await window.YardivoSupplierLiveSync.pullInternal();
+    render();
+  }catch(e){
+    if(body)body.innerHTML=`<tr><td colspan="9"><div class="ysr-empty">Greška: ${escapeY(e?.message||e)}</div></td></tr>`;
+  }
+}
+function render(){
+  const body=document.getElementById('ysrBody');if(!body)return;
+  const fS=document.getElementById('ysrStatusFilter')?.value||'';
+  const fW=document.getElementById('ysrWarehouseFilter')?.value||'';
+  const q=(document.getElementById('ysrSearch')?.value||'').trim().toLowerCase();
+
+  const warehouses=[...new Set(cache.map(x=>x.warehouse).filter(Boolean))].sort();
+  const wh=document.getElementById('ysrWarehouseFilter');
+  if(wh){
+    const old=wh.value;
+    wh.innerHTML='<option value="">Sva skladišta</option>'+warehouses.map(w=>`<option value="${escapeY(w)}">${escapeY(w)}</option>`).join('');
+    if([...wh.options].some(o=>o.value===old))wh.value=old;
+  }
+
+  const rows=cache.filter(x=>{
+    if(fS&&x.status!==fS)return false;
+    if(fW&&x.warehouse!==fW)return false;
+    if(q&&!`${x.supplier_name||''} ${x.supplier_username||''} ${x.client_id||''} ${x.order_number||''}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('ysrPending').textContent=cache.filter(x=>x.status==='pending').length;
+  document.getElementById('ysrRevision').textContent=cache.filter(x=>x.status==='revision_requested').length;
+  document.getElementById('ysrApproved').textContent=cache.filter(x=>['confirmed','arrival','dock','receiving','completed'].includes(x.status)).length;
+  document.getElementById('ysrToday').textContent=cache.filter(x=>x.delivery_date===today).length;
+
+  const pending=cache.filter(x=>x.status==='pending').length;
+  const badge=document.getElementById('supplierRequestsBadge');
+  if(badge){badge.textContent=pending;badge.style.display=pending?'inline-flex':'none'}
+
+  if(!rows.length){
+    body.innerHTML='<tr><td colspan="9"><div class="ysr-empty">Nema Supplier najava za odabrani filter.</div></td></tr>';
+    return;
+  }
+  body.innerHTML=rows.map(x=>{
+    const editable=['pending','revision_requested','confirmed'].includes(x.status);
+    const transport=[x.vehicle_plate,x.trailer_plate,x.driver_name,x.driver_contact].filter(Boolean).map(escapeY).join('<br>')||'—';
+    return `<tr>
+      <td><strong>${escapeY(x.supplier_name||x.supplier_username||'—')}</strong><br><small>${escapeY(x.client_id||'')}</small></td>
+      <td><strong>${escapeY(x.warehouse)}</strong></td>
+      <td>${escapeY(x.delivery_date)}<br><strong>${escapeY(String(x.requested_time||'').slice(0,5))}</strong></td>
+      <td>${Number(x.pallets||0)} pal.<br>${Number(x.sku_count||0)} SKU</td>
+      <td>${escapeY(x.order_number||'—')}</td>
+      <td>${transport}</td>
+      <td><span class="ysr-status ${escapeY(x.status)}">${escapeY(statusLabelY(x.status))}</span></td>
+      <td><div class="ysr-note">${escapeY(x.review_note||x.note||'—')}</div></td>
+      <td><div class="ysr-actions">
+        ${x.status==='pending'||x.status==='revision_requested'?`<button class="primary" data-a="approve" data-id="${x.id}">ODOBRI</button>`:''}
+        ${editable?`<button data-a="term" data-id="${x.id}">TERMIN</button><button data-a="transport" data-id="${x.id}">TRANSPORT</button>`:''}
+        ${x.status==='pending'?`<button class="warn" data-a="revision" data-id="${x.id}">VRATI NA DORADU</button>`:''}
+        ${!['completed','rejected'].includes(x.status)?`<button class="danger" data-a="reject" data-id="${x.id}">ODBIJ</button>`:''}
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+async function update(id,patch){
+  await window.YardivoSupplierLiveSync.call('internal_update',{id,...patch});
+  await load();
+  try{if(typeof render==='function')render()}catch(_){}
+}
+async function handleAction(e){
+  const b=e.target.closest('button[data-a]');if(!b)return;
+  const x=cache.find(r=>String(r.id)===String(b.dataset.id));if(!x)return;
+  try{
+    if(b.dataset.a==='approve'){
+      if(!confirm(`Odobriti najavu ${x.client_id}?\n\nNakon odobrenja ulazi u Dnevnu mapu, Tjednu mapu i Unos najave.`))return;
+      await update(x.id,{status:'confirmed',review_note:''});
+    }
+    if(b.dataset.a==='term'){
+      const date=prompt('Datum dostave (YYYY-MM-DD):',x.delivery_date||'');if(date===null)return;
+      const time=prompt('Termin (HH:MM):',String(x.requested_time||'').slice(0,5));if(time===null)return;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time)){alert('Datum ili termin nisu ispravni.');return}
+      await update(x.id,{delivery_date:date,requested_time:time});
+    }
+    if(b.dataset.a==='revision'){
+      const note=prompt('Što dobavljač treba ispraviti?','');if(note===null)return;
+      if(!note.trim()){alert('Upiši razlog vraćanja na doradu.');return}
+      await update(x.id,{status:'revision_requested',review_note:note.trim()});
+    }
+    if(b.dataset.a==='reject'){
+      const note=prompt('Razlog odbijanja:','');if(note===null)return;
+      if(!confirm('Potvrditi odbijanje ove najave?'))return;
+      await update(x.id,{status:'rejected',review_note:note.trim()});
+    }
+    if(b.dataset.a==='transport'){
+      const truck=prompt('Tablice kamiona (opcionalno):',x.vehicle_plate||'');if(truck===null)return;
+      const trailer=prompt('Tablice prikolice (opcionalno):',x.trailer_plate||'');if(trailer===null)return;
+      const driver=prompt('Vozač (opcionalno):',x.driver_name||'');if(driver===null)return;
+      const contact=prompt('Kontakt vozača (opcionalno):',x.driver_contact||'');if(contact===null)return;
+      await update(x.id,{vehicle_plate:truck,trailer_plate:trailer,driver_name:driver,driver_contact:contact});
+    }
+  }catch(err){alert('Akcija nije uspjela:\n'+(err?.message||err))}
+}
+
+function exposeRoleAccess(){
+  try{
+    const prev=window.allowedViewsForRole;
+    if(typeof prev==='function'&&!prev.__supplier570){
+      const wrapped=function(role){
+        const arr=prev(role)||[];
+        if(['admin','manager','management','inventory'].includes(String(role||'').toLowerCase())&&!arr.includes('supplierRequests'))arr.push('supplierRequests');
+        return arr;
+      };
+      wrapped.__supplier570=true;
+      window.allowedViewsForRole=wrapped;
+    }
+  }catch(_){}
+}
+
+window.YardivoSupplierRequests={ensureUi,load,render,applyAccess};
+window.addEventListener('load',()=>{setTimeout(()=>{ensureUi();exposeRoleAccess();applyAccess();if(canReview())load()},1300)});
+window.addEventListener('yardivo:login',()=>{setTimeout(()=>{ensureUi();exposeRoleAccess();applyAccess();if(canReview())load()},700)});
+window.addEventListener('yardivo:data-synced',()=>{if(canReview())setTimeout(render,150)});
 })();
 </script>
 
