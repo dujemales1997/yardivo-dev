@@ -11,7 +11,7 @@ Designed & Developed by Duje Maleš
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
 (function(){
   'use strict';
-  window.__YARDIVO_BUILD__='20260904-dev-v5.7.0-supplier-approval-workflow';
+  window.__YARDIVO_BUILD__='20260905-dev-v5.7.2-supplier-approval-flow-fix';
   const nativeFetch=window.fetch?.bind(window);
   if(nativeFetch){
     window.fetch=function(input,init){
@@ -35,8 +35,8 @@ Designed & Developed by Duje Maleš
     const old=document.getElementById('yardivoSyncErrorBox'); if(old) old.remove();
     const badge=document.createElement('div');
     badge.id='yardivoBuildBadge';
-    badge.textContent='YARDIVO DEV · BUILD V5.7.0';
-    badge.title='20260904-dev-v5.7.0-supplier-approval-workflow';
+    badge.textContent='YARDIVO DEV · BUILD V5.7.2';
+    badge.title='20260905-dev-v5.7.2-supplier-approval-flow-fix';
     badge.style.cssText='position:fixed;right:8px;bottom:8px;z-index:2147483646;font:700 10px/1.2 system-ui;padding:5px 7px;border-radius:6px;background:#0d1b29;color:#94a9b9;border:1px solid #26435a;opacity:.72;pointer-events:none';
     document.body.appendChild(badge);
   },{once:true});
@@ -32161,7 +32161,11 @@ window.YardivoFullOperationalNotificationsV548={
               <input id="yspOrder" autocomplete="off" placeholder="6W..." required>
             </label>
             <label><span data-i18n="deliveryDate">DATUM DOSTAVE *</span>
-              <input id="yspDate" type="date" required>
+              <div class="ysp-date-wrap">
+  <input id="yspDateDisplay" class="ysp-date-display" type="text" readonly placeholder="Odaberi datum">
+  <input id="yspDate" type="hidden">
+  <div id="yspMiniCal" class="ysp-mini-cal"></div>
+</div>
             </label>
             <label><span data-i18n="time">ŽELJENI TERMIN *</span>
               <input id="yspTime" type="time" step="900" required>
@@ -33017,6 +33021,40 @@ function allAssignedWarehouses(){
   }
   return assigned.sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
 }
+function initSupplierMiniCalendar(){
+  const host=document.getElementById('yspMiniCal');
+  const hidden=document.getElementById('yspDate');
+  const display=document.getElementById('yspDateDisplay');
+  if(!host||!hidden||!display||host.dataset.ready==='1')return;
+  host.dataset.ready='1';
+  let selected=hidden.value||'', cursor=selected?new Date(selected+'T12:00:00'):new Date();
+  const iso=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
+  const human=v=>{if(!v)return '';const [y,m,d]=v.split('-');return `${d}.${m}.${y}.`};
+  function draw(){
+    const y=cursor.getFullYear(),m=cursor.getMonth(),first=new Date(y,m,1),offset=(first.getDay()+6)%7;
+    const days=new Date(y,m+1,0).getDate(),prev=new Date(y,m,0).getDate();
+    const mons=['Siječanj','Veljača','Ožujak','Travanj','Svibanj','Lipanj','Srpanj','Kolovoz','Rujan','Listopad','Studeni','Prosinac'];
+    const dows=['P','U','S','Č','P','S','N'];
+    let cells=dows.map(x=>`<div class="dow">${x}</div>`).join('');
+    for(let i=0;i<42;i++){
+      let n=i-offset+1,d,muted=false;
+      if(n<1){d=new Date(y,m-1,prev+n);muted=true}else if(n>days){d=new Date(y,m+1,n-days);muted=true}else d=new Date(y,m,n);
+      const v=iso(d);
+      cells+=`<button type="button" data-date="${v}" class="${muted?'muted ':''}${v===selected?'sel ':''}${v===iso(new Date())?'today':''}">${d.getDate()}</button>`;
+    }
+    host.innerHTML=`<div class="ysp-cal-head"><button type="button" data-prev>‹</button><div class="ysp-cal-title">${mons[m]} ${y}</div><button type="button" data-next>›</button></div><div class="ysp-cal-grid">${cells}</div>`;
+  }
+  display.value=human(selected);
+  display.addEventListener('click',()=>host.classList.toggle('open'));
+  host.addEventListener('click',e=>{
+    if(e.target.closest('[data-prev]')){cursor=new Date(cursor.getFullYear(),cursor.getMonth()-1,1);draw();return}
+    if(e.target.closest('[data-next]')){cursor=new Date(cursor.getFullYear(),cursor.getMonth()+1,1);draw();return}
+    const b=e.target.closest('[data-date]');if(!b)return;
+    selected=b.dataset.date;hidden.value=selected;display.value=human(selected);host.classList.remove('open');draw();
+  });
+  document.addEventListener('click',e=>{if(!e.target.closest('.ysp-date-wrap'))host.classList.remove('open')});
+  draw();
+}
 function rebuild(){
   const form=document.querySelector('#yardivoSupplierPortal .ysp-form');
   if(!form||form.dataset.v561==='1')return;
@@ -33081,6 +33119,7 @@ function rebuild(){
   const sel=document.getElementById('yspWarehouse');
   const ws=allAssignedWarehouses();
   if(sel)sel.innerHTML='<option value="">ODABERI SKLADIŠTE</option>'+ws.map(w=>`<option value="${w}">${w}</option>`).join('');
+  initSupplierMiniCalendar();
   document.getElementById('yspSubmit')?.addEventListener('click',()=>window.YardivoSupplierPortal?.submitV561?.());
 }
 function init(){setTimeout(rebuild,80)}
@@ -33281,15 +33320,19 @@ function render(){
 }
 async function update(id,patch){
   await window.YardivoSupplierLiveSync.call('internal_update',{id,...patch});
+  // Always re-read the server record. If it was approved, pullInternal mirrors the SAME
+  // supplier delivery into the canonical YARDIVO announcements used by Daily/Weekly/Reception.
   await load();
+  try{await window.YardivoSupplierLiveSync.pullInternal()}catch(_){}
   try{if(typeof render==='function')render()}catch(_){}
+  try{window.dispatchEvent(new CustomEvent('yardivo:supplier-request-updated',{detail:{id,patch}}))}catch(_){}
 }
 async function handleAction(e){
   const b=e.target.closest('button[data-a]');if(!b)return;
   const x=cache.find(r=>String(r.id)===String(b.dataset.id));if(!x)return;
   try{
     if(b.dataset.a==='approve'){
-      if(!confirm(`Odobriti najavu ${x.client_id}?\n\nNakon odobrenja ulazi u Dnevnu mapu, Tjednu mapu i Unos najave.`))return;
+      if(!confirm(`Odobriti Supplier zahtjev ${x.client_id}?\n\nTek nakon odobrenja najava ulazi u operativni YARDIVO: Prijam, Unos najava, Dnevnu i Tjednu mapu.`))return;
       await update(x.id,{status:'confirmed',review_note:''});
     }
     if(b.dataset.a==='term'){
@@ -33340,5 +33383,66 @@ window.addEventListener('yardivo:data-synced',()=>{if(canReview())setTimeout(ren
 })();
 </script>
 
+
+<script id="yardivo-v572-supplier-approval-bridge">
+(function(){
+'use strict';
+const REVIEW_ROLES=['admin','manager','management','inventory'];
+function role(){try{return String((typeof currentSession!=='undefined'?currentSession:window.currentSession)?.role||'').toLowerCase()}catch(_){return String(window.currentSession?.role||'').toLowerCase()}}
+function reviewer(){return REVIEW_ROLES.includes(role())}
+let busy=false,lastPending=-1;
+async function refreshApprovalInbox(){
+  if(!reviewer()||busy||!window.YardivoSupplierLiveSync?.call)return;
+  busy=true;
+  try{
+    const rows=await window.YardivoSupplierLiveSync.call('list_internal');
+    if(!Array.isArray(rows))return;
+    const pending=rows.filter(x=>String(x.status||'').toLowerCase()==='pending').length;
+    const badge=document.getElementById('supplierRequestsBadge');
+    if(badge){badge.textContent=String(pending);badge.style.display=pending?'inline-flex':'none'}
+    // A newly submitted Supplier request must become visible to Inventory without reload.
+    if(pending!==lastPending){
+      lastPending=pending;
+      try{await window.YardivoSupplierRequests?.load?.()}catch(_){}
+      try{window.dispatchEvent(new CustomEvent('yardivo:supplier-inbox-changed',{detail:{pending}}))}catch(_){}
+    }
+  }catch(e){console.error('YARDIVO Supplier approval inbox',e)}
+  finally{busy=false}
+}
+window.addEventListener('yardivo:login',()=>setTimeout(refreshApprovalInbox,900));
+window.addEventListener('focus',refreshApprovalInbox);
+window.addEventListener('yardivo:data-synced',()=>setTimeout(refreshApprovalInbox,250));
+window.addEventListener('yardivo:supplier-request-updated',()=>setTimeout(refreshApprovalInbox,250));
+setInterval(refreshApprovalInbox,5000);
+setTimeout(refreshApprovalInbox,1800);
+window.YardivoSupplierApprovalBridge={refresh:refreshApprovalInbox};
+})();
+</script>
 </body>
 </html>
+
+<style id="yardivo-v571-final-ui">
+#yardivoSupplierPortal #yspSend{display:none!important}
+#yardivoSupplierPortal .ysp-actions{justify-content:flex-end}
+#yardivoSupplierPortal .ysp-form-actions{justify-content:flex-start!important}
+#yardivoSupplierPortal .ysp-form-actions #yspSubmit{
+  min-width:190px!important;max-width:230px!important;width:auto!important;height:auto!important;
+  padding:11px 18px!important;border-radius:9px!important
+}
+#yardivoSupplierPortal .ysp-date-wrap{position:relative}
+#yardivoSupplierPortal .ysp-date-display{cursor:pointer}
+#yardivoSupplierPortal .ysp-mini-cal{
+ display:none;position:absolute;left:0;top:calc(100% + 7px);z-index:100;width:286px;padding:10px;
+ background:#091a25;border:1px solid #315369;border-radius:11px;box-shadow:0 18px 42px rgba(0,0,0,.38)
+}
+#yardivoSupplierPortal .ysp-mini-cal.open{display:block}
+#yardivoSupplierPortal .ysp-cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+#yardivoSupplierPortal .ysp-cal-head button{background:#102837;border:1px solid #315369;color:#fff;border-radius:7px;padding:5px 9px;cursor:pointer}
+#yardivoSupplierPortal .ysp-cal-title{font-size:9px;font-weight:950}
+#yardivoSupplierPortal .ysp-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+#yardivoSupplierPortal .ysp-cal-grid .dow{text-align:center;color:#7894a6;font-size:7px;padding:3px}
+#yardivoSupplierPortal .ysp-cal-grid button{aspect-ratio:1/1;background:#102837;border:1px solid transparent;color:#e8f2f7;border-radius:7px;font-size:8px;cursor:pointer}
+#yardivoSupplierPortal .ysp-cal-grid button:hover,#yardivoSupplierPortal .ysp-cal-grid button.today{border-color:#3e9ddd}
+#yardivoSupplierPortal .ysp-cal-grid button.sel{background:#1e7ee8;color:#fff}
+#yardivoSupplierPortal .ysp-cal-grid button.muted{opacity:.35}
+</style>
