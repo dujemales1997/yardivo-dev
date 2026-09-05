@@ -35,7 +35,7 @@ Designed & Developed by Duje Maleš
     const old=document.getElementById('yardivoSyncErrorBox'); if(old) old.remove();
     const badge=document.createElement('div');
     badge.id='yardivoBuildBadge';
-    badge.textContent='YARDIVO DEV · BUILD V5.7.2';
+    badge.textContent='YARDIVO DEV · BUILD V5.7.5';
     badge.title='20260905-dev-v5.7.2-supplier-approval-flow-fix';
     badge.style.cssText='position:fixed;right:8px;bottom:8px;z-index:2147483646;font:700 10px/1.2 system-ui;padding:5px 7px;border-radius:6px;background:#0d1b29;color:#94a9b9;border:1px solid #26435a;opacity:.72;pointer-events:none';
     document.body.appendChild(badge);
@@ -5938,6 +5938,15 @@ html.yardivo-welcome-complete #yardivoWelcomeBar{
 }
 </style>
 
+
+<style id="yardivo-v575-calendar-hardening">
+#yardivoSupplierPortal .ysp-date-wrap{position:relative}
+#yardivoSupplierPortal .ysp-date-display{cursor:pointer!important;padding-right:36px!important;background-image:linear-gradient(transparent,transparent)!important}
+#yardivoSupplierPortal .ysp-date-display::placeholder{color:#7894a8}
+#yardivoSupplierPortal .ysp-mini-cal{z-index:999999!important;min-width:300px;max-width:340px;box-shadow:0 18px 44px rgba(0,0,0,.45)}
+#yardivoSupplierPortal .ysp-mini-cal.open{display:block!important}
+</style>
+<script id="yardivo-v575-build-marker">window.YARDIVO_DEV_BUILD='20260906-dev-v5.7.5-supplier-auth-calendar-fix';</script>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -32812,19 +32821,31 @@ window.YardivoSupplierPortal={open,close,render,setLanguage:setLang,editVehicle,
 
 async function call(action,payload={}){
   const c=await window.YardivoAuth.client();
-  const {data,error}=await c.functions.invoke('yardivo-supplier-deliveries',{body:{action,...payload}});
-  if(error){
-    let detail='';
-    try{
-      if(error.context){
-        const x=error.context.clone?.()||error.context;
-        const b=await x.json();
-        detail=b?.error||b?.message||'';
-      }
-    }catch(_){}
-    throw new Error(detail||error.message||'Supplier sync error');
+  let session=null;
+  try{
+    const gs=await c.auth.getSession();
+    session=gs?.data?.session||null;
+    if(!session?.access_token){
+      const rr=await c.auth.refreshSession();
+      session=rr?.data?.session||null;
+    }
+  }catch(_){}
+  if(!session?.access_token){
+    throw new Error('ONLINE PRIJAVA NIJE AKTIVNA. Odjavite se i ponovno prijavite u YARDIVO.');
   }
-  if(data?.ok===false||data?.error)throw new Error(data?.error||'Supplier sync error');
+  const res=await fetch('https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-supplier-deliveries',{
+    method:'POST',
+    headers:{
+      apikey:'sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy',
+      Authorization:'Bearer '+session.access_token,
+      'Content-Type':'application/json'
+    },
+    body:JSON.stringify({action,...payload})
+  });
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok||data?.ok===false||data?.error){
+    throw new Error(data?.error||data?.message||('Supplier sync HTTP '+res.status));
+  }
   return data?.data??data;
 }
 function role(){
@@ -33075,7 +33096,11 @@ function rebuild(){
       </div>
       <div class="ysp-field">
         <div class="ysp-field-title">DATUM DOSTAVE <span class="ysp-required">*</span></div>
-        <input id="yspDate" type="date" required>
+        <div class="ysp-date-wrap">
+          <input id="yspDateDisplay" class="ysp-date-display" type="text" readonly placeholder="KLIKNI I ODABERI DATUM" aria-label="Odaberi datum dostave">
+          <input id="yspDate" type="hidden" required>
+          <div id="yspMiniCal" class="ysp-mini-cal" aria-label="Kalendar za odabir datuma"></div>
+        </div>
       </div>
       <div class="ysp-field">
         <div class="ysp-field-title">BROJ PALETA <span class="ysp-required">*</span></div>
