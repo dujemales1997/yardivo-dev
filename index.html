@@ -32723,18 +32723,17 @@ async function submit(){
   const warehouse=document.getElementById('yspWarehouse')?.value||'';
   const order=document.getElementById('yspOrder')?.value.trim().toUpperCase()||'';
   const date=document.getElementById('yspDate')?.value||'';
-  const time=document.getElementById('yspTime')?.value||'';
+  const time='';
   const pallets=Number(document.getElementById('yspPallets')?.value||0);
   const skuCount=Number(document.getElementById('yspSkuCount')?.value||0);
   const missing=[];
   if(!warehouse)missing.push('SKLADIŠTE');
   if(!date)missing.push('DATUM DOSTAVE');
-  if(!time)missing.push('ŽELJENI TERMIN');
   if(!Number.isInteger(pallets)||pallets<1)missing.push('BROJ PALETA');
   if(!Number.isInteger(skuCount)||skuCount<1)missing.push('BROJ SKU-OVA');
   if(missing.length){
     alert((lang==='en'?'Please complete: ':'Molim popuni: ')+missing.join(', '));
-    const ids={SKLADIŠTE:'yspWarehouse','DATUM DOSTAVE':'yspDate','ŽELJENI TERMIN':'yspTime','BROJ PALETA':'yspPallets','BROJ SKU-OVA':'yspSkuCount'};
+    const ids={SKLADIŠTE:'yspWarehouse','DATUM DOSTAVE':'yspDate','BROJ PALETA':'yspPallets','BROJ SKU-OVA':'yspSkuCount'};
     document.getElementById(ids[missing[0]])?.focus?.();
     return;
   }
@@ -32841,7 +32840,7 @@ function supplierRowFromLocal(row){
     warehouse:String(row.warehouse||'').toUpperCase(),
     order_number:String(row.order||'').toUpperCase(),
     delivery_date:row.date,
-    requested_time:row.time,
+    requested_time:null,
     pallets:Number(row.pallets||0),
     sku_count:Number(row.skuCount||0),
     vehicle_plate:String(row.plate||'').toUpperCase(),
@@ -33079,10 +33078,6 @@ function rebuild(){
         <input id="yspDate" type="date" required>
       </div>
       <div class="ysp-field">
-        <div class="ysp-field-title">ŽELJENI TERMIN <span class="ysp-required">*</span></div>
-        <input id="yspTime" type="time" step="900" required>
-      </div>
-      <div class="ysp-field">
         <div class="ysp-field-title">BROJ PALETA <span class="ysp-required">*</span></div>
         <input id="yspPallets" type="number" min="1" step="1" inputmode="numeric" required>
       </div>
@@ -33306,20 +33301,21 @@ function render(){
     return;
   }
   body.innerHTML=rows.map(x=>{
-    const editable=['pending','revision_requested','confirmed'].includes(x.status);
+    const editable=['pending','revision_requested','proposal_sent','confirmed'].includes(x.status);
     const transport=[x.vehicle_plate,x.trailer_plate,x.driver_name,x.driver_contact].filter(Boolean).map(escapeY).join('<br>')||'—';
     return `<tr>
       <td><strong>${escapeY(x.supplier_name||x.supplier_username||'—')}</strong><br><small>${escapeY(x.client_id||'')}</small></td>
       <td><strong>${escapeY(x.warehouse)}</strong></td>
-      <td>${escapeY(x.delivery_date)}<br><strong>${escapeY(String(x.requested_time||'').slice(0,5))}</strong></td>
+      <td>${escapeY(x.delivery_date)}<br><strong>${x.requested_time?('Termin: '+escapeY(String(x.requested_time).slice(0,5))):'Termin nije dodijeljen'}</strong>${x.dock?'<br>Rampa: <strong>'+escapeY(x.dock)+'</strong>':''}</td>
       <td>${Number(x.pallets||0)} pal.<br>${Number(x.sku_count||0)} SKU</td>
       <td>${escapeY(x.order_number||'—')}</td>
       <td>${transport}</td>
       <td><span class="ysr-status ${escapeY(x.status)}">${escapeY(statusLabelY(x.status))}</span></td>
       <td><div class="ysr-note">${escapeY(x.review_note||x.note||'—')}</div></td>
       <td><div class="ysr-actions">
-        ${x.status==='pending'||x.status==='revision_requested'?`<button class="primary" data-a="approve" data-id="${x.id}">ODOBRI</button>`:''}
-        ${editable?`<button data-a="term" data-id="${x.id}">TERMIN</button><button data-a="transport" data-id="${x.id}">TRANSPORT</button>`:''}
+        ${x.status==='pending'||x.status==='revision_requested'?`<button class="primary" data-a="proposal" data-id="${x.id}">PREDLOŽI TERMIN + RAMPU</button>`:''}
+        ${x.status==='proposal_sent'?`<button data-a="proposal" data-id="${x.id}">IZMIJENI PRIJEDLOG</button>`:''}
+        ${editable?`<button data-a="transport" data-id="${x.id}">TRANSPORT</button>`:''}
         ${x.status==='pending'?`<button class="warn" data-a="revision" data-id="${x.id}">VRATI NA DORADU</button>`:''}
         ${!['completed','rejected'].includes(x.status)?`<button class="danger" data-a="reject" data-id="${x.id}">ODBIJ</button>`:''}
       </div></td>
@@ -33339,15 +33335,12 @@ async function handleAction(e){
   const b=e.target.closest('button[data-a]');if(!b)return;
   const x=cache.find(r=>String(r.id)===String(b.dataset.id));if(!x)return;
   try{
-    if(b.dataset.a==='approve'){
-      if(!confirm(`Odobriti Supplier zahtjev ${x.client_id}?\n\nTek nakon odobrenja najava ulazi u operativni YARDIVO: Prijam, Unos najava, Dnevnu i Tjednu mapu.`))return;
-      await update(x.id,{status:'confirmed',review_note:''});
-    }
-    if(b.dataset.a==='term'){
+    if(b.dataset.a==='proposal'){
       const date=prompt('Datum dostave (YYYY-MM-DD):',x.delivery_date||'');if(date===null)return;
-      const time=prompt('Termin (HH:MM):',String(x.requested_time||'').slice(0,5));if(time===null)return;
-      if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time)){alert('Datum ili termin nisu ispravni.');return}
-      await update(x.id,{delivery_date:date,requested_time:time});
+      const time=prompt('Predloženi termin (HH:MM):',String(x.requested_time||'').slice(0,5)||'08:00');if(time===null)return;
+      const dock=prompt('Rampa (npr. R07):',String(x.dock||''));if(dock===null)return;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time)||!dock.trim()){alert('Datum, termin i rampa su obavezni.');return}
+      await update(x.id,{delivery_date:date,requested_time:time,dock:dock.trim().toUpperCase(),status:'proposal_sent',review_note:'YARDIVO je predložio termin i rampu. Dobavljač treba potvrditi ili zatražiti drugi termin.'});
     }
     if(b.dataset.a==='revision'){
       const note=prompt('Što dobavljač treba ispraviti?','');if(note===null)return;
@@ -33445,7 +33438,7 @@ function saveNotifications(a){
 function addRequestNotification(x){
   const a=notifications(), id='SUPREQ-'+String(x.id||x.client_id||Date.now());
   if(a.some(n=>String(n.id)===id))return;
-  a.push({id,event:'SUPPLIER_REQUEST',title:'NOVI ZAHTJEV DOBAVLJAČA',body:`${x.supplier_name||x.supplier_username||'Dobavljač'} · ${x.warehouse||'—'} · ${x.delivery_date||'—'} ${String(x.requested_time||'').slice(0,5)||'—'} · ${Number(x.pallets||0)} pal. · ${Number(x.sku_count||0)} SKU`,supplier:x.supplier_name||x.supplier_username||'',targets:['admin','manager','inventory'],at:new Date().toISOString(),createdAt:new Date().toISOString()});
+  a.push({id,event:'SUPPLIER_REQUEST',title:'NOVI ZAHTJEV DOBAVLJAČA',body:`${x.supplier_name||x.supplier_username||'Dobavljač'} · ${x.warehouse||'—'} · ${x.delivery_date||'—'} · ${Number(x.pallets||0)} pal. · ${Number(x.sku_count||0)} SKU`,supplier:x.supplier_name||x.supplier_username||'',targets:['admin','manager','inventory'],at:new Date().toISOString(),createdAt:new Date().toISOString()});
   saveNotifications(a);
   try{if(typeof showYmsToast==='function')showYmsToast('info','NOVI SUPPLIER ZAHTJEV',`${x.supplier_name||x.supplier_username||'Dobavljač'} · ${x.warehouse||'—'}`,4500)}catch(_){}
 }
@@ -33472,6 +33465,48 @@ window.YardivoSupplierRequestNotifications={check};
 <style id="yardivo-v573-supplier-button-fix">
 #yardivoSupplierPortal .ysp-form-actions{display:flex!important;justify-content:flex-start!important;align-items:center!important}
 #yardivoSupplierPortal #yspSubmit{min-width:0!important;width:auto!important;max-width:none!important;height:38px!important;padding:8px 16px!important;font-size:10px!important;border-radius:8px!important}
+</style>
+
+
+<script id="yardivo-v574-supplier-proposal-flow">
+(function(){
+'use strict';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function acceptProposal(clientId){
+  if(!confirm('Prihvatiti predloženi termin i rampu?'))return;
+  try{await window.YardivoSupplierLiveSync.call('supplier_accept',{client_id:clientId});await window.YardivoSupplierLiveSync.pullSupplier();alert('Termin i rampa su potvrđeni. Najava je sada operativna u YARDIVO-u.');}
+  catch(e){alert('Potvrda nije uspjela:\n'+(e?.message||e));}
+}
+async function requestAlternative(clientId){
+  const note=prompt('Napišite koji drugi termin vam odgovara (ili razlog):','');if(note===null)return;
+  if(!note.trim()){alert('Upišite željeni drugi termin ili napomenu.');return;}
+  try{await window.YardivoSupplierLiveSync.call('supplier_alternative',{client_id:clientId,note:note.trim()});await window.YardivoSupplierLiveSync.pullSupplier();alert('Zahtjev za drugim terminom poslan je Upravljanju zalihama.');}
+  catch(e){alert('Zahtjev nije poslan:\n'+(e?.message||e));}
+}
+document.addEventListener('click',e=>{
+  const a=e.target.closest?.('[data-ysp-accept-proposal]');if(a){acceptProposal(a.dataset.yspAcceptProposal);return;}
+  const b=e.target.closest?.('[data-ysp-alternative]');if(b){requestAlternative(b.dataset.yspAlternative);return;}
+},true);
+function enhance(){
+  document.querySelectorAll('#yspStatusList .ysp-delivery-card').forEach(()=>{});
+  const rows=(()=>{try{const s=(typeof currentSession!=='undefined'?currentSession:window.currentSession)||{};const key='yardivo_supplier_portal_v549_'+String(s.authUserId||s.username||s.user||'supplier');return JSON.parse(localStorage.getItem(key)||'[]')}catch(_){return[]}})();
+  const host=document.getElementById('yspStatusList');if(!host||!Array.isArray(rows))return;
+  const proposed=rows.filter(x=>String(x.status||'').toLowerCase()==='proposal_sent');
+  proposed.forEach(x=>{
+    if(host.querySelector(`[data-v574-proposal="${CSS.escape(String(x.id))}"]`))return;
+    const card=document.createElement('div');card.className='ysp-v574-proposal';card.dataset.v574Proposal=String(x.id);
+    card.innerHTML=`<div><strong>PRIJEDLOG UPRAVLJANJA ZALIHAMA</strong><div>${esc(x.date)} · <b>${esc(String(x.time||'').slice(0,5))}</b> · Rampa <b>${esc(x.dock||'—')}</b></div></div><div class="ysp-v574-actions"><button type="button" class="btn-primary" data-ysp-accept-proposal="${esc(x.id)}">PRIHVATI TERMIN</button><button type="button" class="btn-secondary" data-ysp-alternative="${esc(x.id)}">ODABERI / ZATRAŽI DRUGI</button></div>`;
+    host.prepend(card);
+  });
+}
+window.addEventListener('yardivo:data-synced',()=>setTimeout(enhance,100));
+setInterval(enhance,1200);
+})();
+</script>
+<style id="yardivo-v574-style">
+#yardivoSupplierPortal .ysp-v574-proposal{margin:10px 0;padding:14px;border:1px solid #2d6da3;border-radius:10px;background:#0a2031;display:flex;justify-content:space-between;gap:14px;align-items:center}
+#yardivoSupplierPortal .ysp-v574-proposal strong{font-size:10px;letter-spacing:.08em;color:#8ec7ff}#yardivoSupplierPortal .ysp-v574-proposal div div{margin-top:6px;font-size:13px}.ysp-v574-actions{display:flex;gap:8px;flex-wrap:wrap}
+#yardivoSupplierPortal #yspSubmit{width:auto!important;min-width:140px!important;max-width:180px!important;height:38px!important;padding:8px 14px!important}
 </style>
 
 </body>
