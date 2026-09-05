@@ -32618,7 +32618,7 @@ function render(){
   renderWarehouses();renderHistory();renderStatus();renderKpis();
 }
 function clearForm(){
-  ['yspOrder','yspDate','yspTime','yspPlate','yspDriver','yspPallets','yspReference','yspNote'].forEach(id=>{
+  ['yspOrder','yspDate','yspTime','yspPlate','yspTrailerPlate','yspDriver','yspDriverContact','yspPallets','yspSkuCount','yspReference','yspNote'].forEach(id=>{
     const e=document.getElementById(id); if(e)e.value='';
   });
 }
@@ -32726,8 +32726,16 @@ async function submit(){
   const time=document.getElementById('yspTime')?.value||'';
   const pallets=Number(document.getElementById('yspPallets')?.value||0);
   const skuCount=Number(document.getElementById('yspSkuCount')?.value||0);
-  if(!warehouse||!date||!time||!Number.isInteger(pallets)||pallets<1||!Number.isInteger(skuCount)||skuCount<1){
-    alert(lang==='en'?'Warehouse, delivery date, time, pallet count and SKU count are required.':'Skladište, datum dostave, termin, broj paleta i broj SKU-ova su obavezni.');
+  const missing=[];
+  if(!warehouse)missing.push('SKLADIŠTE');
+  if(!date)missing.push('DATUM DOSTAVE');
+  if(!time)missing.push('ŽELJENI TERMIN');
+  if(!Number.isInteger(pallets)||pallets<1)missing.push('BROJ PALETA');
+  if(!Number.isInteger(skuCount)||skuCount<1)missing.push('BROJ SKU-OVA');
+  if(missing.length){
+    alert((lang==='en'?'Please complete: ':'Molim popuni: ')+missing.join(', '));
+    const ids={SKLADIŠTE:'yspWarehouse','DATUM DOSTAVE':'yspDate','ŽELJENI TERMIN':'yspTime','BROJ PALETA':'yspPallets','BROJ SKU-OVA':'yspSkuCount'};
+    document.getElementById(ids[missing[0]])?.focus?.();
     return;
   }
   const allowed=window.YardivoSupplierV561?.allAssignedWarehouses?.()||currentWarehouses();
@@ -33418,6 +33426,54 @@ setTimeout(refreshApprovalInbox,1800);
 window.YardivoSupplierApprovalBridge={refresh:refreshApprovalInbox};
 })();
 </script>
+
+<script id="yardivo-v573-supplier-request-notification-fix">
+(function(){
+'use strict';
+const SEEN='yardivo_supplier_pending_seen_v573';
+const KEY='yardivo_live_notifications_v1';
+const ROLES=['admin','manager','management','inventory'];
+function role(){try{return String((window.currentSession||currentSession||{}).role||'').toLowerCase()}catch(_){return String(window.currentSession?.role||'').toLowerCase()}}
+function seen(){try{const a=JSON.parse(localStorage.getItem(SEEN)||'[]');return new Set(Array.isArray(a)?a.map(String):[])}catch(_){return new Set()}}
+function saveSeen(x){try{localStorage.setItem(SEEN,JSON.stringify([...x].slice(-1000)))}catch(_){}}
+function notifications(){try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(a)?a:[]}catch(_){return[]}}
+function saveNotifications(a){
+  try{localStorage.setItem(KEY,JSON.stringify(a.slice(-1200)))}catch(_){}
+  try{if(typeof putCloudState==='function')Promise.resolve(putCloudState(KEY,JSON.stringify(a.slice(-1200)))).catch(()=>{})}catch(_){}
+  try{window.YardivoNotifications?.render?.()}catch(_){}
+}
+function addRequestNotification(x){
+  const a=notifications(), id='SUPREQ-'+String(x.id||x.client_id||Date.now());
+  if(a.some(n=>String(n.id)===id))return;
+  a.push({id,event:'SUPPLIER_REQUEST',title:'NOVI ZAHTJEV DOBAVLJAČA',body:`${x.supplier_name||x.supplier_username||'Dobavljač'} · ${x.warehouse||'—'} · ${x.delivery_date||'—'} ${String(x.requested_time||'').slice(0,5)||'—'} · ${Number(x.pallets||0)} pal. · ${Number(x.sku_count||0)} SKU`,supplier:x.supplier_name||x.supplier_username||'',targets:['admin','manager','inventory'],at:new Date().toISOString(),createdAt:new Date().toISOString()});
+  saveNotifications(a);
+  try{if(typeof showYmsToast==='function')showYmsToast('info','NOVI SUPPLIER ZAHTJEV',`${x.supplier_name||x.supplier_username||'Dobavljač'} · ${x.warehouse||'—'}`,4500)}catch(_){}
+}
+async function check(){
+  if(!ROLES.includes(role())||!window.YardivoSupplierLiveSync?.call)return;
+  try{
+    const rows=await window.YardivoSupplierLiveSync.call('list_internal');if(!Array.isArray(rows))return;
+    const S=seen();
+    for(const x of rows.filter(r=>String(r.status||'').toLowerCase()==='pending')){
+      const id=String(x.id||x.client_id||'');if(!id)continue;
+      if(!S.has(id)){addRequestNotification(x);S.add(id)}
+    }
+    saveSeen(S);
+    try{await window.YardivoSupplierRequests?.load?.()}catch(_){}
+  }catch(e){console.error('YARDIVO V5.7.3 supplier notification',e)}
+}
+window.addEventListener('yardivo:login',()=>setTimeout(check,1000));
+window.addEventListener('focus',check);
+window.addEventListener('yardivo:supplier-inbox-changed',check);
+setInterval(check,5000);setTimeout(check,2200);
+window.YardivoSupplierRequestNotifications={check};
+})();
+</script>
+<style id="yardivo-v573-supplier-button-fix">
+#yardivoSupplierPortal .ysp-form-actions{display:flex!important;justify-content:flex-start!important;align-items:center!important}
+#yardivoSupplierPortal #yspSubmit{min-width:0!important;width:auto!important;max-width:none!important;height:38px!important;padding:8px 16px!important;font-size:10px!important;border-radius:8px!important}
+</style>
+
 </body>
 </html>
 
@@ -33426,8 +33482,8 @@ window.YardivoSupplierApprovalBridge={refresh:refreshApprovalInbox};
 #yardivoSupplierPortal .ysp-actions{justify-content:flex-end}
 #yardivoSupplierPortal .ysp-form-actions{justify-content:flex-start!important}
 #yardivoSupplierPortal .ysp-form-actions #yspSubmit{
-  min-width:190px!important;max-width:230px!important;width:auto!important;height:auto!important;
-  padding:11px 18px!important;border-radius:9px!important
+  min-width:0!important;max-width:180px!important;width:auto!important;height:38px!important;
+  padding:8px 14px!important;font-size:10px!important;border-radius:9px!important
 }
 #yardivoSupplierPortal .ysp-date-wrap{position:relative}
 #yardivoSupplierPortal .ysp-date-display{cursor:pointer}
