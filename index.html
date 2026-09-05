@@ -24989,6 +24989,23 @@ async function authenticate(){
   };
   persistSession(session);
 
+  /* V5.7.6: bind the raw REST login tokens into the Supabase auth client for EVERY role,
+     including Supplier. Supplier Edge Functions read this authenticated session. */
+  try{
+    const authClient=await window.YardivoAuth?.client?.();
+    if(authClient?.auth?.setSession){
+      const {error:setSessionError}=await authClient.auth.setSession({
+        access_token:auth.access_token,
+        refresh_token:auth.refresh_token
+      });
+      if(setSessionError)throw setSessionError;
+    }
+    window.__yardivoSupplierAccessToken=auth.access_token;
+  }catch(setSessionErr){
+    console.error('YARDIVO V5.7.6 auth session bind',setSessionErr);
+    throw new Error('ONLINE PRIJAVA NIJE POVEZANA. Odjavite se i ponovno prijavite.');
+  }
+
   /* Canonical online bootstrap: login is complete only when the database session is valid.
      The Edge sync receives this exact JWT; no stale or anonymous browser session can write. */
   if(assignedRole!=='supplier'){
@@ -32830,14 +32847,15 @@ async function call(action,payload={}){
       session=rr?.data?.session||null;
     }
   }catch(_){}
-  if(!session?.access_token){
+  const accessToken=session?.access_token||window.__yardivoSupplierAccessToken||'';
+  if(!accessToken){
     throw new Error('ONLINE PRIJAVA NIJE AKTIVNA. Odjavite se i ponovno prijavite u YARDIVO.');
   }
   const res=await fetch('https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-supplier-deliveries',{
     method:'POST',
     headers:{
       apikey:'sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy',
-      Authorization:'Bearer '+session.access_token,
+      Authorization:'Bearer '+accessToken,
       'Content-Type':'application/json'
     },
     body:JSON.stringify({action,...payload})
@@ -33533,6 +33551,89 @@ setInterval(enhance,1200);
 #yardivoSupplierPortal .ysp-v574-proposal strong{font-size:10px;letter-spacing:.08em;color:#8ec7ff}#yardivoSupplierPortal .ysp-v574-proposal div div{margin-top:6px;font-size:13px}.ysp-v574-actions{display:flex;gap:8px;flex-wrap:wrap}
 #yardivoSupplierPortal #yspSubmit{width:auto!important;min-width:140px!important;max-width:180px!important;height:38px!important;padding:8px 14px!important}
 </style>
+
+
+<style id="yardivo-v576-supplier-final-style">
+#yardivoSupplierPortal .ysp-date-picker-final{position:relative}
+#yardivoSupplierPortal #yspDateDisplay{cursor:pointer!important;user-select:none;background:#07131d!important}
+#yardivoSupplierPortal .ysp-cal-final{display:none;position:absolute;top:calc(100% + 7px);left:0;width:310px;z-index:1000000;background:#0a1824;border:1px solid #31516a;border-radius:12px;padding:12px;box-shadow:0 20px 55px rgba(0,0,0,.5)}
+#yardivoSupplierPortal .ysp-cal-final.open{display:block!important}
+#yardivoSupplierPortal .ysp-cal-head{display:grid;grid-template-columns:34px 1fr 34px;align-items:center;gap:6px;margin-bottom:8px}
+#yardivoSupplierPortal .ysp-cal-head strong{text-align:center;color:#fff;font-size:12px}
+#yardivoSupplierPortal .ysp-cal-head button{height:30px;border:1px solid #31516a;border-radius:7px;background:#102637;color:#fff;cursor:pointer}
+#yardivoSupplierPortal .ysp-cal-week,#yardivoSupplierPortal .ysp-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+#yardivoSupplierPortal .ysp-cal-week span{text-align:center;color:#718da1;font-size:9px;padding:4px 0}
+#yardivoSupplierPortal .ysp-cal-day{height:34px;border:1px solid transparent;border-radius:7px;background:#0e2130;color:#dce9f2;font-size:10px;cursor:pointer}
+#yardivoSupplierPortal .ysp-cal-day:hover{border-color:#4389c5;background:#12304a}
+#yardivoSupplierPortal .ysp-cal-day[disabled]{opacity:.22;cursor:not-allowed}
+#yardivoSupplierPortal .ysp-cal-day.selected{border-color:#5da9ed;background:#184f7e;color:#fff;font-weight:900}
+#yardivoSupplierPortal .ysp-cal-empty{height:34px}
+#yardivoSupplierPortal #yspSubmit{width:auto!important;min-width:132px!important;max-width:180px!important;height:38px!important;padding:8px 15px!important}
+</style>
+<script id="yardivo-v576-supplier-auth-calendar-final">
+(function(){
+'use strict';
+const MONTHS=['Siječanj','Veljača','Ožujak','Travanj','Svibanj','Lipanj','Srpanj','Kolovoz','Rujan','Listopad','Studeni','Prosinac'];
+const WEEK=['PO','UT','SR','ČE','PE','SU','NE'];
+function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function human(v){if(!/^\d{4}-\d{2}-\d{2}$/.test(v||''))return '';const [y,m,d]=v.split('-');return `${d}.${m}.${y}.`}
+function today0(){const d=new Date();d.setHours(0,0,0,0);return d}
+function installCalendar(){
+  const hidden=document.getElementById('yspDate');
+  if(!hidden)return;
+  const field=hidden.closest('.ysp-field')||hidden.parentElement?.parentElement||hidden.parentElement;
+  if(!field)return;
+  const existing=hidden.value||'';
+  field.innerHTML=`<div class="ysp-field-title">ŽELJENI DATUM DOSTAVE <span class="ysp-required">*</span></div>
+    <div class="ysp-date-picker-final">
+      <input id="yspDateDisplay" type="text" readonly placeholder="KLIKNI ZA KALENDAR" autocomplete="off" aria-label="Odaberi datum dostave">
+      <input id="yspDate" type="hidden" value="${existing}">
+      <div id="yspCalendarFinal" class="ysp-cal-final" aria-label="Kalendar"></div>
+    </div>
+    <div class="ysp-helper">Datum se bira isključivo klikom na kalendar.</div>`;
+  const h=document.getElementById('yspDate'),display=document.getElementById('yspDateDisplay'),cal=document.getElementById('yspCalendarFinal');
+  if(existing)display.value=human(existing);
+  let base=existing?new Date(existing+'T12:00:00'):new Date();
+  base=new Date(base.getFullYear(),base.getMonth(),1);
+  function draw(){
+    const y=base.getFullYear(),m=base.getMonth();
+    const first=new Date(y,m,1),days=new Date(y,m+1,0).getDate();
+    const offset=(first.getDay()+6)%7;
+    let cells='';
+    for(let i=0;i<offset;i++)cells+='<span class="ysp-cal-empty"></span>';
+    for(let n=1;n<=days;n++){
+      const d=new Date(y,m,n),val=iso(d),past=d<today0(),sel=h.value===val;
+      cells+=`<button type="button" class="ysp-cal-day${sel?' selected':''}" data-date="${val}" ${past?'disabled':''}>${n}</button>`;
+    }
+    cal.innerHTML=`<div class="ysp-cal-head"><button type="button" data-cal-prev>‹</button><strong>${MONTHS[m]} ${y}</strong><button type="button" data-cal-next>›</button></div><div class="ysp-cal-week">${WEEK.map(x=>`<span>${x}</span>`).join('')}</div><div class="ysp-cal-grid">${cells}</div>`;
+  }
+  display.addEventListener('click',()=>{cal.classList.toggle('open');draw()});
+  cal.addEventListener('click',e=>{
+    const prev=e.target.closest('[data-cal-prev]'),next=e.target.closest('[data-cal-next]'),day=e.target.closest('[data-date]');
+    if(prev){base=new Date(base.getFullYear(),base.getMonth()-1,1);draw();return}
+    if(next){base=new Date(base.getFullYear(),base.getMonth()+1,1);draw();return}
+    if(day){h.value=day.dataset.date;display.value=human(h.value);cal.classList.remove('open');draw()}
+  });
+  document.addEventListener('click',e=>{if(!e.target.closest('.ysp-date-picker-final'))cal.classList.remove('open')},true);
+  draw();
+}
+function enforceOptional(){
+  ['yspOrder','yspPlate','yspTrailerPlate','yspDriver','yspDriverContact','yspReference','yspNote','yspTime'].forEach(id=>{const el=document.getElementById(id);if(el){el.required=false;el.removeAttribute('required')}});
+  ['yspWarehouse','yspPallets','yspSkuCount'].forEach(id=>{const el=document.getElementById(id);if(el)el.required=true});
+}
+function install(){
+  const portal=document.getElementById('yardivoSupplierPortal');if(!portal)return;
+  installCalendar();enforceOptional();
+  const info=portal.querySelector('.ysp-info');if(info)info.textContent='Obavezno: skladište, željeni datum, broj paleta i broj SKU-ova. Ostalo je opcionalno i može se dodati naknadno. Upravljanje zalihama nakon zahtjeva dodjeljuje termin i rampu.';
+}
+window.addEventListener('yardivo:login',()=>setTimeout(install,180));
+window.addEventListener('load',()=>setTimeout(install,500));
+const obs=new MutationObserver(()=>{if(document.body?.getAttribute('data-yardivo-role')==='supplier'&&!document.getElementById('yspCalendarFinal'))setTimeout(install,30)});
+window.addEventListener('load',()=>{try{obs.observe(document.getElementById('yardivoSupplierPortal')||document.body,{childList:true,subtree:true})}catch(_){}});
+window.YardivoSupplierV576={install};
+})();
+</script>
+<script id="yardivo-v576-build-marker">window.YARDIVO_DEV_BUILD='20260906-dev-v5.7.6-supplier-auth-flow-final-fix';</script>
 
 </body>
 </html>
