@@ -5946,7 +5946,7 @@ html.yardivo-welcome-complete #yardivoWelcomeBar{
 #yardivoSupplierPortal .ysp-mini-cal{z-index:999999!important;min-width:300px;max-width:340px;box-shadow:0 18px 44px rgba(0,0,0,.45)}
 #yardivoSupplierPortal .ysp-mini-cal.open{display:block!important}
 </style>
-<script id="yardivo-v575-build-marker">window.YARDIVO_DEV_BUILD='20260907-dev-v5.8.3-notification-scope-supplier-transport-fix';</script>
+<script id="yardivo-v575-build-marker">window.YARDIVO_DEV_BUILD='20260906-dev-v5.8.2-supplier-canonical-stable-fix';</script>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -17137,45 +17137,60 @@ function setPhaseClasses(){
 }
 function role(){
   let r='';try{r=String(currentSession?.role||'').toLowerCase().trim()}catch(e){}
-  if(r==='prijam')r='reception';if(r==='porta'||r==='portir')r='gate';if(r==='zalihe'||r==='upravljanje zalihama')r='inventory';
+  if(r==='prijam')r='reception';if(r==='porta'||r==='portir')r='gate';if(r==='zalihe'||r==='upravljanje zalihama')r='inventory';if(r==='management'||r==='voditelj')r='manager';
   return r;
 }
 function usr(){try{return String(currentSession?.username||currentSession?.user||role()||'anonymous')}catch(e){return'anonymous'}}
 function load(){try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}}
 function save(a){localStorage.setItem(KEY,JSON.stringify(a));try{if(typeof putCloudState==='function')putCloudState(KEY,JSON.stringify(a))}catch(e){}}
+function whLocation(wh){
+  wh=String(wh||'').trim().toUpperCase();
+  if(/^W2/.test(wh))return 'DU';
+  if(/^W1/.test(wh))return 'VG';
+  return '';
+}
+function normalizeNotifLocation(v){
+  v=String(v||'').trim().toUpperCase();
+  if(v==='DU'||v.includes('DUGOPOLJE'))return 'DU';
+  if(v==='VG'||v.includes('VELIKA')||v.includes('GORICA'))return 'VG';
+  if(v==='ALL'||v.includes('SVE LOKACIJE'))return 'ALL';
+  return v;
+}
+function sessionLocation(){try{return normalizeNotifLocation(currentSession?.location||'')}catch(e){return''}}
+function selectedNotificationWarehouse(){
+  try{
+    const w=String(typeof activeWarehouse!=='undefined'?activeWarehouse:'').trim().toUpperCase();
+    return w&&w!=='ALL'?w:'';
+  }catch(e){return''}
+}
+function assignedNotificationWarehouses(){
+  try{return Array.isArray(currentSession?.warehouses)?currentSession.warehouses.map(x=>String(x||'').trim().toUpperCase()).filter(Boolean):[]}
+  catch(e){return[]}
+}
 function visible(n){
   const r=role();
-  const roleTargets=Array.isArray(n?.roles)&&n.roles.length?n.roles:(Array.isArray(n?.targets)&&n.targets.length?n.targets:null);
-  if(roleTargets && r!=='admin' && !roleTargets.includes(r))return false;
+  const targets=Array.isArray(n?.roles)&&n.roles.length?n.roles:(Array.isArray(n?.targets)?n.targets:[]);
+  if(targets.length && r!=='admin' && !targets.map(x=>String(x).toLowerCase()).includes(r))return false;
 
-  const wh=String(n?.warehouse||'').trim().toUpperCase();
-  if(!wh)return true; // truly global/system notification
+  const nWh=String(n?.warehouse||n?.warehouse_code||'').trim().toUpperCase();
+  const nLoc=normalizeNotifLocation(n?.location||n?.location_code||whLocation(nWh)||'');
+  const sLoc=sessionLocation();
 
-  let session={};try{session=(typeof currentSession!=='undefined'?currentSession:window.currentSession)||{}}catch(_){session=window.currentSession||{}}
-  const loc=String(session.location||'').trim().toUpperCase();
-  const notifLoc=(()=>{
-    try{
-      const w=WAREHOUSES?.[wh];
-      const x=String(w?.location||'').toLowerCase();
-      if(x.includes('dugopolje'))return'DU';
-      if(x.includes('gorica'))return'VG';
-    }catch(_){}
-    if(/^W2\d\d$/i.test(wh))return'DU';
-    if(/^W1\d\d$/i.test(wh))return'VG';
-    return'';
-  })();
-  if(loc&&notifLoc&&loc!==notifLoc)return false;
+  // Hard location boundary for notification visibility: VG never sees DU news and vice versa.
+  if(sLoc && sLoc!=='ALL' && nLoc && nLoc!==sLoc)return false;
 
-  // Admin / Voditelj / Upravljanje zaliha see every warehouse in CURRENT logged location.
+  // Admin / Voditelj / Upravljanje zaliha see every warehouse of the CURRENT logged-in location.
   if(['admin','manager','inventory'].includes(r))return true;
 
-  // Limited operational roles only see their assigned warehouse(s), and if a concrete
-  // warehouse is active they see only that warehouse.
-  let assigned=[];
-  try{assigned=Array.isArray(session.warehouses)?session.warehouses.map(x=>String(x).trim().toUpperCase()).filter(Boolean):[]}catch(_){}
-  let active='ALL';try{active=String(activeWarehouse||'ALL').trim().toUpperCase()}catch(_){}
-  if(active&&active!=='ALL'&&wh!==active)return false;
-  if(assigned.length&&!assigned.includes(wh))return false;
+  // Prijam is warehouse-scoped. If a concrete warehouse is selected, only that warehouse is visible.
+  if(r==='reception'){
+    const selected=selectedNotificationWarehouse();
+    if(selected && nWh && nWh!==selected)return false;
+    if(!selected && nWh){
+      const assigned=assignedNotificationWarehouses();
+      if(assigned.length && !assigned.includes('ALL') && !assigned.includes(nWh))return false;
+    }
+  }
   return true;
 }
 function map(n){if(!n.readBy||typeof n.readBy!=='object')n.readBy={};return n.readBy}
@@ -32764,12 +32779,50 @@ async function reviseRequest(id){
 }
 
 async function editVehicle(id){
-  if(window.YardivoSupplierTransportEditor?.open){
-    window.YardivoSupplierTransportEditor.open(id);
-    return;
+  const rows=loadRows();
+  const x=rows.find(r=>String(r.id)===String(id)); if(!x)return;
+  let ov=document.getElementById('yspTransportEditorOverlay');
+  if(!ov){
+    ov=document.createElement('div');ov.id='yspTransportEditorOverlay';ov.className='ysp-transport-overlay';
+    ov.innerHTML=`<div class="ysp-transport-dialog" role="dialog" aria-modal="true" aria-labelledby="yspTransportTitle">
+      <div class="ysp-transport-head"><div><small>YARDIVO · SUPPLIER</small><h2 id="yspTransportTitle">Transportni podaci</h2><p>Podaci su opcionalni i mogu se dopuniti ili promijeniti naknadno.</p></div><button type="button" data-ysp-transport-close aria-label="Zatvori">×</button></div>
+      <div class="ysp-transport-context" id="yspTransportContext"></div>
+      <div class="ysp-transport-grid">
+        <label><span>TABLICE KAMIONA <b>OPCIONALNO</b></span><input id="yspEditTruck" autocomplete="off" placeholder="npr. ZG 1234 AB"></label>
+        <label><span>TABLICE PRIKOLICE <b>OPCIONALNO</b></span><input id="yspEditTrailer" autocomplete="off" placeholder="npr. ZG 5678 CD"></label>
+        <label><span>VOZAČ <b>OPCIONALNO</b></span><input id="yspEditDriver" autocomplete="off" placeholder="Ime i prezime"></label>
+        <label><span>KONTAKT VOZAČA <b>OPCIONALNO</b></span><input id="yspEditContact" inputmode="tel" autocomplete="tel" placeholder="+385 ..."></label>
+      </div>
+      <div class="ysp-transport-note">Možete spremiti i samo jedan podatak. Prazna polja nisu obavezna.</div>
+      <div class="ysp-transport-actions"><button type="button" class="secondary" data-ysp-transport-close>ODUSTANI</button><button type="button" class="primary" id="yspTransportSave">SPREMI TRANSPORT</button></div>
+    </div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('click',e=>{if(e.target===ov||e.target.closest('[data-ysp-transport-close]'))ov.classList.remove('open')});
   }
-  alert('Uređivač transporta nije učitan. Osvježi stranicu i pokušaj ponovno.');
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||''};
+  set('yspEditTruck',x.plate);set('yspEditTrailer',x.trailerPlate);set('yspEditDriver',x.driver);set('yspEditContact',x.driverContact);
+  const ctx=document.getElementById('yspTransportContext');
+  if(ctx)ctx.innerHTML=`<div><small>NAJAVA</small><strong>${String(x.id||'—')}</strong></div><div><small>SKLADIŠTE</small><strong>${String(x.warehouse||'—')}</strong></div><div><small>DATUM</small><strong>${String(x.date||'—')}</strong></div>`;
+  ov.classList.add('open');
+  const saveBtn=document.getElementById('yspTransportSave');
+  if(saveBtn)saveBtn.onclick=async()=>{
+    saveBtn.disabled=true;saveBtn.textContent='SPREMANJE...';
+    const old={plate:x.plate,trailerPlate:x.trailerPlate,driver:x.driver,driverContact:x.driverContact};
+    x.plate=String(document.getElementById('yspEditTruck')?.value||'').trim().toUpperCase();
+    x.trailerPlate=String(document.getElementById('yspEditTrailer')?.value||'').trim().toUpperCase();
+    x.driver=String(document.getElementById('yspEditDriver')?.value||'').trim();
+    x.driverContact=String(document.getElementById('yspEditContact')?.value||'').trim();
+    x.updatedAt=new Date().toISOString();
+    try{
+      if(window.YardivoSupplierLiveSync?.pushVehicle)await window.YardivoSupplierLiveSync.pushVehicle(x);
+      saveRows(rows);upsertCanonicalYardivoFromSupplier(x);render();ov.classList.remove('open');alert(t('vehicleSaved'));
+    }catch(e){
+      Object.assign(x,old);
+      alert((lang==='en'?'Update was not sent to YARDIVO:\n':'Promjena nije poslana u YARDIVO:\n')+(e?.message||e));
+    }finally{saveBtn.disabled=false;saveBtn.textContent='SPREMI TRANSPORT'}
+  };
 }
+
 async function submit(){
   const warehouse=document.getElementById('yspWarehouse')?.value||'';
   const order=document.getElementById('yspOrder')?.value.trim().toUpperCase()||'';
@@ -33520,7 +33573,7 @@ function saveNotifications(a){
 function addRequestNotification(x){
   const a=notifications(), id='SUPREQ-'+String(x.id||x.client_id||Date.now());
   if(a.some(n=>String(n.id)===id))return;
-  a.push({id,event:'SUPPLIER_REQUEST',title:'NOVI ZAHTJEV DOBAVLJAČA',body:`${x.supplier_name||x.supplier_username||'Dobavljač'} · ${x.warehouse||'—'} · ${x.delivery_date||'—'} · ${Number(x.pallets||0)} pal. · ${Number(x.sku_count||0)} SKU`,supplier:x.supplier_name||x.supplier_username||'',targets:['admin','manager','inventory'],at:new Date().toISOString(),createdAt:new Date().toISOString()});
+  a.push({id,event:'SUPPLIER_REQUEST',title:'NOVI ZAHTJEV DOBAVLJAČA',body:`${x.supplier_name||x.supplier_username||'Dobavljač'} · ${x.warehouse||'—'} · ${x.delivery_date||'—'} · ${Number(x.pallets||0)} pal. · ${Number(x.sku_count||0)} SKU`,supplier:x.supplier_name||x.supplier_username||'',roles:['admin','manager','inventory'],targets:['admin','manager','inventory'],warehouse:String(x.warehouse||'').toUpperCase(),location:/^W2/i.test(String(x.warehouse||''))?'DU':(/^W1/i.test(String(x.warehouse||''))?'VG':''),at:new Date().toISOString(),createdAt:new Date().toISOString()});
   saveNotifications(a);
   try{if(typeof showYmsToast==='function')showYmsToast('info','NOVI SUPPLIER ZAHTJEV',`${x.supplier_name||x.supplier_username||'Dobavljač'} · ${x.warehouse||'—'}`,4500)}catch(_){}
 }
@@ -33858,77 +33911,20 @@ window.addEventListener('focus',()=>{const v=document.getElementById('supplierRe
 window.YardivoSupplierPlannerV580={open:openPlanner,refresh:quietLoad,renderRows:renderStable,reconcileCanonical};
 })();
 </script>
-<script id="yardivo-v582-build-marker">window.YARDIVO_DEV_BUILD="20260907-dev-v5.8.3-notification-scope-supplier-transport-fix";</script>
+<script id="yardivo-v582-build-marker">window.YARDIVO_DEV_BUILD="20260906-dev-v5.8.2-supplier-canonical-stable-fix";</script>
 
-<style id="yardivo-v583-supplier-transport-editor-style">
-#yspTransportEditorV583{display:none;position:fixed;inset:0;z-index:1000005;background:rgba(2,10,18,.76);align-items:center;justify-content:center;padding:20px}
-#yspTransportEditorV583.open{display:flex}
-#yspTransportEditorV583 .v583-card{width:min(720px,96vw);background:#071722;border:1px solid #28465d;border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;color:#eaf4fb}
-#yspTransportEditorV583 .v583-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:20px 22px;border-bottom:1px solid #1b3548;background:#0a1c2a}
-#yspTransportEditorV583 h3{margin:0;font-size:18px;letter-spacing:.2px}#yspTransportEditorV583 .v583-head p{margin:5px 0 0;color:#829caf;font-size:10px}
-#yspTransportEditorV583 .v583-x{border:1px solid #35546a;background:#0b2232;color:#d8e8f2;border-radius:8px;width:36px;height:36px;font-size:20px;cursor:pointer}
-#yspTransportEditorV583 .v583-body{padding:20px 22px}.v583-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-#yspTransportEditorV583 label{display:grid;gap:7px;color:#8da7b9;font-size:9px;font-weight:900;letter-spacing:.5px}
-#yspTransportEditorV583 input{width:100%;padding:12px 13px;border:1px solid #29485d;border-radius:8px;background:#04111a;color:#fff;outline:none;font-size:12px}
-#yspTransportEditorV583 input:focus{border-color:#2e8de6;box-shadow:0 0 0 3px rgba(46,141,230,.12)}
-#yspTransportEditorV583 .v583-note{margin-top:15px;padding:11px 12px;border:1px solid #1e3d51;border-radius:8px;background:#081c29;color:#8ea8b8;font-size:9px;line-height:1.5}
-#yspTransportEditorV583 .v583-actions{display:flex;justify-content:flex-end;gap:9px;padding:16px 22px;border-top:1px solid #1b3548;background:#081824}
-#yspTransportEditorV583 button{padding:10px 15px;border-radius:8px;border:1px solid #31536a;background:#0a2232;color:#dcebf4;font-weight:900;cursor:pointer}
-#yspTransportEditorV583 .v583-save{background:#126fc9;border-color:#2e91e8;color:white}
-@media(max-width:650px){#yspTransportEditorV583 .v583-grid{grid-template-columns:1fr}}
+<style id="yardivo-v583-supplier-transport-ui-style">
+#yardivoSupplierPortal .ysp-history-actions [data-ysp-edit-vehicle]{border-radius:8px!important}
+.ysp-transport-overlay{position:fixed;inset:0;z-index:1000010;background:rgba(2,8,13,.76);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px}.ysp-transport-overlay.open{display:flex}
+.ysp-transport-dialog{width:min(720px,96vw);background:#081722;border:1px solid #31546c;border-radius:16px;box-shadow:0 28px 90px rgba(0,0,0,.58);overflow:hidden}
+.ysp-transport-head{display:flex;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid #1d394c}.ysp-transport-head small{color:#4fa8df;font-size:7px;font-weight:1000;letter-spacing:.12em}.ysp-transport-head h2{margin:3px 0 0;font-size:18px}.ysp-transport-head p{margin:5px 0 0;color:#7895a9;font-size:8px}.ysp-transport-head button{width:36px;height:36px;border:1px solid #31546c;border-radius:9px;background:#0d2230;color:#fff;font-size:18px;cursor:pointer}
+.ysp-transport-context{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 20px 0}.ysp-transport-context div{padding:9px 10px;border:1px solid #1e394b;border-radius:8px;background:#07141e}.ysp-transport-context small{display:block;color:#708ea2;font-size:6px;font-weight:950}.ysp-transport-context strong{display:block;margin-top:3px;font-size:9px}
+.ysp-transport-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:14px 20px}.ysp-transport-grid label span{display:block;margin-bottom:6px;color:#8da8ba;font-size:7px;font-weight:950;letter-spacing:.06em}.ysp-transport-grid label b{color:#607e90;font-size:6px;margin-left:4px}.ysp-transport-grid input{width:100%;box-sizing:border-box;background:#07131c;border:1px solid #29485b;color:#edf7fc;border-radius:9px;padding:11px 12px;outline:none}.ysp-transport-grid input:focus{border-color:#4ba8dd;box-shadow:0 0 0 2px rgba(75,168,221,.12)}
+.ysp-transport-note{margin:0 20px 14px;padding:9px 11px;border-radius:8px;background:#0c2332;color:#7fa0b4;font-size:8px}.ysp-transport-actions{display:flex;justify-content:flex-end;gap:8px;padding:0 20px 18px}.ysp-transport-actions button{padding:10px 14px;border-radius:8px;font-size:8px;font-weight:950;cursor:pointer}.ysp-transport-actions .secondary{background:#0d2230;color:#c8d8e2;border:1px solid #31546c}.ysp-transport-actions .primary{background:#155d3a;color:#c8f5d9;border:1px solid #2c8b58}
+html[data-theme="light"] .ysp-transport-dialog{background:#fff;border-color:#bfd2dd;color:#153548}html[data-theme="light"] .ysp-transport-head{border-color:#d7e4eb}html[data-theme="light"] .ysp-transport-context div,html[data-theme="light"] .ysp-transport-grid input{background:#f5fafc;border-color:#c9dbe5;color:#153548}html[data-theme="light"] .ysp-transport-note{background:#edf6fa;color:#527183}
+@media(max-width:650px){.ysp-transport-grid,.ysp-transport-context{grid-template-columns:1fr}}
 </style>
-<script id="yardivo-v583-supplier-transport-editor">
-(function(){
-'use strict';
-let currentId=null;
-function rows(){
-  try{
-    const s=(typeof currentSession!=='undefined'?currentSession:window.currentSession)||{};
-    const key='yardivo_supplier_portal_v549_'+String(s.authUserId||s.username||s.user||'supplier');
-    const a=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(a)?a:[];
-  }catch(_){return[]}
-}
-function key(){const s=(typeof currentSession!=='undefined'?currentSession:window.currentSession)||{};return'yardivo_supplier_portal_v549_'+String(s.authUserId||s.username||s.user||'supplier')}
-function ensure(){
-  let m=document.getElementById('yspTransportEditorV583');if(m)return m;
-  m=document.createElement('div');m.id='yspTransportEditorV583';
-  m.innerHTML=`<div class="v583-card" role="dialog" aria-modal="true"><div class="v583-head"><div><h3>Transportni podaci</h3><p>Podaci se mogu dodati ili promijeniti naknadno.</p></div><button class="v583-x" type="button" aria-label="Zatvori">×</button></div><div class="v583-body"><div class="v583-grid"><label>TABLICE KAMIONA<input id="v583Truck" autocomplete="off" placeholder="npr. ST 123 AB"></label><label>TABLICE PRIKOLICE<input id="v583Trailer" autocomplete="off" placeholder="npr. ST 456 CD"></label><label>VOZAČ<input id="v583Driver" autocomplete="off" placeholder="Ime i prezime"></label><label>KONTAKT BROJ VOZAČA<input id="v583Contact" inputmode="tel" autocomplete="tel" placeholder="+385 ..."></label></div><div class="v583-note">Sva četiri podatka su opcionalna. Možete ih spremiti sada ili dopuniti kasnije. Promjena se šalje u YARDIVO i vidljiva je operativi uz ovu najavu.</div></div><div class="v583-actions"><button type="button" data-v583-cancel>ODUSTANI</button><button type="button" class="v583-save" data-v583-save>SPREMI PODATKE</button></div></div>`;
-  document.body.appendChild(m);
-  m.addEventListener('click',e=>{if(e.target===m||e.target.closest('.v583-x,[data-v583-cancel]'))close();if(e.target.closest('[data-v583-save]'))save()});
-  return m;
-}
-function open(id){
-  const a=rows(),x=a.find(r=>String(r.id)===String(id));if(!x)return;
-  currentId=String(id);const m=ensure();
-  m.querySelector('#v583Truck').value=x.plate||'';m.querySelector('#v583Trailer').value=x.trailerPlate||'';m.querySelector('#v583Driver').value=x.driver||'';m.querySelector('#v583Contact').value=x.driverContact||'';
-  m.classList.add('open');document.body.style.overflow='hidden';
-}
-function close(){document.getElementById('yspTransportEditorV583')?.classList.remove('open');document.body.style.overflow='';currentId=null}
-async function save(){
-  if(!currentId)return;const a=rows(),x=a.find(r=>String(r.id)===currentId);if(!x)return;
-  const m=ensure(),btn=m.querySelector('[data-v583-save]');btn.disabled=true;btn.textContent='SPREMANJE...';
-  x.plate=String(m.querySelector('#v583Truck').value||'').trim().toUpperCase();x.trailerPlate=String(m.querySelector('#v583Trailer').value||'').trim().toUpperCase();x.driver=String(m.querySelector('#v583Driver').value||'').trim();x.driverContact=String(m.querySelector('#v583Contact').value||'').trim();x.updatedAt=new Date().toISOString();
-  try{
-    if(!window.YardivoSupplierLiveSync?.pushVehicle)throw new Error('Supplier sync nije dostupan.');
-    await window.YardivoSupplierLiveSync.pushVehicle(x);localStorage.setItem(key(),JSON.stringify(a));
-    try{window.YardivoSupplierPortal?.render?.()}catch(_){};close();
-    if(typeof showYmsToast==='function')showYmsToast('success','TRANSPORT SPREMLJEN','Podaci kamiona, prikolice i vozača su ažurirani.',3500);else alert('Transportni podaci su spremljeni.');
-  }catch(e){alert('Promjena nije poslana u YARDIVO:\n'+(e?.message||String(e)))}finally{btn.disabled=false;btn.textContent='SPREMI PODATKE'}
-}
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('yspTransportEditorV583')?.classList.contains('open'))close()});
-window.YardivoSupplierTransportEditor={open,close};
-})();
-</script>
-<script id="yardivo-v583-notification-scope-refresh">
-(function(){
-'use strict';
-function refresh(){try{window.YardivoNotifications?.render?.()}catch(_){}}
-window.addEventListener('yardivo:login',()=>setTimeout(refresh,250));
-window.addEventListener('yardivo:data-synced',refresh);
-document.addEventListener('change',e=>{if(e.target?.id==='globalWarehouseSelect'||e.target?.id==='warehouse')setTimeout(refresh,50)},true);
-})();
-</script>
-
+<script id="yardivo-v583-build-marker">window.YARDIVO_DEV_BUILD='20260907-dev-v5.8.3-notification-scope-supplier-transport-ui-fix';</script>
 </body>
 </html>
 
