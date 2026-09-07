@@ -11,7 +11,7 @@ Designed & Developed by Duje Maleš
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
 (function(){
   'use strict';
-  window.__YARDIVO_BUILD__='20260907-dev-v5.8.3-manager-login-hotfix';
+  window.__YARDIVO_BUILD__='20260907-dev-v5.8.3-manager-scope-hotfix';
   const nativeFetch=window.fetch?.bind(window);
   if(nativeFetch){
     window.fetch=function(input,init){
@@ -36,7 +36,7 @@ Designed & Developed by Duje Maleš
     const badge=document.createElement('div');
     badge.id='yardivoBuildBadge';
     badge.textContent='YARDIVO DEV · BUILD V5.8.3';
-    badge.title='20260907-dev-v5.8.3-manager-login-hotfix';
+    badge.title='20260907-dev-v5.8.3-manager-scope-hotfix';
     badge.style.cssText='position:fixed;right:8px;bottom:8px;z-index:2147483646;font:700 10px/1.2 system-ui;padding:5px 7px;border-radius:6px;background:#0d1b29;color:#94a9b9;border:1px solid #26435a;opacity:.72;pointer-events:none';
     document.body.appendChild(badge);
   },{once:true});
@@ -33923,6 +33923,259 @@ window.YardivoTransportV583={openSupplier,openInternal};
 <script id="yardivo-v583-final-integrity-marker">
 window.YARDIVO_DEV_BUILD='20260907-dev-v5.8.3-notification-scope-supplier-transport-final';
 </script>
+
+<style id="yardivo-manager-scope-hotfix-v583">
+/* Voditelj: sve bitne operativne sekcije; u Postavkama bez korisnika i destruktivnog brisanja. */
+body[data-yardivo-role="manager"] #masterUserAdmin,
+body[data-yardivo-role="manager"] #masterUserList,
+body[data-yardivo-role="manager"] [data-admin-only],
+body[data-yardivo-role="manager"] .admin-only,
+body[data-yardivo-role="manager"] #settings .danger-zone,
+body[data-yardivo-role="manager"] #deleteAllDataBtn{
+  display:none!important;
+}
+body[data-yardivo-role="manager"] #settings .settings-grid > .panel:not(#masterUserAdmin),
+body[data-yardivo-role="manager"] #settings .settings-grid > section.panel:not(#masterUserAdmin){
+  display:block!important;
+}
+</style>
+
+<script id="yardivo-manager-scope-hotfix-v583-js">
+(function(){
+'use strict';
+
+function normRole(r){
+  r=String(r||'').toLowerCase().trim();
+  if(r==='management'||r==='voditelj')return'manager';
+  if(r==='porta'||r==='portir')return'gate';
+  if(r==='prijam')return'reception';
+  if(r==='zalihe'||r.includes('zalih'))return'inventory';
+  return r;
+}
+function getSession(){
+  try{return (typeof currentSession!=='undefined'?currentSession:window.currentSession)||null}
+  catch(_){return window.currentSession||null}
+}
+function isManager(){return normRole(getSession()?.role)==='manager'}
+
+const MANAGER_VIEWS=new Set([
+  'homeMenu','dashboard',
+  'receiving','weeklyMap','dailyMap','settings','checkin','myYard','docks','trucks',
+  'suppliers','announcements','yardivoMyAnnouncements','weeklyDeliveries','overview',
+  'incidents','incidentArchive','shipments','operations','reports','plannerPro',
+  'controltower','controlTower','calendar','heatmap','unannounced','epal','orderSearch',
+  'liveYard','yardivoWarRoom','notifications','yard','smartReplanning','warnings'
+]);
+
+function assignedLocation(){
+  const s=getSession();
+  const loc=String(s?.location||'').toUpperCase();
+  return loc==='DU'||loc==='VG'?loc:'';
+}
+function assignedWarehouses(){
+  const s=getSession();
+  return Array.isArray(s?.warehouses)
+    ? [...new Set(s.warehouses.map(x=>String(x||'').trim().toUpperCase()).filter(x=>/^W\d{3,4}$/.test(x)))]
+    : [];
+}
+
+function enforceManagerLocation(){
+  if(!isManager())return;
+  const s=getSession(),loc=assignedLocation();
+  if(!s||!loc)return;
+
+  // Voditelj ne smije promijeniti lokaciju izvan one koju je Admin dodijelio.
+  s.location=loc;
+  try{
+    window.currentSession=s;
+    if(typeof currentSession!=='undefined')currentSession=s;
+    localStorage.setItem('yardivo_last_location',loc);
+  }catch(_){}
+
+  const sel=document.getElementById('homeLocationSelect');
+  if(sel){
+    const label=loc==='DU'?'Dugopolje':'Velika Gorica';
+    sel.innerHTML='<option value="'+loc+'">'+label+'</option>';
+    sel.value=loc;
+    sel.disabled=true;
+    sel.setAttribute('aria-disabled','true');
+    sel.title='Lokaciju Voditelju dodjeljuje Admin.';
+  }
+}
+
+function managerWarehousesForLocation(code){
+  const loc=String(code||'').toUpperCase();
+  const ownLoc=assignedLocation();
+  if(!ownLoc || loc!==ownLoc)return [];
+
+  let all=[];
+  try{
+    if(typeof window.allWarehousesForLocation==='function'){
+      all=window.allWarehousesForLocation(loc)||[];
+    }else if(typeof allWarehousesForLocation==='function'){
+      all=allWarehousesForLocation(loc)||[];
+    }
+  }catch(_){}
+  const assigned=assignedWarehouses();
+  if(!assigned.length)return [];
+  return all.length
+    ? all.filter(w=>assigned.includes(String(w).toUpperCase()))
+    : assigned;
+}
+
+// Override the old rule which incorrectly gave manager every warehouse in a location.
+const previousWarehousesForLocation=window.warehousesForLocation;
+window.warehousesForLocation=function(code){
+  if(isManager())return managerWarehousesForLocation(code);
+  return typeof previousWarehousesForLocation==='function'
+    ? previousWarehousesForLocation.apply(this,arguments)
+    : [];
+};
+try{warehousesForLocation=window.warehousesForLocation}catch(_){}
+
+const previousDefaultWarehouse=window.defaultWarehouseForLocation;
+window.defaultWarehouseForLocation=function(code){
+  if(isManager()){
+    const rows=managerWarehousesForLocation(code);
+    return rows[0]||'';
+  }
+  return typeof previousDefaultWarehouse==='function'
+    ? previousDefaultWarehouse.apply(this,arguments)
+    : '';
+};
+try{defaultWarehouseForLocation=window.defaultWarehouseForLocation}catch(_){}
+
+function managerCanView(view){
+  return MANAGER_VIEWS.has(String(view||''));
+}
+
+function enforceManagerViews(){
+  if(!isManager())return;
+  document.body.dataset.yardivoRole='manager';
+  document.documentElement.dataset.yardivoRole='manager';
+
+  document.querySelectorAll('[data-view]').forEach(el=>{
+    const ok=managerCanView(el.dataset.view);
+    el.classList.toggle('role-hidden',!ok);
+    if(ok){
+      el.removeAttribute('hidden');
+      el.removeAttribute('aria-disabled');
+      el.style.removeProperty('display');
+      el.style.removeProperty('visibility');
+      el.style.removeProperty('pointer-events');
+    }else{
+      el.style.setProperty('display','none','important');
+    }
+  });
+
+  document.querySelectorAll('[data-home-target]').forEach(el=>{
+    const ok=managerCanView(el.dataset.homeTarget);
+    if(ok){
+      el.classList.remove('role-hidden');
+      el.removeAttribute('hidden');
+      el.removeAttribute('aria-disabled');
+      el.style.removeProperty('display');
+      el.style.removeProperty('visibility');
+      el.style.removeProperty('pointer-events');
+    }else{
+      el.style.setProperty('display','none','important');
+    }
+  });
+}
+
+function enforceManagerSettings(){
+  if(!isManager())return;
+  const root=document.getElementById('settings');
+  if(!root)return;
+
+  // Voditelj vidi gotovo sve operativne postavke.
+  root.querySelectorAll('.settings-grid > .panel,.settings-grid > section.panel').forEach(p=>{
+    if(p.id==='masterUserAdmin')return;
+    p.style.setProperty('display','block','important');
+  });
+
+  // Ali ne smije kreirati/mijenjati/dodjeljivati korisnike niti brisati sve podatke.
+  root.querySelectorAll('#masterUserAdmin,#masterUserList,[data-admin-only],.admin-only,.danger-zone,#deleteAllDataBtn')
+    .forEach(el=>el.style.setProperty('display','none','important'));
+}
+
+function refreshManagerScope(){
+  if(!isManager())return;
+  enforceManagerLocation();
+  enforceManagerViews();
+  enforceManagerSettings();
+
+  try{window.yardivoRefreshAllWarehouseUi?.()}catch(_){}
+}
+
+// Preserve existing RBAC for every other role; manager is repaired after it runs.
+if(typeof window.applyRoleAccess==='function'){
+  const old=window.applyRoleAccess;
+  window.applyRoleAccess=function(){
+    const r=old.apply(this,arguments);
+    queueMicrotask(refreshManagerScope);
+    return r;
+  };
+}
+
+if(window.YardivoRoleStableFinal?.apply){
+  const oldStable=window.YardivoRoleStableFinal.apply.bind(window.YardivoRoleStableFinal);
+  window.YardivoRoleStableFinal.apply=function(){
+    const r=oldStable();
+    queueMicrotask(refreshManagerScope);
+    return r;
+  };
+}
+
+// Final navigation guard for manager.
+if(typeof window.openAppView==='function'){
+  const oldOpen=window.openAppView;
+  window.openAppView=function(viewId){
+    if(isManager() && !managerCanView(viewId)){
+      refreshManagerScope();
+      return false;
+    }
+    const r=oldOpen.apply(this,arguments);
+    queueMicrotask(refreshManagerScope);
+    return r;
+  };
+}
+
+document.addEventListener('click',e=>{
+  if(!isManager())return;
+  const nav=e.target.closest?.('[data-view],[data-home-target]');
+  if(nav){
+    const v=nav.dataset.view||nav.dataset.homeTarget;
+    if(!managerCanView(v)){
+      e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+      return false;
+    }
+  }
+  if(e.target.closest?.('#masterUserAdmin,#masterUserList,[data-admin-only],.admin-only,.danger-zone,#deleteAllDataBtn')){
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    return false;
+  }
+  setTimeout(refreshManagerScope,0);
+},true);
+
+window.addEventListener('yardivo:login',()=>setTimeout(refreshManagerScope,0));
+window.addEventListener('yardivo:view-opened',()=>setTimeout(refreshManagerScope,0));
+window.addEventListener('load',()=>setTimeout(refreshManagerScope,80));
+
+const mo=new MutationObserver(()=>{if(isManager())queueMicrotask(refreshManagerScope)});
+mo.observe(document.documentElement,{subtree:true,childList:true});
+
+window.YardivoManagerScopeV583={
+  refresh:refreshManagerScope,
+  assignedLocation,
+  assignedWarehouses,
+  allowedViews:MANAGER_VIEWS
+};
+
+setTimeout(refreshManagerScope,100);
+})();
+</script>
+
 </body>
 </html>
 
