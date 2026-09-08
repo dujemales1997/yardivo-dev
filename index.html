@@ -35661,8 +35661,69 @@ document.addEventListener('click',e=>{const c=e.target.closest?.('.rtd-ramp[data
 function keyFor(a){const id=a?.supplierPortalId||a?.client_id||a?.id;return id?'yardivo_supplier_attachment_'+String(id):''}
 function getAttachment(a){try{const k=keyFor(a);return k?JSON.parse(localStorage.getItem(k)||'null'):null}catch(_){return null}}
 function hasAttachment(a){const x=getAttachment(a);return !!(x?.dataUrl&&x?.name)}
-function openAttachment(a){const x=getAttachment(a);if(!x?.dataUrl)return;const w=window.open();if(w){w.document.write(`<title>${String(x.name||'Dokument').replace(/[<>]/g,'')}</title><iframe src="${x.dataUrl}" style="position:fixed;inset:0;width:100%;height:100%;border:0"></iframe>`);w.document.close()}}
-window.YardivoSupplierAttachments={get:getAttachment,has:hasAttachment,open:openAttachment};
+function ensureDocumentViewer(){
+  let o=document.getElementById('yardivoDocumentViewerV583');
+  if(o)return o;
+  o=document.createElement('div');
+  o.id='yardivoDocumentViewerV583';
+  o.innerHTML=`<div class="ydv-card" role="dialog" aria-modal="true" aria-labelledby="ydvTitle">
+    <div class="ydv-head">
+      <div><small>DOKUMENT DOBAVLJAČA</small><h2 id="ydvTitle">PDF DOKUMENT</h2><div id="ydvMeta"></div></div>
+      <button type="button" class="ydv-close" data-ydv-close aria-label="Zatvori">×</button>
+    </div>
+    <div class="ydv-actions">
+      <button type="button" class="secondary" data-ydv-new>OTVORI U NOVOJ KARTICI</button>
+      <button type="button" class="primary" data-ydv-download>PREUZMI PDF</button>
+    </div>
+    <div class="ydv-frame-wrap"><iframe id="ydvFrame" title="Pregled PDF dokumenta"></iframe></div>
+  </div>`;
+  document.body.appendChild(o);
+  o.addEventListener('click',e=>{
+    e.stopPropagation();
+    if(e.target===o||e.target.closest('[data-ydv-close]'))closeDocumentViewer();
+  });
+  return o;
+}
+let yardivoCurrentDocument=null;
+function closeDocumentViewer(){
+  const o=document.getElementById('yardivoDocumentViewerV583');
+  if(o)o.classList.remove('open');
+  const f=document.getElementById('ydvFrame');if(f)f.src='about:blank';
+  yardivoCurrentDocument=null;
+}
+function downloadAttachmentData(x){
+  if(!x?.dataUrl)return;
+  const a=document.createElement('a');
+  a.href=x.dataUrl;
+  a.download=String(x.name||'yardivo-dokument.pdf').replace(/[\\/:*?"<>|]+/g,'_');
+  document.body.appendChild(a);a.click();a.remove();
+}
+function openAttachment(a){
+  const x=getAttachment(a);
+  if(!x?.dataUrl){
+    try{showYmsToast?.('warning','DOKUMENT','Dokument nije dostupan na ovom uređaju.')}catch(_){alert('Dokument nije dostupan na ovom uređaju.')}
+    return;
+  }
+  yardivoCurrentDocument=x;
+  const o=ensureDocumentViewer();
+  document.getElementById('ydvTitle').textContent=x.name||'PDF DOKUMENT';
+  const kb=Math.max(1,Math.round(Number(x.size||0)/1024));
+  document.getElementById('ydvMeta').textContent=(x.size?kb+' KB · ':'')+(x.uploadedAt?new Date(x.uploadedAt).toLocaleString('hr-HR'):'PRILOŽEN DOKUMENT');
+  document.getElementById('ydvFrame').src=x.dataUrl;
+  o.classList.add('open');
+  requestAnimationFrame(()=>o.querySelector('[data-ydv-close]')?.focus());
+}
+window.YardivoSupplierAttachments={get:getAttachment,has:hasAttachment,open:openAttachment,download:downloadAttachmentData};
+document.addEventListener('click',e=>{
+  if(e.target.closest?.('[data-ydv-download]')){
+    e.preventDefault();e.stopPropagation();downloadAttachmentData(yardivoCurrentDocument);return;
+  }
+  if(e.target.closest?.('[data-ydv-new]')){
+    e.preventDefault();e.stopPropagation();
+    if(yardivoCurrentDocument?.dataUrl)window.open(yardivoCurrentDocument.dataUrl,'_blank','noopener');
+  }
+},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('yardivoDocumentViewerV583')?.classList.contains('open'))closeDocumentViewer()});
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-yardivo-doc]');if(!b)return;e.preventDefault();e.stopPropagation();try{const a=(Array.isArray(announcements)?announcements:[]).find(x=>String(x.id)===String(b.dataset.yardivoDoc));if(a)openAttachment(a)}catch(_){}} ,true);
 
 function setupSupplierFile(){const input=document.getElementById('yspAttachment'),label=document.getElementById('yspAttachmentLabel');if(!input||input.dataset.ready==='1')return;input.dataset.ready='1';input.addEventListener('change',()=>{const f=input.files?.[0];if(label)label.textContent=f?`${f.name} · ${Math.round(f.size/1024)} KB`:'PRILOŽI PDF DOKUMENT'})}
@@ -37365,3 +37426,108 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElement
 }
 </style>
 <script>window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-planner-freeze-root-fix';</script>
+
+<style id="yardivo-v583-global-dark-surface-contrast">
+/* ============================================================
+   YARDIVO DARK SURFACE CONTRAST GUARD
+   Every explicitly dark YARDIVO surface must render readable text.
+   ============================================================ */
+#yardivoSupplierPortal .ysp-v574-proposal,
+#yardivoSupplierPortal .ysp-v574-proposal div,
+#yardivoSupplierPortal .ysp-v574-proposal b,
+#yardivoSupplierPortal .ysp-v574-proposal span{
+  color:#f7fbff!important;
+}
+#yardivoSupplierPortal .ysp-v574-proposal > div > strong{
+  color:#ffffff!important;
+}
+#yardivoSupplierPortal .ysp-v574-proposal > div > div{
+  color:#ffffff!important;
+  font-weight:850!important;
+}
+
+/* Common YARDIVO dark cards / overlays */
+body:not(.light-mode) :is(
+  .panel,.modal-content,.dialog,.timeline-dialog,.yiv-dialog,.y5-reader,.yod-dialog,
+  .week-map-day,.week-map-item,.daily-map-shell,.dmv-booked,.rtd-ramp,.rtd-building,
+  .ct-card,.control-tower-card,.announcement-card,.supplier-card,.overview-card,
+  .ysrp-card,.ysrfd-card,.ydv-card
+){
+  color:#f3f8fb;
+}
+body:not(.light-mode) :is(
+  .panel,.modal-content,.dialog,.timeline-dialog,.yiv-dialog,.y5-reader,.yod-dialog,
+  .week-map-day,.week-map-item,.daily-map-shell,.dmv-booked,.rtd-ramp,.rtd-building,
+  .ct-card,.control-tower-card,.announcement-card,.supplier-card,.overview-card,
+  .ysrp-card,.ysrfd-card,.ydv-card
+) :is(h1,h2,h3,h4,h5,h6,strong,b,label,td,th,p,div,span){
+  color:inherit;
+}
+body:not(.light-mode) :is(
+  .panel,.modal-content,.dialog,.timeline-dialog,.yiv-dialog,.y5-reader,.yod-dialog,
+  .week-map-day,.week-map-item,.daily-map-shell,.dmv-booked,.rtd-ramp,.rtd-building,
+  .ct-card,.control-tower-card,.announcement-card,.supplier-card,.overview-card,
+  .ysrp-card,.ysrfd-card,.ydv-card
+) :is(small,.muted,.meta,.sub,.subtitle){
+  color:#a9bfcd!important;
+}
+
+/* Dark surfaces that can exist even while the Supplier portal itself is light. */
+#yardivoSupplierPortal :is(
+  .ysp-v574-proposal,.ysp-delivery-card,.ysp-cal-final
+) :is(h1,h2,h3,h4,h5,h6,strong,b,label,p,div,span){
+  color:#f5f9fc;
+}
+#yardivoSupplierPortal :is(.ysp-v574-proposal,.ysp-delivery-card,.ysp-cal-final) :is(small,.meta){
+  color:#a9c0d0!important;
+}
+
+/* Preserve semantic buttons/chips but never allow dark-on-dark labels. */
+:is(.primary,.secondary,.action,.btn-primary,.btn-secondary,.yardivo-doc-icon,.ysr-status,.notice-pill,.badge){
+  text-shadow:none;
+}
+</style>
+
+<style id="yardivo-v583-document-viewer-style">
+#yardivoDocumentViewerV583{
+  position:fixed;inset:0;z-index:10000140;display:none;
+  align-items:center;justify-content:center;padding:18px;
+  background:rgba(2,8,13,.88);
+}
+#yardivoDocumentViewerV583.open{display:flex}
+#yardivoDocumentViewerV583 .ydv-card{
+  width:min(1180px,97vw);height:min(900px,95vh);
+  display:grid;grid-template-rows:auto auto 1fr;overflow:hidden;
+  border:1px solid #37647f;border-radius:14px;
+  background:#071824;color:#f5f9fc;
+  box-shadow:0 30px 100px rgba(0,0,0,.65);
+  contain:layout paint;
+}
+#yardivoDocumentViewerV583 .ydv-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:18px;
+  padding:15px 17px;border-bottom:1px solid #28465b;background:#0a1d2b;
+}
+#yardivoDocumentViewerV583 .ydv-head small{display:block;color:#9ab4c5!important;font-size:8px;font-weight:950;letter-spacing:.1em}
+#yardivoDocumentViewerV583 .ydv-head h2{margin:4px 0 3px;color:#fff!important;font-size:15px}
+#yardivoDocumentViewerV583 #ydvMeta{font-size:8px;color:#a9c0cf!important}
+#yardivoDocumentViewerV583 .ydv-close{
+  width:38px;height:38px;flex:0 0 38px;border:1px solid #40627a;border-radius:8px;
+  background:#102737;color:#fff;font-size:21px;cursor:pointer;
+}
+#yardivoDocumentViewerV583 .ydv-actions{
+  display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;
+  padding:9px 14px;border-bottom:1px solid #213d50;background:#081a27;
+}
+#yardivoDocumentViewerV583 .ydv-actions button{min-height:36px}
+#yardivoDocumentViewerV583 .ydv-frame-wrap{min-height:0;background:#111}
+#yardivoDocumentViewerV583 iframe{display:block;width:100%;height:100%;border:0;background:#fff}
+.yardivo-doc-icon{
+  color:#fff!important;
+  border-color:#3d7aa5!important;
+  background:#123149!important;
+}
+.yardivo-doc-icon:hover{background:#174362!important;border-color:#5ca7dc!important}
+</style>
+<script>
+window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-contrast-document-viewer';
+</script>
