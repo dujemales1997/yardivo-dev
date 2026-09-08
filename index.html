@@ -7278,7 +7278,7 @@ AUTOMATSKA PREPORUKA</small>
 </section>
 <section class="panel" style="margin-top:12px">
 <div class="panel-head"><div><h2>POVIJEST PROMJENA NAJAVA</h2><small>originalni i novi termin ostaju trajno zabilježeni</small></div></div>
-<div class="data-wrap"><table class="data-table"><thead><tr><th>DOBAVLJAČ</th><th>SKLADIŠTE</th><th>STARI TERMIN</th><th>NOVI TERMIN</th><th>RAZLOG</th><th>KADA JE PROMIJENJENO</th><th>UTJECAJ NA KPI</th></tr></thead><tbody id="changeHistoryTable"></tbody></table></div>
+<div class="data-wrap"><table class="data-table"><thead><tr><th>DOBAVLJAČ</th><th>SKLADIŠTE</th><th>STARI TERMIN</th><th>NOVI TERMIN</th><th>INICIRAO</th><th>ODOBRIO</th><th>PRIHVATIO</th><th>RAZLOG</th><th>KADA JE PROMIJENJENO</th><th>UTJECAJ NA KPI</th></tr></thead><tbody id="changeHistoryTable"></tbody></table></div>
 </section>
 </section>
 <section class="view" id="incidents">
@@ -8992,7 +8992,10 @@ function renderAnnouncementDetail(){
         <strong>${new Date(c.changedAt).toLocaleString('hr-HR')}</strong><br>
         ${c.oldDate} ${c.oldTime} · R${c.oldDock} → ${c.newDate} ${c.newTime} · R${c.newDock}<br>
         Razlog: ${c.reason||'—'}${c.note?` · ${c.note}`:''}<br>
-        KPI: ${c.countsAsLate?'Negativan utjecaj':'Neutralno'}
+        <span class="term-prov-line"><b>Promjenu inicirao:</b> ${window.YardivoTermProvenance?.initiatorLabel?.(c)||c.initiatedBy||c.changedBy||'—'}</span><br>
+        ${c.approvedBy?`<span class="term-prov-line"><b>Odobrio:</b> ${c.approvedBy}</span><br>`:''}
+        ${c.acceptedBy?`<span class="term-prov-line"><b>Prihvatio:</b> ${c.acceptedBy}</span><br>`:''}
+        KPI: ${window.YardivoTermProvenance?.kpiLabel?.(c)|| (c.countsAsLate?'Stvarno kašnjenje / negativno':'Neutralno')}
       </div>`).join('')
     : '<div class="overview-empty">Nema promjena ove najave.</div>';
 
@@ -9291,7 +9294,7 @@ function renderChangeHistory(){
   const rows=[];
   announcements.filter(whMatch).forEach(a=>(a.changeHistory||[]).forEach(c=>rows.push({supplier:a.supplier,...c})));
   rows.sort((a,b)=>String(b.changedAt).localeCompare(String(a.changedAt)));
-  body.innerHTML=rows.length?rows.map(c=>`<tr><td><strong>${c.supplier}</strong></td><td>${c.oldWarehouse} → ${c.newWarehouse}</td><td>${c.oldDate} ${c.oldTime} · R${c.oldDock}</td><td>${c.newDate} ${c.newTime} · R${c.newDock}</td><td>${c.reason}${c.note?`<br><small>${c.note}</small>`:''}</td><td>${new Date(c.changedAt).toLocaleString('hr-HR')}</td><td><span class="${c.countsAsLate?'change-negative':'change-neutral'}">${c.countsAsLate?'NO-SHOW / negativno':'Najavljeno unaprijed / neutralno'}</span></td></tr>`).join(''):'<tr><td colspan="7"><div class="overview-empty">Nema evidentiranih promjena najava.</div></td></tr>';
+  body.innerHTML=rows.length?rows.map(c=>`<tr><td><strong>${c.supplier}</strong></td><td>${c.oldWarehouse||c.warehouse||'—'} → ${c.newWarehouse||c.warehouse||'—'}</td><td>${c.oldDate||c.fromDate||'—'} ${c.oldTime||c.fromTime||'—'} · R${c.oldDock||c.fromDock||'—'}</td><td>${c.newDate||c.toDate||'—'} ${c.newTime||c.toTime||'—'} · R${c.newDock||c.toDock||'—'}</td><td><strong>${window.YardivoTermProvenance?.initiatorLabel?.(c)||c.initiatedBy||c.changedBy||'—'}</strong></td><td>${c.approvedBy||'—'}</td><td>${c.acceptedBy||'—'}</td><td>${c.reason||'—'}${c.note?`<br><small>${c.note}</small>`:''}</td><td>${c.changedAt?new Date(c.changedAt).toLocaleString('hr-HR'):'—'}</td><td><span class="${c.countsAsLate?'change-negative':'change-neutral'}">${window.YardivoTermProvenance?.kpiLabel?.(c)||(c.countsAsLate?'Stvarno kašnjenje / negativno':'Neutralno')}</span></td></tr>`).join(''):'<tr><td colspan="10"><div class="overview-empty">Nema evidentiranih promjena najava.</div></td></tr>';
 }
 
 function renderIncidents(){
@@ -17737,8 +17740,21 @@ function commit(){if(!pending||!validate())return;
     changedBy:a.updatedBy,
     fromDate:old.date,fromTime:old.time,fromDock:old.dock,
     toDate:p.date,toTime:p.time,toDock:Number(p.dock),
-    note:'Termin promijenjen drag & drop / promjena termina'
+    note:'Termin promijenjen drag & drop / promjena termina',
+    initiatedByType:'INVENTORY',
+    initiatedBy:a.updatedBy,
+    approvedBy:a.updatedBy,
+    acceptedBy:'',
+    responsibility:'WAREHOUSE',
+    kpiImpact:'WAREHOUSE_CHANGE',
+    countsAsLate:false
   });
+  try{window.YardivoTermProvenance?.record?.({
+    announcementId:a.id,supplierDeliveryId:a.supplierDeliveryId||'',supplier:a.supplier||'',warehouse:a.warehouse||'',
+    initiatedByType:'INVENTORY',initiatedBy:a.updatedBy,approvedBy:a.updatedBy,status:'APPLIED',
+    before:{date:old.date,time:old.time,dock:old.dock},after:{date:p.date,time:p.time,dock:p.dock},
+    reason:'Promjena termina od strane Upravljanja zalihama',responsibility:'WAREHOUSE'
+  })}catch(_){}
   refreshAll();
   close();
   if(a.supplierDeliveryId){
@@ -17765,7 +17781,8 @@ function commit(){if(!pending||!validate())return;
     window.YardivoRescheduleAudit?.push?.('TERMIN PROMIJENJEN',`${a.supplier} · ${p.date} ${p.time} · R${p.dock}`,{
       actor,warehouse:a.warehouse||'',announcementId:a.id||'',supplierDeliveryId:a.supplierDeliveryId||'',
       before:{date:old.date||'',time:old.time||'',dock:old.dock||''},
-      after:{date:p.date,time:p.time,dock:p.dock},type:'inventory_drag_reschedule'
+      after:{date:p.date,time:p.time,dock:p.dock},type:'inventory_drag_reschedule',
+      initiatedByType:'INVENTORY',initiatedBy:actor,approvedBy:actor,responsibility:'WAREHOUSE',kpiImpact:'WAREHOUSE_CHANGE'
     });
   }catch(e){}
 }
@@ -18459,7 +18476,8 @@ function applyReplan(a,problem,c){
    orderNumber:a.orderNumber||''
  };
  const ls=logs();ls.push(log);saveLogs(ls);
- const msg=`${a.supplier||'Dobavljač'} · Smart predlaže ${old.date} ${old.time} R${old.dock} → ${c.date} ${c.time} R${c.dock}. ${problem.reason} Potrebna je potvrda Upravljanja zalihama.`;
+ try{window.YardivoTermProvenance?.record?.({announcementId:a.id,supplierDeliveryId:a.supplierDeliveryId||'',supplier:a.supplier||'',warehouse:a.warehouse||'',initiatedByType:'YARDIVO_SMART',initiatedBy:'YARDIVO SMART',status:'PENDING_INVENTORY',before:old,after:{date:c.date,time:c.time,dock:c.dock},reason:problem.reason,responsibility:'YARDIVO_SMART'})}catch(_){}
+ const msg=`${a.supplier||'Dobavljač'} · Inicirao: YARDIVO SMART · ${old.date} ${old.time} R${old.dock} → ${c.date} ${c.time} R${c.dock}. ${problem.reason} Potrebna je potvrda Upravljanja zalihama.`;
  notification(['admin','inventory'],'YARDIVO SMART · NOVI PRIJEDLOG TERMINA',msg,a,log);
  showAlert(log);
  selectedLogId=log.id;renderSection();
@@ -33260,7 +33278,8 @@ async function submitSupplierRescheduleRequest(){
   if(!date||!/^\d{2}:\d{2}$/.test(time))return alert('Odaberi novi datum i željeno vrijeme.');
   if(date===x.date&&time===x.time)return alert('Odaberi termin koji se razlikuje od trenutno potvrđenog.');
   if(!reason)return alert('Upiši razlog zahtjeva za promjenu termina.');
-  const req={status:'pending',requestedAt:new Date().toISOString(),fromDate:x.date,fromTime:x.time,fromDock:x.dock||'',requestedDate:date,requestedTime:time,reason,requestedBy:(window.YardivoRescheduleAudit?.supplierActorLabel?.()||'Dobavljač')};
+  const req={status:'pending',requestedAt:new Date().toISOString(),fromDate:x.date,fromTime:x.time,fromDock:x.dock||'',requestedDate:date,requestedTime:time,reason,requestedBy:(window.YardivoRescheduleAudit?.supplierActorLabel?.()||'Dobavljač'),initiatedByType:'SUPPLIER'};
+  try{window.YardivoTermProvenance?.record?.({supplierDeliveryId:x.id||'',supplier:x.supplier||x.supplierName||'',warehouse:x.warehouse||'',initiatedByType:'SUPPLIER',initiatedBy:req.requestedBy,status:'PENDING_INVENTORY',before:{date:req.fromDate,time:req.fromTime,dock:req.fromDock},after:{date:req.requestedDate,time:req.requestedTime,dock:req.fromDock},reason:req.reason,responsibility:'SUPPLIER_REQUEST'})}catch(_){};
   const marker=`[YARDIVO_RESCHEDULE_REQUEST:${btoa(unescape(encodeURIComponent(JSON.stringify(req))))}]`;
   const clean=String(x.note||'').replace(/\n?\[YARDIVO_RESCHEDULE_REQUEST:[^\]]+\]/g,'').trim();
   try{
@@ -34043,7 +34062,7 @@ window.YardivoSupplierRequestNotifications={check};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function acceptProposal(clientId){
   if(!confirm('Prihvatiti predloženi termin i rampu?'))return;
-  try{await window.YardivoSupplierLiveSync.call('supplier_accept',{client_id:clientId});await window.YardivoSupplierLiveSync.pullSupplier();alert('Termin i rampa su potvrđeni. Najava je sada operativna u YARDIVO-u.');}
+  try{await window.YardivoSupplierLiveSync.call('supplier_accept',{client_id:clientId});try{window.YardivoTermProvenance?.supplierAcceptedByClient?.(clientId,'Dobavljač')}catch(_){}await window.YardivoSupplierLiveSync.pullSupplier();alert('Termin i rampa su potvrđeni. Najava je sada operativna u YARDIVO-u.');}
   catch(e){alert('Potvrda nije uspjela:\n'+(e?.message||e));}
 }
 async function requestAlternative(clientId){
@@ -34302,7 +34321,7 @@ function recommendation(){
 function populate(rec,forceRec){const w=whConfig(),t=document.getElementById('ysrpTime'),d=document.getElementById('ysrpDock');if(!t||!d)return;const oldT=forceRec?'':t.value,oldD=forceRec?'':d.value;let start=480,end=960;try{if(w?.receptionStart&&typeof toMin==='function')start=toMin(w.receptionStart);if(w?.receptionEnd&&typeof toMin==='function')end=toMin(w.receptionEnd)}catch(_){}t.innerHTML=Array.from({length:Math.max(1,Math.ceil((end-start)/15))},(_,i)=>{const mins=start+i*15,hh=String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0');return `<option value="${hh}">${hh}</option>`}).join('');d.innerHTML=Array.from({length:Number(w?.ramps||0)},(_,i)=>`<option value="${i+1}">Rampa ${i+1}</option>`).join('');if(rec){t.value=rec.time;d.value=String(rec.dock)}else{if([...t.options].some(o=>o.value===oldT))t.value=oldT;if([...d.options].some(o=>o.value===oldD))d.value=oldD}}
 function refreshPlanner(forceRec=false){const box=document.getElementById('ysrpRecommendation'),rec=recommendation();populate(rec,forceRec);if(rec){box.className='ysrp-recommend';box.innerHTML=`<small>✓ PREPORUKA YARDIVO</small><strong>${human(plannerDate)} · ${esc(rec.time)} · Rampa ${esc(rec.dock)}</strong><p>Procjena istovara ${duration()} min. Preporuka koristi postojeću logiku zauzeća rampi i opterećenja skladišta iz Unosa najava.</p>`}else{box.className='ysrp-recommend bad';box.innerHTML=`<small>NEMA AUTOMATSKE PREPORUKE</small><strong>${human(plannerDate)}</strong><p>Za ovaj datum nema slobodnog automatskog termina ili skladište nema konfigurirane rampe.</p>`}checkChoice()}
 function checkChoice(){const time=document.getElementById('ysrpTime')?.value,dock=Number(document.getElementById('ysrpDock')?.value||0),c=document.getElementById('ysrpCheck');if(!c)return;if(!plannerDate||!time||!dock){c.className='ysrp-check bad';c.textContent='Odaberi datum, termin i rampu.';return false}let free=true;try{free=plannerFree(dock,typeof toMin==='function'?toMin(time):0,duration())}catch(_){}c.className='ysrp-check '+(free?'good':'bad');c.textContent=free?`✓ DOBAR ODABIR · Rampa ${dock} u ${time} je slobodna.`:`⚠ TERMIN JE ZAUZET · Rampa ${dock} u ${time}. Odaberi drugi termin ili YARDIVO preporuku.`;return free}
-async function sendProposal(){if(!plannerRow||!checkChoice())return;const time=document.getElementById('ysrpTime').value,dock=document.getElementById('ysrpDock').value,id=plannerRow.id;try{await window.YardivoSupplierLiveSync.call('internal_update',{id,delivery_date:plannerDate,requested_time:time,dock:'R'+String(dock).replace(/^R/i,''),status:'proposal_sent',review_note:'Upravljanje zalihama predložilo je termin i rampu. Dobavljač treba prihvatiti ili zatražiti drugi termin.'});closePlanner();await quietLoad(false);try{window.dispatchEvent(new CustomEvent('yardivo:supplier-request-updated',{detail:{id}}))}catch(_){}}catch(e){alert('Prijedlog nije poslan:\n'+errorText(e))}}
+async function sendProposal(){if(!plannerRow||!checkChoice())return;const time=document.getElementById('ysrpTime').value,dock=document.getElementById('ysrpDock').value,id=plannerRow.id;try{const actor=window.YardivoRescheduleAudit?.actorLabel?.()||'Upravljanje zalihama';await window.YardivoSupplierLiveSync.call('internal_update',{id,delivery_date:plannerDate,requested_time:time,dock:'R'+String(dock).replace(/^R/i,''),status:'proposal_sent',review_note:`Promjenu termina inicirao: ${actor}. Dobavljač treba prihvatiti ili zatražiti drugi termin.`});try{window.YardivoTermProvenance?.record?.({supplierDeliveryId:id,supplier:plannerRow.supplier_name||plannerRow.supplier_username||'',warehouse:plannerRow.warehouse||'',initiatedByType:'INVENTORY',initiatedBy:actor,approvedBy:actor,status:'PENDING_SUPPLIER',before:{date:plannerRow.delivery_date||'',time:String(plannerRow.requested_time||'').slice(0,5),dock:plannerRow.dock||''},after:{date:plannerDate,time,dock:'R'+String(dock).replace(/^R/i,'')},reason:'Promjenu termina predložilo Upravljanje zalihama',responsibility:'WAREHOUSE'})}catch(_){}closePlanner();await quietLoad(false);try{window.dispatchEvent(new CustomEvent('yardivo:supplier-request-updated',{detail:{id}}))}catch(_){}}catch(e){alert('Prijedlog nije poslan:\n'+errorText(e))}}
 async function rejectPlanner(){if(!plannerRow)return;const id=plannerRow.id,note=prompt('Razlog odbijanja zahtjeva:','');if(note===null)return;if(!note.trim()){alert('Upiši razlog odbijanja.');return}if(!confirm('Potvrditi odbijanje Supplier zahtjeva?'))return;try{await window.YardivoSupplierLiveSync.call('internal_update',{id,status:'rejected',review_note:note.trim()});closePlanner();await quietLoad(false)}catch(e){alert('Odbijanje nije uspjelo:\n'+errorText(e))}}
 function errorText(e){if(!e)return 'Nepoznata greška';if(typeof e==='string')return e;if(e.message&&typeof e.message==='string')return e.message;if(e.error?.message)return e.error.message;try{return JSON.stringify(e)}catch(_){return String(e)}}
 
@@ -37666,7 +37685,8 @@ function modal(){let m=document.getElementById('ysrRescheduleReviewV583');if(m)r
 function close(){document.getElementById('ysrRescheduleReviewV583')?.classList.remove('open');row=req=null}
 async function open(id){try{const rows=await window.YardivoSupplierLiveSync.call('list_internal');row=(rows||[]).find(x=>String(x.id)===String(id));if(!row)return;req=parseReq(row);if(!req)return alert('Nema aktivnog zahtjeva za promjenu termina.');const m=modal();m.querySelector('#ysrrBody').innerHTML=`<div class="ysrr-compare"><div><small>TRENUTNO POTVRĐENO</small><strong>${esc(req.fromDate||row.delivery_date)} · ${esc(req.fromTime||String(row.requested_time||'').slice(0,5))}${(req.fromDock||row.dock)?' · '+esc(req.fromDock||row.dock):''}</strong></div><div><small>DOBAVLJAČ TRAŽI</small><strong>${esc(req.requestedDate)} · ${esc(req.requestedTime)}</strong></div></div><div class="ysrr-reason"><strong>ZAHTJEV POSLAO</strong><br>${esc(req.requestedBy||row.supplier_username||row.supplier_name||'Dobavljač')}<br><br><strong>RAZLOG DOBAVLJAČA</strong><br>${esc(req.reason||'—')}</div><div class="ysrr-actions"><button class="danger" data-ysrr-reject>ODBIJ</button><button class="secondary" data-ysrr-alternate>PREDLOŽI DRUGI TERMIN</button><button class="primary" data-ysrr-approve>ODOBRI PROMJENU</button></div>`;m.classList.add('open')}catch(e){alert('Zahtjev nije moguće učitati:\\n'+(e?.message||e))}}
 async function upd(p){await window.YardivoSupplierLiveSync.call('internal_update',p);try{await window.YardivoSupplierPlannerV580?.refresh?.(true)}catch(_){}}
-async function approve(){if(!row||!req)return;if(!confirm(`Odobriti ${req.requestedDate} ${req.requestedTime}?`))return;try{const actor=window.YardivoRescheduleAudit?.actorLabel?.()||'YARDIVO korisnik';await upd({id:row.id,delivery_date:req.requestedDate,requested_time:req.requestedTime,dock:row.dock||'',status:'confirmed',review_note:`Promjena termina odobrena · ${req.requestedDate} ${req.requestedTime} · Odobrio: ${actor}`,note:cleanNote(row.note)});try{window.YardivoRescheduleAudit?.push?.('PROMJENA TERMINA ODOBRENA',`${row.supplier_name||row.supplier_username||'Dobavljač'} · ${req.requestedDate} ${req.requestedTime}`,{actor,type:'supplier_reschedule_approved',supplierDeliveryId:row.id||'',warehouse:row.warehouse||'',before:{date:req.fromDate,time:req.fromTime,dock:req.fromDock||row.dock||''},after:{date:req.requestedDate,time:req.requestedTime,dock:row.dock||''}})}catch(_){}close()}catch(e){alert('Promjena nije odobrena:\\n'+(e?.message||e))}}
+async function approve(){if(!row||!req)return;if(!confirm(`Odobriti ${req.requestedDate} ${req.requestedTime}?`))return;try{const actor=window.YardivoRescheduleAudit?.actorLabel?.()||'YARDIVO korisnik';await upd({id:row.id,delivery_date:req.requestedDate,requested_time:req.requestedTime,dock:row.dock||'',status:'confirmed',review_note:`Promjena termina odobrena · ${req.requestedDate} ${req.requestedTime} · Odobrio: ${actor}`,note:cleanNote(row.note)});try{window.YardivoRescheduleAudit?.push?.('PROMJENA TERMINA ODOBRENA',`${row.supplier_name||row.supplier_username||'Dobavljač'} · ${req.requestedDate} ${req.requestedTime}`,{actor,type:'supplier_reschedule_approved',supplierDeliveryId:row.id||'',warehouse:row.warehouse||'',before:{date:req.fromDate,time:req.fromTime,dock:req.fromDock||row.dock||''},after:{date:req.requestedDate,time:req.requestedTime,dock:row.dock||''},initiatedByType:'SUPPLIER',initiatedBy:req.requestedBy||row.supplier_name||row.supplier_username||'Dobavljač',approvedBy:actor,responsibility:'SUPPLIER_REQUEST',kpiImpact:'SUPPLIER_REQUEST'})}catch(_){}
+try{window.YardivoTermProvenance?.approve?.(row.id,actor,{initiatedByType:'SUPPLIER',initiatedBy:req.requestedBy||row.supplier_name||row.supplier_username||'Dobavljač',before:{date:req.fromDate,time:req.fromTime,dock:req.fromDock||row.dock||''},after:{date:req.requestedDate,time:req.requestedTime,dock:row.dock||''},reason:req.reason||'Zahtjev dobavljača za promjenu termina'})}catch(_){}close()}catch(e){alert('Promjena nije odobrena:\\n'+(e?.message||e))}}
 async function reject(){if(!row)return;const why=prompt('Razlog odbijanja zahtjeva:','');if(why===null||!why.trim())return;try{const actor=window.YardivoRescheduleAudit?.actorLabel?.()||'YARDIVO korisnik';await upd({id:row.id,status:'confirmed',review_note:`Zahtjev za promjenu termina odbijen · ${why.trim()} · Odbio: ${actor}`,note:cleanNote(row.note)});try{window.YardivoRescheduleAudit?.push?.('ZAHTJEV ZA PROMJENU ODBIJEN',`${row.supplier_name||row.supplier_username||'Dobavljač'} · ${why.trim()}`,{actor,type:'supplier_reschedule_rejected',supplierDeliveryId:row.id||'',warehouse:row.warehouse||''})}catch(_){}close()}catch(e){alert('Odbijanje nije spremljeno:\\n'+(e?.message||e))}}
 function alternate(){if(!row)return;const x=row;close();window.YardivoSupplierPlannerV580?.open?.(x)}
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-v583-reschedule-review]');if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();open(b.dataset.v583RescheduleReview)},true);
@@ -38977,6 +38997,7 @@ async function inventoryApprove(id){
    l.status='PENDING_SUPPLIER';
    l.inventoryApprovedAt=new Date().toISOString();
    l.inventoryApprovedBy=who;
+   try{window.YardivoTermProvenance?.approve?.(supplierId,who,{announcementId:l.announcementId,initiatedByType:'YARDIVO_SMART',initiatedBy:'YARDIVO SMART',before:l.old,after:l.newSlot,reason:l.reason,responsibility:'YARDIVO_SMART'})}catch(_){}
    l.supplierDeliveryId=supplierId;
    save(ls);
    notif('SMART PRIJEDLOG POSLAN DOBAVLJAČU',`${l.supplier||a.supplier||'Dobavljač'} · ${l.newSlot.date} ${l.newSlot.time} · R${normDock(l.newSlot.dock)} · Potvrdio: ${who}`,a,l);
@@ -38997,6 +39018,7 @@ function reconcileAccepted(){
    if(!matches)continue;
    l.status='SUPPLIER_ACCEPTED';
    l.supplierAcceptedAt=new Date().toISOString();
+   try{window.YardivoTermProvenance?.accept?.(l.supplierDeliveryId||'', 'Dobavljač',{announcementId:l.announcementId,initiatedByType:'YARDIVO_SMART',initiatedBy:'YARDIVO SMART',approvedBy:l.inventoryApprovedBy||'',before:l.old,after:l.newSlot,reason:l.reason,responsibility:'YARDIVO_SMART'})}catch(_){}
    changed=true;
    notif('DOBAVLJAČ JE PRIHVATIO SMART TERMIN',`${l.supplier||a.supplier||'Dobavljač'} · canonical najava je promijenjena na ${l.newSlot.date} ${l.newSlot.time} · R${normDock(l.newSlot.dock)}.`,a,l);
  }
@@ -39016,5 +39038,196 @@ setInterval(reconcileAccepted,5000);
 
 window.YardivoSmartApprovalV583={inventoryApprove,reconcileAccepted};
 window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-settings-smart-approval-workflow';
+})();
+</script>
+
+<style id="yardivo-v583-term-provenance-style">
+.term-prov-line{color:#a9becc}
+.ytp-card{
+  margin:9px 0;padding:10px;border:1px solid #2d5269;border-radius:8px;
+  background:#091b28;font-size:8px;line-height:1.55;color:#a8bdca
+}
+.ytp-card strong{color:#fff}
+.ytp-card .ytp-badge{
+  display:inline-flex;padding:4px 7px;border-radius:999px;border:1px solid #38627a;
+  font-size:6.5px;font-weight:950;color:#b9d1df;margin-bottom:5px
+}
+.ytp-card.supplier .ytp-badge{border-color:#8a6a2c;color:#f2cf86}
+.ytp-card.inventory .ytp-badge{border-color:#3378a4;color:#8fd0fb}
+.ytp-card.smart .ytp-badge{border-color:#2f7552;color:#8cecb3}
+</style>
+
+<script id="yardivo-v583-term-provenance-system">
+(function(){
+'use strict';
+const KEY='yardivo_term_change_provenance_v1';
+const NOTIF_KEY='yardivo_live_notifications_v1';
+
+function arr(){try{const x=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(x)?x:[]}catch(_){return[]}}
+function save(x){
+  const out=x.slice(-1500);
+  localStorage.setItem(KEY,JSON.stringify(out));
+  try{if(typeof putCloudState==='function')Promise.resolve(putCloudState(KEY,JSON.stringify(out))).catch(()=>{})}catch(_){}
+}
+function cleanDock(v){const n=Number(String(v??'').replace(/^R/i,''));return n||v||''}
+function actorType(type){
+  type=String(type||'').toUpperCase();
+  if(type==='SUPPLIER')return'DOBAVLJAČ';
+  if(type==='INVENTORY')return'UPRAVLJANJE ZALIHAMA';
+  if(type==='YARDIVO_SMART')return'YARDIVO SMART';
+  if(type==='ADMIN')return'ADMIN';
+  return type||'—';
+}
+function initiatorLabel(c){
+  if(c?.initiatedBy)return String(c.initiatedBy);
+  return actorType(c?.initiatedByType)||String(c?.changedBy||'—');
+}
+function kpiLabel(c){
+  const t=String(c?.initiatedByType||'').toUpperCase(),impact=String(c?.kpiImpact||c?.responsibility||'').toUpperCase();
+  if(c?.countsAsLate===true)return'Stvarno kašnjenje / negativno';
+  if(t==='SUPPLIER'||impact==='SUPPLIER_REQUEST')return'Zahtjev dobavljača · zaseban KPI';
+  if(t==='INVENTORY'||impact==='WAREHOUSE'||impact==='WAREHOUSE_CHANGE')return'Promjena skladišta · neutralno';
+  if(t==='YARDIVO_SMART'||impact==='YARDIVO_SMART')return'Smart optimizacija · neutralno';
+  return'Neutralno';
+}
+function keyMatch(x,p){
+  if(p.id&&String(x.id)===String(p.id))return true;
+  if(p.supplierDeliveryId&&String(x.supplierDeliveryId)===String(p.supplierDeliveryId)&&!['APPLIED','ACCEPTED'].includes(x.status))return true;
+  if(p.announcementId&&String(x.announcementId)===String(p.announcementId)&&!['APPLIED','ACCEPTED'].includes(x.status))return true;
+  return false;
+}
+function record(p){
+  if(!p)return null;
+  const a=arr();let x=a.find(v=>keyMatch(v,p));
+  if(!x){
+    x={id:'TP-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),createdAt:new Date().toISOString()};
+    a.push(x);
+  }
+  Object.assign(x,p,{
+    updatedAt:new Date().toISOString(),
+    initiatedByType:String(p.initiatedByType||x.initiatedByType||'').toUpperCase(),
+    initiatedBy:p.initiatedBy||x.initiatedBy||actorType(p.initiatedByType),
+    before:p.before||x.before||{},
+    after:p.after||x.after||{}
+  });
+  if(x.initiatedByType==='SUPPLIER')x.kpiImpact='SUPPLIER_REQUEST';
+  else if(x.initiatedByType==='INVENTORY')x.kpiImpact='WAREHOUSE_CHANGE';
+  else if(x.initiatedByType==='YARDIVO_SMART')x.kpiImpact='YARDIVO_SMART';
+  x.countsAsLate=false;
+  save(a);notifyState(x);return x;
+}
+function approve(supplierDeliveryId,who,extra={}){
+  return record({...extra,supplierDeliveryId,approvedBy:who,approvedAt:new Date().toISOString(),status:extra.status||'PENDING_SUPPLIER'});
+}
+function accept(supplierDeliveryId,who,extra={}){
+  const x=record({...extra,supplierDeliveryId,acceptedBy:who,acceptedAt:new Date().toISOString(),status:'ACCEPTED'});
+  attachToAnnouncement(x);
+  return x;
+}
+function supplierAcceptedByClient(clientId,who){
+  let rows=[];
+  try{
+    const s=(typeof currentSession!=='undefined'?currentSession:window.currentSession)||{};
+    const k='yardivo_supplier_portal_v549_'+String(s.authUserId||s.username||s.user||'supplier');
+    rows=JSON.parse(localStorage.getItem(k)||'[]')||[];
+  }catch(_){}
+  const row=rows.find(r=>String(r.client_id||r.clientId||r.id)===String(clientId));
+  const sid=row?.id||'';
+  const a=arr();
+  let x=a.slice().reverse().find(v=>(sid&&String(v.supplierDeliveryId)===String(sid))||String(v.clientId||'')===String(clientId));
+  if(!x)return null;
+  x.acceptedBy=who||'Dobavljač';x.acceptedAt=new Date().toISOString();x.status='ACCEPTED';x.clientId=clientId;
+  save(a);attachToAnnouncement(x);notifyState(x);return x;
+}
+function findAnnouncement(x){
+  try{
+    const aa=Array.isArray(announcements)?announcements:[];
+    return aa.find(a=>
+      (x.announcementId&&String(a.id)===String(x.announcementId))||
+      (x.supplierDeliveryId&&String(a.supplierDeliveryId||'')===String(x.supplierDeliveryId))
+    );
+  }catch(_){return null}
+}
+function attachToAnnouncement(x){
+  const a=findAnnouncement(x);if(!a||!x?.before||!x?.after)return false;
+  a.changeHistory=Array.isArray(a.changeHistory)?a.changeHistory:[];
+  if(a.changeHistory.some(c=>String(c.provenanceId||'')===String(x.id)))return true;
+  const c={
+    provenanceId:x.id,
+    changedAt:x.acceptedAt||x.approvedAt||x.updatedAt||new Date().toISOString(),
+    type:'TERM_CHANGE',
+    oldDate:x.before.date||'',oldTime:x.before.time||'',oldDock:cleanDock(x.before.dock),
+    newDate:x.after.date||'',newTime:x.after.time||'',newDock:cleanDock(x.after.dock),
+    oldWarehouse:a.warehouse||x.warehouse||'',newWarehouse:a.warehouse||x.warehouse||'',
+    reason:x.reason||'Promjena termina',
+    note:`Promjenu termina inicirao: ${x.initiatedBy||actorType(x.initiatedByType)}`,
+    initiatedByType:x.initiatedByType||'',
+    initiatedBy:x.initiatedBy||actorType(x.initiatedByType),
+    approvedBy:x.approvedBy||'',
+    acceptedBy:x.acceptedBy||'',
+    responsibility:x.responsibility||'',
+    kpiImpact:x.kpiImpact||'',
+    countsAsLate:false
+  };
+  a.changeHistory.push(c);
+  try{saveAnnouncements?.()}catch(_){}
+  try{renderChangeHistory?.();if(typeof currentAnnouncementDetailId!=='undefined'&&Number(currentAnnouncementDetailId)===Number(a.id))renderAnnouncementDetail?.()}catch(_){}
+  return true;
+}
+function notifyState(x){
+  if(!x)return;
+  const signature=`${x.id}:${x.status}:${x.approvedAt||''}:${x.acceptedAt||''}`;
+  let ns=[];try{ns=JSON.parse(localStorage.getItem(NOTIF_KEY)||'[]');if(!Array.isArray(ns))ns=[]}catch(_){}
+  if(ns.some(n=>n.provenanceSignature===signature))return;
+  let title='PROMJENA TERMINA';
+  if(x.status==='PENDING_INVENTORY')title='PROMJENA TERMINA · ČEKA ZALIHE';
+  if(x.status==='PENDING_SUPPLIER')title='PROMJENA TERMINA · ČEKA DOBAVLJAČA';
+  if(x.status==='ACCEPTED'||x.status==='APPLIED')title='TERMIN PROMIJENJEN';
+  const body=[
+    x.supplier||'Dobavljač',
+    `Inicirao: ${x.initiatedBy||actorType(x.initiatedByType)}`,
+    x.approvedBy?`Odobrio: ${x.approvedBy}`:'',
+    x.acceptedBy?`Prihvatio: ${x.acceptedBy}`:'',
+    x.after?.date&&x.after?.time?`Novi termin: ${x.after.date} ${x.after.time}${x.after.dock?' · R'+cleanDock(x.after.dock):''}`:''
+  ].filter(Boolean).join(' · ');
+  ns.push({id:'TPN-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),event:'TERM_PROVENANCE',title,body,at:new Date().toISOString(),createdAt:new Date().toISOString(),roles:['admin','inventory','reception'],targets:['admin','inventory','reception'],warehouse:String(x.warehouse||'').toUpperCase(),announcementId:x.announcementId||'',supplierDeliveryId:x.supplierDeliveryId||'',provenanceSignature:signature,readBy:{}});
+  localStorage.setItem(NOTIF_KEY,JSON.stringify(ns.slice(-1200)));
+  try{window.YardivoNotifications?.render?.()}catch(_){}
+}
+
+/* Try attaching accepted changes whenever canonical data refreshes. */
+function reconcile(){
+  const a=arr();let touched=false;
+  a.filter(x=>['ACCEPTED','APPLIED'].includes(x.status)).forEach(x=>{if(attachToAnnouncement(x))touched=true});
+  return touched;
+}
+
+/* Supplier portal: always show who proposed the current proposal. */
+function decorateSupplier(){
+  const host=document.getElementById('yspStatusList');if(!host)return;
+  const all=arr();
+  host.querySelectorAll('.ysp-v574-proposal').forEach(card=>{
+    if(card.querySelector('.ytp-card'))return;
+    const id=String(card.dataset.v574Proposal||'');
+    const p=all.slice().reverse().find(x=>String(x.supplierDeliveryId||'')===id||String(x.clientId||'')===id);
+    if(!p)return;
+    const cls=p.initiatedByType==='SUPPLIER'?'supplier':p.initiatedByType==='YARDIVO_SMART'?'smart':'inventory';
+    const box=document.createElement('div');box.className='ytp-card '+cls;
+    box.innerHTML=`<span class="ytp-badge">${actorType(p.initiatedByType)}</span><br><strong>Promjenu termina inicirao:</strong> ${p.initiatedBy||actorType(p.initiatedByType)}${p.approvedBy?`<br><strong>Odobrio:</strong> ${p.approvedBy}`:''}<br><strong>Utjecaj na KPI dobavljača:</strong> ${kpiLabel(p)}`;
+    card.appendChild(box);
+  });
+}
+
+document.addEventListener('click',()=>setTimeout(decorateSupplier,80),true);
+window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>{reconcile();decorateSupplier()},100));
+window.addEventListener('yardivo:supplier-request-updated',()=>setTimeout(()=>{reconcile();decorateSupplier()},120));
+window.addEventListener('load',()=>setTimeout(()=>{reconcile();decorateSupplier()},1600));
+setInterval(()=>{reconcile();decorateSupplier()},5000);
+
+window.YardivoTermProvenance={
+  record,approve,accept,supplierAcceptedByClient,reconcile,
+  initiatorLabel,kpiLabel,actorType,all:arr
+};
+window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-term-change-provenance-system';
 })();
 </script>
