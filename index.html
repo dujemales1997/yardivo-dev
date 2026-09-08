@@ -34082,7 +34082,7 @@ window.YardivoSupplierV576={install};
 <script id="yardivo-v582-supplier-planner-canonical-fix">
 (function(){
 'use strict';
-let plannerRow=null, plannerDate='', calCursor=null, refreshing=false, lastRows=[], lastFingerprint='', plannerDurationCache=60;
+let plannerRow=null, plannerDate='', calCursor=null, refreshing=false, lastRows=[], lastFingerprint='', plannerDurationCache=60, plannerOccupancyCache=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const MONTH_NAMES=['Siječanj','Veljača','Ožujak','Travanj','Svibanj','Lipanj','Srpanj','Kolovoz','Rujan','Listopad','Studeni','Prosinac'];
 function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
@@ -34098,10 +34098,10 @@ function ensureModal(){
  o.addEventListener('click',async e=>{
    e.stopPropagation();
    if(e.target===o||e.target.closest('[data-ysrp-close]'))closePlanner();
-   const d=e.target.closest('[data-ysrp-day]');if(d&&!d.disabled){plannerDate=d.dataset.ysrpDay;calCursor=new Date(plannerDate+'T12:00:00');drawCalendar();refreshPlanner();}
+   const d=e.target.closest('[data-ysrp-day]');if(d&&!d.disabled){plannerDate=d.dataset.ysrpDay;plannerOccupancyCache=null;calCursor=new Date(plannerDate+'T12:00:00');drawCalendar();requestAnimationFrame(()=>refreshPlanner());}
    if(e.target.closest('[data-ysrp-prev]')){calCursor=new Date(calCursor.getFullYear(),calCursor.getMonth()-1,1);drawCalendar();}
    if(e.target.closest('[data-ysrp-next]')){calCursor=new Date(calCursor.getFullYear(),calCursor.getMonth()+1,1);drawCalendar();}
-   if(e.target.closest('[data-ysrp-wanted]')){plannerDate=plannerRow?.delivery_date||plannerDate;calCursor=new Date(plannerDate+'T12:00:00');drawCalendar();refreshPlanner(true);}
+   if(e.target.closest('[data-ysrp-wanted]')){plannerDate=plannerRow?.delivery_date||plannerDate;plannerOccupancyCache=null;calCursor=new Date(plannerDate+'T12:00:00');drawCalendar();requestAnimationFrame(()=>refreshPlanner(true));}
    if(e.target.closest('[data-ysrp-send]'))await sendProposal();
    if(e.target.closest('[data-ysrp-reject]'))await rejectPlanner();
  });
@@ -34116,8 +34116,22 @@ function ensureModal(){
  o.querySelector('#ysrpDock').addEventListener('change',plannerChoiceChanged);
 }
 function facts(x){return `<div class="ysrp-facts"><div class="ysrp-fact"><small>DOBAVLJAČ</small><strong>${esc(x.supplier_name||x.supplier_username||'—')}</strong></div><div class="ysrp-fact"><small>SKLADIŠTE</small><strong>${esc(x.warehouse||'—')}</strong></div><div class="ysrp-fact"><small>PALETE</small><strong>${Number(x.pallets||0)}</strong></div><div class="ysrp-fact"><small>SKU</small><strong>${Number(x.sku_count||0)}</strong></div></div><div class="ysrp-wanted"><small>ŽELJENI DATUM DOBAVLJAČA</small><strong>${human(x.delivery_date)}</strong></div>`}
-function openPlanner(x){ensureModal();plannerRow=x;plannerDurationCache=computePlannerDuration();plannerDate=x.delivery_date||iso(new Date());calCursor=new Date(plannerDate+'T12:00:00');document.getElementById('ysrpFacts').innerHTML=facts(x);document.getElementById('ysrPlannerOverlay').classList.add('open');drawCalendar();requestAnimationFrame(()=>refreshPlanner());}
-function closePlanner(){document.getElementById('ysrPlannerOverlay')?.classList.remove('open');plannerRow=null}
+function openPlanner(x){
+ ensureModal();
+ plannerRow=x;
+ plannerDate=x.delivery_date||iso(new Date());
+ plannerDurationCache=computePlannerDuration();
+ plannerOccupancyCache=null;
+ calCursor=new Date(plannerDate+'T12:00:00');
+ document.getElementById('ysrpFacts').innerHTML=facts(x);
+ drawCalendar();
+ /* Paint modal first; calculate slots after the opening frame so opening is instant. */
+ document.getElementById('ysrPlannerOverlay').classList.add('open');
+ const box=document.getElementById('ysrpRecommendation');
+ if(box){box.className='ysrp-recommend';box.innerHTML='<small>YARDIVO PLANER</small><strong>Provjera slobodnih termina…</strong><p>Analiza raspoloživosti rampi.</p>'}
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{if(plannerRow)refreshPlanner()}));
+}
+function closePlanner(){document.getElementById('ysrPlannerOverlay')?.classList.remove('open');plannerRow=null;plannerOccupancyCache=null}
 function drawCalendar(){const h=document.getElementById('ysrpCalendar');if(!h||!calCursor)return;const y=calCursor.getFullYear(),m=calCursor.getMonth(),first=new Date(y,m,1),offset=(first.getDay()+6)%7,days=new Date(y,m+1,0).getDate(),today=new Date();today.setHours(0,0,0,0);let grid='';for(let i=0;i<offset;i++)grid+='<div class="ysrp-empty"></div>';for(let n=1;n<=days;n++){const d=new Date(y,m,n),v=iso(d),past=d<today;grid+=`<button type="button" class="ysrp-day ${v===plannerDate?'sel ':''}${v===plannerRow?.delivery_date?'wanted':''}" data-ysrp-day="${v}" ${past?'disabled':''}>${n}</button>`}h.innerHTML=`<div class="ysrp-cal-head"><button type="button" data-ysrp-prev>‹</button><strong>${MONTH_NAMES[m]} ${y}</strong><button type="button" data-ysrp-next>›</button></div><div class="ysrp-week">${['PO','UT','SR','ČE','PE','SU','NE'].map(x=>`<span>${x}</span>`).join('')}</div><div class="ysrp-grid">${grid}</div>`}
 function whConfig(){try{return (typeof WAREHOUSES!=='undefined'?WAREHOUSES:window.WAREHOUSES)?.[plannerRow?.warehouse]}catch(_){return null}}
 function duration(){return Math.max(15,Number(plannerDurationCache)||60)}
@@ -34132,10 +34146,67 @@ function computePlannerDuration(){
   }catch(_){}
   return 60;
 }
-function recommendation(){try{return typeof recommendSlot==='function'?recommendSlot(plannerDate,duration(),plannerRow?.warehouse,null):null}catch(_){return null}}
+function rebuildPlannerOccupancy(){
+  const wh=String(plannerRow?.warehouse||'W101');
+  const date=String(plannerDate||'');
+  const rows=[];
+  try{
+    for(const a of (Array.isArray(announcements)?announcements:[])){
+      if((a.warehouse||'W101')!==wh||a.date!==date)continue;
+      const start=typeof toMin==='function'?toMin(a.time):0;
+      const dur=Math.max(15,Number(a.duration)||60);
+      rows.push({dock:Number(a.dock)||0,start:Number(start)||0,duration:dur,pallets:Number(a.pallets)||0});
+    }
+  }catch(_){}
+  plannerOccupancyCache={wh,date,rows};
+  return plannerOccupancyCache;
+}
+function plannerCache(){
+  if(!plannerOccupancyCache||plannerOccupancyCache.wh!==String(plannerRow?.warehouse||'W101')||plannerOccupancyCache.date!==String(plannerDate||'')){
+    return rebuildPlannerOccupancy();
+  }
+  return plannerOccupancyCache;
+}
+function plannerFree(dock,start,dur){
+  const c=plannerCache(),w=whConfig();
+  if(!w)return false;
+  let ws=480,we=960;
+  try{if(w.receptionStart&&typeof toMin==='function')ws=toMin(w.receptionStart);if(w.receptionEnd&&typeof toMin==='function')we=toMin(w.receptionEnd)}catch(_){}
+  if(start<ws||start+dur>we)return false;
+  try{if(typeof isRampBlocked==='function'&&isRampBlocked(c.wh,c.date,dock,start,dur))return false}catch(_){}
+  for(const a of c.rows){
+    if(a.dock!==Number(dock))continue;
+    if(start<a.start+a.duration && a.start<start+dur)return false;
+  }
+  return true;
+}
+function recommendation(){
+  try{
+    const w=whConfig();if(!w?.ramps)return null;
+    let ws=480,we=960;
+    if(w.receptionStart&&typeof toMin==='function')ws=toMin(w.receptionStart);
+    if(w.receptionEnd&&typeof toMin==='function')we=toMin(w.receptionEnd);
+    const dur=duration(),c=plannerCache();
+    let best=null;
+    const rampLoads=new Map();
+    for(const a of c.rows)rampLoads.set(a.dock,(rampLoads.get(a.dock)||0)+a.duration);
+    for(let start=ws;start+dur<=we;start+=15){
+      let warehouseLoad=0;
+      for(const a of c.rows)if(start<a.start+a.duration&&a.start<start+dur)warehouseLoad+=a.pallets;
+      for(let dock=1;dock<=Number(w.ramps);dock++){
+        try{if(window.YardivoRampConfig?.isLocked?.(c.wh,dock))continue}catch(_){}
+        if(!plannerFree(dock,start,dur))continue;
+        const rampLoad=rampLoads.get(dock)||0;
+        const score=((start-ws)*1.6)+(warehouseLoad*1.0)+(rampLoad*.12);
+        if(!best||score<best.score)best={dock,start,time:(typeof hhmm==='function'?hhmm(start):String(Math.floor(start/60)).padStart(2,'0')+':'+String(start%60).padStart(2,'0')),warehouseLoad,rampLoad,score};
+      }
+    }
+    return best;
+  }catch(e){console.warn('YARDIVO planner recommendation',e);return null}
+}
 function populate(rec,forceRec){const w=whConfig(),t=document.getElementById('ysrpTime'),d=document.getElementById('ysrpDock');if(!t||!d)return;const oldT=forceRec?'':t.value,oldD=forceRec?'':d.value;let start=480,end=960;try{if(w?.receptionStart&&typeof toMin==='function')start=toMin(w.receptionStart);if(w?.receptionEnd&&typeof toMin==='function')end=toMin(w.receptionEnd)}catch(_){}t.innerHTML=Array.from({length:Math.max(1,Math.ceil((end-start)/15))},(_,i)=>{const mins=start+i*15,hh=String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0');return `<option value="${hh}">${hh}</option>`}).join('');d.innerHTML=Array.from({length:Number(w?.ramps||0)},(_,i)=>`<option value="${i+1}">Rampa ${i+1}</option>`).join('');if(rec){t.value=rec.time;d.value=String(rec.dock)}else{if([...t.options].some(o=>o.value===oldT))t.value=oldT;if([...d.options].some(o=>o.value===oldD))d.value=oldD}}
 function refreshPlanner(forceRec=false){const box=document.getElementById('ysrpRecommendation'),rec=recommendation();populate(rec,forceRec);if(rec){box.className='ysrp-recommend';box.innerHTML=`<small>✓ PREPORUKA YARDIVO</small><strong>${human(plannerDate)} · ${esc(rec.time)} · Rampa ${esc(rec.dock)}</strong><p>Procjena istovara ${duration()} min. Preporuka koristi postojeću logiku zauzeća rampi i opterećenja skladišta iz Unosa najava.</p>`}else{box.className='ysrp-recommend bad';box.innerHTML=`<small>NEMA AUTOMATSKE PREPORUKE</small><strong>${human(plannerDate)}</strong><p>Za ovaj datum nema slobodnog automatskog termina ili skladište nema konfigurirane rampe.</p>`}checkChoice()}
-function checkChoice(){const time=document.getElementById('ysrpTime')?.value,dock=Number(document.getElementById('ysrpDock')?.value||0),c=document.getElementById('ysrpCheck');if(!c)return;if(!plannerDate||!time||!dock){c.className='ysrp-check bad';c.textContent='Odaberi datum, termin i rampu.';return false}let free=true;try{free=typeof isSlobodna==='function'?isSlobodna(plannerDate,dock,typeof toMin==='function'?toMin(time):0,duration(),null,plannerRow?.warehouse):true}catch(_){}c.className='ysrp-check '+(free?'good':'bad');c.textContent=free?`✓ DOBAR ODABIR · Rampa ${dock} u ${time} je slobodna.`:`⚠ TERMIN JE ZAUZET · Rampa ${dock} u ${time}. Odaberi drugi termin ili YARDIVO preporuku.`;return free}
+function checkChoice(){const time=document.getElementById('ysrpTime')?.value,dock=Number(document.getElementById('ysrpDock')?.value||0),c=document.getElementById('ysrpCheck');if(!c)return;if(!plannerDate||!time||!dock){c.className='ysrp-check bad';c.textContent='Odaberi datum, termin i rampu.';return false}let free=true;try{free=plannerFree(dock,typeof toMin==='function'?toMin(time):0,duration())}catch(_){}c.className='ysrp-check '+(free?'good':'bad');c.textContent=free?`✓ DOBAR ODABIR · Rampa ${dock} u ${time} je slobodna.`:`⚠ TERMIN JE ZAUZET · Rampa ${dock} u ${time}. Odaberi drugi termin ili YARDIVO preporuku.`;return free}
 async function sendProposal(){if(!plannerRow||!checkChoice())return;const time=document.getElementById('ysrpTime').value,dock=document.getElementById('ysrpDock').value,id=plannerRow.id;try{await window.YardivoSupplierLiveSync.call('internal_update',{id,delivery_date:plannerDate,requested_time:time,dock:'R'+String(dock).replace(/^R/i,''),status:'proposal_sent',review_note:'Upravljanje zalihama predložilo je termin i rampu. Dobavljač treba prihvatiti ili zatražiti drugi termin.'});closePlanner();await quietLoad(false);try{window.dispatchEvent(new CustomEvent('yardivo:supplier-request-updated',{detail:{id}}))}catch(_){}}catch(e){alert('Prijedlog nije poslan:\n'+errorText(e))}}
 async function rejectPlanner(){if(!plannerRow)return;const id=plannerRow.id,note=prompt('Razlog odbijanja zahtjeva:','');if(note===null)return;if(!note.trim()){alert('Upiši razlog odbijanja.');return}if(!confirm('Potvrditi odbijanje Supplier zahtjeva?'))return;try{await window.YardivoSupplierLiveSync.call('internal_update',{id,status:'rejected',review_note:note.trim()});closePlanner();await quietLoad(false)}catch(e){alert('Odbijanje nije uspjelo:\n'+errorText(e))}}
 function errorText(e){if(!e)return 'Nepoznata greška';if(typeof e==='string')return e;if(e.message&&typeof e.message==='string')return e.message;if(e.error?.message)return e.error.message;try{return JSON.stringify(e)}catch(_){return String(e)}}
@@ -36258,24 +36329,51 @@ try{
   }
 }catch(_){}
 
-/* Give custom .open overlays a fresh animation every time they are opened. */
+/* Give custom overlays a fresh animation only on the CLOSED -> OPEN edge.
+   IMPORTANT: restartMotion() itself changes class. The old observer reacted to
+   those class writes again while .open was still present, creating a recursive
+   MutationObserver loop that could freeze Supplier Planner and other overlays. */
+const motionOpenState=new WeakMap();
+const motionDialogState=new WeakMap();
+const motionDetailState=new WeakMap();
 const observer=new MutationObserver(records=>{
   for(const rec of records){
     const el=rec.target;
-    if(rec.attributeName==='class' && el.classList?.contains('open')){
-      restartMotion(el);
-      const panel=el.querySelector?.('.timeline-dialog,.yiv-dialog,.y5-reader,.yod-dialog,.modal-content,.dialog');
-      restartMotion(panel);
+
+    if(rec.attributeName==='class' && el?.classList){
+      const isOpen=el.classList.contains('open');
+      const wasOpen=motionOpenState.get(el)===true;
+      if(isOpen!==wasOpen){
+        motionOpenState.set(el,isOpen);
+        if(isOpen){
+          restartMotion(el);
+          const panel=el.querySelector?.('.timeline-dialog,.yiv-dialog,.y5-reader,.yod-dialog,.modal-content,.dialog');
+          restartMotion(panel);
+        }
+      }
+
+      if(el.id==='announcementDetail'){
+        const isActive=el.classList.contains('active');
+        const wasActive=motionDetailState.get(el)===true;
+        if(isActive!==wasActive){
+          motionDetailState.set(el,isActive);
+          if(isActive){
+            const head=el.querySelector(':scope > .section-title');
+            const body=el.querySelector(':scope > .announcement-detail-wrap');
+            restartMotion(head);restartMotion(body);
+            requestAnimationFrame(()=>{try{el.scrollTop=0}catch(_){}});
+          }
+        }
+      }
     }
-    if(rec.attributeName==='open' && el instanceof HTMLDialogElement && el.open){
-      restartMotion(el);
-    }
-    if(rec.attributeName==='class' && el.id==='announcementDetail' && el.classList.contains('active')){
-      const head=el.querySelector(':scope > .section-title');
-      const body=el.querySelector(':scope > .announcement-detail-wrap');
-      restartMotion(head);restartMotion(body);
-      /* Start every detail at its top, like opening a new app/document window. */
-      requestAnimationFrame(()=>{try{el.scrollTop=0}catch(_){}});
+
+    if(rec.attributeName==='open' && el instanceof HTMLDialogElement){
+      const isOpen=!!el.open;
+      const wasOpen=motionDialogState.get(el)===true;
+      if(isOpen!==wasOpen){
+        motionDialogState.set(el,isOpen);
+        if(isOpen)restartMotion(el);
+      }
     }
   }
 });
@@ -37247,3 +37345,23 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElement
 })();
 </script>
 <script>window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-supplier-inbox-stable-full-detail';</script>
+
+<style id="yardivo-v583-planner-freeze-root-css">
+#ysrPlannerOverlay,
+#ysrPlannerOverlay *{
+  animation-duration:0s!important;
+}
+#ysrPlannerOverlay{
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  contain:strict;
+}
+#ysrPlannerOverlay .ysrp-card{
+  transform:none!important;
+  filter:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  contain:layout paint;
+}
+</style>
+<script>window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-planner-freeze-root-fix';</script>
