@@ -7056,6 +7056,7 @@ AUTOMATSKA PREPORUKA</small>
 <option value="W103">W103 · Velika Gorica · Svježe i hlađeno</option>
 <option value="W104">W104 · Velika Gorica · Smrznuto</option>
 <option value="W201">W201 · Dugopolje · Ambijent</option>
+<option value="W202">W202 · Dugopolje · W202</option>
 <option value="W203">W203 · Dugopolje · Svježe i hlađeno</option>
 <option value="W204">W204 · Dugopolje · Smrznuto</option>
 </select>
@@ -8344,6 +8345,7 @@ const WAREHOUSES={
   W103:{code:'W103',location:'Velika Gorica',name:'Svježe i hlađeno',ramps:null,receptionStart:null,receptionEnd:null},
   W104:{code:'W104',location:'Velika Gorica',name:'Smrznuto',ramps:null,receptionStart:null,receptionEnd:null},
   W201:{code:'W201',location:'Dugopolje',name:'Ambijent',ramps:6,receptionStart:'06:00',receptionEnd:'13:00'},
+  W202:{code:'W202',location:'Dugopolje',name:'W202',ramps:null,receptionStart:null,receptionEnd:null},
   W203:{code:'W203',location:'Dugopolje',name:'Svježe i hlađeno',ramps:null,receptionStart:null,receptionEnd:null},
   W204:{code:'W204',location:'Dugopolje',name:'Smrznuto',ramps:null,receptionStart:null,receptionEnd:null}
 };
@@ -13023,7 +13025,7 @@ window.YardivoLocationLock={apply:configureHomeLocation};
   }
 
   function baseRampCount(wh){
-    const base={W101:6,W103:0,W104:0,W201:6,W203:0,W204:0};
+    const base={W101:6,W103:0,W104:0,W201:6,W202:0,W203:0,W204:0};
     try{
       const n=Number(WAREHOUSES?.[wh]?.ramps);
       return Number.isFinite(n)&&n>0?n:(base[wh]||0);
@@ -13033,7 +13035,7 @@ window.YardivoLocationLock={apply:configureHomeLocation};
   function loadCfg(){
     let cfg={};
     try{cfg=JSON.parse(localStorage.getItem(RAMP_CFG_KEY)||'{}')||{}}catch(e){}
-    ['W101','W103','W104','W201','W203','W204'].forEach(wh=>{
+    ['W101','W103','W104','W201','W202','W203','W204'].forEach(wh=>{
       if(!cfg[wh])cfg[wh]={count:baseRampCount(wh),locked:[]};
       if(!Number.isFinite(Number(cfg[wh].count)))cfg[wh].count=baseRampCount(wh);
       if(!Array.isArray(cfg[wh].locked))cfg[wh].locked=[];
@@ -37999,7 +38001,7 @@ window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-supplier-inbox-scope-edit-fix';
 }
 </style>
 
-<script id="yardivo-v583-settings-redesign-script">
+<script id="yardivo-v583-settings-redesign-script" type="application/x-yardivo-disabled">
 (function(){
 'use strict';
 
@@ -38026,7 +38028,13 @@ function getMasterHours(w){
   return {from:'06:00',to:'22:00'}
 }
 function setMasterHours(w,from,to){
-  const all=loadJson(MASTER_HOURS_KEY);all[w]={from,to};saveJson(MASTER_HOURS_KEY,all)
+  const all=loadJson(MASTER_HOURS_KEY);all[w]={from,to};saveJson(MASTER_HOURS_KEY,all);
+  try{
+    if(typeof WAREHOUSES==='object'&&WAREHOUSES?.[w]){
+      WAREHOUSES[w].receptionStart=from;
+      WAREHOUSES[w].receptionEnd=to;
+    }
+  }catch(_){}
 }
 window.YardivoRampCapacityV583={
   get:getCapacity,
@@ -38181,5 +38189,700 @@ window.addEventListener('yardivo:login',()=>setTimeout(()=>{ensureNav();enhanceR
 window.addEventListener('yardivo:data-synced',()=>{if(document.getElementById('settings')?.classList.contains('active'))rerenderSoon()});
 
 window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-settings-warehouse-capacity-ux';
+})();
+</script>
+
+<style id="yardivo-v583-settings-tabs-hard-fix">
+/* ============================================================
+   SETTINGS TABS HARD FIX
+   Older role CSS uses display:* !important. These selectors are
+   intentionally stronger, but activate ONLY when the Settings
+   tab controller has classified the panels.
+   ============================================================ */
+html body #settings.yardivo-settings-tabs-ready .settings-grid > .yardivo-settings-tab-hidden{
+  display:none!important;
+}
+html body #settings.yardivo-settings-tabs-ready .settings-grid > .yardivo-settings-tab-visible{
+  display:block!important;
+}
+
+/* Never let tabs bypass non-admin security restrictions. */
+html[data-yardivo-role="inventory"] body #settings.yardivo-settings-tabs-ready .settings-grid > .yardivo-settings-tab-visible:not([data-yardivo-settings~="inventory"]),
+body[data-yardivo-role="inventory"] #settings.yardivo-settings-tabs-ready .settings-grid > .yardivo-settings-tab-visible:not([data-yardivo-settings~="inventory"]),
+html[data-yardivo-role="reception"] body #settings.yardivo-settings-tabs-ready .settings-grid > .yardivo-settings-tab-visible:not([data-yardivo-settings~="reception"]),
+body[data-yardivo-role="reception"] #settings.yardivo-settings-tabs-ready .settings-grid > .yardivo-settings-tab-visible:not([data-yardivo-settings~="reception"]),
+html[data-yardivo-role="gate"] body #settings.yardivo-settings-tabs-ready .settings-grid > .yardivo-settings-tab-visible,
+body[data-yardivo-role="gate"] #settings.yardivo-settings-tabs-ready .settings-grid > .yardivo-settings-tab-visible{
+  display:none!important;
+}
+
+#yardivoWarehouseRampCountV583{
+  margin:0 0 11px;
+  border:1px solid #2a5068;
+  border-radius:10px;
+  background:#081a27;
+  overflow:hidden;
+}
+#yardivoWarehouseRampCountV583 .ywr-head{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  padding:13px 14px;border-bottom:1px solid #244357;background:#0b2130;
+}
+#yardivoWarehouseRampCountV583 .ywr-head h3{
+  margin:0;color:#fff!important;font-size:11px;
+}
+#yardivoWarehouseRampCountV583 .ywr-head p{
+  margin:4px 0 0;color:#8fa8ba!important;font-size:7.5px;line-height:1.45;
+}
+#yardivoWarehouseRampCountV583 .ywr-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:8px;padding:10px;
+}
+.ywr-card{
+  border:1px solid #28485d;border-radius:8px;background:#0a1d2a;padding:11px;
+}
+.ywr-card.active{
+  border-color:#3486bd;box-shadow:0 0 0 1px rgba(52,134,189,.18) inset;
+}
+.ywr-card .ywr-title{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:9px;
+}
+.ywr-card .ywr-title strong{color:#fff!important;font-size:11px}
+.ywr-card .ywr-title small{display:block;margin-top:3px;color:#87a2b4!important;font-size:7px}
+.ywr-card .ywr-state{
+  border:1px solid #315369;border-radius:999px;padding:4px 7px;
+  color:#9cb5c5!important;font-size:6.5px;font-weight:950;white-space:nowrap;
+}
+.ywr-card.configured .ywr-state{border-color:#276047;color:#77e5a4!important;background:#0d2b20}
+.ywr-count{
+  display:grid;grid-template-columns:34px minmax(60px,1fr) 34px auto;gap:6px;align-items:center;
+}
+.ywr-count button{
+  height:36px;border:1px solid #355a72;border-radius:7px;background:#10283a;color:#fff;font-weight:950;cursor:pointer;
+}
+.ywr-count input{
+  width:100%;height:36px;border:1px solid #355a72;border-radius:7px;background:#061622;color:#fff;
+  text-align:center;font-size:13px;font-weight:950;
+}
+.ywr-count .ywr-save{
+  padding:0 10px;background:#135a96;border-color:#287db8;font-size:7px;
+}
+.ywr-select{
+  width:100%;margin-top:7px;height:31px;border:1px solid #2c4b60;border-radius:6px;
+  background:#091927;color:#b5c8d4;font-size:7px;font-weight:900;cursor:pointer;
+}
+.ywr-zero-note{
+  margin-top:7px;color:#f0bb72!important;font-size:7px;line-height:1.35;
+}
+@media(max-width:600px){
+  #yardivoWarehouseRampCountV583 .ywr-grid{grid-template-columns:1fr}
+  .ywr-count{grid-template-columns:34px 1fr 34px auto}
+}
+</style>
+
+<script id="yardivo-v583-settings-tabs-warehouse-count-fix" type="application/x-yardivo-disabled">
+(function(){
+'use strict';
+
+const WAREHOUSE_META={
+ W101:{location:'Velika Gorica',name:'Ambijent'},
+ W103:{location:'Velika Gorica',name:'Svježe i hlađeno'},
+ W104:{location:'Velika Gorica',name:'Smrznuto'},
+ W201:{location:'Dugopolje',name:'Ambijent'},
+ W202:{location:'Dugopolje',name:'W202'},
+ W203:{location:'Dugopolje',name:'Svježe i hlađeno'},
+ W204:{location:'Dugopolje',name:'Smrznuto'}
+};
+const WH_CODES=Object.keys(WAREHOUSE_META);
+let currentTab='ramps';
+
+function role(){
+ try{return String(window.currentSession?.role||currentSession?.role||document.body.dataset.yardivoRole||document.documentElement.dataset.yardivoRole||'').toLowerCase().trim()}
+ catch(_){return''}
+}
+function ensureW202Model(){
+ try{
+   if(typeof WAREHOUSES==='object'&&!WAREHOUSES.W202){
+     WAREHOUSES.W202={code:'W202',location:'Dugopolje',name:'W202',ramps:null,receptionStart:null,receptionEnd:null};
+   }
+ }catch(_){}
+}
+function ensureWarehouseOptions(){
+ ensureW202Model();
+ document.querySelectorAll('select').forEach(sel=>{
+   const vals=[...sel.options].map(o=>o.value);
+   if(vals.includes('W201')&&vals.includes('W203')&&!vals.includes('W202')){
+     const opt=document.createElement('option');
+     opt.value='W202';opt.textContent='W202 · Dugopolje';
+     const before=[...sel.options].find(o=>o.value==='W203');
+     if(before)sel.insertBefore(opt,before);else sel.appendChild(opt);
+   }
+ });
+}
+function classify(panel){
+ const id=String(panel.id||'').toLowerCase();
+ const t=String(panel.querySelector('h2,h3')?.textContent||'').toUpperCase();
+ if(panel.classList.contains('danger-zone')||/OPASNA|OBRIŠI SVE|RESET BAZE/.test(t))return'danger';
+ if(id==='receptionrampsettings'||/UPRAVLJANJE RAMPAMA|RAMPE|KAPACITET SKLADIŠTA/.test(t))return'ramps';
+ if(id==='qrmobilesettingspanel'||/QR|MOBILE|SCANNER|SKENER/.test(t))return'qr';
+ if(id==='yardivononworkingdayssettings'||/NERADNI|BLAGDAN/.test(t))return'calendar';
+ if(/KORISNICI|PERMISSIONS|PRISTUP|AUTENTIK|AUTH|DOBAVLJAČKI RAČUNI/.test(t))return'admin';
+ return'general';
+}
+function nav(){
+ const settings=document.getElementById('settings');if(!settings)return null;
+ let n=document.getElementById('yardivoSettingsNavV583');
+ if(!n){
+   n=document.createElement('div');n.id='yardivoSettingsNavV583';
+   settings.querySelector('.section-title')?.insertAdjacentElement('afterend',n);
+ }
+ n.innerHTML=`
+   <button type="button" data-setcat="ramps">PRIJAM & RAMPE</button>
+   <button type="button" data-setcat="qr">QR & MOBILNO</button>
+   <button type="button" data-setcat="calendar">NERADNI DANI</button>
+   <button type="button" data-setcat="general">OSTALE POSTAVKE</button>
+   <button type="button" data-setcat="admin">ADMINISTRACIJA</button>
+   <button type="button" class="setnav-danger" data-setcat="danger">OPASNA ZONA</button>`;
+ return n;
+}
+function rescan(){
+ const settings=document.getElementById('settings');if(!settings)return;
+ ensureWarehouseOptions();nav();
+ const kids=[...settings.querySelectorAll('.settings-grid > *')];
+ kids.forEach(p=>p.dataset.v583SettingsCategory=classify(p));
+ settings.classList.add('yardivo-settings-tabs-ready');
+ showTab(currentTab,false);
+}
+function permitted(panel){
+ const r=role();
+ if(r==='admin'||!r)return true;
+ const tags=String(panel.dataset.yardivoSettings||'').split(/\s+/).filter(Boolean);
+ if(r==='inventory')return tags.includes('inventory');
+ if(r==='reception')return tags.includes('reception');
+ return false;
+}
+function showTab(cat,scroll=true){
+ const settings=document.getElementById('settings');if(!settings)return;
+ currentTab=cat;
+ nav();
+ const panels=[...settings.querySelectorAll('.settings-grid > *')];
+ panels.forEach(p=>{
+   p.dataset.v583SettingsCategory=classify(p);
+   const visible=p.dataset.v583SettingsCategory===cat&&permitted(p);
+   p.classList.toggle('yardivo-settings-tab-visible',visible);
+   p.classList.toggle('yardivo-settings-tab-hidden',!visible);
+ });
+ settings.querySelectorAll('#yardivoSettingsNavV583 [data-setcat]').forEach(b=>b.classList.toggle('active',b.dataset.setcat===cat));
+ if(cat==='ramps'){
+   ensureRampCountOverview();
+   setTimeout(()=>window.YardivoSettingsRampUXV583?.refresh?.(),25);
+ }
+ if(scroll)settings.querySelector('.settings-grid')?.scrollIntoView({block:'start',behavior:'smooth'});
+}
+
+/* Direct warehouse -> ramp count manager. No warehouse may be "undefined" just
+   because its initial count is zero. */
+function rampCount(code){
+ try{return Number(window.YardivoRampConfig?.count?.(code)||0)}catch(_){return 0}
+}
+function setRampCount(code,n){
+ n=Math.max(0,Math.min(50,Number(n)||0));
+ if(n===0){
+   // The underlying legacy setter enforces >=1. Zero remains an intentionally
+   // unconfigured state until user assigns a first ramp.
+   try{
+     const key='yardivo_ramp_config_v1';
+     const cfg=JSON.parse(localStorage.getItem(key)||'{}')||{};
+     cfg[code]=cfg[code]||{count:0,locked:[]};
+     cfg[code].count=0;cfg[code].locked=[];
+     localStorage.setItem(key,JSON.stringify(cfg));
+     if(typeof WAREHOUSES==='object'&&WAREHOUSES?.[code])WAREHOUSES[code].ramps=0;
+   }catch(_){}
+   return;
+ }
+ window.YardivoRampConfig?.setCount?.(code,n);
+}
+function selectedWh(){
+ return String(document.getElementById('rampSettingsWarehouse')?.value||'W101').toUpperCase()
+}
+function selectWarehouse(code){
+ ensureWarehouseOptions();
+ const sel=document.getElementById('rampSettingsWarehouse');
+ if(sel){
+   sel.value=code;
+   sel.dispatchEvent(new Event('change',{bubbles:true}));
+ }
+ setTimeout(()=>{ensureRampCountOverview();window.YardivoSettingsRampUXV583?.refresh?.()},45);
+}
+function ensureRampCountOverview(){
+ const panel=document.getElementById('receptionRampSettings');if(!panel)return;
+ let box=document.getElementById('yardivoWarehouseRampCountV583');
+ if(!box){
+   box=document.createElement('div');box.id='yardivoWarehouseRampCountV583';
+   const body=panel.querySelector('.master-settings-body,.panel-body')||panel;
+   body.insertAdjacentElement('afterbegin',box);
+ }
+ const active=selectedWh();
+ box.innerHTML=`<div class="ywr-head"><div><h3>SKLADIŠTA · BROJ RAMPI</h3><p>Ovdje direktno određuješ koliko rampi ima svako skladište. Nakon spremanja R1…Rn odmah postaju dio YARDIVO konfiguracije.</p></div></div>
+ <div class="ywr-grid">${WH_CODES.map(code=>{
+   const m=WAREHOUSE_META[code],n=rampCount(code);
+   return `<div class="ywr-card ${n>0?'configured':''} ${active===code?'active':''}" data-ywr-card="${code}">
+     <div class="ywr-title"><div><strong>${code} · ${m.name}</strong><small>${m.location}</small></div><span class="ywr-state">${n>0?n+' RAMPI':'NIJE DODIJELJENO'}</span></div>
+     <div class="ywr-count"><button type="button" data-ywr-minus="${code}">−</button><input type="number" min="0" max="50" value="${n}" data-ywr-count="${code}"><button type="button" data-ywr-plus="${code}">+</button><button type="button" class="ywr-save" data-ywr-save="${code}">SPREMI</button></div>
+     <button type="button" class="ywr-select" data-ywr-select="${code}">UPRAVLJAJ RAMPAMA ${code}</button>
+     ${n===0?'<div class="ywr-zero-note">Dodijeli broj rampi i klikni SPREMI.</div>':''}
+   </div>`;
+ }).join('')}</div>`;
+}
+function saveCount(code){
+ const input=document.querySelector(`[data-ywr-count="${code}"]`);if(!input)return;
+ const next=Math.max(0,Math.min(50,Number(input.value)||0)),before=rampCount(code);
+ if(next===0){
+   if(before>0&&!confirm(`${code} trenutno ima ${before} rampi. Postaviti skladište bez dodijeljenih rampi?`))return;
+ }else if(next<before){
+   if(!confirm(`${code}: smanjiti broj rampi ${before} → ${next}?`))return;
+ }
+ setRampCount(code,next);
+ try{
+   const actor=window.YardivoRescheduleAudit?.actorLabel?.()||'YARDIVO korisnik';
+   window.YardivoRescheduleAudit?.push?.('KONFIGURACIJA RAMPI PROMIJENJENA',`${code} · ${before} → ${next} rampi`,{actor,type:'warehouse_ramp_count',warehouse:code});
+   showYmsToast?.('success','BROJ RAMPI SPREMLJEN',`${code} · ${next} rampi`);
+ }catch(_){}
+ selectWarehouse(code);
+ try{
+   if(typeof renderWarehouseCards==='function')renderWarehouseCards();
+   if(typeof populateAnnouncementControls==='function')populateAnnouncementControls();
+   if(typeof renderDailyMap==='function')renderDailyMap();
+   if(typeof renderWeeklyMap==='function')renderWeeklyMap();
+ }catch(_){}
+}
+
+/* Apply saved master reception hours to operational WAREHOUSES model on boot. */
+function applySavedHours(){
+ try{
+  const all=JSON.parse(localStorage.getItem('yardivo_reception_master_hours_v1')||'{}')||{};
+  Object.entries(all).forEach(([code,h])=>{
+    if(WAREHOUSES?.[code]&&h?.from&&h?.to){
+      WAREHOUSES[code].receptionStart=h.from;WAREHOUSES[code].receptionEnd=h.to;
+    }
+  });
+ }catch(_){}
+}
+
+document.addEventListener('click',e=>{
+ const tab=e.target.closest?.('#yardivoSettingsNavV583 [data-setcat]');
+ if(tab){e.preventDefault();e.stopPropagation();showTab(tab.dataset.setcat);return}
+
+ const minus=e.target.closest?.('[data-ywr-minus]');
+ if(minus){const code=minus.dataset.ywrMinus,i=document.querySelector(`[data-ywr-count="${code}"]`);if(i)i.value=Math.max(0,Number(i.value||0)-1);return}
+ const plus=e.target.closest?.('[data-ywr-plus]');
+ if(plus){const code=plus.dataset.ywrPlus,i=document.querySelector(`[data-ywr-count="${code}"]`);if(i)i.value=Math.min(50,Number(i.value||0)+1);return}
+ const save=e.target.closest?.('[data-ywr-save]');
+ if(save){saveCount(save.dataset.ywrSave);return}
+ const pick=e.target.closest?.('[data-ywr-select]');
+ if(pick){selectWarehouse(pick.dataset.ywrSelect);return}
+
+ if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]')){
+   setTimeout(()=>{rescan();ensureRampCountOverview()},100);
+   setTimeout(()=>{rescan();ensureRampCountOverview()},350);
+ }
+},true);
+
+document.getElementById('rampSettingsWarehouse')?.addEventListener('change',()=>setTimeout(ensureRampCountOverview,25));
+window.addEventListener('yardivo:login',()=>setTimeout(()=>{ensureW202Model();ensureWarehouseOptions();applySavedHours();rescan();ensureRampCountOverview()},400));
+window.addEventListener('load',()=>setTimeout(()=>{ensureW202Model();ensureWarehouseOptions();applySavedHours();rescan();ensureRampCountOverview()},1300));
+
+/* Expose refresh hook used by prior Settings UX. */
+window.YardivoSettingsTabsV583={show:showTab,rescan,refreshWarehouses:ensureRampCountOverview};
+window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-settings-tabs-warehouse-ramp-count-fix';
+})();
+</script>
+
+<style id="yardivo-v583-settings-authoritative-style">
+/* One controller owns Settings visibility from this build onward. */
+#settings .yardivo-settings-section[hidden]{display:none!important}
+#settings .yardivo-settings-section:not([hidden]){display:block!important}
+
+#yardivoSettingsTabsFinal{
+  display:flex!important;gap:7px;align-items:center;flex-wrap:wrap;
+  margin:0 0 12px!important;padding:7px!important;
+  border:1px solid #23445a!important;border-radius:10px!important;
+  background:#071824!important;
+}
+#yardivoSettingsTabsFinal button{
+  appearance:none;border:1px solid #2a4b61!important;border-radius:7px!important;
+  background:#0b1e2c!important;color:#9bb0be!important;padding:9px 12px!important;
+  font-size:8px!important;font-weight:950!important;cursor:pointer!important;
+}
+#yardivoSettingsTabsFinal button:hover{background:#102a3b!important;color:#fff!important}
+#yardivoSettingsTabsFinal button.active{
+  background:#175d91!important;border-color:#3a8fc8!important;color:#fff!important;
+}
+#yardivoSettingsTabsFinal button[data-settings-tab="danger"]{margin-left:auto;color:#ff9ea3!important}
+#yardivoSettingsTabsFinal button[data-settings-tab="danger"].active{
+  background:#421a20!important;border-color:#8c3d45!important;color:#fff!important
+}
+
+/* Authoritative warehouse configuration block */
+#yardivoWarehouseConfigFinal{
+  border:1px solid #2b526b;border-radius:10px;background:#081a27;
+  margin:0 0 12px;overflow:hidden;
+}
+#yardivoWarehouseConfigFinal .ywcf-head{
+  padding:13px 14px;background:#0c2231;border-bottom:1px solid #25465b;
+}
+#yardivoWarehouseConfigFinal .ywcf-head h3{margin:0;color:#fff!important;font-size:11px}
+#yardivoWarehouseConfigFinal .ywcf-head p{
+  margin:4px 0 0;color:#91a9ba!important;font-size:7.5px;line-height:1.45
+}
+#yardivoWarehouseConfigFinal .ywcf-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:8px;padding:10px
+}
+.ywcf-card{
+  border:1px solid #29495e;border-radius:9px;background:#0a1e2b;padding:11px
+}
+.ywcf-card.selected{border-color:#3b91c8;box-shadow:0 0 0 1px rgba(59,145,200,.18) inset}
+.ywcf-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:9px}
+.ywcf-top strong{display:block;color:#fff!important;font-size:11px}
+.ywcf-top small{display:block;color:#89a3b4!important;font-size:7px;margin-top:3px}
+.ywcf-state{
+  border:1px solid #56616a;border-radius:999px;padding:4px 7px;
+  color:#bac6cd!important;font-size:6px!important;font-weight:950;white-space:nowrap
+}
+.ywcf-card.configured .ywcf-state{
+  border-color:#2d7153;background:#0d3022;color:#7decaa!important
+}
+.ywcf-count{display:grid;grid-template-columns:34px 1fr 34px auto;gap:6px;align-items:center}
+.ywcf-count button,.ywcf-open{
+  border:1px solid #355b73;border-radius:7px;background:#10283a;color:#fff;cursor:pointer;font-weight:950
+}
+.ywcf-count button{height:36px}
+.ywcf-count input{
+  min-width:0;width:100%;height:36px;border:1px solid #355b73;border-radius:7px;
+  background:#061622;color:#fff;text-align:center;font-size:13px;font-weight:950
+}
+.ywcf-count .ywcf-save{padding:0 11px;background:#155f99;border-color:#2c83bd;font-size:7px}
+.ywcf-open{width:100%;height:32px;margin-top:7px;font-size:7px;color:#afc6d4}
+.ywcf-warning{margin-top:7px;color:#f0bd78!important;font-size:7px}
+
+/* Selected warehouse editor */
+#yardivoSelectedWarehouseFinal{
+  border:1px solid #2b526b;border-radius:10px;background:#091b28;padding:12px;margin-bottom:10px
+}
+.ywsf-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}
+.ywsf-head h3{margin:0;color:#fff!important;font-size:12px}
+.ywsf-head small{color:#8ea6b7!important;font-size:7px}
+.ywsf-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px}
+.ywsf-kpi{border:1px solid #28485d;border-radius:8px;background:#071824;padding:9px}
+.ywsf-kpi small{display:block;color:#829cac!important;font-size:6.5px;font-weight:950}
+.ywsf-kpi strong{display:block;color:#fff!important;font-size:15px;margin-top:3px}
+.ywsf-master{
+  display:grid;grid-template-columns:1fr 1fr auto;gap:7px;align-items:end;margin-bottom:10px
+}
+.ywsf-master label{display:grid;gap:4px;color:#91a9ba!important;font-size:7px;font-weight:900}
+.ywsf-master input{
+  height:37px;border:1px solid #355a72;border-radius:7px;background:#061622;color:#fff;padding:8px
+}
+.ywsf-master button{height:37px;white-space:nowrap}
+#rampSettingsList{
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr))!important;gap:8px!important
+}
+#rampSettingsList .ramp-settings-card{
+  display:block!important;position:relative;min-height:160px;padding:11px!important;
+  border:1px solid #2b4d62!important;border-radius:9px!important;background:#0a1e2b!important
+}
+#rampSettingsList .ramp-settings-card.locked{
+  border-color:#713b40!important;background:#241519!important
+}
+#rampSettingsList .ramp-settings-card > div:first-child{padding-right:64px}
+#rampSettingsList .ramp-settings-card > div:first-child strong{color:#fff!important}
+#rampSettingsList .ramp-settings-card > div:first-child small{color:#95acbc!important}
+#rampSettingsList .ramp-lock-btn{
+  position:absolute;right:11px;top:11px;width:52px!important;min-width:52px!important;height:27px!important;
+  border-radius:999px!important;font-size:0!important;padding:0!important;background:#155234!important;border-color:#317554!important
+}
+#rampSettingsList .ramp-lock-btn:after{content:'ON';font-size:7px;font-weight:950;color:#8ff0b2}
+#rampSettingsList .locked .ramp-lock-btn{background:#481b21!important;border-color:#913f48!important}
+#rampSettingsList .locked .ramp-lock-btn:after{content:'OFF';color:#ffadb2}
+.yardivo-ramp-extra{
+  margin-top:9px;padding-top:9px;border-top:1px solid #254459;display:grid;gap:8px
+}
+.yardivo-ramp-hours{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.yardivo-ramp-extra label{display:grid;gap:4px;color:#91a9ba!important;font-size:7px;font-weight:900}
+.yardivo-ramp-extra input{
+  width:100%;height:34px;border:1px solid #355a72;border-radius:6px;background:#061622;color:#fff;padding:7px
+}
+.yardivo-ramp-cap{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end}
+.yardivo-ramp-cap button{height:34px}
+#receptionRampSettings .form-grid:first-of-type{display:none!important}
+#receptionRampSettings .master-note{display:none!important}
+
+@media(max-width:750px){
+  .ywsf-kpis{grid-template-columns:repeat(2,1fr)}
+  .ywsf-master{grid-template-columns:1fr 1fr}.ywsf-master button{grid-column:1/-1}
+}
+@media(max-width:520px){
+  #yardivoWarehouseConfigFinal .ywcf-grid{grid-template-columns:1fr}
+}
+</style>
+
+<script id="yardivo-v583-settings-authoritative-controller">
+(function(){
+'use strict';
+
+const WH_META={
+  W101:['Velika Gorica','Ambijent'],
+  W103:['Velika Gorica','Svježe i hlađeno'],
+  W104:['Velika Gorica','Smrznuto'],
+  W201:['Dugopolje','Ambijent'],
+  W202:['Dugopolje','W202'],
+  W203:['Dugopolje','Svježe i hlađeno'],
+  W204:['Dugopolje','Smrznuto']
+};
+const WHS=Object.keys(WH_META);
+const HOURS_KEY='yardivo_reception_master_hours_v1';
+const RAMP_HOURS_KEY='yardivo_ramp_hours_v583';
+const CAP_KEY='yardivo_ramp_capacity_v1';
+let activeTab='ramps';
+
+function jget(k){try{return JSON.parse(localStorage.getItem(k)||'{}')||{}}catch(_){return{}}}
+function jset(k,v){localStorage.setItem(k,JSON.stringify(v));try{window.YardivoSupabase?.flush?.()}catch(_){}}
+function appRole(){
+  let r='';try{r=String(currentSession?.role||window.currentSession?.role||'').toLowerCase().trim()}catch(_){}
+  if(r==='prijam')r='reception';if(r==='zalihe')r='inventory';if(r==='porta')r='gate';
+  return r;
+}
+function panelCategory(p){
+  const id=String(p.id||'').toLowerCase(),t=String(p.querySelector('h2')?.textContent||'').toUpperCase();
+  if(p.classList.contains('danger-zone')||/OPASNA/.test(t))return'danger';
+  if(id==='receptionrampsettings'||/RAMPA|KAPACITET/.test(t))return'ramps';
+  if(/QR|MOBILE|SKENER|SCANNER/.test(t))return'qr';
+  if(/NERADNI|BLAGDAN/.test(t))return'calendar';
+  if(/KORISNI|PRISTUP|LOZINK|AUTH|DOBAVLJAČKI RAČUN/.test(t))return'admin';
+  return'general';
+}
+function allowed(p){
+  const r=appRole();if(!r||r==='admin')return true;
+  const cat=p.dataset.settingsFinalCategory;
+  if(r==='reception')return ['ramps','qr','calendar','general'].includes(cat);
+  if(r==='inventory')return ['calendar','general'].includes(cat);
+  return cat==='general';
+}
+function tabs(){
+  const set=document.getElementById('settings');if(!set)return null;
+  let nav=document.getElementById('yardivoSettingsTabsFinal');
+  if(!nav){
+    nav=document.createElement('div');nav.id='yardivoSettingsTabsFinal';
+    set.querySelector('.section-title')?.insertAdjacentElement('afterend',nav);
+  }
+  nav.innerHTML=`
+    <button type="button" data-settings-tab="ramps">PRIJAM & RAMPE</button>
+    <button type="button" data-settings-tab="qr">QR & MOBILNO</button>
+    <button type="button" data-settings-tab="calendar">NERADNI DANI</button>
+    <button type="button" data-settings-tab="general">OSTALE POSTAVKE</button>
+    <button type="button" data-settings-tab="admin">ADMINISTRACIJA</button>
+    <button type="button" data-settings-tab="danger">OPASNA ZONA</button>`;
+  return nav;
+}
+function scanSections(){
+  const set=document.getElementById('settings');if(!set)return;
+  tabs();
+  [...set.querySelectorAll('.settings-grid > .panel,.settings-grid > .danger-zone')].forEach(p=>{
+    p.classList.add('yardivo-settings-section');
+    p.dataset.settingsFinalCategory=panelCategory(p);
+  });
+}
+function showTab(cat){
+  activeTab=cat;
+  const set=document.getElementById('settings');if(!set)return;
+  scanSections();
+  set.querySelectorAll('.yardivo-settings-section').forEach(p=>{
+    const show=p.dataset.settingsFinalCategory===cat&&allowed(p);
+    p.hidden=!show;
+    if(show){
+      p.style.removeProperty('display');
+      p.classList.remove('yardivo-settings-tab-hidden','yardivo-settings-tab-visible');
+    }
+  });
+  set.querySelectorAll('#yardivoSettingsTabsFinal button').forEach(b=>b.classList.toggle('active',b.dataset.settingsTab===cat));
+  if(cat==='ramps')renderWarehouseManager();
+}
+
+/* ---------------- Canonical warehouse/ramp count ---------------- */
+function rampCount(code){return Number(window.YardivoRampConfig?.count?.(code)||0)}
+function setCount(code,n){
+  n=Math.max(1,Math.min(50,Number(n)||1));
+  window.YardivoRampConfig?.setCount?.(code,n);
+  try{if(WAREHOUSES?.[code])WAREHOUSES[code].ramps=n}catch(_){}
+}
+function selected(){
+  return String(document.getElementById('rampSettingsWarehouse')?.value||'W101').toUpperCase()
+}
+function selectWh(code){
+  const sel=document.getElementById('rampSettingsWarehouse');if(sel){sel.value=code;sel.dispatchEvent(new Event('change',{bubbles:true}))}
+  renderWarehouseManager();
+}
+function masterHours(code){
+  const x=jget(HOURS_KEY)[code];
+  if(x?.from&&x?.to)return x;
+  try{
+    const w=WAREHOUSES?.[code];
+    if(w?.receptionStart&&w?.receptionEnd)return {from:w.receptionStart,to:w.receptionEnd};
+  }catch(_){}
+  return {from:'06:00',to:'22:00'};
+}
+function saveMasterHours(code,from,to){
+  const all=jget(HOURS_KEY);all[code]={from,to};jset(HOURS_KEY,all);
+  try{if(WAREHOUSES?.[code]){WAREHOUSES[code].receptionStart=from;WAREHOUSES[code].receptionEnd=to}}catch(_){}
+}
+function rampHours(code,r){
+  const all=jget(RAMP_HOURS_KEY);const h=all?.[code]?.[String(r)];
+  return h?.from&&h?.to?h:masterHours(code)
+}
+function saveRampHours(code,r,from,to){
+  const all=jget(RAMP_HOURS_KEY);all[code]=all[code]||{};all[code][String(r)]={from,to};jset(RAMP_HOURS_KEY,all);
+  try{window.YardivoRampHoursV583?.set?.(code,r,from,to)}catch(_){}
+}
+function cap(code,r){
+  return Number(jget(CAP_KEY)?.[code]?.[String(r)]||33)
+}
+function saveCap(code,r,n){
+  const all=jget(CAP_KEY);all[code]=all[code]||{};all[code][String(r)]=Math.max(1,Math.min(500,Number(n)||33));jset(CAP_KEY,all)
+}
+function locked(code,r){return window.YardivoRampConfig?.isLocked?.(code,r)===true}
+
+function ensureWarehouseSelectOptions(){
+  const sel=document.getElementById('rampSettingsWarehouse');if(!sel)return;
+  WHS.forEach(code=>{
+    if([...sel.options].some(o=>o.value===code))return;
+    const o=document.createElement('option');o.value=code;o.textContent=`${code} · ${WH_META[code][0]} · ${WH_META[code][1]}`;sel.appendChild(o);
+  });
+  [...sel.options].sort((a,b)=>a.value.localeCompare(b.value)).forEach(o=>sel.appendChild(o));
+}
+function renderWarehouseManager(){
+  const panel=document.getElementById('receptionRampSettings');if(!panel||panel.hidden)return;
+  ensureWarehouseSelectOptions();
+  const body=panel.querySelector('.master-settings-body,.panel-body')||panel;
+  let overview=document.getElementById('yardivoWarehouseConfigFinal');
+  if(!overview){overview=document.createElement('div');overview.id='yardivoWarehouseConfigFinal';body.insertAdjacentElement('afterbegin',overview)}
+  const cur=selected();
+  overview.innerHTML=`<div class="ywcf-head"><h3>SKLADIŠTA · BROJ RAMPI</h3><p>Dodijeli broj rampi svakom skladištu. Ako piše “NIJE DODIJELJENO”, upiši broj i klikni SPREMI.</p></div>
+    <div class="ywcf-grid">${WHS.map(code=>{
+      const n=rampCount(code),m=WH_META[code];
+      return `<div class="ywcf-card ${n?'configured':''} ${cur===code?'selected':''}">
+        <div class="ywcf-top"><div><strong>${code} · ${m[1]}</strong><small>${m[0]}</small></div><span class="ywcf-state">${n?`${n} RAMPI`:'NIJE DODIJELJENO'}</span></div>
+        <div class="ywcf-count"><button type="button" data-ywcf-minus="${code}">−</button><input type="number" min="1" max="50" value="${n||1}" data-ywcf-count="${code}"><button type="button" data-ywcf-plus="${code}">+</button><button type="button" class="ywcf-save" data-ywcf-save="${code}">SPREMI</button></div>
+        <button type="button" class="ywcf-open" data-ywcf-open="${code}">UPRAVLJAJ ${code}</button>
+        ${n?'':'<div class="ywcf-warning">Broj rampi još nije dodijeljen.</div>'}
+      </div>`;
+    }).join('')}</div>`;
+
+  let detail=document.getElementById('yardivoSelectedWarehouseFinal');
+  if(!detail){detail=document.createElement('div');detail.id='yardivoSelectedWarehouseFinal';overview.insertAdjacentElement('afterend',detail)}
+  renderSelected(detail,cur);
+}
+
+function renderSelected(detail,code){
+  const n=rampCount(code),mh=masterHours(code),on=Array.from({length:n},(_,i)=>i+1).filter(r=>!locked(code,r)).length;
+  detail.innerHTML=`<div class="ywsf-head"><div><h3>${code} · ${WH_META[code][1]}</h3><small>${WH_META[code][0]} · detaljna konfiguracija prijama</small></div></div>
+  <div class="ywsf-kpis">
+    <div class="ywsf-kpi"><small>UKUPNO RAMPI</small><strong>${n}</strong></div>
+    <div class="ywsf-kpi"><small>ON</small><strong>${on}</strong></div>
+    <div class="ywsf-kpi"><small>OFF</small><strong>${Math.max(0,n-on)}</strong></div>
+    <div class="ywsf-kpi"><small>PRIJAM</small><strong>${mh.from}–${mh.to}</strong></div>
+  </div>
+  <div class="ywsf-master"><label>RADNO VRIJEME OD<input type="time" id="ywsfFrom" value="${mh.from}"></label><label>DO<input type="time" id="ywsfTo" value="${mh.to}"></label><button class="secondary" type="button" data-ywsf-all>PRIMIJENI NA SVE RAMPE</button></div>`;
+
+  /* Let the original module build the authoritative ON/OFF ramp cards first. */
+  try{
+    const sel=document.getElementById('rampSettingsWarehouse');if(sel&&sel.value!==code)sel.value=code;
+    if(typeof window.YardivoRampConfig==='object'){
+      /* original renderRampSettings is closure-private, so trigger its selector handler */
+      sel?.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+  }catch(_){}
+
+  setTimeout(()=>enhanceRampCards(code),0);
+}
+function enhanceRampCards(code){
+  const host=document.getElementById('rampSettingsList');if(!host)return;
+  host.querySelectorAll('.ramp-settings-card').forEach((card,i)=>{
+    const r=i+1,h=rampHours(code,r);
+    let ex=card.querySelector('.yardivo-ramp-extra');
+    if(!ex){ex=document.createElement('div');ex.className='yardivo-ramp-extra';card.appendChild(ex)}
+    ex.innerHTML=`<div class="yardivo-ramp-hours">
+      <label>OD<input type="time" value="${h.from}" data-final-ramp-from="${r}"></label>
+      <label>DO<input type="time" value="${h.to}" data-final-ramp-to="${r}"></label>
+    </div>
+    <div class="yardivo-ramp-cap"><label>KAPACITET · PALETA / SAT<input type="number" min="1" max="500" value="${cap(code,r)}" data-final-ramp-cap="${r}"></label>
+    <button type="button" class="secondary" data-final-ramp-save="${r}">SPREMI</button></div>`;
+  });
+}
+
+function saveWarehouseCount(code){
+  const i=document.querySelector(`[data-ywcf-count="${code}"]`),next=Math.max(1,Math.min(50,Number(i?.value)||1)),before=rampCount(code);
+  if(before&&next<before&&!confirm(`${code}: smanjiti broj rampi ${before} → ${next}?`))return;
+  setCount(code,next);
+  try{
+    const actor=window.YardivoRescheduleAudit?.actorLabel?.()||'YARDIVO korisnik';
+    window.YardivoRescheduleAudit?.push?.('KONFIGURACIJA RAMPI PROMIJENJENA',`${code} · ${before||0} → ${next} rampi`,{actor,type:'warehouse_ramp_count',warehouse:code});
+    showYmsToast?.('success','BROJ RAMPI SPREMLJEN',`${code} sada ima ${next} rampi.`);
+  }catch(_){}
+  selectWh(code);
+  try{populateAnnouncementControls?.();renderWarehouseCards?.();renderDailyMap?.();renderWeeklyMap?.()}catch(_){}
+}
+function applyAllHours(){
+  const code=selected(),from=document.getElementById('ywsfFrom')?.value,to=document.getElementById('ywsfTo')?.value;
+  if(!from||!to||from>=to)return alert('Vrijeme DO mora biti nakon vremena OD.');
+  saveMasterHours(code,from,to);
+  for(let r=1;r<=rampCount(code);r++)saveRampHours(code,r,from,to);
+  try{showYmsToast?.('success','RADNO VRIJEME PRIJAMA',`${code} · ${from}–${to}`)}catch(_){}
+  renderWarehouseManager();
+}
+function saveRamp(code,r){
+  const from=document.querySelector(`[data-final-ramp-from="${r}"]`)?.value,to=document.querySelector(`[data-final-ramp-to="${r}"]`)?.value,n=document.querySelector(`[data-final-ramp-cap="${r}"]`)?.value;
+  if(!from||!to||from>=to)return alert('Vrijeme DO mora biti nakon vremena OD.');
+  saveRampHours(code,r,from,to);saveCap(code,r,n);
+  try{showYmsToast?.('success',`RAMPA ${r}`,`${from}–${to} · ${Math.max(1,Number(n)||33)} paleta/sat`)}catch(_){}
+}
+
+/* Capture phase: this runs before any legacy Settings click code. */
+document.addEventListener('click',e=>{
+  const tab=e.target.closest?.('#yardivoSettingsTabsFinal [data-settings-tab]');
+  if(tab){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();showTab(tab.dataset.settingsTab);return}
+
+  const minus=e.target.closest?.('[data-ywcf-minus]');
+  if(minus){e.preventDefault();e.stopPropagation();const c=minus.dataset.ywcfMinus,i=document.querySelector(`[data-ywcf-count="${c}"]`);if(i)i.value=Math.max(1,Number(i.value||1)-1);return}
+  const plus=e.target.closest?.('[data-ywcf-plus]');
+  if(plus){e.preventDefault();e.stopPropagation();const c=plus.dataset.ywcfPlus,i=document.querySelector(`[data-ywcf-count="${c}"]`);if(i)i.value=Math.min(50,Number(i.value||1)+1);return}
+  const save=e.target.closest?.('[data-ywcf-save]');
+  if(save){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();saveWarehouseCount(save.dataset.ywcfSave);return}
+  const open=e.target.closest?.('[data-ywcf-open]');
+  if(open){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();selectWh(open.dataset.ywcfOpen);return}
+  if(e.target.closest?.('[data-ywsf-all]')){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();applyAllHours();return}
+  const rs=e.target.closest?.('[data-final-ramp-save]');
+  if(rs){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();saveRamp(selected(),Number(rs.dataset.finalRampSave));return}
+
+  if(e.target.closest?.('[data-ramp-lock]')){
+    setTimeout(()=>{renderWarehouseManager()},60);
+  }
+
+  if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]')){
+    setTimeout(()=>{scanSections();showTab(activeTab)},80);
+  }
+},true);
+
+document.getElementById('rampSettingsWarehouse')?.addEventListener('change',()=>setTimeout(()=>renderWarehouseManager(),40));
+
+function init(){
+  ensureWarehouseSelectOptions();
+  scanSections();
+  showTab('ramps');
+}
+window.addEventListener('load',()=>setTimeout(init,900));
+window.addEventListener('yardivo:login',()=>setTimeout(init,300));
+document.addEventListener('DOMContentLoaded',()=>setTimeout(init,250));
+
+window.YardivoSettingsFinalV583={showTab,refresh:renderWarehouseManager};
+window.YardivoRampCapacityV583={get:cap,set:saveCap,masterHours};
+window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-settings-authoritative-fix';
 })();
 </script>
