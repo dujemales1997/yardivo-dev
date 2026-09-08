@@ -13767,10 +13767,10 @@ window.YardivoCleanCore={load,save,role,applyHome,driverOpen,driverSave,gateFind
       const loc=String(scope?.location||(/^W2/.test(wh)?'DU':(/^W1/.test(wh)?'VG':''))||'').toUpperCase();
       const sLoc=String(currentSession?.location||'').toUpperCase();
       if(loc&&sLoc&&loc!==sLoc)return false;
-      if(!wh)return true;
-      if(['admin','inventory'].includes(r))return true;
-      const aw=String((typeof activeWarehouse!=='undefined'?activeWarehouse:'')||'').toUpperCase();
-      if(aw&&aw!=='ALL')return aw===wh;
+      if(!wh)return false;
+      let aw='';
+      try{aw=String((typeof getActiveWarehouse==='function'?getActiveWarehouse():(typeof activeWarehouse!=='undefined'?activeWarehouse:localStorage.getItem('yardivo_active_warehouse')))||'').toUpperCase().trim()}catch(_){}
+      if(aw&&aw!=='ALL'&&aw!=='SVA')return aw===wh;
       const assigned=Array.isArray(currentSession?.warehouses)?currentSession.warehouses.map(x=>String(x).toUpperCase()):[];
       if(assigned.length&&!assigned.includes('ALL')&&!assigned.includes('SVA'))return assigned.includes(wh);
       return true;
@@ -13779,7 +13779,17 @@ window.YardivoCleanCore={load,save,role,applyHome,driverOpen,driverSave,gateFind
   function toast(type,title,body,meta,scope){
     const wh=String(scope?.warehouse||'').toUpperCase().trim();
     const loc=String(scope?.location||(/^W2/.test(wh)?'DU':(/^W1/.test(wh)?'VG':''))||'').toUpperCase();
-    const n={id:Date.now()+Math.random(),type,title,body,meta,at:new Date().toISOString(),warehouse:wh,location:loc,roles:['admin','manager','inventory','reception']};
+    const event=(()=>{
+      const t=String(title||'').toUpperCase();
+      if(/DVORIŠT|DVORIST/.test(t))return'YARD_ARRIVAL';
+      if(/NA RAMPI/.test(t))return'DOCK_ARRIVAL';
+      if(/ZAPRIMLJEN/.test(t))return'RECEIVED';
+      if(/ODBIJEN/.test(t))return'REJECTED';
+      if(/IZLAZ|IZAŠAO|IZASAO|ODLAZAK/.test(t))return'YARD_DEPARTURE';
+      if(/INCIDENT/.test(t))return'INCIDENT';
+      return'OPERATIONAL';
+    })();
+    const n={id:Date.now()+Math.random(),type,event,title,body,meta,at:new Date().toISOString(),warehouse:wh,location:loc,roles:['admin','manager','inventory','reception']};
     log(n); if(!visibleForCurrentRole()||!scopeAllows(n))return;
     const el=document.createElement('div');el.className=`y-live-toast ${type}`;
     el.innerHTML=`<div class="y-live-toast-head"><span>${title}</span><button class="y-live-toast-close" aria-label="Zatvori">×</button></div>
@@ -17285,59 +17295,117 @@ function assignedWarehouses(){
     return [...new Set(a.map(x=>String(x||'').trim().toUpperCase()).filter(Boolean))];
   }catch(e){return[]}
 }
+function activeWh(){
+  let w='';
+  try{
+    if(typeof getActiveWarehouse==='function')w=getActiveWarehouse();
+    else if(typeof activeWarehouse!=='undefined')w=activeWarehouse;
+    else w=localStorage.getItem('yardivo_active_warehouse');
+  }catch(e){}
+  w=String(w||'').toUpperCase().trim();
+  return (w==='SVA'?'ALL':w);
+}
 function locationOfWarehouse(w){
   w=String(w||'').toUpperCase();
   return /^W2/.test(w)?'DU':/^W1/.test(w)?'VG':'';
+}
+function resolvedWarehouse(n){
+  let wh=String(n?.warehouse||'').toUpperCase().trim();
+  if(wh)return wh;
+
+  /* First try linked canonical announcement. */
+  if(n?.announcementId){
+    try{
+      const a=(Array.isArray(announcements)?announcements:[])
+        .find(x=>String(x.id)===String(n.announcementId));
+      wh=String(a?.warehouse||'').toUpperCase().trim();
+      if(wh)return wh;
+    }catch(e){}
+  }
+
+  /* Then try Supplier delivery rows known to the current client. */
+  if(n?.supplierDeliveryId){
+    try{
+      const sid=String(n.supplierDeliveryId);
+      const candidates=[];
+      for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i)||'';
+        if(!/^yardivo_supplier_portal_v549_|yardivo_supplier/i.test(k))continue;
+        try{
+          const x=JSON.parse(localStorage.getItem(k)||'[]');
+          if(Array.isArray(x))candidates.push(...x);
+        }catch(_){}
+      }
+      const row=candidates.find(x=>String(x?.id||x?.supplierDeliveryId||'')===sid);
+      wh=String(row?.warehouse||'').toUpperCase().trim();
+      if(wh)return wh;
+    }catch(e){}
+  }
+  return '';
+}
+
+/*
+ Appointment / announcement notifications are the ONLY global category for Inventory.
+ Everything concerning physical truck movement is strictly active-warehouse scoped.
+*/
+function notificationClass(n){
+  const e=String(n?.event||'').toUpperCase().trim();
+  const title=String(n?.title||'').toUpperCase();
+  const body=String(n?.body||'').toUpperCase();
+
+  const operationalEvents=new Set([
+    'YARD_ARRIVAL','DOCK_ARRIVAL','RECEIVED','REJECTED','YARD_DEPARTURE',
+    'GATE_ARRIVAL','GATE_ENTRY','DOCK','ARRIVAL','DEPARTURE','INCIDENT','OPERATIONAL'
+  ]);
+  if(operationalEvents.has(e))return'OPERATIONAL';
+
+  const announcementEvents=new Set([
+    'SUPPLIER_REQUEST','SMART_APPROVAL','TERM_PROVENANCE','AUTO_REPLAN',
+    'ANNOUNCEMENT','ANNOUNCEMENT_CREATED','ANNOUNCEMENT_UPDATED',
+    'SUPPLIER_PROPOSAL','SUPPLIER_ACCEPT','SUPPLIER_REJECT','RESCHEDULE',
+    'TERM_CHANGE','TERM_PROPOSAL'
+  ]);
+  if(announcementEvents.has(e))return'ANNOUNCEMENT';
+
+  /* Legacy notifications with meaningful text classification. */
+  if(/KAMION|DVORIŠT|DVORIST|RAMPI|ZAPRIMLJEN|ODBIJEN|IZLAZ|IZAŠAO|IZASAO|DOLAZAK|ODLAZAK|INCIDENT/.test(title+' '+body))
+    return'OPERATIONAL';
+
+  if(/NAJAV|TERMIN|DOBAVLJAČ.*PRIJEDLOG|DOBAVLJAC.*PRIJEDLOG|SMART.*PRIJEDLOG|PROMJEN[AU].*TERMIN|ZAHTJEV.*TERMIN/.test(title+' '+body))
+    return'ANNOUNCEMENT';
+
+  return'OTHER';
+}
+function warehouseMatchesActive(n){
+  const wh=resolvedWarehouse(n);
+  const aw=activeWh();
+
+  /* A concrete warehouse is mandatory for warehouse-scoped notifications. */
+  if(!wh)return false;
+  if(!aw||aw==='ALL')return false;
+  return wh===aw;
 }
 function visible(n){
   const r=role();
   if(!eventAllowedForRole(n,r))return false;
 
-  let wh=String(n?.warehouse||'').toUpperCase().trim();
-  if(!wh&&n?.announcementId){
-    try{
-      const a=(Array.isArray(announcements)?announcements:[])
-        .find(x=>String(x.id)===String(n.announcementId));
-      wh=String(a?.warehouse||'').toUpperCase().trim();
-    }catch(e){}
+  const cls=notificationClass(n);
+  const wh=resolvedWarehouse(n);
+
+  /*
+   Inventory exception:
+   - appointment/announcement workflow from ALL warehouses
+   - operational / physical movement only active warehouse
+  */
+  if(r==='inventory'&&cls==='ANNOUNCEMENT'){
+    return !!wh; // still require meaningful warehouse context
   }
 
-  const nLoc=String(n?.location||locationOfWarehouse(wh)||'').toUpperCase();
-  let sLoc='';
-  try{sLoc=String(currentSession?.location||'').toUpperCase()}catch(e){}
-
-  // Admin is global notification authority.
-  if(r==='admin')return true;
-
-  // Inventory may enter every warehouse, but Supplier approval follows the
-  // globally selected warehouse at the top of YARDIVO.
-  if(r==='inventory' && String(n?.event||'').toUpperCase()==='SUPPLIER_REQUEST'){
-    let aw='';
-    try{aw=String((typeof activeWarehouse!=='undefined'?activeWarehouse:window.activeWarehouse)||'').toUpperCase().trim()}catch(e){}
-    if(!wh || !aw || aw==='ALL' || aw!==wh)return false;
-    return true;
-  }
-
-  // Every operational role is location-scoped.
-  if(nLoc && sLoc && sLoc!=='ALL' && nLoc!==sLoc)return false;
-
-  const assigned=assignedWarehouses();
-  const unrestricted=assigned.includes('ALL')||assigned.includes('SVA');
-
-  // If a notification has a concrete W..., it must be explicitly assigned.
-  if(wh){
-    if(unrestricted)return true;
-    return assigned.includes(wh);
-  }
-
-  // Legacy/location-only notification: allow only when its location matches the user's assigned location.
-  if(nLoc){
-    if(sLoc==='ALL')return unrestricted;
-    return nLoc===sLoc;
-  }
-
-  // Unscoped legacy records are too broad for operational users.
-  return false;
+  /*
+   All roles, including Admin, are warehouse-strict for the notification center.
+   No active warehouse = no warehouse notification leakage.
+  */
+  return warehouseMatchesActive(n);
 }
 function map(n){if(!n.readBy||typeof n.readBy!=='object')n.readBy={};return n.readBy}
 function isRead(n){return !!map(n)[usr()]}
@@ -17381,7 +17449,7 @@ function openReader(id,mark=true){
   if(mark)markRead(id,false);
   const m=reader(),h=m.querySelector('.y5-reader-head'),b=m.querySelector('.y5-reader-body');
   h.innerHTML=`<div><h3>${esc(n.title||'Notifikacija')}</h3><small>${fmt(n.at||n.createdAt)}</small></div><button type="button" class="y5-reader-close">×</button>`;
-  b.innerHTML=`<div class="y5-reader-message">${esc(n.body||'')}</div><div class="y5-reader-grid">${field('Tip',n.event)}${field('Dobavljač',n.supplier)}${field('Tablice',n.plate)}${field('Najava ID',n.announcementId)}${field('Status','PROČITANO')}</div>`;
+  b.innerHTML=`<div class="y5-reader-message">${esc(n.body||'')}</div><div class="y5-reader-grid">${field('Skladište',resolvedWarehouse(n))}${field('Kategorija',notificationClass(n)==='ANNOUNCEMENT'?'NAJAVA / TERMIN':notificationClass(n)==='OPERATIONAL'?'OPERATIVA':'OSTALO')}${field('Tip',n.event)}${field('Dobavljač',n.supplier)}${field('Tablice',n.plate)}${field('Najava ID',n.announcementId)}${field('Status','PROČITANO')}</div>`;
   h.querySelector('.y5-reader-close').onclick=closeReader;
   m.classList.add('open');document.body.style.overflow='hidden';
   render();
@@ -17392,7 +17460,7 @@ function renderBell(){
   const list=document.getElementById('notifList');if(!list)return;
   if(prelogin()){list.innerHTML='';return}
   const a=unreadList().sort((x,y)=>String(y.at||y.createdAt||'').localeCompare(String(x.at||x.createdAt||''))).slice(0,20);
-  list.innerHTML=a.length?a.map(n=>`<div class="notif-item y5-unread" data-y5-bell="${esc(n.id)}"><div class="notif-ico">🔔</div><div><strong>${esc(n.title||'Notifikacija')}</strong><p>${esc(n.body||'')}</p></div><span class="notif-time">${fmt(n.at||n.createdAt)}</span></div>`).join(''):'<div class="notif-empty">Nema novih notifikacija.</div>';
+  list.innerHTML=a.length?a.map(n=>{const wh=resolvedWarehouse(n);return `<div class="notif-item y5-unread" data-y5-bell="${esc(n.id)}"><div class="notif-ico">🔔</div><div><strong>${esc(n.title||'Notifikacija')}</strong><p>${wh?`<span class="y5-notif-wh">${esc(wh)}</span> `:''}${esc(n.body||'')}</p></div><span class="notif-time">${fmt(n.at||n.createdAt)}</span></div>`}).join(''):'<div class="notif-empty">Nema novih notifikacija za odabrani kontekst.</div>';
   list.querySelectorAll('[data-y5-bell]').forEach(el=>el.onclick=e=>{
     e.preventDefault();e.stopPropagation();
     const id=el.dataset.y5Bell;
@@ -17411,7 +17479,7 @@ function renderHistory(){
   if(prelogin()){host.innerHTML='';return}
   const a=all().sort((x,y)=>String(y.at||y.createdAt||'').localeCompare(String(x.at||x.createdAt||'')));
   host.innerHTML=`<div class="y5-notif-toolbar"><strong>${unreadCount()} nepročitanih · ${a.length} ukupno</strong><button type="button" class="action" data-y5-all>OZNAČI SVE PROČITANO</button></div>`+
-    (a.length?a.map(n=>`<article class="y5-history-card ${isRead(n)?'read':'unread'}" data-y5-history="${esc(n.id)}"><div class="y5-history-head"><strong>${esc(n.title||'Notifikacija')}</strong><small>${fmt(n.at||n.createdAt)}</small></div><div class="y5-history-body">${esc(n.body||'')}</div><div class="y5-history-meta">${n.event?`<span class="y5-chip">${esc(n.event)}</span>`:''}${n.supplier?`<span class="y5-chip">Dobavljač: ${esc(n.supplier)}</span>`:''}${n.warehouse?`<span class="y5-chip">${esc(n.warehouse)}</span>`:''}<span class="y5-chip">${isRead(n)?'PROČITANO':'NOVO'}</span></div></article>`).join(''):'<div class="notif-empty">Nema notifikacija.</div>');
+    (a.length?a.map(n=>`<article class="y5-history-card ${isRead(n)?'read':'unread'}" data-y5-history="${esc(n.id)}"><div class="y5-history-head"><strong>${esc(n.title||'Notifikacija')}</strong><small>${fmt(n.at||n.createdAt)}</small></div><div class="y5-history-body">${esc(n.body||'')}</div><div class="y5-history-meta">${n.event?`<span class="y5-chip">${esc(n.event)}</span>`:''}${n.supplier?`<span class="y5-chip">Dobavljač: ${esc(n.supplier)}</span>`:''}${resolvedWarehouse(n)?`<span class="y5-chip">${esc(resolvedWarehouse(n))}</span>`:''}<span class="y5-chip">${isRead(n)?'PROČITANO':'NOVO'}</span></div></article>`).join(''):'<div class="notif-empty">Nema notifikacija.</div>');
   host.querySelector('[data-y5-all]')?.addEventListener('click',markAll);
   host.querySelectorAll('[data-y5-history]').forEach(el=>el.onclick=()=>openReader(el.dataset.y5History,true));
 }
@@ -17437,6 +17505,13 @@ function checkNew(){
 function fingerprint(){return JSON.stringify(load().map(n=>[n.id,n.readBy,n.at,n.createdAt]))}
 function render(){
   setPhaseClasses();
+  const lab=document.getElementById('notifRoleLabel');
+  if(lab){
+    const aw=activeWh(),r=role();
+    lab.textContent=(r==='inventory')
+      ? `Najave: sva skladišta · Operativa: ${aw&&aw!=='ALL'?aw:'odaberi skladište'}`
+      : `Skladište: ${aw&&aw!=='ALL'?aw:'odaberi skladište'}`;
+  }
   syncBadges();
   renderBell();
   renderHistory();
@@ -17480,7 +17555,26 @@ setInterval(()=>{
   if(now!==fp){render();checkNew()}else syncBadges();
 },1200);
 
-window.YardivoNotifications={load,save,markRead,markAllRead:markAll,unreadCount,render,open:openReader};
+window.addEventListener('yardivo:warehouse-changed',()=>{
+  panel?.classList.remove('open');
+  setTimeout(()=>{
+    render();
+    /* Only toast notifications that become newly relevant AFTER this warehouse selection. */
+    const s=seen();all().filter(isRead).forEach(n=>s.add(String(n.id)));saveSeen(s);
+  },30);
+});
+document.addEventListener('change',e=>{
+  const el=e.target;
+  if(!el)return;
+  const id=String(el.id||'').toLowerCase(),name=String(el.name||'').toLowerCase();
+  if(id.includes('warehouse')||name.includes('warehouse'))setTimeout(render,50);
+},true);
+
+window.YardivoNotifications={
+  load,save,markRead,markAllRead:markAll,unreadCount,render,open:openReader,
+  visible,notificationClass,resolvedWarehouse,activeWarehouse:activeWh,
+  visibleAll:all
+};
 })();
 </script>
 <script id="yardivo-operational-drilldown-v1">
@@ -39229,5 +39323,25 @@ window.YardivoTermProvenance={
   initiatorLabel,kpiLabel,actorType,all:arr
 };
 window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-term-change-provenance-system';
+})();
+</script>
+
+<style id="yardivo-v583-notification-warehouse-scope-style">
+#notifList .y5-notif-wh{
+  display:inline-flex;align-items:center;padding:2px 5px;margin-right:3px;
+  border-radius:999px;border:1px solid #365d75;background:#0d293a;
+  color:#8fd2fa;font-size:6px;font-weight:950;vertical-align:1px
+}
+</style>
+<script id="yardivo-v583-notification-warehouse-scope-finalizer">
+(function(){
+'use strict';
+function refresh(){try{window.YardivoNotifications?.render?.()}catch(_){}}
+window.addEventListener('yardivo:warehouse-changed',()=>setTimeout(refresh,80));
+window.addEventListener('yardivo:login',()=>setTimeout(refresh,220));
+window.addEventListener('storage',e=>{
+  if(['yardivo_live_notifications_v1','yardivo_active_warehouse'].includes(String(e.key||'')))setTimeout(refresh,30);
+});
+window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-notification-warehouse-scope-fix';
 })();
 </script>
