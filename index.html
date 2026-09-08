@@ -17726,16 +17726,7 @@ function refreshAll(){
   try{renderControlTower?.()}catch(e){}
   try{refreshRecommendation?.()}catch(e){}
 }
-function commit(){
-  try{
-    if(a){
-      a.__beforeDate=a.date||'';
-      a.__beforeTime=a.time||'';
-      a.__beforeDock=a.dock||'';
-    }
-  }catch(_){}
-
-  if(!pending||!validate())return;
+function commit(){if(!pending||!validate())return;
   const a=ann(pending.id),p=proposal(),old={...pending.old},now=new Date().toISOString();
   a.date=p.date;a.time=p.time;a.dock=Number(p.dock);
   a.updatedAt=now;a.updatedBy=currentSession?.username||currentSession?.user||currentRole();
@@ -17773,7 +17764,7 @@ function commit(){
     showYmsToast?.('success','TERMIN PROMIJENJEN',`${a.supplier} · ${p.date} ${p.time} · R${p.dock} · ${actor}`);
     window.YardivoRescheduleAudit?.push?.('TERMIN PROMIJENJEN',`${a.supplier} · ${p.date} ${p.time} · R${p.dock}`,{
       actor,warehouse:a.warehouse||'',announcementId:a.id||'',supplierDeliveryId:a.supplierDeliveryId||'',
-      before:{date:a.__beforeDate||'',time:a.__beforeTime||'',dock:a.__beforeDock||''},
+      before:{date:old.date||'',time:old.time||'',dock:old.dock||''},
       after:{date:p.date,time:p.time,dock:p.dock},type:'inventory_drag_reschedule'
     });
   }catch(e){}
@@ -18444,17 +18435,32 @@ function refreshAll(){
  try{YardivoLiveYard?.render?.()}catch(e){}
 }
 function applyReplan(a,problem,c){
- const old={date:a.date,time:a.time,dock:Number(a.dock)},now=new Date().toISOString(),conf=confidence(problem,c);
- a.date=c.date;a.time=c.time;a.dock=Number(c.dock);
- a.updatedAt=now;a.updatedBy='YARDIVO AUTO REPLANNING';
- a.rescheduledAt=now;a.autoReplannedAt=now;a.autoReplanned=true;
- a.changeHistory=Array.isArray(a.changeHistory)?a.changeHistory:[];
- a.changeHistory.push({changedAt:now,type:'AUTO_REPLAN',changedBy:'YARDIVO AUTO REPLANNING',fromDate:old.date,fromTime:old.time,fromDock:old.dock,toDate:c.date,toTime:c.time,toDock:c.dock,reason:problem.reason,confidence:conf});
- const log={id:Date.now()+'-'+Math.random().toString(36).slice(2,7),at:now,announcementId:a.id,supplier:a.supplier||'',warehouse:a.warehouse||'W101',old,newSlot:{date:c.date,time:c.time,dock:c.dock},problemType:problem.type,reason:problem.reason,lateMinutes:problem.late||0,confidence:conf,score:Math.round(c.score),mode:'AUTO_SAFE',status:'APPLIED',acknowledgedBy:[],orderNumber:a.orderNumber||''};
+ const now=new Date().toISOString(),conf=confidence(problem,c);
+ const old={date:a.date,time:a.time,dock:Number(a.dock)};
+ const existing=logs().find(l=>String(l.announcementId)===String(a.id)&&['PENDING_INVENTORY','PENDING_SUPPLIER'].includes(l.status));
+ if(existing)return existing;
+ const log={
+   id:Date.now()+'-'+Math.random().toString(36).slice(2,7),
+   at:now,
+   announcementId:a.id,
+   supplierDeliveryId:a.supplierDeliveryId||'',
+   supplier:a.supplier||'',
+   warehouse:a.warehouse||'W101',
+   old,
+   newSlot:{date:c.date,time:c.time,dock:c.dock},
+   problemType:problem.type,
+   reason:problem.reason,
+   lateMinutes:problem.late||0,
+   confidence:conf,
+   score:Math.round(c.score),
+   mode:'SMART_APPROVAL',
+   status:'PENDING_INVENTORY',
+   acknowledgedBy:[],
+   orderNumber:a.orderNumber||''
+ };
  const ls=logs();ls.push(log);saveLogs(ls);
- refreshAll();
- const msg=`${a.supplier||'Dobavljač'}: ${old.date} ${old.time} R${old.dock} → ${c.date} ${c.time} R${c.dock}. ${problem.reason} Automatski izračunato · pouzdanost ${conf}%.`;
- notification(['admin','manager','inventory','reception'],'YARDIVO JE AUTOMATSKI PROMIJENIO TERMIN / RAMPU',msg,a,log);
+ const msg=`${a.supplier||'Dobavljač'} · Smart predlaže ${old.date} ${old.time} R${old.dock} → ${c.date} ${c.time} R${c.dock}. ${problem.reason} Potrebna je potvrda Upravljanja zalihama.`;
+ notification(['admin','inventory'],'YARDIVO SMART · NOVI PRIJEDLOG TERMINA',msg,a,log);
  showAlert(log);
  selectedLogId=log.id;renderSection();
  return log;
@@ -18464,9 +18470,9 @@ function showAlert(log){
  if(!currentSession?.role||!canView())return;
  const s=alertStack(),x=document.createElement('div');x.className='srp-alert '+(log.problemType==='RAMP_CLOSED'?'critical':log.problemType==='LATE'?'warn':'');
  x.dataset.logId=log.id;
- x.innerHTML=`<h3>⚡ YARDIVO AUTOMATSKI REPLANNING</h3><p><strong>${esc(log.supplier)}</strong> · ${esc(log.reason)}</p>
+ x.innerHTML=`<h3>⚡ YARDIVO SMART PRIJEDLOG</h3><p><strong>${esc(log.supplier)}</strong> · ${esc(log.reason)}</p>
  <div class="change"><div class="box"><small>PRIJE</small><strong>${esc(log.old.date)} ${esc(log.old.time)} · R${log.old.dock}</strong></div><div class="arr">→</div><div class="box"><small>NOVO</small><strong>${esc(log.newSlot.date)} ${esc(log.newSlot.time)} · R${log.newSlot.dock}</strong></div></div>
- <div class="foot"><small>Automatski izračunato · ${new Date(log.at).toLocaleString('hr-HR')} · confidence ${log.confidence}%</small><button type="button">OK</button></div>`;
+ <div class="foot"><small>Smart izračun · čeka potvrdu zaliha · ${new Date(log.at).toLocaleString('hr-HR')} · confidence ${log.confidence}%</small><button type="button">OK</button></div>`;
  x.querySelector('button').onclick=()=>{ack(log.id);x.remove()};
  s.appendChild(x);
 }
@@ -18512,15 +18518,15 @@ function inject(){
  if(!document.getElementById('smartReplanning')){
    const main=document.querySelector('main')||document.querySelector('.main');
    main?.insertAdjacentHTML('beforeend',`<section id="smartReplanning" class="view">
-    <div class="section-title"><div><h1>⚡ YARDIVO AUTOMATSKE PREPORUKE</h1><p>Automatsko otkrivanje kašnjenja, zatvorenih rampi i konflikata te sigurno preplaniranje termina.</p></div></div>
+    <div class="section-title"><div><h1>⚡ YARDIVO AUTOMATSKE PREPORUKE</h1><p>Smart automatski prati opterećenje, kašnjenja, blokade i konflikte te predlaže sigurniji termin i rampu. Promjena vrijedi tek nakon potvrde Zaliha i dobavljača.</p></div></div>
     <div class="srp-top">
-      <span class="srp-engine"><i></i><span id="srpEngineText">AUTO SAFE · AKTIVAN</span></span>
+      <span class="srp-engine"><i></i><span id="srpEngineText">SMART ON · AUTOMATSKA ANALIZA</span></span>
       <button class="secondary" id="srpScanNow">⚡ IZRAČUNAJ SADA</button>
-      <select id="srpMode"><option value="AUTO_SAFE">AUTO SAFE</option><option value="PAUSED">PAUZIRANO</option></select>
+      <select id="srpMode"><option value="AUTO_SAFE">SMART ON</option><option value="PAUSED">PAUZIRANO</option></select>
       <select id="srpLate"><option value="15">Kašnjenje 15+ min</option><option value="20">Kašnjenje 20+ min</option><option value="30">Kašnjenje 30+ min</option><option value="45">Kašnjenje 45+ min</option></select>
     </div>
-    <div class="srp-kpis"><div class="srp-kpi"><small>AUTOMATSKE PROMJENE DANAS</small><strong id="srpToday">0</strong></div><div class="srp-kpi"><small>ZBOG KAŠNJENJA</small><strong id="srpLateKpi">0</strong></div><div class="srp-kpi"><small>ZBOG RAMPI / BLOKADA</small><strong id="srpRampKpi">0</strong></div><div class="srp-kpi"><small>BEZ SIGURNOG RJEŠENJA</small><strong id="srpNoSlot">0</strong></div></div>
-    <div class="srp-board"><div class="srp-history"><div class="srp-head"><h3>AUDIT TRAIL · ŠTO JE YARDIVO PROMIJENIO</h3><small>Svaka automatska odluka, razlog, stari i novi termin.</small></div><div class="srp-list" id="srpList"></div></div><aside class="srp-side"><div class="srp-head"><h3>DETALJ ODLUKE</h3><small>Zašto je YARDIVO napravio promjenu.</small></div><div class="srp-detail" id="srpDetail"><div class="srp-empty">Odaberi automatsku preporuku.</div></div></aside></div>
+    <div class="srp-kpis"><div class="srp-kpi"><small>SMART PRIJEDLOZI DANAS</small><strong id="srpToday">0</strong></div><div class="srp-kpi"><small>ZBOG KAŠNJENJA</small><strong id="srpLateKpi">0</strong></div><div class="srp-kpi"><small>ZBOG RAMPI / BLOKADA</small><strong id="srpRampKpi">0</strong></div><div class="srp-kpi"><small>BEZ SIGURNOG RJEŠENJA</small><strong id="srpNoSlot">0</strong></div></div>
+    <div class="srp-board"><div class="srp-history"><div class="srp-head"><h3>SMART WORKFLOW · PRIJEDLOZI I ODOBRENJA</h3><small>Smart prijedlog → potvrda Zaliha → odgovor dobavljača → promjena najave.</small></div><div class="srp-list" id="srpList"></div></div><aside class="srp-side"><div class="srp-head"><h3>DETALJ ODLUKE</h3><small>Zašto Smart predlaže promjenu i gdje je u approval workflowu.</small></div><div class="srp-detail" id="srpDetail"><div class="srp-empty">Odaberi automatsku preporuku.</div></div></aside></div>
    </section>`);
  }
  bind();
@@ -18540,17 +18546,17 @@ function renderSection(){
  if(!document.getElementById('smartReplanning'))return;
  const ls=logs().slice().sort((a,b)=>String(b.at).localeCompare(String(a.at))),td=isoDate(new Date());
  document.getElementById('srpMode').value=c.enabled?'AUTO_SAFE':'PAUSED';document.getElementById('srpLate').value=String(c.lateThreshold);
- document.getElementById('srpEngineText').textContent=c.enabled?'AUTO SAFE · AKTIVAN':'REPLANNING · PAUZIRAN';
- document.getElementById('srpToday').textContent=ls.filter(x=>x.at?.slice(0,10)===td&&x.status==='APPLIED').length;
- document.getElementById('srpLateKpi').textContent=ls.filter(x=>x.at?.slice(0,10)===td&&x.problemType==='LATE'&&x.status==='APPLIED').length;
- document.getElementById('srpRampKpi').textContent=ls.filter(x=>x.at?.slice(0,10)===td&&['RAMP_CLOSED','RAMP_BLOCKED'].includes(x.problemType)&&x.status==='APPLIED').length;
+ document.getElementById('srpEngineText').textContent=c.enabled?'SMART ON · AUTOMATSKA ANALIZA':'REPLANNING · PAUZIRAN';
+ document.getElementById('srpToday').textContent=ls.filter(x=>x.at?.slice(0,10)===td&&x.newSlot).length;
+ document.getElementById('srpLateKpi').textContent=ls.filter(x=>x.at?.slice(0,10)===td&&x.problemType==='LATE'&&x.newSlot).length;
+ document.getElementById('srpRampKpi').textContent=ls.filter(x=>x.at?.slice(0,10)===td&&['RAMP_CLOSED','RAMP_BLOCKED','SLOT_CONFLICT'].includes(x.problemType)&&x.newSlot).length;
  document.getElementById('srpNoSlot').textContent=ls.filter(x=>x.at?.slice(0,10)===td&&x.status==='NO_SAFE_SLOT').length;
  const host=document.getElementById('srpList');
- host.innerHTML=ls.length?ls.map(l=>`<article class="srp-row" data-srp-log="${esc(l.id)}"><div class="top"><h4>${esc(l.supplier||'Dobavljač')} · ${esc(l.problemType)}</h4><time>${new Date(l.at).toLocaleString('hr-HR')}</time></div><div class="srp-reason">${esc(l.reason)}</div>${l.newSlot?`<div class="srp-change"><span class="srp-slot">${esc(l.old.date)} ${esc(l.old.time)} · R${l.old.dock}</span><span class="srp-arrow">→</span><span class="srp-slot">${esc(l.newSlot.date)} ${esc(l.newSlot.time)} · R${l.newSlot.dock}</span></div>`:''}<div class="srp-chips"><span class="srp-chip ${l.status==='APPLIED'?'auto':'critical'}">${esc(l.status)}</span>${l.confidence?`<span class="srp-chip">confidence ${l.confidence}%</span>`:''}${l.lateMinutes?`<span class="srp-chip warn">kasni ${l.lateMinutes} min</span>`:''}<span class="srp-chip">${(l.acknowledgedBy||[]).length} potvrda OK</span></div></article>`).join(''):'<div class="srp-empty">YARDIVO još nije radio automatske promjene.</div>';
+ host.innerHTML=ls.length?ls.map(l=>`<article class="srp-row" data-srp-log="${esc(l.id)}"><div class="top"><h4>${esc(l.supplier||'Dobavljač')} · ${esc(l.problemType)}</h4><time>${new Date(l.at).toLocaleString('hr-HR')}</time></div><div class="srp-reason">${esc(l.reason)}</div>${l.newSlot?`<div class="srp-change"><span class="srp-slot">${esc(l.old.date)} ${esc(l.old.time)} · R${l.old.dock}</span><span class="srp-arrow">→</span><span class="srp-slot">${esc(l.newSlot.date)} ${esc(l.newSlot.time)} · R${l.newSlot.dock}</span></div>`:''}<div class="srp-chips"><span class="srp-chip ${['SUPPLIER_ACCEPTED','APPLIED'].includes(l.status)?'auto':(['PENDING_INVENTORY','PENDING_SUPPLIER'].includes(l.status)?'warn':'critical')}">${esc(({PENDING_INVENTORY:'ČEKA ZALIHE',PENDING_SUPPLIER:'ČEKA DOBAVLJAČA',SUPPLIER_ACCEPTED:'DOBAVLJAČ PRIHVATIO',NO_SAFE_SLOT:'NEMA SIGURNOG TERMINA'})[l.status]||l.status)}</span>${l.confidence?`<span class="srp-chip">confidence ${l.confidence}%</span>`:''}${l.lateMinutes?`<span class="srp-chip warn">kasni ${l.lateMinutes} min</span>`:''}<span class="srp-chip">${(l.acknowledgedBy||[]).length} potvrda OK</span></div></article>`).join(''):'<div class="srp-empty">YARDIVO Smart još nema prijedloga.</div>';
  const l=ls.find(x=>String(x.id)===String(selectedLogId));
  const d=document.getElementById('srpDetail');
  if(!l){d.innerHTML='<div class="srp-empty">Odaberi automatsku preporuku.</div>';return}
- d.innerHTML=`<h2>${esc(l.supplier)}</h2><p>${esc(l.reason)}</p><div class="srp-detail-grid"><div><small>VRIJEME ODLUKE</small><strong>${new Date(l.at).toLocaleString('hr-HR')}</strong></div><div><small>STATUS</small><strong>${esc(l.status)}</strong></div><div><small>STARI TERMIN</small><strong>${esc(l.old.date)} ${esc(l.old.time)} · R${l.old.dock}</strong></div><div><small>NOVI TERMIN</small><strong>${l.newSlot?`${esc(l.newSlot.date)} ${esc(l.newSlot.time)} · R${l.newSlot.dock}`:'Nije pronađen'}</strong></div><div><small>POUZDANOST</small><strong>${l.confidence||0}%</strong></div><div><small>ALGORITAM SCORE</small><strong>${l.score??'—'}</strong></div></div><div class="srp-note"><strong>Automatski izračunato:</strong><br>YARDIVO je provjerio kompatibilne rampe, blokade, postojeće najave, radno vrijeme, trajanje istovara i najraniji slobodni termin. Promjena se primjenjuje samo kad postoji slobodan termin bez konflikta.</div><div class="srp-action-row"><button class="primary" onclick="YardivoSmartReplanning.scanNow()">PONOVNO IZRAČUNAJ SADA</button></div>`;
+ d.innerHTML=`<h2>${esc(l.supplier)}</h2><p>${esc(l.reason)}</p><div class="srp-detail-grid"><div><small>VRIJEME ODLUKE</small><strong>${new Date(l.at).toLocaleString('hr-HR')}</strong></div><div><small>STATUS</small><strong>${esc(l.status)}</strong></div><div><small>STARI TERMIN</small><strong>${esc(l.old.date)} ${esc(l.old.time)} · R${l.old.dock}</strong></div><div><small>NOVI TERMIN</small><strong>${l.newSlot?`${esc(l.newSlot.date)} ${esc(l.newSlot.time)} · R${l.newSlot.dock}`:'Nije pronađen'}</strong></div><div><small>POUZDANOST</small><strong>${l.confidence||0}%</strong></div><div><small>ALGORITAM SCORE</small><strong>${l.score??'—'}</strong></div></div><div class="srp-note"><strong>Smart approval workflow:</strong><br>YARDIVO je provjerio kompatibilne rampe, ON/OFF stanje, blokade, postojeće najave, radno vrijeme, kapacitet i trajanje istovara. Smart samo predlaže. Najava se ne mijenja dok Zalihe ne potvrde prijedlog i dobavljač ga potom ne prihvati.</div><div class="srp-action-row">${l.status==='PENDING_INVENTORY'&&['admin','inventory'].includes(role())?`<button class="primary" data-smart-inventory-approve="${esc(l.id)}">POTVRDI I POŠALJI DOBAVLJAČU</button>`:''}<button class="secondary" onclick="YardivoSmartReplanning.scanNow()">PONOVNO IZRAČUNAJ</button></div>`;
 }
 function wrapRampTriggers(){
  try{
@@ -38641,7 +38647,7 @@ const WHS=Object.keys(WH_META);
 const HOURS_KEY='yardivo_reception_master_hours_v1';
 const RAMP_HOURS_KEY='yardivo_ramp_hours_v583';
 const CAP_KEY='yardivo_ramp_capacity_v1';
-let activeTab='ramps';
+let activeTab=null;
 
 function jget(k){try{return JSON.parse(localStorage.getItem(k)||'{}')||{}}catch(_){return{}}}
 function jset(k,v){localStorage.setItem(k,JSON.stringify(v));try{window.YardivoSupabase?.flush?.()}catch(_){}}
@@ -38694,6 +38700,7 @@ function showTab(cat){
   activeTab=cat;
   const set=document.getElementById('settings');if(!set)return;
   scanSections();
+  const empty=document.getElementById('yardivoSettingsChooseV583');if(empty)empty.hidden=true;
   set.querySelectorAll('.yardivo-settings-section').forEach(p=>{
     const show=p.dataset.settingsFinalCategory===cat&&allowed(p);
     p.hidden=!show;
@@ -38866,23 +38873,148 @@ document.addEventListener('click',e=>{
   }
 
   if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]')){
-    setTimeout(()=>{scanSections();showTab(activeTab)},80);
+    activeTab=null;
+    setTimeout(()=>hideAllSettingsSections(),80);
   }
 },true);
 
 document.getElementById('rampSettingsWarehouse')?.addEventListener('change',()=>setTimeout(()=>renderWarehouseManager(),40));
 
+function hideAllSettingsSections(){
+  const set=document.getElementById('settings');if(!set)return;
+  scanSections();
+  set.querySelectorAll('.yardivo-settings-section').forEach(p=>{p.hidden=true;p.style.removeProperty('display')});
+  set.querySelectorAll('#yardivoSettingsTabsFinal button').forEach(b=>b.classList.remove('active'));
+  let empty=document.getElementById('yardivoSettingsChooseV583');
+  if(!empty){
+    empty=document.createElement('div');empty.id='yardivoSettingsChooseV583';
+    const grid=set.querySelector('.settings-grid');
+    grid?.insertAdjacentElement('beforebegin',empty);
+  }
+  empty.innerHTML='<strong>ODABERI POSTAVKE</strong><span>Odaberi jednu od glavnih kategorija iznad. Prikazat će se samo odabrana sekcija.</span>';
+  empty.hidden=false;
+}
 function init(){
   ensureWarehouseSelectOptions();
   scanSections();
-  showTab('ramps');
+  hideAllSettingsSections();
 }
 window.addEventListener('load',()=>setTimeout(init,900));
 window.addEventListener('yardivo:login',()=>setTimeout(init,300));
 document.addEventListener('DOMContentLoaded',()=>setTimeout(init,250));
 
-window.YardivoSettingsFinalV583={showTab,refresh:renderWarehouseManager};
+window.YardivoSettingsFinalV583={showTab,hideAll:hideAllSettingsSections,refresh:renderWarehouseManager};
 window.YardivoRampCapacityV583={get:cap,set:saveCap,masterHours};
 window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-settings-authoritative-fix';
+})();
+</script>
+
+<style id="yardivo-v583-settings-choose-only-style">
+#yardivoSettingsChooseV583{
+  min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:7px;border:1px dashed #2c5169;border-radius:10px;background:#081923;
+  color:#fff;text-align:center;padding:28px;margin-bottom:12px
+}
+#yardivoSettingsChooseV583[hidden]{display:none!important}
+#yardivoSettingsChooseV583 strong{font-size:11px;letter-spacing:.08em}
+#yardivoSettingsChooseV583 span{color:#8fa8b9;font-size:8px;max-width:520px;line-height:1.55}
+</style>
+
+<style id="yardivo-v583-smart-approval-style">
+#smartReplanning .srp-chip.warn{border-color:#886423!important;background:#2a210c!important;color:#ffd981!important}
+#smartReplanning .srp-chip.auto{border-color:#2c7b52!important;background:#0d2b1d!important;color:#8ef0b5!important}
+</style>
+<script id="yardivo-v583-smart-approval-workflow">
+(function(){
+'use strict';
+const LOG_KEY='yardivo_auto_replan_log_v1';
+const NOTIF_KEY='yardivo_live_notifications_v1';
+
+function role(){
+ let r='';try{r=String(currentSession?.role||window.currentSession?.role||'').toLowerCase().trim()}catch(_){}
+ if(r==='zalihe'||r==='upravljanje zalihama')r='inventory';
+ return r;
+}
+function actor(){return window.YardivoRescheduleAudit?.actorLabel?.()||(()=>{try{return currentSession?.username||currentSession?.user||role()||'YARDIVO'}catch(_){return'YARDIVO'}})()}
+function logs(){try{const a=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');return Array.isArray(a)?a:[]}catch(_){return[]}}
+function save(a){localStorage.setItem(LOG_KEY,JSON.stringify(a.slice(-1000)));try{putCloudState?.(LOG_KEY,JSON.stringify(a.slice(-1000)))}catch(_){}}
+function anns(){try{return Array.isArray(announcements)?announcements:[]}catch(_){return[]}}
+function normDock(v){return Number(String(v??'').replace(/^R/i,''))||0}
+function notif(title,body,a,l,roles=['admin','inventory']){
+ let arr=[];try{arr=JSON.parse(localStorage.getItem(NOTIF_KEY)||'[]');if(!Array.isArray(arr))arr=[]}catch(_){}
+ const now=new Date().toISOString();
+ arr.push({id:'SMARTWF-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),event:'SMART_APPROVAL',title,body,at:now,createdAt:now,roles,readBy:{},supplier:a?.supplier||l?.supplier||'',announcementId:l?.announcementId||'',warehouse:String(a?.warehouse||l?.warehouse||'').toUpperCase(),smartLogId:l?.id||''});
+ localStorage.setItem(NOTIF_KEY,JSON.stringify(arr));
+ try{putCloudState?.(NOTIF_KEY,JSON.stringify(arr))}catch(_){}
+ try{YardivoNotifications?.render?.()}catch(_){}
+}
+function immutable(a){
+ const st=String(a?.status||'').toLowerCase();
+ return !!(a?.yardArrivalAt||a?.dockArrivalAt||a?.receivedAt||a?.rejectedAt||/dvori|rampi|zaprim|odbij|zavr|izašao|izasao/.test(st));
+}
+
+async function inventoryApprove(id){
+ if(!['admin','inventory'].includes(role()))return alert('Samo Upravljanje zalihama ili Admin mogu potvrditi Smart prijedlog.');
+ const ls=logs(),l=ls.find(x=>String(x.id)===String(id));if(!l||l.status!=='PENDING_INVENTORY')return;
+ const a=anns().find(x=>String(x.id)===String(l.announcementId));if(!a)return alert('Povezana najava nije pronađena.');
+ if(immutable(a))return alert('Najava je već u operativnom prijamu i više se ne smije preplanirati.');
+ const supplierId=a.supplierDeliveryId||l.supplierDeliveryId;
+ if(!supplierId)return alert('Ova najava nije povezana sa Supplier zapisom pa Smart prijedlog nije moguće poslati dobavljaču.');
+ if(!window.YardivoSupplierLiveSync?.call)return alert('Supplier komunikacija trenutno nije dostupna.');
+
+ const who=actor();
+ if(!confirm(`Poslati Smart prijedlog dobavljaču?\n\n${l.old.date} ${l.old.time} · R${l.old.dock}\n→ ${l.newSlot.date} ${l.newSlot.time} · R${l.newSlot.dock}\n\nNajava se još neće promijeniti dok dobavljač ne prihvati.`))return;
+
+ try{
+   await window.YardivoSupplierLiveSync.call('internal_update',{
+     id:supplierId,
+     delivery_date:l.newSlot.date,
+     requested_time:l.newSlot.time,
+     dock:'R'+normDock(l.newSlot.dock),
+     status:'proposal_sent',
+     review_note:`YARDIVO Smart prijedlog potvrdio ${who}. Dobavljač treba prihvatiti termin i rampu prije promjene canonical najave.`
+   });
+   l.status='PENDING_SUPPLIER';
+   l.inventoryApprovedAt=new Date().toISOString();
+   l.inventoryApprovedBy=who;
+   l.supplierDeliveryId=supplierId;
+   save(ls);
+   notif('SMART PRIJEDLOG POSLAN DOBAVLJAČU',`${l.supplier||a.supplier||'Dobavljač'} · ${l.newSlot.date} ${l.newSlot.time} · R${normDock(l.newSlot.dock)} · Potvrdio: ${who}`,a,l);
+   try{window.dispatchEvent(new CustomEvent('yardivo:supplier-request-updated',{detail:{id:supplierId,source:'smart'}}))}catch(_){}
+   try{await window.YardivoSupplierPlannerV580?.refresh?.(true)}catch(_){}
+   window.YardivoSmartReplanning?.render?.();
+ }catch(e){
+   alert('Smart prijedlog nije poslan dobavljaču:\n'+(e?.message||e));
+ }
+}
+
+function reconcileAccepted(){
+ const ls=logs();let changed=false;
+ for(const l of ls){
+   if(l.status!=='PENDING_SUPPLIER'||!l.newSlot)continue;
+   const a=anns().find(x=>String(x.id)===String(l.announcementId));if(!a)continue;
+   const matches=String(a.date)===String(l.newSlot.date)&&String(a.time).slice(0,5)===String(l.newSlot.time).slice(0,5)&&normDock(a.dock)===normDock(l.newSlot.dock);
+   if(!matches)continue;
+   l.status='SUPPLIER_ACCEPTED';
+   l.supplierAcceptedAt=new Date().toISOString();
+   changed=true;
+   notif('DOBAVLJAČ JE PRIHVATIO SMART TERMIN',`${l.supplier||a.supplier||'Dobavljač'} · canonical najava je promijenjena na ${l.newSlot.date} ${l.newSlot.time} · R${normDock(l.newSlot.dock)}.`,a,l);
+ }
+ if(changed){save(ls);try{window.YardivoSmartReplanning?.render?.()}catch(_){}}
+}
+
+document.addEventListener('click',e=>{
+ const b=e.target.closest?.('[data-smart-inventory-approve]');
+ if(!b)return;
+ e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+ inventoryApprove(b.dataset.smartInventoryApprove);
+},true);
+
+window.addEventListener('yardivo:data-synced',()=>setTimeout(reconcileAccepted,120));
+window.addEventListener('yardivo:supplier-request-updated',()=>setTimeout(reconcileAccepted,180));
+setInterval(reconcileAccepted,5000);
+
+window.YardivoSmartApprovalV583={inventoryApprove,reconcileAccepted};
+window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-settings-smart-approval-workflow';
 })();
 </script>
