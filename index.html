@@ -7,7 +7,7 @@ Designed & Developed by Duje Maleš
 
 <html lang="hr">
 <head>
-<meta name="yardivo-build" content="20260908-dev-v5.8.3-performance-freeze-fix">
+<meta name="yardivo-build" content="20260908-dev-v5.8.3-realtime-instant-sync">
 
   <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=3">
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
@@ -24766,6 +24766,7 @@ const CLIENT_KEY='yardivo_client_id_v1';
 
 let accessToken='',refreshToken='',tokenExp=0,ready=false,applying=false,client=null;
 let dirtyAnn=false,dirtyInc=false,pushing=false,pulling=false;
+let realtimeChannel=null,realtimeStatus='OFF',realtimePullTimer=0,realtimeRetryTimer=0,realtimePendingSignal=false,lastRealtimePullAt=0;
 const dirtyState=new Map(),timers=new Map();
 let annSnapshot=new Map(),incSnapshot=new Map();
 
@@ -24811,7 +24812,10 @@ async function refreshAccess(){
   const d=await res.json().catch(()=>({}));
   if(!res.ok||!d?.access_token)throw new Error(d?.message||d?.error_description||'Obnova prijave nije uspjela.');
   setTokens(d.access_token,d.refresh_token||refreshToken);
-  if(client)await client.auth.setSession({access_token:accessToken,refresh_token:refreshToken});
+  if(client){
+    await client.auth.setSession({access_token:accessToken,refresh_token:refreshToken});
+    try{await client.realtime?.setAuth?.(accessToken)}catch(_){}
+  }
 }
 async function token(){
   if(!accessToken)throw new Error('YARDIVO_AUTH_REQUIRED');
@@ -24878,6 +24882,70 @@ function applyBootstrap(d){
   annSnapshot=mapData(A);incSnapshot=mapData(I);
   dirtyAnn=false;dirtyInc=false;dirtyState.clear();
 }
+async function broadcastChange(reason='data-changed'){
+  try{
+    if(!realtimeChannel||realtimeStatus!=='SUBSCRIBED'){
+      realtimePendingSignal=true;
+      try{if(ready)await startRealtime()}catch(_){}
+      return false;
+    }
+    realtimePendingSignal=false;
+    const r=await realtimeChannel.send({
+      type:'broadcast',event:'data-changed',
+      payload:{source:clientId,reason:String(reason||'data-changed'),ts:Date.now()}
+    });
+    return r==='ok'||r==='OK'||r?.status==='ok'||r===undefined;
+  }catch(e){
+    console.warn('[YARDIVO REALTIME] broadcast nije poslan; polling fallback ostaje aktivan.',e);
+    return false;
+  }
+}
+function requestRealtimePull(payload){
+  try{if(String(payload?.payload?.source||'')===clientId)return}catch(_){}
+  const now=Date.now(),wait=Math.max(140,500-(now-lastRealtimePullAt));
+  clearTimeout(realtimePullTimer);
+  realtimePullTimer=setTimeout(async()=>{
+    lastRealtimePullAt=Date.now();
+    realtimePullTimer=0;
+    try{
+      if(!ready)return;
+      if(pending())await flush();
+      let ok=await pull();
+      if(!ok){
+        clearTimeout(realtimeRetryTimer);
+        realtimeRetryTimer=setTimeout(async()=>{
+          realtimeRetryTimer=0;
+          try{if(ready&&!pending())await pull()}catch(_){}
+        },500);
+      }
+    }catch(e){console.warn('[YARDIVO REALTIME] instant refresh fallback.',e)}
+  },wait);
+}
+async function startRealtime(){
+  if(realtimeChannel)return realtimeChannel;
+  const c=await getClient();
+  if(!c)return null;
+  try{if(accessToken)await c.realtime?.setAuth?.(accessToken)}catch(_){}
+  realtimeStatus='CONNECTING';
+  const ch=c.channel('yardivo-live-sync-v583',{config:{broadcast:{self:false,ack:true}}});
+  ch.on('broadcast',{event:'data-changed'},requestRealtimePull);
+  ch.subscribe((st)=>{
+    realtimeStatus=String(st||'').toUpperCase();
+    if(realtimeStatus==='SUBSCRIBED'){
+      console.info('[YARDIVO REALTIME] LIVE');
+      if(realtimePendingSignal)setTimeout(()=>broadcastChange('pending-sync'),0);
+    }else if(realtimeStatus==='CHANNEL_ERROR'||realtimeStatus==='TIMED_OUT'){
+      console.warn('[YARDIVO REALTIME]',realtimeStatus,'— 60 s polling fallback ostaje aktivan.');
+    }
+  });
+  realtimeChannel=ch;
+  return ch;
+}
+async function stopRealtime(){
+  const ch=realtimeChannel;realtimeChannel=null;realtimeStatus='OFF';
+  clearTimeout(realtimePullTimer);clearTimeout(realtimeRetryTimer);
+  if(ch&&client){try{await client.removeChannel(ch)}catch(_){}}
+}
 async function pull(){
   if(!ready||pulling||pushing||dirtyAnn||dirtyInc||dirtyState.size)return false;
   pulling=true;
@@ -24914,10 +24982,12 @@ async function pushState(){
 }
 async function flush(){
   if(!ready||pushing)return false;
+  const hadChanges=pending()>0;
   pushing=true;
   try{
     await pushAnnouncements();await pushIncidents();await pushState();
     status('● ONLINE BAZA · SVE SPREMLJENO','ok');
+    if(hadChanges)setTimeout(()=>broadcastChange('sync-flush'),0);
     return true;
   }catch(e){showOnlineError('SPREMANJE',e);return false}
   finally{pushing=false}
@@ -24979,6 +25049,7 @@ async function authenticate(a,r){
   if(!serverUser||serverUser!==appUser)throw new Error('ONLINE PROFIL SE NE PODUDARA S PRIJAVLJENIM KORISNIKOM.');
   const d=await edge('bootstrap');
   applyBootstrap(d);ready=true;renderAll();status('● ONLINE BAZA · ONLINE','ok');
+  try{await startRealtime()}catch(e){console.warn('[YARDIVO REALTIME] nije pokrenut; polling fallback ostaje aktivan.',e)}
   try{window.dispatchEvent(new CustomEvent('yardivo:data-synced',{detail:{source:'online-v2'}}))}catch(_){}
   return true;
 }
@@ -24987,11 +25058,12 @@ function online(){return ready}
 function pending(){return Number(dirtyAnn)+Number(dirtyInc)+dirtyState.size}
 
 clearLegacyErrors();
-window.YardivoSupabase={authenticate,syncNow,flushQueue:flush,pending,client:getClient,realtime:()=>{},online};
+window.YardivoSupabase={authenticate,syncNow,flushQueue:flush,pending,client:getClient,realtime:startRealtime,realtimeStatus:()=>realtimeStatus,broadcastChange,online};
 window.YardivoOnlineSync=window.YardivoSupabase;
 
-window.addEventListener('online',()=>setTimeout(()=>{if(ready)flush()},250));
-window.addEventListener('focus',()=>setTimeout(()=>{if(ready){if(pending())flush();else pull()}},150));
+window.addEventListener('online',()=>setTimeout(()=>{if(ready){startRealtime().catch(()=>{});flush()}},250));
+window.addEventListener('focus',()=>setTimeout(()=>{if(ready){startRealtime().catch(()=>{});if(pending())flush();else pull()}},150));
+window.addEventListener('pagehide',()=>{stopRealtime().catch(()=>{})},{once:true});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&ready)setTimeout(()=>{if(pending())flush();else pull()},180)});
 setInterval(()=>{if(!ready)return;if(pending())flush();else pull()},60000);
 window.addEventListener('load',()=>{clearLegacyErrors();if(!ready)status('● ONLINE BAZA · ČEKA PRIJAVU','')},{once:true});
