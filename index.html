@@ -7,11 +7,13 @@ Designed & Developed by Duje Maleš
 
 <html lang="hr">
 <head>
+<meta name="yardivo-build" content="20260908-dev-v5.8.3-performance-freeze-fix">
+
   <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=3">
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
 (function(){
   'use strict';
-  window.__YARDIVO_BUILD__='20260908-dev-v5.8.3-warehouse-transition';
+  window.__YARDIVO_BUILD__='20260908-dev-v5.8.3-scanner-theme-ui-final';
   const nativeFetch=window.fetch?.bind(window);
   if(nativeFetch){
     window.fetch=function(input,init){
@@ -36,7 +38,7 @@ Designed & Developed by Duje Maleš
     const badge=document.createElement('div');
     badge.id='yardivoBuildBadge';
     badge.textContent='YARDIVO DEV · BUILD V5.8.3';
-    badge.title='20260908-dev-v5.8.3-warehouse-transition';
+    badge.title='20260908-dev-v5.8.3-scanner-theme-ui-final';
     badge.style.cssText='position:fixed;right:8px;bottom:8px;z-index:2147483646;font:700 10px/1.2 system-ui;padding:5px 7px;border-radius:6px;background:#0d1b29;color:#94a9b9;border:1px solid #26435a;opacity:.72;pointer-events:none';
     document.body.appendChild(badge);
   },{once:true});
@@ -5946,7 +5948,7 @@ html.yardivo-welcome-complete #yardivoWelcomeBar{
 #yardivoSupplierPortal .ysp-mini-cal{z-index:999999!important;min-width:300px;max-width:340px;box-shadow:0 18px 44px rgba(0,0,0,.45)}
 #yardivoSupplierPortal .ysp-mini-cal.open{display:block!important}
 </style>
-<script id="yardivo-v575-build-marker">window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-warehouse-transition';</script>
+<script id="yardivo-v575-build-marker">window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-scanner-theme-ui-final';</script>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -19565,12 +19567,15 @@ function stabilize(){
     w.style.backfaceVisibility='hidden';
   });
 }
-document.addEventListener('pointermove',function(){
-  if(raf)return;
-  raf=requestAnimationFrame(function(){raf=0;stabilize()});
-},true);
-window.addEventListener('load',function(){setTimeout(stabilize,1200)});
-setInterval(stabilize,2200);
+/* Stability styles are static. Re-applying them on every pointer move caused
+   expensive full-document queries/repaints in Safari. Apply only when needed. */
+window.addEventListener('load',function(){
+  stabilize();
+  setTimeout(stabilize,1200);
+  setTimeout(stabilize,5000);
+},{once:true});
+window.addEventListener('yardivo:warehouse-changed',stabilize);
+window.addEventListener('yardivo:login',function(){setTimeout(stabilize,120)});
 })();
 </script>
 <style id="yardivo-v30-single-yard-engine">
@@ -34123,7 +34128,7 @@ window.YardivoTransportV583={openSupplier,openInternal};
 </script>
 
 <script id="yardivo-v583-final-integrity-marker">
-window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-warehouse-transition';
+window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-scanner-theme-ui-final';
 </script>
 
 
@@ -36387,7 +36392,7 @@ html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] .topbar,
 html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] .top-bar,
 html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] .nav,
 html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] .menu{background:#070b08!important;border-color:rgba(255,255,255,.08)!important}
-#yardivoCursorGlowV583{position:fixed;left:0;top:0;width:360px;height:360px;border-radius:50%;pointer-events:none;z-index:0;opacity:0;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(61,238,131,.10) 0,rgba(61,238,131,.045) 28%,transparent 68%);filter:blur(5px);transition:opacity .22s ease;mix-blend-mode:screen}
+#yardivoCursorGlowV583{position:fixed;left:0;top:0;width:360px;height:360px;border-radius:50%;pointer-events:none;z-index:0;opacity:0;transform:translate3d(-9999px,-9999px,0);background:radial-gradient(circle,rgba(61,238,131,.10) 0,rgba(61,238,131,.045) 28%,transparent 68%);transition:opacity .18s ease;will-change:transform,opacity;contain:strict}
 body.yardivo-glow-active #yardivoCursorGlowV583{opacity:1}
 @media(pointer:coarse){#yardivoCursorGlowV583{display:none!important}}
 /* Stable notification UX: no looping blink/pulse on notification surfaces. */
@@ -36409,10 +36414,31 @@ function decorateHistory(){document.querySelectorAll('#yardivoNotificationHistor
 function decorateReader(){const m=document.getElementById('yardivoNotifReaderV5');if(!m?.classList.contains('open'))return;const h=m.querySelector('.y5-reader-head');if(!h||h.querySelector('.y583-reader-actions'))return;const close=h.querySelector('.y5-reader-close');const wrap=document.createElement('div');wrap.className='y583-reader-actions';const del=document.createElement('button');del.type='button';del.className='y583-notif-delete';del.textContent='IZBRIŠI';del.onclick=e=>{e.preventDefault();e.stopPropagation();delN(currentNotifId)};if(close){close.remove();wrap.append(del,close)}else wrap.append(del);h.appendChild(wrap)}
 document.addEventListener('pointerdown',e=>{const c=e.target.closest?.('[data-y5-history],[data-y5-bell]');if(c)currentNotifId=c.dataset.y5History||c.dataset.y5Bell||''},true);
 document.addEventListener('click',e=>{const c=e.target.closest?.('[data-y5-history]');if(!c||e.target.closest('.y583-notif-delete'))return;currentNotifId=c.dataset.y5History||'';try{window.YardivoNotifications?.open?.(currentNotifId,true)}catch(_){}},true);
-const mo=new MutationObserver(()=>{decorateHistory();decorateReader();ensureScannerButton()});mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
-setInterval(()=>{decorateHistory();decorateReader()},1800);
+let moQueued=false;
+const mo=new MutationObserver(()=>{
+  if(moQueued)return;
+  moQueued=true;
+  requestAnimationFrame(()=>{moQueued=false;decorateHistory();decorateReader();ensureScannerButton()});
+});
+mo.observe(document.documentElement,{subtree:true,childList:true});
+/* Low-frequency safety refresh only; normal updates are mutation-driven. */
+setInterval(()=>{decorateHistory();decorateReader()},10000);
 function ensureScannerButton(){const p=document.getElementById('qrMobileSettingsPanel');if(!p||document.getElementById('yardivoScannerOpenV583'))return;const b=document.createElement('button');b.id='yardivoScannerOpenV583';b.type='button';b.textContent='OTVORI YARDIVO SCANNER';b.onclick=()=>{window.open('YARDIVO_SCANNER_V5.8.3_GATE_DOCK_FINAL.html','_blank','noopener')};(p.querySelector('.qr-mobile-setting-body')||p).appendChild(b)}
-function glow(){if(matchMedia('(pointer:coarse)').matches)return;let g=document.getElementById('yardivoCursorGlowV583');if(!g){g=document.createElement('div');g.id='yardivoCursorGlowV583';document.body.prepend(g)}document.addEventListener('pointermove',e=>{g.style.left=e.clientX+'px';g.style.top=e.clientY+'px';document.body.classList.add('yardivo-glow-active')},{passive:true});document.addEventListener('pointerleave',()=>document.body.classList.remove('yardivo-glow-active'),{passive:true})}
+function glow(){
+  if(matchMedia('(pointer:coarse)').matches)return;
+  let g=document.getElementById('yardivoCursorGlowV583');
+  if(!g){g=document.createElement('div');g.id='yardivoCursorGlowV583';document.body.prepend(g)}
+  let x=-9999,y=-9999,raf=0,active=false;
+  const draw=()=>{raf=0;g.style.transform=`translate3d(${x-210}px,${y-210}px,0)`};
+  document.addEventListener('pointermove',e=>{
+    x=e.clientX;y=e.clientY;
+    if(!active){active=true;document.body.classList.add('yardivo-glow-active')}
+    if(!raf)raf=requestAnimationFrame(draw);
+  },{passive:true});
+  document.addEventListener('pointerleave',()=>{
+    active=false;document.body.classList.remove('yardivo-glow-active');
+  },{passive:true});
+}
 window.addEventListener('load',()=>{setTimeout(()=>{ensureScannerButton();decorateHistory();glow()},400)});
 window.YardivoNotificationUXV583={delete:delN,decorate:decorateHistory};
 })();
@@ -36464,3 +36490,225 @@ window.addEventListener('load',()=>setTimeout(()=>{inject();render()},900));docu
 #yardivoSupplierPortal .ysp-cal-grid button.sel{background:#1e7ee8;color:#fff}
 #yardivoSupplierPortal .ysp-cal-grid button.muted{opacity:.35}
 </style>
+
+
+<!-- YARDIVO DEV V5.8.3 · SCANNER THEME UI FINAL · 20260908 -->
+<style id="yardivo-v583-scanner-theme-authority">
+/* ==========================================================
+   YARDIVO DARK MODE · FINAL TWO-CHOICE MODEL
+   ORIGINAL YARDIVO = original navy UI
+   DARK / GREEN      = exact Scanner visual language
+   ========================================================== */
+
+/* Hide deprecated third/legacy theme choices from Settings. */
+#yardivoDarkStyleSettings .yardivo-dark-style-option[data-dark-style="blue"],
+#yardivoThemeSettingsV2 [data-dark-look="blue"]{display:none!important}
+
+#yardivoDarkStyleSettings .yardivo-dark-style-options,
+#yardivoThemeSettingsV2 .yt-row{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+
+/* Theme cards themselves preview the actual palette. */
+#yardivoDarkStyleSettings .yardivo-dark-style-option[data-dark-style="original"],
+#yardivoThemeSettingsV2 [data-dark-look="original"]{
+  background:linear-gradient(180deg,#10283a,#07131f)!important;
+  border-color:#28516c!important;color:#edf6ff!important;
+}
+#yardivoDarkStyleSettings .yardivo-dark-style-option[data-dark-style="graphite"],
+#yardivoThemeSettingsV2 [data-dark-look="graphite"]{
+  background:linear-gradient(180deg,#121d16,#080d0a)!important;
+  border-color:rgba(84,242,139,.30)!important;color:#f2f7f4!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.025),0 10px 28px rgba(0,0,0,.14)!important;
+}
+#yardivoDarkStyleSettings .yardivo-dark-style-option[data-dark-style="graphite"] strong,
+#yardivoThemeSettingsV2 [data-dark-look="graphite"]{color:#54f28b!important}
+#yardivoDarkStyleSettings .yardivo-dark-style-option.selected,
+#yardivoDarkStyleSettings .yardivo-dark-style-option.active,
+#yardivoThemeSettingsV2 button.active{
+  outline:none!important;box-shadow:0 0 0 2px rgba(84,242,139,.16),0 12px 34px rgba(0,0,0,.20)!important;
+}
+
+/* Exact Scanner palette tokens. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"]{
+  --yardivo-accent:#54f28b!important;
+  --yardivo-accent-2:#1ec96a!important;
+  --theme-bg:#050806!important;
+  --theme-bg-2:#07110c!important;
+  --theme-panel:#0b120e!important;
+  --theme-panel-2:#0e1712!important;
+  --theme-card:#0b120e!important;
+  --theme-input:#08100b!important;
+  --theme-hover:#111d16!important;
+  --theme-border:rgba(255,255,255,.10)!important;
+  --theme-border-soft:rgba(255,255,255,.07)!important;
+  --theme-text:#f2f7f4!important;
+  --theme-muted:#91a298!important;
+  --yv-bg:#050806!important;
+  --yv-surface:#0b120e!important;
+  --yv-surface2:#0e1712!important;
+  --yv-line:rgba(255,255,255,.10)!important;
+  --yv-text:#f2f7f4!important;
+  --yv-muted:#91a298!important;
+  --yv-brand:#54f28b!important;
+  --yv-brand2:#1ec96a!important;
+  --yv-soft:#111d16!important;
+  --accent:#54f28b!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body{
+  background:radial-gradient(circle at 50% -18%,#123321 0,#07110c 29%,#050806 69%) fixed!important;
+  color:#f2f7f4!important;
+}
+
+/* Global application shell: scanner-black, no navy leakage. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body :is(
+  .app,.app-shell,#appShell,#mainApp,.main,.main-content,#mainContent,.view,.app-view,
+  .content,.page,.page-content,.section,.settings-content
+){background-color:transparent!important;color:#f2f7f4!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body :is(
+  .sidebar,#sidebar,.topbar,.top-bar,#topbar,.nav,.menu,.side-nav,.navigation
+){background:#070b08!important;border-color:rgba(255,255,255,.08)!important;color:#f2f7f4!important}
+
+/* All main cards/panels use Scanner card gradient. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body :is(
+  .card,.panel,.section-card,.settings-card,.control-card,.dashboard-card,.stat-card,
+  .modal-content,.dialog-content,.popover,.dropdown,.dropdown-menu,.notification-dropdown,
+  .master-card,.master-panel,.detail-card,.announcement-detail-wrap,.supplier-card,.receiving-card,
+  #yardivoNotificationHistory,.y5-history-card,#yardivoSmartEngineSettingsV583,#qrMobileSettingsPanel,
+  #yardivoExecutiveLive,#yardivoCtLiveFlow,#rampTopdownPanel
+){
+  background:linear-gradient(180deg,rgba(18,29,22,.94),rgba(9,15,11,.97))!important;
+  border-color:rgba(255,255,255,.10)!important;
+  color:#f2f7f4!important;
+  box-shadow:0 18px 55px rgba(0,0,0,.28)!important;
+}
+
+/* Nested cells and table surfaces. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body :is(
+  table,tbody,tfoot,.table-wrap,.grid-wrap,.list-wrap,.cell,.yse-field,.yctf-stage,.yctf-truck,
+  .schedule-cell,.dock-cell,.time-cell,.ramp-capacity-card,.capacity-card
+){background:#08100b!important;border-color:rgba(255,255,255,.07)!important;color:#f2f7f4!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body :is(thead,thead tr,thead th,.table-head){
+  background:#0e1712!important;color:#a9bbb0!important;border-color:rgba(255,255,255,.09)!important
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body tbody tr:hover,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body tbody tr:hover td{
+  background:#111d16!important
+}
+
+/* Inputs exactly follow Scanner login field language. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body :is(input,select,textarea){
+  background:#08100b!important;color:#f2f7f4!important;border-color:rgba(255,255,255,.10)!important;
+  caret-color:#54f28b!important
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body :is(input,select,textarea):focus{
+  border-color:rgba(84,242,139,.60)!important;
+  box-shadow:0 0 0 4px rgba(84,242,139,.08)!important;outline:none!important
+}
+
+/* Navigation + buttons: green interaction, never legacy blue. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body .nav-btn,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body .sidebar button,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body .sidebar a{
+  background:transparent!important;color:#c9d6ce!important;border-color:transparent!important
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body .nav-btn:hover,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body .sidebar button:hover,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body .sidebar a:hover{
+  background:#111d16!important;color:#f2f7f4!important;border-color:rgba(84,242,139,.12)!important
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body .nav-btn.active,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body .sidebar .active,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body [aria-current="page"]{
+  background:rgba(84,242,139,.10)!important;color:#54f28b!important;border-color:rgba(84,242,139,.24)!important;
+  box-shadow:inset 3px 0 0 #54f28b!important
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body :is(
+  .btn-primary,.primary,.yse-save,#yardivoScannerOpenV583,button[data-primary="true"]
+){
+  background:linear-gradient(180deg,#64f69a,#36d878)!important;color:#041309!important;
+  border-color:rgba(84,242,139,.30)!important;box-shadow:0 12px 32px rgba(54,216,120,.16)!important
+}
+
+/* Neutral buttons inherit Scanner secondary control. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body button:not(.danger):not(.btn-danger):not(.btn-primary):not(.primary):not(.yse-save):not(#yardivoScannerOpenV583){
+  background:#111d16!important;color:#e8f3ec!important;border-color:rgba(255,255,255,.10)!important
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body button:not(.danger):not(.btn-danger):hover{
+  border-color:rgba(84,242,139,.28)!important;filter:brightness(1.045)
+}
+
+/* Text + accents. Semantic red/yellow/orange remain untouched. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body :is(
+  .muted,.subtle,.secondary-text,.hint,.help,.description,small
+){color:#91a298!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body :is(
+  a,.accent,.green,.success:not(.status-red):not(.status-yellow):not(.status-orange),
+  .live,.online,.selected:not(.status-red):not(.status-yellow):not(.status-orange)
+){color:#54f28b}
+
+/* Operational canvas/map shells also remove navy in Scanner mode. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"]{
+  --yardivo-map-bg:#07110c!important;--yardivo-map-bg-2:#0e1712!important;
+  --yardivo-map-line:#274033!important;--yardivo-map-accent:#54f28b!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] body :is(
+  #myYard .myy-stage,#yardivoMyYardWebGL,#yardivoWarRoom #wrYardCanvas,#yardivoWarRoomMyYardMirror,
+  #weeklyMap,#dailyMap,#heatmap,[id*="Map"] .map,[class*="yard-map"],[class*="warehouse-map"]
+){background:#07110c!important;border-color:#274033!important}
+
+/* Scanner-like soft green pointer aura only in DARK / GREEN. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="graphite"] #yardivoCursorGlowV583{
+  width:420px!important;height:420px!important;
+  background:radial-gradient(circle,rgba(84,242,139,.11) 0,rgba(84,242,139,.045) 31%,transparent 69%)!important;
+  filter:none!important;mix-blend-mode:normal!important
+}
+html:not([data-yardivo-dark-look="graphite"]) #yardivoCursorGlowV583{display:none!important}
+
+/* Theme chooser presentation. */
+#yardivoDarkStyleSettings .yardivo-dark-style-option strong{font-size:12px!important;letter-spacing:.025em}
+#yardivoDarkStyleSettings .yardivo-dark-style-option small{font-size:9px!important;opacity:.76!important}
+#yardivoThemeSettingsV2 .yt-note{line-height:1.45!important}
+@media(max-width:720px){#yardivoDarkStyleSettings .yardivo-dark-style-options,#yardivoThemeSettingsV2 .yt-row{grid-template-columns:1fr!important}}
+</style>
+<script id="yardivo-v583-scanner-theme-authority-js">
+(function(){'use strict';
+const K='yardivo_dark_look_v2',LEG='yardivo_dark_style';
+function normalize(){
+  const v=localStorage.getItem(K);
+  if(v==='blue'){
+    localStorage.setItem(K,'original');
+    try{localStorage.setItem(LEG,'original')}catch(_){}
+    document.documentElement.dataset.yardivoDarkLook='original';
+  }
+}
+function labelOption(el,title,desc){
+  if(!el)return;
+  const s=el.querySelector('strong'); if(s)s.textContent=title;
+  const sm=el.querySelector('small'); if(sm)sm.textContent=desc;
+  if(el.tagName==='BUTTON')el.textContent=title;
+  el.setAttribute('aria-label',title);
+}
+function refreshThemeUI(){
+  normalize();
+  labelOption(document.querySelector('#yardivoDarkStyleSettings .yardivo-dark-style-option[data-dark-style="original"]'),'ORIGINAL YARDIVO','Originalni tamno-plavi YARDIVO izgled.');
+  labelOption(document.querySelector('#yardivoDarkStyleSettings .yardivo-dark-style-option[data-dark-style="graphite"]'),'DARK / GREEN','Scanner stil · crna podloga, tamno-zeleni paneli i green glow.');
+  labelOption(document.querySelector('#yardivoThemeSettingsV2 [data-dark-look="original"]'),'ORIGINAL YARDIVO','');
+  labelOption(document.querySelector('#yardivoThemeSettingsV2 [data-dark-look="graphite"]'),'DARK / GREEN','');
+  document.querySelectorAll('#yardivoDarkStyleSettings .yardivo-dark-style-option[data-dark-style="blue"],#yardivoThemeSettingsV2 [data-dark-look="blue"]').forEach(x=>x.style.display='none');
+  const title=document.querySelector('#yardivoDarkStyleSettings .master-card-title,#yardivoDarkStyleSettings h3,#yardivoDarkStyleSettings h4,#yardivoThemeSettingsV2 .yt-title');
+  if(title)title.textContent='DARK MODE · IZGLED';
+  const note=document.querySelector('#yardivoThemeSettingsV2 .yt-note');
+  if(note)note.textContent='ORIGINAL YARDIVO zadržava prvotni tamno-plavi izgled. DARK / GREEN koristi isti vizualni jezik kao YARDIVO Scanner.';
+}
+normalize();
+window.addEventListener('load',()=>setTimeout(refreshThemeUI,500));
+document.addEventListener('click',e=>{
+  const x=e.target.closest?.('[data-dark-look],[data-dark-style]');
+  if(!x)return;
+  const v=x.dataset.darkLook||x.dataset.darkStyle;
+  if(v==='blue'){e.preventDefault();e.stopImmediatePropagation();localStorage.setItem(K,'original');try{localStorage.setItem(LEG,'original')}catch(_){}}
+  setTimeout(refreshThemeUI,0);
+},true);
+new MutationObserver(()=>refreshThemeUI()).observe(document.documentElement,{childList:true,subtree:true});
+window.YardivoScannerThemeV583={refresh:refreshThemeUI};
+})();
+</script>
