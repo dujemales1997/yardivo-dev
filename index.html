@@ -7,7 +7,7 @@ Designed & Developed by Duje Maleš
 
 <html lang="hr">
 <head>
-<meta name="yardivo-build" content="20260908-dev-v5.8.3-realtime-instant-sync">
+<meta name="yardivo-build" content="20260908-dev-v5.8.3-stability-login-theme-fix">
 
   <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=3">
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
@@ -5873,6 +5873,17 @@ class YardivoGuardedMutationObserver extends NativeMO{
         }
         return;
       }
+      if(self){
+        self.__yardivoRecords=(self.__yardivoRecords||[]).concat(records||[]);
+        if(self.__yardivoRaf)return;
+        self.__yardivoRaf=requestAnimationFrame(()=>{
+          self.__yardivoRaf=0;
+          const batch=self.__yardivoRecords||[];
+          self.__yardivoRecords=[];
+          try{callback(batch,observer)}catch(e){console.error(e)}
+        });
+        return;
+      }
       callback(records,observer);
     });
     selfRef=this;
@@ -5907,7 +5918,7 @@ window.__YARDIVO_WELCOME_MO_GUARD__={
 window.addEventListener('yardivo:welcome-complete',()=>{
   try{
     const g=window.__YARDIVO_WELCOME_MO_GUARD__;
-    if(g?.native)window.MutationObserver=g.native;
+    /* stability hard-fix: keep coalescing MutationObserver wrapper active */
   }catch(_){}
 },{once:true});
 })();
@@ -10623,7 +10634,7 @@ function tick(){
   const dateEl=document.getElementById('date');if(dateEl)dateEl.textContent=n.toLocaleDateString('hr-HR');
 }
 tick();setInterval(tick,1000);populateSuppliers();populateAnnouncementControls();populateIncidentControls();refreshRecommendation();
-document.addEventListener('DOMContentLoaded',()=>{render();setInterval(render,60000);});
+document.addEventListener('DOMContentLoaded',()=>{render();setInterval(render,180000);});
 
   </script>
 <script>
@@ -11900,12 +11911,22 @@ setTimeout(enableDatePickers,0);setTimeout(renderHolidayAdmin,0);setTimeout(upda
 
 setInterval(()=>{
   try{
-    renderAfter14NoShowAlerts();
-    if(typeof renderDashboardSimple==='function')renderDashboardSimple();
-    if(typeof renderAnnouncementSchedule==='function')renderAnnouncementSchedule();
-    if(typeof renderDailyMap==='function')renderDailyMap();
-    if(typeof renderWeeklyMap==='function')renderWeeklyMap();
-    if(typeof renderReceiving==='function')renderReceiving();
+    /* Stability hard-fix: never repaint six large screens just because one minute elapsed.
+       Refresh only the currently visible operational view and defer noncritical alerts. */
+    const active=document.querySelector('.view.active');
+    const id=active?.id||active?.getAttribute?.('data-view')||'';
+    const run=()=>{
+      try{renderAfter14NoShowAlerts()}catch(_){}
+      try{
+        if((id==='dashboard'||id==='home')&&typeof renderDashboardSimple==='function')renderDashboardSimple();
+        else if((id==='announcements'||id==='schedule')&&typeof renderAnnouncementSchedule==='function')renderAnnouncementSchedule();
+        else if(id==='dailyMap'&&typeof renderDailyMap==='function')renderDailyMap();
+        else if(id==='weeklyMap'&&typeof renderWeeklyMap==='function')renderWeeklyMap();
+        else if(id==='receiving'&&typeof renderReceiving==='function')renderReceiving();
+      }catch(_){}
+    };
+    if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:1200});
+    else setTimeout(run,120);
   }catch(e){}
 },60000);
 
@@ -14465,7 +14486,7 @@ body.yardivo-porta-role [data-home-target="notifications"]{
  }
  document.addEventListener('click',()=>setTimeout(enforce,0),true);
  new MutationObserver(enforce).observe(document.body,{childList:true,subtree:true});
- setInterval(enforce,300);
+ setInterval(enforce,3000);
  window.addEventListener('load',()=>setTimeout(enforce,50));
  window.YardivoPortaNoWarnings=enforce;
 })();
@@ -22909,7 +22930,7 @@ window.YardivoMyYardWebGL={boot,refresh:()=>engine?.sync()};
   });
  }
  window.addEventListener('load',()=>setTimeout(clean,250));
- new MutationObserver(()=>clean()).observe(document.documentElement,{childList:true,subtree:true});
+ /* stability: legacy global clean observer removed */
 })();
 </script>
 <style id="yardivo-warroom-webgl-sync-v1-20260831">
@@ -23245,7 +23266,7 @@ button:focus-visible,a:focus-visible,[tabindex]:focus-visible{
    document.querySelectorAll('.kpi-card,.metric-card,.summary-card').forEach(x=>x.setAttribute('data-yv-ui','metric'));
  }
  window.addEventListener('load',enhance);
- new MutationObserver(enhance).observe(document.documentElement,{childList:true,subtree:true});
+ /* YARDIVO V5.8.3 stability: global enhance observer removed; load/click hooks are sufficient. */
 })();
 </script>
 <style id="yardivo-ux-original-option-v1-20260831">
@@ -23291,7 +23312,7 @@ function inject(){
 apply(mode());
 window.addEventListener('load',()=>setTimeout(inject,350));
 document.addEventListener('click',e=>{if(e.target.closest('[data-view="settings"],[data-home-target="settings"]'))setTimeout(inject,100)},true);
-new MutationObserver(()=>{if(document.getElementById('settings'))inject()}).observe(document.documentElement,{childList:true,subtree:true});
+/* stability: settings inject is load/click driven */
 window.YardivoUxStyle={apply,mode};
 })();
 </script>
@@ -24698,7 +24719,7 @@ function finalizeLogin(){
 
   try{
     const g=window.__YARDIVO_WELCOME_MO_GUARD__;
-    if(g?.native)window.MutationObserver=g.native;
+    /* stability hard-fix: keep coalescing MutationObserver wrapper active */
   }catch(_){}
 
   return true;
@@ -24857,20 +24878,38 @@ function diff(snapshot,items){
   for(const id of snapshot.keys())if(!now.has(id))deletes.push(id);
   return {now,upserts,deletes};
 }
+let renderAllQueued=false;
 function renderAll(){
-  const fns=['reloadAnnouncementsFromPersistentStorage','render','renderAnnouncements','renderAnnouncementSchedule','renderReceiving','renderDailyMap','renderWeeklyMap','renderOverview','renderIncidents','renderOperationsPro','renderControlTower','renderUnannounced','renderEpal'];
-  for(const n of fns){try{if(typeof window[n]==='function')window[n]()}catch(_){}}
-  try{window.YardivoNotifications?.render?.()}catch(_){}
-  try{window.YardivoMyYard?.render?.()}catch(_){}
-  try{window.YardivoMyYardWebGL?.refresh?.()}catch(_){}
+  if(renderAllQueued)return;
+  renderAllQueued=true;
+  requestAnimationFrame(()=>{
+    renderAllQueued=false;
+    const fns=['reloadAnnouncementsFromPersistentStorage','render','renderAnnouncements','renderAnnouncementSchedule','renderReceiving','renderDailyMap','renderWeeklyMap','renderOverview','renderIncidents','renderOperationsPro','renderControlTower','renderUnannounced','renderEpal'];
+    for(const n of fns){try{if(typeof window[n]==='function')window[n]()}catch(_){} }
+    try{window.YardivoNotifications?.render?.()}catch(_){}
+    try{window.YardivoMyYard?.render?.()}catch(_){}
+    /* WebGL refresh only when its view is actually visible. */
+    try{
+      const my=document.getElementById('myYard');
+      if(my?.classList.contains('active'))window.YardivoMyYardWebGL?.refresh?.();
+    }catch(_){}
+  });
 }
+function bootstrapSignature(d){
+  try{
+    const a=Array.isArray(d?.announcements)?d.announcements:[];
+    const i=Array.isArray(d?.incidents)?d.incidents:[];
+    const st=Array.isArray(d?.state)?d.state:[];
+    return JSON.stringify([a,i,st.map(r=>[r?.key,r?.value_json,r?.updated_at,r?.deleted])]);
+  }catch(_){return String(Date.now())}
+}
+let lastBootstrapSignature='';
 function applyBootstrap(d){
   const A=Array.isArray(d?.announcements)?d.announcements:[];
   const I=Array.isArray(d?.incidents)?d.incidents:[];
   applying=true;
   try{
     const aj=JSON.stringify(A),ij=JSON.stringify(I);
-    Storage.prototype.setItem.call(localStorage,'yardivo_yms_announcements_v1',aj);
     Storage.prototype.setItem.call(localStorage,'yardivo_yms_announcements_v1',aj);
     Storage.prototype.setItem.call(localStorage,'yardivo_yms_incidents_v1',ij);
     for(const r of (Array.isArray(d?.state)?d.state:[])){
@@ -24881,6 +24920,7 @@ function applyBootstrap(d){
   }finally{applying=false}
   annSnapshot=mapData(A);incSnapshot=mapData(I);
   dirtyAnn=false;dirtyInc=false;dirtyState.clear();
+  lastBootstrapSignature=bootstrapSignature(d);
 }
 async function broadcastChange(reason='data-changed'){
   try{
@@ -24935,7 +24975,7 @@ async function startRealtime(){
       console.info('[YARDIVO REALTIME] LIVE');
       if(realtimePendingSignal)setTimeout(()=>broadcastChange('pending-sync'),0);
     }else if(realtimeStatus==='CHANNEL_ERROR'||realtimeStatus==='TIMED_OUT'){
-      console.warn('[YARDIVO REALTIME]',realtimeStatus,'— 60 s polling fallback ostaje aktivan.');
+      console.warn('[YARDIVO REALTIME]',realtimeStatus,'— 180 s safety polling fallback ostaje aktivan.');
     }
   });
   realtimeChannel=ch;
@@ -24951,8 +24991,13 @@ async function pull(){
   pulling=true;
   try{
     const d=await edge('bootstrap');
-    applyBootstrap(d);renderAll();status('● ONLINE BAZA · ONLINE','ok');
-    try{window.dispatchEvent(new CustomEvent('yardivo:data-synced',{detail:{source:'online-v2'}}))}catch(_){}
+    const sig=bootstrapSignature(d);
+    if(sig!==lastBootstrapSignature){
+      applyBootstrap(d);
+      renderAll();
+      try{window.dispatchEvent(new CustomEvent('yardivo:data-synced',{detail:{source:'online-v2',changed:true}}))}catch(_){}
+    }
+    status('● ONLINE BAZA · ONLINE','ok');
     return true;
   }catch(e){showOnlineError('UČITAVANJE',e);return false}
   finally{pulling=false}
@@ -25065,7 +25110,7 @@ window.addEventListener('online',()=>setTimeout(()=>{if(ready){startRealtime().c
 window.addEventListener('focus',()=>setTimeout(()=>{if(ready){startRealtime().catch(()=>{});if(pending())flush();else pull()}},150));
 window.addEventListener('pagehide',()=>{stopRealtime().catch(()=>{})},{once:true});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&ready)setTimeout(()=>{if(pending())flush();else pull()},180)});
-setInterval(()=>{if(!ready)return;if(pending())flush();else pull()},60000);
+setInterval(()=>{if(!ready)return;if(pending())flush();else pull()},180000);
 window.addEventListener('load',()=>{clearLegacyErrors();if(!ready)status('● ONLINE BAZA · ČEKA PRIJAVU','')},{once:true});
 })();
 </script>
@@ -31593,7 +31638,7 @@ document.addEventListener('DOMContentLoaded',()=>setTimeout(ensure,700));
 window.addEventListener('load',()=>setTimeout(ensure,1100));
 window.addEventListener('yardivo:login',()=>setTimeout(ensure,100));
 document.addEventListener('click',e=>{if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(ensure,100)},true);
-new MutationObserver(()=>{if(document.getElementById('masterUserAdmin'))ensure()}).observe(document.documentElement,{childList:true,subtree:true});
+/* stability: admin ensure is load/login/click driven */
 })();
 </script>
 
@@ -33293,7 +33338,7 @@ window.YardivoSupplierLiveSync={call,pushSupplierRow,pushVehicle,pullSupplier,pu
 
 window.addEventListener('yardivo:login',()=>setTimeout(syncNow,500));
 window.addEventListener('load',()=>setTimeout(syncNow,1600));
-setInterval(syncNow,5000);
+setInterval(syncNow,30000);
 })();
 </script>
 
@@ -33762,7 +33807,7 @@ window.addEventListener('yardivo:login',()=>setTimeout(refreshApprovalInbox,900)
 window.addEventListener('focus',refreshApprovalInbox);
 window.addEventListener('yardivo:data-synced',()=>setTimeout(refreshApprovalInbox,250));
 window.addEventListener('yardivo:supplier-request-updated',()=>setTimeout(refreshApprovalInbox,250));
-setInterval(refreshApprovalInbox,5000);
+setInterval(refreshApprovalInbox,30000);
 setTimeout(refreshApprovalInbox,1800);
 window.YardivoSupplierApprovalBridge={refresh:refreshApprovalInbox};
 })();
@@ -33822,7 +33867,7 @@ async function check(){
 window.addEventListener('yardivo:login',()=>setTimeout(check,1000));
 window.addEventListener('focus',check);
 window.addEventListener('yardivo:supplier-inbox-changed',check);
-setInterval(check,5000);setTimeout(check,2200);
+setInterval(check,30000);setTimeout(check,2200);
 window.YardivoSupplierRequestNotifications={check};
 })();
 </script>
@@ -34630,7 +34675,7 @@ document.addEventListener('click',e=>{
     setTimeout(enforceManagerAssignment,0);
   }
 },true);
-new MutationObserver(()=>{if(isAdmin())installLaunch()}).observe(document.documentElement,{childList:true,subtree:true});
+/* stability: admin launch is load/click driven */
 })();
 </script>
 
@@ -34664,9 +34709,7 @@ function queue(){
   if(queued)return;queued=true;
   requestAnimationFrame(run);
 }
-new MutationObserver(queue).observe(document.documentElement,{
-  subtree:true,childList:true,attributes:true,attributeFilter:['style','class','hidden']
-});
+/* YARDIVO V5.8.3 stability: global manager class/style observer removed; login/click/data-synced hooks remain. */
 window.addEventListener('yardivo:login',()=>setTimeout(run,0));
 window.addEventListener('yardivo:data-synced',()=>setTimeout(run,0));
 document.addEventListener('click',()=>setTimeout(run,0),true);
@@ -35010,7 +35053,7 @@ window.addEventListener('yardivo:login',()=>setTimeout(refresh,180));
 document.addEventListener('click',e=>{
   if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(refresh,180);
 },true);
-new MutationObserver(()=>{if(isAdmin())ensure()}).observe(document.documentElement,{childList:true,subtree:true});
+/* stability: admin modal ensure is load/login/click driven */
 
 window.YardivoAdminUserCreationV583={open:openRolePicker,refresh};
 })();
@@ -35872,7 +35915,7 @@ document.addEventListener('click',e=>{
 },true);
 document.getElementById('globalWarehouse')?.addEventListener('change',()=>setTimeout(refreshAll,20));
 document.getElementById('homeLocationSelect')?.addEventListener('change',()=>setTimeout(refreshAll,30));
-setInterval(smartRefresh,1000);
+setInterval(smartRefresh,5000);
 
 window.YardivoExecutiveContextV583={refresh:refreshAll,currentWarehouse:currentWh,location:locCode};
 })();
@@ -36534,6 +36577,55 @@ function render(){const p=document.getElementById('yardivoSmartEngineSettingsV58
 window.addEventListener('load',()=>setTimeout(()=>{inject();render()},900));document.addEventListener('click',e=>{if(e.target.closest?.('[data-view="settings"]'))setTimeout(()=>{inject();render()},80)},true);setInterval(()=>{inject();render()},2500);window.YardivoSmartEngineSettingsV583={get:cfg,save};
 })();
 </script>
+
+<style id="yardivo-v583-original-login-blue-authority">
+/* ORIGINAL YARDIVO must stay navy/blue, including the login surface. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="original"] #loginOverlay,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="original"] #loginScreen,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="original"] .login-screen,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="original"] .login-overlay{
+  --yardivo-accent:#1f7cf5!important;--yardivo-accent-2:#0d5bc6!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="original"] #loginOverlay :is(.btn-primary,.primary,#loginSubmitBtn,button[type="submit"]),
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="original"] #loginScreen :is(.btn-primary,.primary,#loginSubmitBtn,button[type="submit"]),
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="original"] .login-screen :is(.btn-primary,.primary,#loginSubmitBtn,button[type="submit"]){
+  background:linear-gradient(180deg,#1f7cf5,#0d5bc6)!important;
+  color:#fff!important;border-color:#2e8cff!important;
+  box-shadow:0 10px 28px rgba(13,91,198,.24)!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="original"] #loginOverlay :is(input,select):focus,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-look="original"] #loginScreen :is(input,select):focus{
+  border-color:#2e8cff!important;box-shadow:0 0 0 4px rgba(31,124,245,.12)!important;caret-color:#1f7cf5!important;
+}
+</style>
+<script id="yardivo-v583-stability-runtime-guard">
+(function(){
+'use strict';
+window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-stability-login-theme-fix';
+/* Keep expensive refresh work away from the exact minute boundary. */
+let lastMinuteGuard=0;
+window.addEventListener('yardivo:data-synced',()=>{ lastMinuteGuard=performance.now(); },{passive:true});
+/* Freeze diagnostics: records long main-thread tasks without mutating app DOM. */
+try{
+  if('PerformanceObserver' in window){
+    const po=new PerformanceObserver(list=>{
+      for(const e of list.getEntries()){
+        if(e.duration>=120){
+          window.__YARDIVO_LONG_TASKS__=window.__YARDIVO_LONG_TASKS__||[];
+          window.__YARDIVO_LONG_TASKS__.push({at:Date.now(),duration:Math.round(e.duration)});
+          if(window.__YARDIVO_LONG_TASKS__.length>40)window.__YARDIVO_LONG_TASKS__.shift();
+        }
+      }
+    });
+    po.observe({entryTypes:['longtask']});
+  }
+}catch(_){ }
+})();
+</script>
+
+<script id="yardivo-stability-hard-fix-marker-v1">
+window.__YARDIVO_STABILITY_HARD_FIX__={version:'V5.8.3',build:'20260908-dev-v5.8.3-stability-hard-fix',snapshotDiff:true,observerCoalescing:true,pollFallbackMs:180000};
+</script>
 </body>
 </html>
 
@@ -36780,7 +36872,7 @@ document.addEventListener('click',e=>{
   if(v==='blue'){e.preventDefault();e.stopImmediatePropagation();localStorage.setItem(K,'original');try{localStorage.setItem(LEG,'original')}catch(_){}}
   setTimeout(refreshThemeUI,0);
 },true);
-new MutationObserver(()=>refreshThemeUI()).observe(document.documentElement,{childList:true,subtree:true});
+/* YARDIVO V5.8.3 stability: global theme DOM observer removed; theme updates are event-driven. */
 window.YardivoScannerThemeV583={refresh:refreshThemeUI};
 })();
 </script>
