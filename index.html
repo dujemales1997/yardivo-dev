@@ -39410,3 +39410,131 @@ $('ysmUse')?.addEventListener('click',()=>{if(!pick){alert('Odaberi termin i ram
 window.YardivoSupplierSlotMapV583={open,free};
 })();
 </script>
+
+<style id="yardivo-v583-voice-notification-style">
+#yardivoVoiceSettingsV583{margin-top:12px;border:1px solid #294c61;border-radius:10px;background:#081c28;padding:12px}
+#yardivoVoiceSettingsV583 .yv-title{font-size:9px;font-weight:950;color:#fff;letter-spacing:.5px}
+#yardivoVoiceSettingsV583 .yv-sub{font-size:7px;color:#87a3b3;margin:4px 0 10px}
+#yardivoVoiceSettingsV583 .yv-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid #173747}
+#yardivoVoiceSettingsV583 .yv-row:first-of-type{border-top:0}
+#yardivoVoiceSettingsV583 label{font-size:7px;font-weight:900;color:#c8dce6}
+#yardivoVoiceSettingsV583 button{border:1px solid #35617a;background:#0d2b3b;color:#fff;border-radius:7px;padding:7px 10px;font-size:7px;font-weight:950;cursor:pointer}
+#yardivoVoiceSettingsV583 input[type=range]{width:min(250px,42vw)}
+#yardivoVoiceStatusV583{font-size:6.5px;color:#87a7b8}
+#yardivoVoiceVolumeValueV583{font-size:7px;color:#fff;font-weight:900;min-width:34px;text-align:right}
+</style>
+
+<script id="yardivo-v583-voice-notifications-hr-female">
+(function(){
+'use strict';
+const KEY='yardivo_voice_notifications_v583';
+const SPOKEN='yardivo_voice_spoken_v583';
+const defaults={enabled:false,volume:0.85};
+let queue=[],speaking=false,baselineReady=false;
+
+function cfg(){try{return Object.assign({},defaults,JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(_){return{...defaults}}}
+function save(x){localStorage.setItem(KEY,JSON.stringify(Object.assign(cfg(),x)));renderSettings()}
+function spoken(){try{return new Set(JSON.parse(localStorage.getItem(SPOKEN)||'[]'))}catch(_){return new Set}}
+function mark(id){const x=spoken();x.add(String(id));localStorage.setItem(SPOKEN,JSON.stringify([...x].slice(-1200)))}
+function voices(){try{return speechSynthesis.getVoices()||[]}catch(_){return[]}}
+function femaleHrVoice(){
+ const a=voices().filter(v=>/^hr(?:-|$)/i.test(String(v.lang||'')));
+ if(!a.length)return null;
+ return a.find(v=>/female|žensk|zens|lana|ivana|gabrijela|croat/i.test(String(v.name||'')))||a[0]||null;
+}
+function available(){return !!(window.speechSynthesis&&window.SpeechSynthesisUtterance&&femaleHrVoice())}
+function normTime(t){
+ const m=String(t||'').match(/(\d{1,2}):(\d{2})/);if(!m)return'';
+ return `${Number(m[1])} sati${Number(m[2])?` i ${Number(m[2])} minuta`:''}`;
+}
+function clean(s){return String(s||'').replace(/\bID[:#]?\s*[\w-]+/gi,'').replace(/\s+/g,' ').trim()}
+function speechText(n){
+ const title=String(n?.title||'').toUpperCase(),b=clean(n?.body||'');
+ const wh=String(window.YardivoNotifications?.resolvedWarehouse?.(n)||n?.warehouse||'').toUpperCase();
+ const supplier=clean(n?.supplier||n?.meta?.supplier||'');
+ const dock=String(n?.dock||n?.meta?.dock||'').replace(/^R/i,'');
+ const t=normTime(n?.time||n?.meta?.time||'');
+ const pallets=Number(n?.pallets||n?.meta?.pallets||0);
+
+ if(/SMART/.test(title)) return clean(`YARDIVO Smart obavijest. ${wh?`Skladište ${wh}. `:''}${b}`);
+ if(/NAJAV/.test(title)||String(n?.event||'').toUpperCase()==='SUPPLIER_REQUEST')
+   return clean(`Nova najava dobavljača. ${supplier?`${supplier}. `:''}${wh?`Skladište ${wh}. `:''}${t?`Termin ${t}. `:''}${dock?`Rampa ${dock}. `:''}${pallets?`Količina ${pallets} paleta. `:''}${b}`);
+ if(/DVORIŠT|DVORIST|DOLAZAK/.test(title)) return clean(`${wh?`Skladište ${wh}. `:''}${supplier?`Dobavljač ${supplier}. `:''}Kamion je stigao u dvorište. ${b}`);
+ if(/NA RAMPI|RAMPA/.test(title)) return clean(`${wh?`Skladište ${wh}. `:''}${supplier?`Dobavljač ${supplier}. `:''}Kamion je stigao na rampu${dock?' '+dock:''}. ${b}`);
+ if(/ZAPRIMLJEN/.test(title)) return clean(`${wh?`Skladište ${wh}. `:''}${supplier?`Dobavljač ${supplier}. `:''}Isporuka je zaprimljena. ${b}`);
+ if(/IZLAZ|IZAŠAO|IZASAO|ODLAZAK/.test(title)) return clean(`${wh?`Skladište ${wh}. `:''}${supplier?`Dobavljač ${supplier}. `:''}Kamion je napustio lokaciju. ${b}`);
+ return clean(`${wh?`Skladište ${wh}. `:''}${n?.title||'Nova obavijest'}. ${b}`);
+}
+function say(text,onDone){
+ const v=femaleHrVoice();if(!v){onDone?.();return false}
+ const u=new SpeechSynthesisUtterance(text);u.lang='hr-HR';u.voice=v;u.volume=Math.max(0,Math.min(1,Number(cfg().volume)||0));u.rate=.94;u.pitch=1.02;
+ u.onend=()=>onDone?.();u.onerror=()=>onDone?.();
+ try{speechSynthesis.speak(u);return true}catch(_){onDone?.();return false}
+}
+function pump(){
+ if(speaking||!queue.length||!cfg().enabled)return;
+ const n=queue.shift();speaking=true;
+ say(speechText(n),()=>{speaking=false;setTimeout(pump,180)});
+}
+function enqueue(n){
+ if(!cfg().enabled||!available()||!n?.id)return;
+ if(window.YardivoNotifications?.visible&&!window.YardivoNotifications.visible(n))return;
+ const x=spoken();if(x.has(String(n.id)))return;
+ mark(n.id);queue.push(n);pump();
+}
+function test(){
+ const v=femaleHrVoice();
+ if(!v){alert('Na ovom uređaju nije pronađen hrvatski glas. YARDIVO neće koristiti drugi jezik ili namjerno odabrani muški zamjenski glas.');renderSettings();return}
+ try{speechSynthesis.cancel()}catch(_){}
+ queue=[];speaking=true;
+ say('Nova najava dobavljača. Podravka je najavila isporuku u skladište W101. Dolazak je planiran u 14 sati i 30 minuta, na rampi 3. Količina isporuke je 24 palete.',()=>{speaking=false});
+}
+function stop(){queue=[];speaking=false;try{speechSynthesis.cancel()}catch(_){}}
+function installSettings(){
+ if(document.getElementById('yardivoVoiceSettingsV583'))return;
+ let host=document.querySelector('[data-settings-category="other"],#settingsOther,#otherSettings,#settingsMisc,.yardivo-settings-section[data-category="other"]');
+ if(!host){
+  const hs=[...document.querySelectorAll('.yardivo-settings-section')];
+  host=hs.find(x=>/OSTALE POSTAVKE/i.test(x.textContent||''))||hs[hs.length-1];
+ }
+ if(!host)return;
+ const d=document.createElement('div');d.id='yardivoVoiceSettingsV583';
+ d.innerHTML=`<div class="yv-title">GLASOVNE NOTIFIKACIJE</div><div class="yv-sub">Čita samo novu notifikaciju koja se pojavi desno i koju korisnik smije vidjeti prema ulozi i skladištu. Backend se ne mijenja.</div>
+ <div class="yv-row"><label>HRVATSKI ŽENSKI GLAS</label><button type="button" id="yardivoVoiceToggleV583">OFF</button></div>
+ <div class="yv-row"><label>GLASNOĆA</label><div style="display:flex;align-items:center;gap:8px"><input id="yardivoVoiceVolumeV583" type="range" min="0" max="100" step="5"><span id="yardivoVoiceVolumeValueV583"></span></div></div>
+ <div class="yv-row"><div><label>TEST GLASA</label><div id="yardivoVoiceStatusV583"></div></div><button type="button" id="yardivoVoiceTestV583">TESTIRAJ GLAS</button></div>`;
+ host.appendChild(d);
+ d.querySelector('#yardivoVoiceToggleV583').onclick=()=>{const on=!cfg().enabled;save({enabled:on});if(!on)stop()};
+ d.querySelector('#yardivoVoiceTestV583').onclick=test;
+ d.querySelector('#yardivoVoiceVolumeV583').oninput=e=>save({volume:Number(e.target.value)/100});
+ renderSettings();
+}
+function renderSettings(){
+ const c=cfg(),b=document.getElementById('yardivoVoiceToggleV583'),r=document.getElementById('yardivoVoiceVolumeV583'),rv=document.getElementById('yardivoVoiceVolumeValueV583'),st=document.getElementById('yardivoVoiceStatusV583');
+ if(b)b.textContent=c.enabled?'ON':'OFF';if(r)r.value=Math.round(c.volume*100);if(rv)rv.textContent=Math.round(c.volume*100)+'%';
+ if(st){const v=femaleHrVoice();st.textContent=v?`Dostupan HR glas: ${v.name}`:'Hrvatski glas nije pronađen na ovom uređaju.'}
+}
+
+/* Voice is attached to the same NEW-notification detection that drives the right-side toast.
+   First pass is baseline only, preventing old notifications from speaking after login/refresh. */
+let known=new Set();
+function scan(){
+ const api=window.YardivoNotifications;if(!api?.visibleAll||!api?.visible)return;
+ let all=[];try{all=api.visibleAll()||[]}catch(_){return}
+ if(!baselineReady){all.forEach(n=>known.add(String(n.id)));baselineReady=true;return}
+ all.forEach(n=>{
+  const id=String(n?.id||'');if(!id||known.has(id))return;known.add(id);
+  if(api.visible(n))enqueue(n);
+ });
+}
+setInterval(scan,700);
+window.addEventListener('yardivo:warehouse-changed',()=>{ /* never replay on warehouse switch */ setTimeout(()=>{try{(window.YardivoNotifications?.visibleAll?.()||[]).forEach(n=>known.add(String(n.id)))}catch(_){}},20)});
+window.addEventListener('load',()=>setTimeout(()=>{installSettings();scan()},900));
+document.addEventListener('click',()=>setTimeout(installSettings,80),true);
+try{speechSynthesis.onvoiceschanged=()=>renderSettings()}catch(_){}
+setTimeout(installSettings,500);
+
+window.YardivoVoiceNotificationsV583={enabled:()=>cfg().enabled,volume:()=>cfg().volume,test,stop,enqueue,speechText,available};
+window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-voice-notifications-hr-female';
+})();
+</script>
