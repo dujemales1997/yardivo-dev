@@ -37799,3 +37799,387 @@ window.YardivoConfirmedSupplierEdit={open};
 window.addEventListener('yardivo:warehouse-changed',()=>{try{window.YardivoSupplierPlannerV580?.refresh?.(false)}catch(_){}});
 window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-supplier-inbox-scope-edit-fix';
 </script>
+
+<style id="yardivo-v583-settings-redesign">
+/* ============================================================
+   YARDIVO DEV V5.8.3 — SETTINGS / WAREHOUSE CAPACITY MANAGER
+   ============================================================ */
+#settings{
+  --set-bg:#071520;
+  --set-card:#0a1c29;
+  --set-card2:#0d2231;
+  --set-line:#244258;
+  --set-muted:#8fa8b9;
+  --set-green:#52df8c;
+  --set-red:#ff7c83;
+  --set-blue:#4ea7f5;
+}
+#settings .section-title{
+  margin-bottom:12px;
+}
+#settings .section-title h1{margin-bottom:3px}
+#settings .section-title p{color:#8199aa!important}
+
+#yardivoSettingsNavV583{
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+  padding:7px;margin:0 0 13px;border:1px solid #203d52;
+  border-radius:10px;background:#071725;position:sticky;top:0;z-index:8;
+}
+#yardivoSettingsNavV583 button{
+  border:1px solid transparent;background:transparent;color:#8ea7b9;
+  border-radius:7px;padding:9px 12px;font-size:8px;font-weight:950;
+  letter-spacing:.025em;cursor:pointer;
+}
+#yardivoSettingsNavV583 button:hover{background:#0d2637;color:#fff}
+#yardivoSettingsNavV583 button.active{
+  background:#123b5d;border-color:#2e6e9e;color:#fff;
+}
+#yardivoSettingsNavV583 .setnav-danger{margin-left:auto;color:#ff9ca1}
+#yardivoSettingsNavV583 .setnav-danger.active{background:#3b171c;border-color:#81333a;color:#fff}
+
+#settings .settings-grid{gap:11px!important}
+#settings .settings-grid>.panel,
+#settings .settings-grid>.danger-zone{
+  border-radius:10px!important;
+  overflow:hidden;
+  border-color:#244156!important;
+  background:linear-gradient(180deg,#0a1b28,#071620)!important;
+}
+#settings .panel-head{padding:13px 15px!important;background:#0b1d2a!important}
+#settings .panel-head h2{font-size:12px!important;color:#fff!important}
+#settings .panel-head small{font-size:7.5px!important;color:#8fa7b8!important}
+#settings .panel-body,.master-settings-body{padding:15px!important}
+
+/* Main ramp manager */
+#receptionRampSettings{border-color:#2d5973!important}
+#receptionRampSettings .panel-head{
+  background:linear-gradient(90deg,#0c2537,#0a1d2a)!important;
+}
+#rampSettingsWarehouseBadge{
+  background:#103c30!important;border-color:#25684e!important;color:#81e8ae!important;
+}
+#receptionRampSettings .form-grid:first-of-type{
+  grid-template-columns:minmax(280px,1fr)!important;
+}
+#receptionRampSettings .form-grid:first-of-type>label:has(#newRampNumber){
+  display:none!important;
+}
+#rampSettingsWarehouse{
+  min-height:42px;font-weight:900;background:#071825!important;color:#fff!important;
+  border-color:#31566e!important;
+}
+#yardivoRampManagerV583{margin-top:12px}
+.yrm-overview{
+  display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;margin-bottom:10px;
+}
+.yrm-kpi{
+  border:1px solid #28475c;background:#091c29;border-radius:8px;padding:11px;
+}
+.yrm-kpi small{display:block;color:#829bad!important;font-size:7px;font-weight:950}
+.yrm-kpi strong{display:block;color:#fff!important;font-size:19px;margin-top:4px}
+.yrm-kpi.on strong{color:#64e99b!important}.yrm-kpi.off strong{color:#ff8f96!important}
+.yrm-control{
+  display:grid;grid-template-columns:minmax(230px,.75fr) minmax(380px,1.25fr);
+  gap:9px;margin-bottom:11px;
+}
+.yrm-box{
+  padding:12px;border:1px solid #27465b;border-radius:9px;background:#0a1c29;
+}
+.yrm-box-title{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:9px}
+.yrm-box-title strong{font-size:9px;color:#fff!important}
+.yrm-box-title small{font-size:7px;color:#8099ab!important}
+.yrm-count-row{display:flex;align-items:center;gap:7px}
+.yrm-count-row button{
+  width:40px;height:40px;border:1px solid #345870;border-radius:7px;
+  background:#102637;color:#fff;font-size:18px;cursor:pointer;
+}
+.yrm-count-row input{
+  width:82px;height:40px;text-align:center;font-size:14px;font-weight:950;
+  border:1px solid #345870;border-radius:7px;background:#061622;color:#fff;
+}
+.yrm-count-row .yrm-apply-count{
+  width:auto;padding:0 13px;font-size:8px;background:#135895;border-color:#287bb7;
+}
+.yrm-hours-master{
+  display:grid;grid-template-columns:1fr 1fr auto;gap:7px;align-items:end;
+}
+.yrm-hours-master label{display:grid;gap:4px;color:#8fa6b7!important;font-size:7px;font-weight:900}
+.yrm-hours-master input{
+  min-height:39px;border:1px solid #345870;border-radius:7px;background:#061622;color:#fff;padding:8px;
+}
+.yrm-hours-master button{height:39px;white-space:nowrap}
+.yrm-help{
+  padding:9px 10px;margin-bottom:10px;border:1px solid #24465d;border-left:3px solid #2d8acb;
+  border-radius:7px;background:#081a27;color:#94acbd!important;font-size:7.5px;line-height:1.5;
+}
+
+/* Ramp cards */
+#rampSettingsList{
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr))!important;
+  gap:9px!important;margin-top:0!important;
+}
+#rampSettingsList .ramp-settings-card{
+  display:block!important;position:relative;padding:12px!important;
+  border-radius:9px!important;background:#0a1d2a!important;border:1px solid #29495f!important;
+  min-height:165px;
+}
+#rampSettingsList .ramp-settings-card.locked{
+  background:#211417!important;border-color:#66363b!important;
+}
+#rampSettingsList .ramp-settings-card>.yrm-ramp-top{
+  display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:9px;
+}
+#rampSettingsList .ramp-settings-card strong{font-size:11px!important;color:#fff!important}
+#rampSettingsList .ramp-settings-card small{font-size:7px!important;color:#91a9ba!important}
+#rampSettingsList .ramp-lock-btn{
+  position:absolute;right:12px;top:12px;
+  width:52px!important;min-width:52px!important;height:26px;padding:0!important;
+  border-radius:999px!important;font-size:0!important;
+  border:1px solid #397353!important;background:#14472f!important;
+}
+#rampSettingsList .ramp-lock-btn:after{
+  content:'ON';font-size:7px;font-weight:950;color:#92f3b6;
+}
+#rampSettingsList .ramp-settings-card.locked .ramp-lock-btn{
+  background:#3a1a1e!important;border-color:#82363e!important;
+}
+#rampSettingsList .ramp-settings-card.locked .ramp-lock-btn:after{
+  content:'OFF';color:#ffadb1;
+}
+#rampSettingsList .ramp-hours-row{
+  grid-template-columns:1fr 1fr!important;gap:7px!important;margin-top:9px!important;
+  padding-top:9px;border-top:1px solid #234155;
+}
+#rampSettingsList .ramp-hours-row label{
+  color:#8fa6b7!important;font-size:7px!important;font-weight:900;
+}
+#rampSettingsList .ramp-hours-row input{
+  background:#061622!important;color:#fff!important;border-color:#34566e!important;
+}
+#rampSettingsList .ramp-hours-save{
+  grid-column:1/-1!important;margin-top:1px!important;
+}
+.yrm-capacity-row{
+  display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end;
+  margin-top:8px;padding-top:8px;border-top:1px solid #213d50;
+}
+.yrm-capacity-row label{
+  display:grid;gap:4px;color:#8fa6b7!important;font-size:7px;font-weight:900;
+}
+.yrm-capacity-row input{
+  min-height:34px;border:1px solid #34566e;border-radius:6px;background:#061622;color:#fff;padding:7px;
+}
+.yrm-capacity-row button{height:34px;white-space:nowrap}
+.yrm-status{
+  display:inline-flex;align-items:center;gap:5px;margin-top:4px;font-size:7px!important;font-weight:950;
+}
+.yrm-status:before{content:'';width:6px;height:6px;border-radius:50%;background:#51df8b;box-shadow:0 0 0 3px rgba(81,223,139,.09)}
+.locked .yrm-status:before{background:#f06b72;box-shadow:0 0 0 3px rgba(240,107,114,.09)}
+
+/* General settings clarity */
+#settings [data-v583-settings-category]{transition:opacity .12s ease}
+#settings .master-note{
+  color:#91aabb!important;background:#091c29!important;border-color:#28475b!important;
+}
+#settings .danger-zone{
+  border-color:#72323a!important;background:linear-gradient(180deg,#251217,#160b0e)!important;
+}
+#settings .danger-zone .panel-head{background:#2a1318!important}
+#settings .danger-zone h2{color:#ff979d!important}
+
+@media(max-width:900px){
+  .yrm-overview{grid-template-columns:repeat(2,1fr)}
+  .yrm-control{grid-template-columns:1fr}
+  #yardivoSettingsNavV583{position:static}
+  #yardivoSettingsNavV583 .setnav-danger{margin-left:0}
+}
+@media(max-width:560px){
+  .yrm-hours-master{grid-template-columns:1fr 1fr}
+  .yrm-hours-master button{grid-column:1/-1}
+}
+</style>
+
+<script id="yardivo-v583-settings-redesign-script">
+(function(){
+'use strict';
+
+const CAP_KEY='yardivo_ramp_capacity_v1';
+const MASTER_HOURS_KEY='yardivo_reception_master_hours_v1';
+let activeCategory='ramps';
+
+function loadJson(key){try{return JSON.parse(localStorage.getItem(key)||'{}')||{}}catch(_){return{}}}
+function saveJson(key,val){localStorage.setItem(key,JSON.stringify(val));try{window.YardivoSupabase?.flush?.()}catch(_){}}
+function wh(){return String(document.getElementById('rampSettingsWarehouse')?.value||'W101').toUpperCase()}
+function count(){return Number(window.YardivoRampConfig?.count?.(wh())||0)}
+function locked(r){return window.YardivoRampConfig?.isLocked?.(wh(),r)===true}
+function getCapacity(w,r){const all=loadJson(CAP_KEY);return Number(all?.[w]?.[String(r)]||33)}
+function setCapacity(w,r,v){
+  const all=loadJson(CAP_KEY);all[w]=all[w]||{};all[w][String(r)]=Math.max(1,Math.min(500,Number(v)||33));saveJson(CAP_KEY,all)
+}
+function getMasterHours(w){
+  const all=loadJson(MASTER_HOURS_KEY);
+  if(all[w])return all[w];
+  try{
+    const base=window.YardivoRampHoursV583?.get?.(w,1);
+    if(base?.from&&base?.to)return {from:base.from,to:base.to};
+  }catch(_){}
+  return {from:'06:00',to:'22:00'}
+}
+function setMasterHours(w,from,to){
+  const all=loadJson(MASTER_HOURS_KEY);all[w]={from,to};saveJson(MASTER_HOURS_KEY,all)
+}
+window.YardivoRampCapacityV583={
+  get:getCapacity,
+  set:setCapacity,
+  all:()=>loadJson(CAP_KEY),
+  masterHours:getMasterHours
+};
+
+function categoryFor(panel){
+  const id=panel.id||'',t=(panel.querySelector('h2')?.textContent||'').toUpperCase();
+  if(id==='receptionRampSettings'||/RAMPA|KAPACITET/.test(t))return'ramps';
+  if(/QR|MOBILE|SKENER|SCANNER/.test(t))return'qr';
+  if(/NERADNI|BLAGDAN|KALENDAR/.test(t))return'calendar';
+  if(panel.classList.contains('danger-zone')||/OPASNA|OBRIŠI/.test(t))return'danger';
+  if(/KORISNIK|USER|PRISTUP|LOZINK|AUTH/.test(t))return'admin';
+  return'general';
+}
+function ensureNav(){
+  const settings=document.getElementById('settings');if(!settings)return;
+  if(!document.getElementById('yardivoSettingsNavV583')){
+    const title=settings.querySelector('.section-title');
+    title?.insertAdjacentHTML('afterend',`<div id="yardivoSettingsNavV583">
+      <button data-setcat="ramps">PRIJAM & RAMPE</button>
+      <button data-setcat="qr">QR & MOBILNO</button>
+      <button data-setcat="calendar">NERADNI DANI</button>
+      <button data-setcat="general">OPĆE</button>
+      <button data-setcat="admin">ADMINISTRACIJA</button>
+      <button class="setnav-danger" data-setcat="danger">OPASNA ZONA</button>
+    </div>`);
+  }
+  settings.querySelectorAll('.settings-grid>.panel,.settings-grid>.danger-zone').forEach(p=>{
+    p.dataset.v583SettingsCategory=categoryFor(p);
+  });
+  applyCategory(activeCategory);
+}
+function applyCategory(cat){
+  activeCategory=cat;
+  const settings=document.getElementById('settings');if(!settings)return;
+  settings.querySelectorAll('#yardivoSettingsNavV583 button').forEach(b=>b.classList.toggle('active',b.dataset.setcat===cat));
+  const panels=[...settings.querySelectorAll('.settings-grid>.panel,.settings-grid>.danger-zone')];
+  let shown=0;
+  panels.forEach(p=>{
+    const roleHidden=p.style.display==='none'&&!['danger'].includes(cat);
+    const match=p.dataset.v583SettingsCategory===cat;
+    if(match){
+      /* Do not override deliberate role security hiding except for ramp panel,
+         whose own role gate remains enforced by the existing settings module. */
+      if(p.id==='receptionRampSettings'){p.style.removeProperty('display')}
+      else if(!roleHidden)p.style.removeProperty('display');
+      if(getComputedStyle(p).display!=='none')shown++;
+    }else p.style.display='none';
+  });
+  if(cat==='ramps')setTimeout(enhanceRampManager,30);
+}
+
+function enhanceRampManager(){
+  const panel=document.getElementById('receptionRampSettings');
+  const host=document.getElementById('rampSettingsList');
+  if(!panel||!host||getComputedStyle(panel).display==='none')return;
+
+  const w=wh(),n=count(),active=Array.from({length:n},(_,i)=>i+1).filter(r=>!locked(r)).length;
+  let manager=document.getElementById('yardivoRampManagerV583');
+  if(!manager){
+    manager=document.createElement('div');manager.id='yardivoRampManagerV583';
+    const note=panel.querySelector('.master-note');
+    (note||host).insertAdjacentElement(note?'afterend':'beforebegin',manager);
+  }
+  const mh=getMasterHours(w);
+  manager.innerHTML=`<div class="yrm-overview">
+    <div class="yrm-kpi"><small>UKUPNO RAMPI</small><strong>${n}</strong></div>
+    <div class="yrm-kpi on"><small>RAMPE ON</small><strong>${active}</strong></div>
+    <div class="yrm-kpi off"><small>RAMPE OFF</small><strong>${Math.max(0,n-active)}</strong></div>
+    <div class="yrm-kpi"><small>RADNO VRIJEME PRIJAMA</small><strong style="font-size:13px">${mh.from} – ${mh.to}</strong></div>
+  </div>
+  <div class="yrm-control">
+    <div class="yrm-box">
+      <div class="yrm-box-title"><div><strong>BROJ RAMPI</strong><small>Određuje koliko rampi ${w} ima u YARDIVO-u</small></div></div>
+      <div class="yrm-count-row"><button data-yrm-minus title="Smanji broj rampi">−</button><input id="yrmRampCount" type="number" min="1" max="50" value="${n}"><button data-yrm-plus title="Povećaj broj rampi">+</button><button class="yrm-apply-count" data-yrm-count-save>SPREMI</button></div>
+    </div>
+    <div class="yrm-box">
+      <div class="yrm-box-title"><div><strong>RADNO VRIJEME PRIJAMA</strong><small>Primijeni isto vrijeme na sve rampe skladišta</small></div></div>
+      <div class="yrm-hours-master"><label>OD<input id="yrmMasterFrom" type="time" value="${mh.from}"></label><label>DO<input id="yrmMasterTo" type="time" value="${mh.to}"></label><button class="secondary" data-yrm-hours-all>PRIMIJENI NA SVE RAMPE</button></div>
+    </div>
+  </div>
+  <div class="yrm-help"><strong style="color:#fff">ON / OFF RAMPE:</strong> OFF rampa ostaje u konfiguraciji, ali se ne koristi za nove termine i Planner je mora tretirati kao nedostupnu. Radno vrijeme i kapacitet podešavaju se zasebno za svaku rampu ispod.</div>`;
+
+  // Existing renderer can rebuild these cards. Normalize them each time this enhancer is called.
+  host.querySelectorAll('.ramp-settings-card').forEach((card,i)=>{
+    const r=i+1;
+    const first=card.firstElementChild;
+    if(first&&!first.classList.contains('yrm-ramp-top')){
+      first.classList.add('yrm-ramp-top');
+      const status=first.querySelector('small');
+      if(status){
+        status.classList.add('yrm-status');
+        status.textContent=locked(r)?'OFF · ne koristi se za nove termine':'ON · dostupna za termine';
+      }
+    }
+    const lockBtn=card.querySelector('.ramp-lock-btn');
+    if(lockBtn){lockBtn.title=locked(r)?'Uključi rampu':'Isključi rampu';lockBtn.setAttribute('aria-label',lockBtn.title)}
+    if(!card.querySelector('.yrm-capacity-row')){
+      card.insertAdjacentHTML('beforeend',`<div class="yrm-capacity-row"><label>KAPACITET · PALETA / SAT<input type="number" min="1" max="500" step="1" value="${getCapacity(w,r)}" data-yrm-capacity="${r}"></label><button class="secondary" data-yrm-capacity-save="${r}">SPREMI</button></div>`);
+    }
+  });
+}
+function rerenderSoon(){setTimeout(enhanceRampManager,40);setTimeout(enhanceRampManager,180)}
+
+document.addEventListener('click',e=>{
+  const cat=e.target.closest?.('[data-setcat]');
+  if(cat){e.preventDefault();applyCategory(cat.dataset.setcat);return}
+
+  if(e.target.closest?.('[data-yrm-minus]')){
+    const i=document.getElementById('yrmRampCount');if(i)i.value=Math.max(1,Number(i.value||1)-1);return;
+  }
+  if(e.target.closest?.('[data-yrm-plus]')){
+    const i=document.getElementById('yrmRampCount');if(i)i.value=Math.min(50,Number(i.value||0)+1);return;
+  }
+  if(e.target.closest?.('[data-yrm-count-save]')){
+    const i=document.getElementById('yrmRampCount'),desired=Math.max(1,Math.min(50,Number(i?.value||1)));
+    const current=count();
+    if(desired<current&&!confirm(`${wh()} trenutno ima ${current} rampi. Smanjiti na ${desired}? Rampe R${desired+1}–R${current} više neće biti dostupne.`))return;
+    window.YardivoRampConfig?.setCount?.(wh(),desired);
+    try{showYmsToast?.('success','KONFIGURACIJA RAMPI',`${wh()} sada ima ${desired} rampi.`)}catch(_){}
+    rerenderSoon();return;
+  }
+  if(e.target.closest?.('[data-yrm-hours-all]')){
+    const from=document.getElementById('yrmMasterFrom')?.value||'06:00',to=document.getElementById('yrmMasterTo')?.value||'22:00';
+    if(from>=to)return alert('Vrijeme DO mora biti nakon vremena OD.');
+    const w=wh(),n=count();setMasterHours(w,from,to);
+    for(let r=1;r<=n;r++)window.YardivoRampHoursV583?.set?.(w,r,from,to);
+    try{showYmsToast?.('success','RADNO VRIJEME PRIJAMA',`${w} · ${from} – ${to} primijenjeno na ${n} rampi.`)}catch(_){}
+    rerenderSoon();return;
+  }
+  const cap=e.target.closest?.('[data-yrm-capacity-save]');
+  if(cap){
+    const r=Number(cap.dataset.yrmCapacitySave),input=document.querySelector(`[data-yrm-capacity="${r}"]`);
+    const val=Math.max(1,Math.min(500,Number(input?.value||33)));setCapacity(wh(),r,val);
+    try{showYmsToast?.('success',`RAMPA ${r}`,`Kapacitet spremljen: ${val} paleta / sat.`)}catch(_){}
+    return;
+  }
+
+  if(e.target.closest?.('[data-ramp-lock],#addRampBtn'))rerenderSoon();
+  if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]')){
+    setTimeout(()=>{ensureNav();enhanceRampManager()},120);
+  }
+},true);
+
+document.getElementById('rampSettingsWarehouse')?.addEventListener('change',()=>rerenderSoon());
+
+window.addEventListener('load',()=>setTimeout(()=>{ensureNav();enhanceRampManager()},1500));
+window.addEventListener('yardivo:login',()=>setTimeout(()=>{ensureNav();enhanceRampManager()},500));
+window.addEventListener('yardivo:data-synced',()=>{if(document.getElementById('settings')?.classList.contains('active'))rerenderSoon()});
+
+window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-settings-warehouse-capacity-ux';
+})();
+</script>
