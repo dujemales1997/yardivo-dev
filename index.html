@@ -5,6 +5,7 @@ Designed & Developed by Duje Maleš
 -->
 <!DOCTYPE html>
 
+<!-- YARDIVO BUILD 20260908-dev-v5.8.3-maps-fullscreen-day-drilldown -->
 <html lang="hr">
 <head>
 <meta name="yardivo-build" content="20260908-dev-v5.8.3-stability-login-theme-fix">
@@ -5960,6 +5961,37 @@ html.yardivo-welcome-complete #yardivoWelcomeBar{
 #yardivoSupplierPortal .ysp-mini-cal.open{display:block!important}
 </style>
 <script id="yardivo-v575-build-marker">window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-scanner-theme-ui-final';</script>
+
+<style id="yardivo-v583-map-fullscreen-day-drilldown">
+.yardivo-map-fullscreen-btn{white-space:nowrap}
+#dailyMap:fullscreen,#weeklyMap:fullscreen,#dailyMap:-webkit-full-screen,#weeklyMap:-webkit-full-screen{
+  background:var(--bg,#06131f);padding:18px;overflow:auto;width:100vw;height:100vh;box-sizing:border-box
+}
+#dailyMap:fullscreen .daily-map-shell,#dailyMap:-webkit-full-screen .daily-map-shell{max-height:none!important;height:calc(100vh - 310px);min-height:520px}
+#weeklyMap:fullscreen .week-map-board,#weeklyMap:-webkit-full-screen .week-map-board{grid-template-columns:repeat(5,minmax(260px,1fr));overflow:visible}
+#weeklyMap:fullscreen .panel,#weeklyMap:-webkit-full-screen .panel{min-height:calc(100vh - 210px)}
+.week-map-day-head.yardivo-week-day-open{display:block;width:100%;text-align:left;color:inherit;background:transparent;border:0;border-bottom:1px solid #20394c;border-radius:8px 8px 0 0;cursor:pointer;font:inherit}
+.week-map-day-head.yardivo-week-day-open:hover{background:rgba(70,150,220,.09)}
+.week-map-day-head.yardivo-week-day-open:focus-visible{outline:2px solid #3f9ee8;outline-offset:-2px}
+.yardivo-week-day-modal{position:fixed;inset:0;z-index:10050;display:none;align-items:stretch;justify-content:center}
+.yardivo-week-day-modal.open{display:flex}
+.yardivo-week-day-backdrop{position:absolute;inset:0;background:rgba(2,8,13,.84);backdrop-filter:blur(5px)}
+.yardivo-week-day-dialog{position:relative;z-index:1;width:min(1080px,calc(100vw - 28px));height:calc(100vh - 28px);margin:14px;background:#071722;border:1px solid #29465d;border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.52);overflow:auto}
+.yardivo-week-day-dialog-head{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;background:rgba(7,23,34,.96);border-bottom:1px solid #29465d;backdrop-filter:blur(12px)}
+.yardivo-week-day-kicker{font-size:9px;font-weight:1000;letter-spacing:.12em;color:#7ea6c2}
+.yardivo-week-day-dialog-head h2{margin:4px 0 2px;font-size:22px}.yardivo-week-day-dialog-head small{color:#8ea6b8}
+.yardivo-week-day-stats{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;padding:16px 20px 4px}
+.yardivo-week-day-stat{padding:12px;border:1px solid #213b50;border-radius:9px;background:#091824}.yardivo-week-day-stat small{display:block;font-size:8px;color:#7f97aa;font-weight:900}.yardivo-week-day-stat strong{display:block;margin-top:4px;font-size:18px}
+.yardivo-week-day-list{padding:14px 20px 24px;display:flex;flex-direction:column;gap:9px}
+.yardivo-week-day-row{display:grid;grid-template-columns:92px minmax(210px,1.5fr) minmax(150px,.8fr) minmax(150px,.8fr) auto;gap:12px;align-items:center;padding:13px 14px;border:1px solid #213b50;border-radius:9px;background:#091824;cursor:pointer}
+.yardivo-week-day-row:hover{transform:translateY(-1px);border-color:#3a6585;background:#0c1f2e}.yardivo-week-day-row .time{font-size:16px;font-weight:1000}.yardivo-week-day-row .supplier{font-weight:900}.yardivo-week-day-row .meta,.yardivo-week-day-row .status{font-size:10px;color:#91a7b7}.yardivo-week-day-row .status{font-weight:900;text-align:right}
+.yardivo-week-day-empty{padding:40px;text-align:center;border:1px dashed #29465d;border-radius:10px;color:#7f97aa}
+body.yardivo-week-day-modal-open{overflow:hidden}
+html[data-yardivo-main-theme="light"] .yardivo-week-day-dialog,html[data-theme="light"] .yardivo-week-day-dialog,body.light-mode .yardivo-week-day-dialog{background:#f7fbff;color:#102230}
+html[data-yardivo-main-theme="light"] .yardivo-week-day-dialog-head,html[data-theme="light"] .yardivo-week-day-dialog-head,body.light-mode .yardivo-week-day-dialog-head{background:rgba(247,251,255,.96)}
+html[data-yardivo-main-theme="light"] .yardivo-week-day-stat,html[data-theme="light"] .yardivo-week-day-stat,body.light-mode .yardivo-week-day-stat,html[data-yardivo-main-theme="light"] .yardivo-week-day-row,html[data-theme="light"] .yardivo-week-day-row,body.light-mode .yardivo-week-day-row{background:#fff;color:#102230}
+@media(max-width:760px){.yardivo-week-day-stats{grid-template-columns:repeat(2,1fr)}.yardivo-week-day-row{grid-template-columns:72px 1fr}.yardivo-week-day-row .meta,.yardivo-week-day-row .status{grid-column:2}.yardivo-week-day-dialog{width:100vw;height:100vh;margin:0;border-radius:0}}
+</style>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -7038,6 +7070,7 @@ AUTOMATSKA PREPORUKA</small>
 <span class="zoom-value" id="dailyZoomValue">100%</span>
 <button class="secondary" id="dailyZoomIn" type="button">+</button>
 <button class="secondary" id="dailyZoomReset" type="button">RESET</button>
+<button class="secondary yardivo-map-fullscreen-btn" id="dailyMapFullscreen" type="button" title="Prikaži Dnevnu mapu preko cijelog ekrana">⛶ CIJELI EKRAN</button>
 </div>
 </div>
 <div class="total-capacity-panel" id="dailyTotalCapacity">
@@ -7115,6 +7148,7 @@ AUTOMATSKA PREPORUKA</small>
 <select id="weeklyMapWeek"></select>
 <button class="secondary" id="weeklyMapNext" type="button">SLJEDEĆI TJEDAN ›</button>
 <button class="secondary" id="weeklyMapCurrent" type="button">OVAJ TJEDAN</button>
+<button class="secondary yardivo-map-fullscreen-btn" id="weeklyMapFullscreen" type="button" title="Prikaži Tjednu mapu preko cijelog ekrana">⛶ CIJELI EKRAN</button>
 </div>
 </div>
 <div class="week-map-summary" id="weeklyMapSummary"></div>
@@ -8757,10 +8791,10 @@ function renderWeeklyMap(){
     const trucks=items.reduce((s,a)=>s+truckCountForPallets(a.pallets),0);
 
     html+=`<div class="week-map-day" data-weekly-move-date="${iso}" data-weekly-move-warehouse="${wh}">
-      <div class="week-map-day-head">
+      <button class="week-map-day-head yardivo-week-day-open" type="button" data-week-day-open="${iso}" data-week-day-warehouse="${wh}" aria-label="Otvori detaljni pregled za ${dayNames[i]}">
         <h3>${dayNames[i]} · ${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.</h3>
-        <small>${iso}${info.closed?' · '+info.name:''}</small>
-      </div>
+        <small>${iso}${info.closed?' · '+info.name:''} · KLIKNI ZA CIJELI DAN</small>
+      </button>
       <div class="week-day-load ${info.closed?'closed':''}">
         <div class="week-day-load-head">
           <span>OPTEREĆENOST DANA</span>
@@ -8799,10 +8833,16 @@ function renderWeeklyMap(){
 
 document.getElementById('weeklyMapBoard')?.addEventListener('click',e=>{
   const item=e.target.closest('.week-map-item[data-announcement-id]');
-  if(!item)return;
-  const id=Number(item.dataset.announcementId);
-  const a=announcements.find(x=>x.id===id);
-  if(a)openAnnouncementDetail(a.id,'weeklyMap');
+  if(item){
+    const id=Number(item.dataset.announcementId);
+    const a=announcements.find(x=>x.id===id);
+    if(a)openAnnouncementDetail(a.id,'weeklyMap');
+    return;
+  }
+  const day=e.target.closest('[data-week-day-open]');
+  if(day){
+    openWeeklyDayDrilldown(day.dataset.weekDayOpen,day.dataset.weekDayWarehouse);
+  }
 });
 
 document.getElementById('weeklyMapWarehouse')?.addEventListener('change',renderWeeklyMap);
@@ -33318,27 +33358,47 @@ function mirrorInternal(x){
     });
   }catch(e){console.error('Supplier internal mirror',e)}
 }
-async function pullInternal(){
-  if(!internal())return;
+let __yardivoInternalSupplierFingerprint='';
+function __yardivoSupplierRowsFingerprint(rows){
+  try{return JSON.stringify((rows||[]).map(x=>[x.id,x.client_id,x.status,x.delivery_date,x.requested_time,x.dock,x.updated_at,x.pallets,x.sku_count,x.vehicle_plate,x.trailer_plate,x.driver_name,x.driver_contact,x.review_note]))}
+  catch(_){return String(Date.now())}
+}
+async function pullInternal(force=false){
+  if(!internal())return false;
   const rows=await call('list_internal');
-  if(!Array.isArray(rows))return;
+  if(!Array.isArray(rows))return false;
+  const fp=__yardivoSupplierRowsFingerprint(rows);
+  if(!force && fp===__yardivoInternalSupplierFingerprint)return false;
+  __yardivoInternalSupplierFingerprint=fp;
+  const before=(()=>{try{return JSON.stringify((announcements||[]).filter(a=>a?.supplierSource==='supplier_live'))}catch(_){return''}})();
   rows.forEach(mirrorInternal);
-  try{saveAnnouncements();render?.()}catch(_){}
-  try{window.dispatchEvent(new CustomEvent('yardivo:data-synced'))}catch(_){}
+  const after=(()=>{try{return JSON.stringify((announcements||[]).filter(a=>a?.supplierSource==='supplier_live'))}catch(_){return String(Date.now())}})();
+  if(before!==after){
+    try{saveAnnouncements()}catch(_){}
+    try{
+      const active=document.querySelector('.view.active')?.id||'';
+      const map={announcements:'renderAnnouncements',dailyMap:'renderDailyMap',weeklyMap:'renderWeeklyMap',receiving:'renderReceiving',controlTower:'renderControlTower',controltower:'renderControlTower',dashboard:'renderDashboard'};
+      const fn=map[active];if(fn&&typeof window[fn]==='function')window[fn]();
+    }catch(_){}
+    try{window.dispatchEvent(new CustomEvent('yardivo:data-synced',{detail:{source:'supplier',changed:true}}))}catch(_){}
+    return true;
+  }
+  return false;
 }
 
 async function syncNow(){
   try{
+    if(document.hidden)return;
     if(supplier())await pullSupplier();
-    else if(internal())await pullInternal();
+    else if(internal())await pullInternal(false);
   }catch(e){console.error('YARDIVO supplier live sync',e)}
 }
 
 window.YardivoSupplierLiveSync={call,pushSupplierRow,pushVehicle,pullSupplier,pullInternal,syncNow};
 
-window.addEventListener('yardivo:login',()=>setTimeout(syncNow,500));
-window.addEventListener('load',()=>setTimeout(syncNow,1600));
-setInterval(syncNow,30000);
+window.addEventListener('yardivo:login',()=>setTimeout(syncNow,700));
+window.addEventListener('load',()=>setTimeout(syncNow,1800));
+window.__yardivoSupplierLiveSyncTimer=setInterval(()=>{if(!document.getElementById('ysrPlannerOverlay')?.classList.contains('open'))syncNow()},120000);
 })();
 </script>
 
@@ -34003,9 +34063,9 @@ window.YardivoSupplierV576={install};
 
 
 <style id="yardivo-v580-supplier-planner-style">
-#ysrPlannerOverlay{position:fixed;inset:0;z-index:1000001;background:rgba(2,8,13,.78);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px}
+#ysrPlannerOverlay{position:fixed;inset:0;z-index:1000001;background:rgba(2,8,13,.92);backdrop-filter:none;display:none;align-items:center;justify-content:center;padding:18px;contain:layout paint}
 #ysrPlannerOverlay.open{display:flex}
-#ysrPlanner{width:min(1040px,96vw);max-height:92vh;overflow:auto;background:#081722;border:1px solid #31546c;border-radius:16px;box-shadow:0 28px 90px rgba(0,0,0,.58)}
+#ysrPlanner{width:min(1040px,96vw);max-height:92vh;overflow:auto;background:#081722;contain:layout paint;border:1px solid #31546c;border-radius:16px;box-shadow:0 28px 90px rgba(0,0,0,.58)}
 .ysrp-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding:18px 20px;border-bottom:1px solid #1c394c;position:sticky;top:0;background:#081722;z-index:3}.ysrp-head h2{margin:0;font-size:18px}.ysrp-head p{margin:5px 0 0;color:#7895a9;font-size:9px}.ysrp-close{width:36px;height:36px;border:1px solid #31546c;border-radius:9px;background:#0d2230;color:#fff;font-size:18px;cursor:pointer}
 .ysrp-body{display:grid;grid-template-columns:.8fr 1.2fr;gap:14px;padding:16px}.ysrp-card{border:1px solid #203e52;border-radius:12px;background:#0a1a26;padding:14px}.ysrp-card h3{margin:0 0 12px;font-size:10px;letter-spacing:.08em;color:#9ab7c9}.ysrp-facts{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ysrp-fact{padding:10px;border:1px solid #1d394c;border-radius:8px;background:#07141e}.ysrp-fact small{display:block;color:#6f8da1;font-size:7px;font-weight:900}.ysrp-fact strong{display:block;margin-top:4px;font-size:11px}.ysrp-wanted{margin-top:10px;padding:12px;border:1px solid #2e729d;border-radius:9px;background:#0b2638}.ysrp-wanted small{color:#80bce2;font-size:7px;font-weight:950}.ysrp-wanted strong{display:block;margin-top:4px;font-size:14px}
 .ysrp-calendar{margin-bottom:12px}.ysrp-cal-head{display:grid;grid-template-columns:36px 1fr 36px;gap:8px;align-items:center;margin-bottom:8px}.ysrp-cal-head strong{text-align:center}.ysrp-cal-head button{height:32px;border:1px solid #31546c;border-radius:7px;background:#102737;color:#fff;cursor:pointer}.ysrp-week,.ysrp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.ysrp-week span{text-align:center;color:#708da1;font-size:8px;padding:4px}.ysrp-day{height:35px;border:1px solid transparent;border-radius:7px;background:#0e2231;color:#dceaf3;cursor:pointer}.ysrp-day:hover{border-color:#438bc4}.ysrp-day.sel{background:#17527e;border-color:#65b8ee;font-weight:950}.ysrp-day.wanted{box-shadow:inset 0 0 0 1px #d5a52d}.ysrp-day[disabled]{opacity:.2;cursor:not-allowed}.ysrp-empty{height:35px}
@@ -34198,7 +34258,11 @@ function patchPolling(){
     const el=document.getElementById(id);if(el&&!el.dataset.v582){el.dataset.v582='1';el.addEventListener('input',()=>renderStable(lastRows,true),true)}
   });
   if(!window.__yardivoSupplierV582Polling){
-    window.__yardivoSupplierV582Polling=setInterval(()=>{const v=document.getElementById('supplierRequests');if(v?.classList.contains('active'))quietLoad(false)},5000);
+    window.__yardivoSupplierV582Polling=setInterval(()=>{
+      const v=document.getElementById('supplierRequests');
+      const plannerOpen=document.getElementById('ysrPlannerOverlay')?.classList.contains('open');
+      if(!document.hidden&&v?.classList.contains('active')&&!plannerOpen)quietLoad(false)
+    },30000);
   }
 }
 document.addEventListener('click',e=>{
@@ -36626,6 +36690,129 @@ try{
 <script id="yardivo-stability-hard-fix-marker-v1">
 window.__YARDIVO_STABILITY_HARD_FIX__={version:'V5.8.3',build:'20260908-dev-v5.8.3-stability-hard-fix',snapshotDiff:true,observerCoalescing:true,pollFallbackMs:180000};
 </script>
+
+<div class="yardivo-week-day-modal" id="weeklyDayDrilldown" aria-hidden="true">
+  <div class="yardivo-week-day-backdrop" data-week-day-close="1"></div>
+  <section class="yardivo-week-day-dialog" role="dialog" aria-modal="true" aria-labelledby="weeklyDayDrilldownTitle">
+    <header class="yardivo-week-day-dialog-head">
+      <div>
+        <span class="yardivo-week-day-kicker">TJEDNA MAPA · DNEVNI PREGLED</span>
+        <h2 id="weeklyDayDrilldownTitle">DAN</h2>
+        <small id="weeklyDayDrilldownSubtitle"></small>
+      </div>
+      <button class="secondary" id="weeklyDayDrilldownClose" type="button">✕ ZATVORI</button>
+    </header>
+    <div class="yardivo-week-day-stats" id="weeklyDayDrilldownStats"></div>
+    <div class="yardivo-week-day-list" id="weeklyDayDrilldownList"></div>
+  </section>
+</div>
+
+<script id="yardivo-v583-map-fullscreen-day-drilldown-js">
+(()=>{
+  const DAY_NAMES=['NEDJELJA','PONEDJELJAK','UTORAK','SRIJEDA','ČETVRTAK','PETAK','SUBOTA'];
+  function mapFullscreenElement(){return document.fullscreenElement||document.webkitFullscreenElement||null}
+  async function toggleMapFullscreen(viewId,buttonId){
+    const view=document.getElementById(viewId),btn=document.getElementById(buttonId);if(!view)return;
+    try{
+      if(mapFullscreenElement()){
+        if(document.exitFullscreen)await document.exitFullscreen();else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+      }else{
+        if(view.requestFullscreen)await view.requestFullscreen();else if(view.webkitRequestFullscreen)view.webkitRequestFullscreen();
+      }
+    }catch(err){console.warn('YARDIVO map fullscreen unavailable',err)}
+    if(btn)btn.blur();
+  }
+  function syncFullscreenButtons(){
+    const fs=mapFullscreenElement();
+    const d=document.getElementById('dailyMapFullscreen'),w=document.getElementById('weeklyMapFullscreen');
+    if(d)d.textContent=fs?.id==='dailyMap'?'↙ VRATI PRIKAZ':'⛶ CIJELI EKRAN';
+    if(w)w.textContent=fs?.id==='weeklyMap'?'↙ VRATI PRIKAZ':'⛶ CIJELI EKRAN';
+  }
+  document.getElementById('dailyMapFullscreen')?.addEventListener('click',()=>toggleMapFullscreen('dailyMap','dailyMapFullscreen'));
+  document.getElementById('weeklyMapFullscreen')?.addEventListener('click',()=>toggleMapFullscreen('weeklyMap','weeklyMapFullscreen'));
+  document.addEventListener('fullscreenchange',syncFullscreenButtons);
+  document.addEventListener('webkitfullscreenchange',syncFullscreenButtons);
+
+  window.openWeeklyDayDrilldown=function(date,warehouse){
+    const modal=document.getElementById('weeklyDayDrilldown');if(!modal||!date)return;
+    const wh=warehouse||document.getElementById('weeklyMapWarehouse')?.value||'';
+    const d=new Date(date+'T12:00:00');
+    const items=(Array.isArray(window.announcements)?window.announcements:(typeof announcements!=='undefined'?announcements:[]))
+      .filter(a=>a.date===date&&(!wh||(a.warehouse||'W101')===wh))
+      .sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')));
+    const pal=items.reduce((n,a)=>n+Number(a.pallets||0),0);
+    const trucks=items.reduce((n,a)=>n+(typeof truckCountForPallets==='function'?truckCountForPallets(a.pallets):1),0);
+    const dockCount=new Set(items.map(a=>a.dock).filter(Boolean)).size;
+    const title=document.getElementById('weeklyDayDrilldownTitle');
+    const sub=document.getElementById('weeklyDayDrilldownSubtitle');
+    const stats=document.getElementById('weeklyDayDrilldownStats');
+    const list=document.getElementById('weeklyDayDrilldownList');
+    if(title)title.textContent=`${DAY_NAMES[d.getDay()]} · ${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}.`;
+    if(sub)sub.textContent=`${typeof warehouseOptionLabel==='function'?warehouseOptionLabel(wh):wh} · ${date}`;
+    if(stats)stats.innerHTML=[['NAJAVA',items.length],['PALETA',pal],['KAMIONA',trucks],['AKTIVNIH RAMPI',dockCount]].map(x=>`<div class="yardivo-week-day-stat"><small>${x[0]}</small><strong>${x[1]}</strong></div>`).join('');
+    if(list)list.innerHTML=items.length?items.map(a=>{
+      const status=typeof operationalPlanStatus==='function'?operationalPlanStatus(a):(a.status||'');
+      const delay=typeof operationalDelayText==='function'?operationalDelayText(a):'';
+      const hasDoc=window.YardivoSupplierAttachments?.has?.(a);
+      return `<article class="yardivo-week-day-row ${typeof yardivoUnifiedStatusClass==='function'?yardivoUnifiedStatusClass(a):''}" data-week-day-announcement="${a.id}" tabindex="0">
+        <div class="time">${a.time||'—'}</div>
+        <div><div class="supplier">${a.supplier||'—'} ${hasDoc?'📁':''}</div><div class="meta">${a.orderNo||a.order||''}</div></div>
+        <div class="meta">RAMPA ${a.dock||'—'} · ${Number(a.pallets||0)} pal.</div>
+        <div class="meta">${a.sku||0} SKU · ${typeof truckCountForPallets==='function'?truckCountForPallets(a.pallets):1} kam.</div>
+        <div class="status">${status}${delay?' · '+delay:''}</div>
+      </article>`;
+    }).join(''):`<div class="yardivo-week-day-empty">Nema najavljenih dobavljača za odabrani dan.</div>`;
+    modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.classList.add('yardivo-week-day-modal-open');
+    setTimeout(()=>document.getElementById('weeklyDayDrilldownClose')?.focus(),0);
+  };
+  function closeWeeklyDayDrilldown(){const modal=document.getElementById('weeklyDayDrilldown');if(!modal)return;modal.classList.remove('open');modal.setAttribute('aria-hidden','true');document.body.classList.remove('yardivo-week-day-modal-open')}
+  document.getElementById('weeklyDayDrilldownClose')?.addEventListener('click',closeWeeklyDayDrilldown);
+  document.getElementById('weeklyDayDrilldown')?.addEventListener('click',e=>{
+    if(e.target.closest('[data-week-day-close]')){closeWeeklyDayDrilldown();return}
+    const row=e.target.closest('[data-week-day-announcement]');if(!row)return;
+    const id=Number(row.dataset.weekDayAnnouncement);if(id&&typeof openAnnouncementDetail==='function'){closeWeeklyDayDrilldown();openAnnouncementDetail(id,'weeklyMap')}
+  });
+  document.getElementById('weeklyDayDrilldown')?.addEventListener('keydown',e=>{
+    const row=e.target.closest?.('[data-week-day-announcement]');if(row&&(e.key==='Enter'||e.key===' ')){e.preventDefault();row.click()}
+  });
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('weeklyDayDrilldown')?.classList.contains('open'))closeWeeklyDayDrilldown()});
+})();
+</script>
+
+<style id="yardivo-v583-supplier-history-detail-style">
+#yspHistoryBody tr{cursor:pointer;transition:background .12s ease}#yspHistoryBody tr:hover{background:#f2f7fc}
+#yardivoSupplierHistoryDetail{position:fixed;inset:0;z-index:10000120;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(4,13,21,.88)}
+#yardivoSupplierHistoryDetail.open{display:flex}.yshd-dialog{width:min(900px,96vw);max-height:92vh;overflow:auto;background:#fff;color:#20354a;border-radius:14px;box-shadow:0 28px 90px rgba(0,0,0,.42);border:1px solid #d8e3ed}
+.yshd-head{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:18px 20px;border-bottom:1px solid #e0e8ef;background:#fff}.yshd-head h2{margin:0;font-size:17px}.yshd-head p{margin:4px 0 0;color:#73879a;font-size:9px}.yshd-close{width:36px;height:36px;border:1px solid #c9d7e3;background:#f7fafc;border-radius:8px;cursor:pointer;font-size:18px}
+.yshd-body{padding:18px 20px}.yshd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.yshd-fact{padding:11px;border:1px solid #dce6ef;border-radius:9px;background:#f8fafc}.yshd-fact small{display:block;color:#71869a;font-size:7px;font-weight:950}.yshd-fact strong{display:block;margin-top:4px;font-size:11px;word-break:break-word}
+.yshd-section{margin-top:14px;padding:14px;border:1px solid #dce6ef;border-radius:10px}.yshd-section h3{margin:0 0 9px;font-size:10px}.yshd-doc{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.yshd-doc-meta{display:flex;gap:10px;align-items:center}.yshd-doc-icon{font-size:30px}.yshd-doc-meta small{display:block;color:#73879a;font-size:8px}.yshd-doc-actions{display:flex;gap:7px;flex-wrap:wrap}.yshd-doc-actions button,.yshd-doc-actions label{border:1px solid #c6d7e5;background:#f7fafc;color:#25435c;border-radius:8px;padding:9px 12px;font-size:8px;font-weight:950;cursor:pointer}.yshd-doc-actions .primary{background:#1477ef;border-color:#1477ef;color:#fff}.yshd-doc-actions input{display:none}
+@media(max-width:700px){.yshd-grid{grid-template-columns:1fr 1fr}}@media(max-width:480px){.yshd-grid{grid-template-columns:1fr}}
+</style>
+<script id="yardivo-v583-supplier-history-detail-stability">
+(function(){
+'use strict';
+const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function sess(){try{return window.currentSession||currentSession||{}}catch(_){return window.currentSession||{}}}
+function rowsKey(){const s=sess();return 'yardivo_supplier_portal_v549_'+String(s.authUserId||s.username||s.user||'supplier')}
+function rows(){try{const a=JSON.parse(localStorage.getItem(rowsKey())||'[]');return Array.isArray(a)?a:[]}catch(_){return[]}}
+function docKey(id){return 'yardivo_supplier_attachment_'+String(id||'')}
+function doc(id){try{return JSON.parse(localStorage.getItem(docKey(id))||'null')}catch(_){return null}}
+function humanBytes(n){n=Number(n||0);return n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?Math.round(n/1024)+' KB':n+' B'}
+function humanDate(v){try{return v?new Date(v).toLocaleString('hr-HR'):'—'}catch(_){return v||'—'}}
+function status(v){return ({pending:'Čeka potvrdu',revision_requested:'Vraćeno na doradu',proposal_sent:'Čeka odgovor na prijedlog',confirmed:'Potvrđeno',arrival:'Stigao',dock:'Na rampi',receiving:'Zaprimanje',completed:'Završeno',rejected:'Odbijeno'})[String(v||'').toLowerCase()]||String(v||'—')}
+function ensure(){let o=document.getElementById('yardivoSupplierHistoryDetail');if(o)return o;o=document.createElement('div');o.id='yardivoSupplierHistoryDetail';o.innerHTML='<div class="yshd-dialog"><div class="yshd-head"><div><h2>DETALJ NAJAVE</h2><p id="yshdSubtitle">—</p></div><button type="button" class="yshd-close">×</button></div><div class="yshd-body" id="yshdBody"></div></div>';document.body.appendChild(o);o.querySelector('.yshd-close').onclick=close;o.onclick=e=>{if(e.target===o)close()};return o}
+let currentId='';
+function open(id){const x=rows().find(r=>String(r.id)===String(id));if(!x)return;currentId=String(id);const a=doc(id),o=ensure();document.getElementById('yshdSubtitle').textContent=`${x.id} · ${x.warehouse||'—'} · ${status(x.status)}`;const facts=[['ID NAJAVE',x.id],['STATUS',status(x.status)],['SKLADIŠTE',x.warehouse||'—'],['DATUM',x.date||'—'],['TERMIN',x.time||'—'],['RAMPA',x.dock||'Nije dodijeljena'],['BROJ NARUDŽBE',x.order||'—'],['PALETE',x.pallets??'—'],['SKU',x.skuCount??x.sku??'—'],['KAMION',x.plate||'—'],['PRIKOLICA',x.trailerPlate||'—'],['VOZAČ',x.driver||'—'],['KONTAKT VOZAČA',x.driverContact||'—'],['REFERENCA / OTPREMNICA',x.reference||'—'],['NAPOMENA',x.note||'—'],['ODGOVOR YARDIVO',x.reviewNote||'—'],['POSLANO',humanDate(x.createdAt)],['ZADNJA PROMJENA',humanDate(x.updatedAt)]];document.getElementById('yshdBody').innerHTML=`<div class="yshd-grid">${facts.map(([k,v])=>`<div class="yshd-fact"><small>${esc(k)}</small><strong>${esc(v)}</strong></div>`).join('')}</div><div class="yshd-section"><h3>DOKUMENT</h3><div class="yshd-doc"><div class="yshd-doc-meta"><div class="yshd-doc-icon">${a?.dataUrl?'📁':'📄'}</div><div><strong>${a?.name?esc(a.name):'Dokument nije priložen'}</strong><small>${a?.dataUrl?`${humanBytes(a.size)} · priloženo ${humanDate(a.uploadedAt)}`:'PDF nije obavezan. Može se dodati i nakon potvrde termina.'}</small></div></div><div class="yshd-doc-actions">${a?.dataUrl?'<button type="button" data-yshd-open>OTVORI PDF</button>':''}<label class="primary">${a?.dataUrl?'ZAMIJENI PDF':'PRILOŽI PDF'}<input type="file" accept="application/pdf,.pdf" data-yshd-file></label></div></div></div>`;o.classList.add('open')}
+function close(){document.getElementById('yardivoSupplierHistoryDetail')?.classList.remove('open');currentId=''}
+function openPdf(){const a=doc(currentId);if(!a?.dataUrl)return;const w=window.open();if(w){w.document.write(`<title>${esc(a.name||'Dokument')}</title><iframe src="${a.dataUrl}" style="position:fixed;inset:0;width:100%;height:100%;border:0"></iframe>`);w.document.close()}}
+function saveFile(file){if(!file||!currentId)return;if(file.type!=='application/pdf'&&!/\.pdf$/i.test(file.name||'')){alert('Dopušten je samo PDF dokument.');return}if(file.size>1024*1024){alert('PDF je veći od 1 MB.');return}const r=new FileReader();r.onload=()=>{const a={name:String(file.name||'dokument.pdf'),type:'application/pdf',size:Number(file.size||0),dataUrl:String(r.result||''),uploadedAt:new Date().toISOString()};try{localStorage.setItem(docKey(currentId),JSON.stringify(a));const all=rows(),x=all.find(v=>String(v.id)===currentId);if(x){x.attachmentName=a.name;x.attachmentSize=a.size;x.hasAttachment=true;x.attachmentUploadedAt=a.uploadedAt;x.updatedAt=new Date().toISOString();localStorage.setItem(rowsKey(),JSON.stringify(all));try{window.YardivoSupplierPortal?.render?.()}catch(_){} }open(currentId);try{window.dispatchEvent(new CustomEvent('yardivo:supplier-attachment-changed',{detail:{id:currentId,name:a.name}}))}catch(_){}}catch(e){alert('Dokument nije moguće spremiti: '+(e?.message||e))}};r.onerror=()=>alert('PDF nije moguće pročitati.');r.readAsDataURL(file)}
+document.addEventListener('click',e=>{if(document.body?.getAttribute('data-yardivo-role')!=='supplier')return;const tr=e.target.closest?.('#yspHistoryBody tr');if(tr&&!e.target.closest('button,label,input')){const id=tr.querySelector('td strong')?.textContent?.trim();if(id)open(id)}if(e.target.closest?.('[data-yshd-open]')){e.preventDefault();openPdf()}},true);
+document.addEventListener('change',e=>{if(e.target?.matches?.('[data-yshd-file]'))saveFile(e.target.files?.[0])},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('yardivoSupplierHistoryDetail')?.classList.contains('open'))close()});
+window.YardivoSupplierHistoryDetail={open,close};
+})();
+</script>
+<script id="yardivo-v583-supplier-stability-marker">window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-supplier-history-planner-stability';</script>
 </body>
 </html>
 
