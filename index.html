@@ -5992,6 +5992,138 @@ html[data-yardivo-main-theme="light"] .yardivo-week-day-dialog-head,html[data-th
 html[data-yardivo-main-theme="light"] .yardivo-week-day-stat,html[data-theme="light"] .yardivo-week-day-stat,body.light-mode .yardivo-week-day-stat,html[data-yardivo-main-theme="light"] .yardivo-week-day-row,html[data-theme="light"] .yardivo-week-day-row,body.light-mode .yardivo-week-day-row{background:#fff;color:#102230}
 @media(max-width:760px){.yardivo-week-day-stats{grid-template-columns:repeat(2,1fr)}.yardivo-week-day-row{grid-template-columns:72px 1fr}.yardivo-week-day-row .meta,.yardivo-week-day-row .status{grid-column:2}.yardivo-week-day-dialog{width:100vw;height:100vh;margin:0;border-radius:0}}
 </style>
+
+<script id="yardivo-server-authoritative-browser-storage-v583">
+(function(){
+'use strict';
+/*
+ YARDIVO DEV V5.8.3
+ Server-authoritative storage boundary.
+ Business/operational state is virtualized in RAM and synchronized through
+ the existing authenticated YARDIVO online sync / Supabase layer.
+ Browser persistence remains only for harmless UX/auth bootstrap preferences.
+*/
+if(window.__yardivoBrowserlessStorageInstalled)return;
+window.__yardivoBrowserlessStorageInstalled=true;
+
+const memLocal=new Map(),memSession=new Map(),legacy=new Map();
+const native={
+ get:Storage.prototype.getItem,
+ set:Storage.prototype.setItem,
+ remove:Storage.prototype.removeItem,
+ key:Storage.prototype.key,
+ clear:Storage.prototype.clear
+};
+
+const LOCAL_ONLY_EXACT=new Set([
+ 'yardivo_theme_preset_v1','yardivo_ux_style_v1','yardivo_first_theme_initialized_v1',
+ 'yardivo_font_scale','yardivo_master_font_v1','yardivo_dark_style_v1',
+ 'yardivo_light_style_v1','yardivo_main_theme_v1','yardivo_notification_sound_v1',
+ 'yardivo_voice_notifications_v583',
+ 'yardivo_remembered_session','yardivo_session','yardivo_custom_session',
+ 'yardivo_real_auth_cutover_v1','yardivo_rbac_session_migrated_20260831',
+ 'yardivo_client_id_v1','yardivo_active_warehouse'
+]);
+
+function isAuthProviderKey(k){
+ k=String(k||'');
+ return /^sb-[a-z0-9_-]+-auth-token$/i.test(k) || /^supabase\.auth\./i.test(k);
+}
+function isLocalOnly(k){
+ k=String(k||'');
+ return LOCAL_ONLY_EXACT.has(k) || isAuthProviderKey(k);
+}
+function isYardivoKey(k){
+ k=String(k||'');
+ return /^(yardivo_|studenac_|yms_)/i.test(k);
+}
+function isServerKey(k){
+ k=String(k||'');
+ return isYardivoKey(k) && !isLocalOnly(k);
+}
+function mapFor(st){return st===window.sessionStorage?memSession:memLocal}
+
+function captureAndPurge(st){
+ let keys=[];
+ try{for(let i=0;i<st.length;i++){const k=native.key.call(st,i);if(k)keys.push(k)}}catch(_){}
+ for(const k of keys){
+   if(!isServerKey(k))continue;
+   try{
+     const v=native.get.call(st,k);
+     if(v!==null){
+       mapFor(st).set(k,String(v));
+       if(st===window.localStorage)legacy.set(k,String(v));
+     }
+     native.remove.call(st,k);
+   }catch(_){}
+ }
+}
+try{captureAndPurge(window.localStorage)}catch(_){}
+try{captureAndPurge(window.sessionStorage)}catch(_){}
+
+Storage.prototype.getItem=function(k){
+ k=String(k);
+ if((this===window.localStorage||this===window.sessionStorage)&&isServerKey(k)){
+   const m=mapFor(this); return m.has(k)?m.get(k):null;
+ }
+ return native.get.apply(this,arguments);
+};
+Storage.prototype.setItem=function(k,v){
+ k=String(k);
+ if((this===window.localStorage||this===window.sessionStorage)&&isServerKey(k)){
+   mapFor(this).set(k,String(v));
+   try{window.dispatchEvent(new CustomEvent('yardivo:memory-state-changed',{detail:{key:k,storage:this===window.localStorage?'local':'session'}}))}catch(_){}
+   return;
+ }
+ return native.set.apply(this,arguments);
+};
+Storage.prototype.removeItem=function(k){
+ k=String(k);
+ if((this===window.localStorage||this===window.sessionStorage)&&isServerKey(k)){
+   mapFor(this).delete(k); return;
+ }
+ return native.remove.apply(this,arguments);
+};
+
+function purgeAgain(){
+ for(const st of [window.localStorage,window.sessionStorage]){
+   let keys=[];try{for(let i=0;i<st.length;i++){const k=native.key.call(st,i);if(k)keys.push(k)}}catch(_){}
+   for(const k of keys)if(isServerKey(k)){try{native.remove.call(st,k)}catch(_){}}
+ }
+}
+setInterval(purgeAgain,15000);
+
+/* One-time migration of legacy browser-only state:
+   after authenticated server bootstrap, only keys that the server did NOT
+   replace are re-emitted so the existing online sync can persist them. */
+let migrated=false;
+window.addEventListener('yardivo:data-synced',()=>{
+ if(migrated)return;
+ migrated=true;
+ setTimeout(()=>{
+   for(const [k,v] of legacy){
+     if(k==='yardivo_yms_announcements_v1'||k==='yardivo_yms_incidents_v1')continue;
+     try{
+       if(memLocal.get(k)===v)localStorage.setItem(k,v);
+     }catch(_){}
+   }
+   legacy.clear();
+   purgeAgain();
+ },50);
+});
+
+window.YardivoBrowserlessStorageV583={
+ isServerKey,isLocalOnly,
+ businessKeys:()=>[...memLocal.keys()],
+ browserPersistentBusinessKeys:()=>{
+   const out=[];try{for(let i=0;i<localStorage.length;i++){const k=native.key.call(localStorage,i);if(isServerKey(k))out.push(k)}}catch(_){}
+   return out;
+ },
+ purge:purgeAgain
+};
+})();
+</script>
+
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -7727,7 +7859,7 @@ AUTOMATSKA PREPORUKA</small>
 <section class="danger-zone">
 <div class="panel-head"><div><h2>OPASNA ZONA</h2><small>Samo Admin</small></div></div>
 <div class="danger-body">
-<p><strong>OBRIŠI SVE PODATKE</strong> radi potpuni operativni reset: briše sve najave, incidente, nenajavljene dolaske, EPAL evidenciju, povijest kamiona i dolazaka, promjene termina, operativne logove, izvještajne cacheve, upozorenja i <strong>svu povijest notifikacija</strong>. Nakon brisanja svi operativni brojači moraju biti 0. Korisnici/autentikacija, popis dobavljača, skladišta, rampe, neradni dani i vizualne postavke ostaju sačuvani.</p>
+<p><strong>OBRIŠI SVE PODATKE</strong> radi potpuni reset YARDIVO-a: briše <strong>apsolutno sve podatke i postavke</strong> — najave, incidente, Supplier podatke, nenajavljene dolaske, EPAL, kamione, termine, rampe i konfiguracije, Smart odluke i logove, KPI/povijesti, notifikacije, audit podatke, neradne dane, cacheve i ostalo poslovno stanje. <strong>Jedino korisnički računi/profili i autentikacija ostaju sačuvani.</strong></p>
 <button class="delete-all-btn" id="deleteAllDataBtn" type="button">OBRIŠI SVE PODATKE</button>
 </div>
 </section>
@@ -25056,6 +25188,10 @@ async function edge(action,payload={}){
   return d;
 }
 function stateKey(k){
+  k=String(k||'');
+  try{
+    if(window.YardivoBrowserlessStorageV583?.isServerKey?.(k))return true;
+  }catch(_){}
   return STATE_EXACT.has(k)||/^(yardivo_manager_access_|yardivo_supplier_attachment_|yardivo_unannounced_|yardivo_incident_|yardivo_pallet_|studenac_pallet_|yardivo_ramp_|yardivo_capacity_|yardivo_replanning_)/.test(k);
 }
 function parseArray(v){try{const a=JSON.parse(v||'[]');return Array.isArray(a)?a:[]}catch(_){return[]}}
@@ -25300,12 +25436,97 @@ async function authenticate(a,r){
   return true;
 }
 async function syncNow(){return flush()}
+
+/* Admin-only destructive server reset. Keeps user accounts/profiles intact. */
+function resetPreserveUserKey(k){
+  k=String(k||'');
+  return /(?:^|_)(?:user|users|user_access|profile|profiles|auth)(?:_|$)/i.test(k)
+      || k==='yardivo_master_users_v1'||k==='yardivo_users'||k==='yardivo_yms_users';
+}
+async function resetAllExceptUsers(){
+  const rr=String(window.currentSession?.role||'').toLowerCase().trim();
+  if(rr!=='admin')throw new Error('Samo Admin može izvršiti potpuni reset.');
+  if(!ready)throw new Error('ONLINE BAZA NIJE SPREMNA. Ponovno se prijavi i pokušaj opet.');
+
+  /* Finish any pending write first, then take authoritative server snapshot. */
+  if(pending())await flush();
+  const d=await edge('bootstrap');
+
+  const anns=Array.isArray(d?.announcements)?d.announcements:[];
+  const incs=Array.isArray(d?.incidents)?d.incidents:[];
+  const states=Array.isArray(d?.state)?d.state:[];
+
+  const annIds=anns.map(idOf).filter(Boolean);
+  const incIds=incs.map(idOf).filter(Boolean);
+  if(annIds.length)await edge('delete_announcements',{ids:annIds});
+  if(incIds.length)await edge('delete_incidents',{ids:incIds});
+
+  for(const row of states){
+    const k=String(row?.key||'');
+    if(!k||resetPreserveUserKey(k))continue;
+    await edge('delete_state',{key:k});
+  }
+
+  /* Known normalized server tables that are not user tables.
+     RLS may block direct cleanup; Edge cleanup above remains canonical. */
+  try{
+    const c=await getClient();
+    if(c){
+      for(const table of ['yardivo_audit_log']){
+        try{
+          const q=await c.from(table).delete().not('id','is',null);
+          if(q?.error)console.warn('[YARDIVO RESET] '+table,q.error);
+        }catch(e){console.warn('[YARDIVO RESET] '+table,e)}
+      }
+    }
+  }catch(e){console.warn('[YARDIVO RESET] audit cleanup',e)}
+
+  annSnapshot=new Map();incSnapshot=new Map();
+  dirtyAnn=false;dirtyInc=false;dirtyState.clear();
+  lastBootstrapSignature='';
+  try{await broadcastChange('full-reset-except-users')}catch(_){}
+  return {ok:true,announcements:annIds.length,incidents:incIds.length,state:states.filter(x=>x?.key&&!resetPreserveUserKey(x.key)).length};
+}
+async function fullDataSnapshot(){
+ const rr=String(window.currentSession?.role||'').toLowerCase().trim();
+ if(rr!=='admin')throw new Error('Samo Admin može izvesti kompletne podatke.');
+ if(!ready)throw new Error('ONLINE BAZA NIJE SPREMNA.');
+ if(pending())await flush();
+ const d=await edge('bootstrap'),client=await getClient();let audit=[];
+ try{if(client){const q=await client.from('yardivo_audit_log').select('*').order('created_at',{ascending:true});if(!q?.error&&Array.isArray(q?.data))audit=q.data}}catch(e){console.warn(e)}
+ return {schema:'yardivo-full-data-v1',yardivoVersion:'YARDIVO DEV V5.8.3',exportedAt:new Date().toISOString(),source:'server',announcements:Array.isArray(d?.announcements)?d.announcements:[],incidents:Array.isArray(d?.incidents)?d.incidents:[],state:Array.isArray(d?.state)?d.state:[],audit_log:audit};
+}
+async function restoreFullData(p){
+ const rr=String(window.currentSession?.role||'').toLowerCase().trim();
+ if(rr!=='admin')throw new Error('Samo Admin može vratiti kompletne podatke.');
+ if(!ready)throw new Error('ONLINE BAZA NIJE SPREMNA.');
+ if(!p||p.schema!=='yardivo-full-data-v1')throw new Error('Neispravan YARDIVO backup.');
+ await resetAllExceptUsers();
+ const a=Array.isArray(p.announcements)?p.announcements:[],i=Array.isArray(p.incidents)?p.incidents:[],st=Array.isArray(p.state)?p.state:[];
+ if(a.length)await edge('upsert_announcements',{rows:a});if(i.length)await edge('upsert_incidents',{rows:i});
+ for(const row of st){const k=String(row?.key||'');if(!k||resetPreserveUserKey(k))continue;await edge('put_state',{key:k,value:row?.value??''})}
+ try{await broadcastChange('full-data-restore')}catch(_){} await bootstrap();
+ return {ok:true,announcements:a.length,incidents:i.length,state:st.length};
+}
 function online(){return ready}
 function pending(){return Number(dirtyAnn)+Number(dirtyInc)+dirtyState.size}
 
 clearLegacyErrors();
-window.YardivoSupabase={authenticate,syncNow,flushQueue:flush,pending,client:getClient,realtime:startRealtime,realtimeStatus:()=>realtimeStatus,broadcastChange,online};
+window.YardivoSupabase={authenticate,syncNow,flushQueue:flush,pending,client:getClient,realtime:startRealtime,realtimeStatus:()=>realtimeStatus,broadcastChange,online,resetAllExceptUsers,fullDataSnapshot,restoreFullData};
 window.YardivoOnlineSync=window.YardivoSupabase;
+try{
+  window.YardivoServerStorageStatusV583={
+    online:()=>!!ready,
+    pending:()=>pending(),
+    browserBusinessKeys:()=>window.YardivoBrowserlessStorageV583?.browserPersistentBusinessKeys?.()||[],
+    memoryBusinessKeys:()=>window.YardivoBrowserlessStorageV583?.businessKeys?.()||[],
+    verify:()=>({
+      online:!!ready,
+      pending:pending(),
+      persistentBusinessKeys:window.YardivoBrowserlessStorageV583?.browserPersistentBusinessKeys?.()||[]
+    })
+  };
+}catch(_){}
 
 window.addEventListener('online',()=>setTimeout(()=>{if(ready){startRealtime().catch(()=>{});flush()}},250));
 window.addEventListener('focus',()=>setTimeout(()=>{if(ready){startRealtime().catch(()=>{});if(pending())flush();else pull()}},150));
@@ -29961,13 +30182,7 @@ let busy=false;
 
 /* These are configuration/auth keys and MUST survive the operational wipe. */
 const PRESERVE_EXACT=new Set([
-  'yardivo_last_location','studenac_active_warehouse',
-  'yardivo_main_theme_v2','yardivo_dark_look_v2','yardivo_dark_style','yardivo_dark_style_v1',
-  'yardivo_light_style_v1','yardivo_theme','yardivo_theme_v2','yardivo_theme_v3',
-  'yardivo_theme_preset_v1','yardivo_ux_style_v1','yardivo_first_theme_initialized_v1',
-  'yardivo_font_scale','yardivo_master_font_v1','yardivo_notification_sound_v1',
-  'yardivo_ramp_qr_mobile_v1','yardivo_ramp_config_v1','yardivo_capacity_config_v1',
-  'yardivo_detention_settings_v1','yardivo_auto_replan_cfg_v1',
+  /* USER IDENTITIES / AUTH ONLY — jedino ovo preživljava potpuni reset. */
   'yardivo_master_users_v1','yardivo_users','yardivo_yms_users',
   'yardivo_remembered_session','yardivo_session','yardivo_custom_session',
   'yardivo_real_auth_cutover_v1','yardivo_rbac_session_migrated_20260831',
@@ -29991,11 +30206,9 @@ const OPERATIONAL_EXACT=new Set([
 function operationalKey(k){
   k=String(k||'');
   if(!k || PRESERVE_EXACT.has(k))return false;
-  if(OPERATIONAL_EXACT.has(k))return true;
-  return /(?:^|_)(?:announcement|incident|notification|unannounced|epal|truck|arrival|history|audit|alert|replan_log|supplier_scores|overview_qa|daily_forecast_seen)(?:_|$)/i.test(k)
-      || /^yardivo_unannounced_/i.test(k)
-      || /^yardivo_incident_/i.test(k)
-      || /^yardivo_daily_forecast_seen_v1_/i.test(k);
+  if(/^sb-[a-z0-9_-]+-auth-token$/i.test(k)||/^supabase\.auth\./i.test(k))return false;
+  if(/(?:^|_)(?:user|users|user_access|profile|profiles|auth)(?:_|$)/i.test(k))return false;
+  return /^(?:yardivo_|studenac_|yms_)/i.test(k);
 }
 
 function storageKeys(storage){
@@ -30056,23 +30269,24 @@ function clearRuntimeArrays(){
 }
 
 async function clearCloudState(){
+  /* Authoritative server wipe: delete every server-owned dataset/state except user identities. */
+  if(window.YardivoSupabase?.resetAllExceptUsers){
+    await window.YardivoSupabase.resetAllExceptUsers();
+    return;
+  }
+  /* Compatibility fallback for older backend builds. */
   const keys=[...OPERATIONAL_EXACT];
-  /* State-key modules: overwrite with an empty payload so other devices do not repopulate history. */
   if(typeof putCloudState==='function'){
     for(const k of keys){
-      try{
-        const value=(/notifications|announcements|incidents|epal|truck|unannounced|history|log|scores/i.test(k))?'[]':'';
-        await Promise.resolve(putCloudState(k,value));
-      }catch(e){console.warn('YARDIVO wipe cloud state',k,e)}
+      try{await Promise.resolve(putCloudState(k,''))}catch(e){console.warn('YARDIVO wipe cloud state',k,e)}
     }
   }
 }
 
 async function clearNormalizedRows(){
-  /* Empty arrays drive the existing CAS normalized transport to delete every row. */
+  /* Runtime arrays are already empty. Server deletion is handled authoritatively by clearCloudState(). */
   try{saveAnnouncements?.()}catch(_){}
   try{saveIncidents?.()}catch(_){}
-  try{await window.YardivoSupabase?.syncNow?.()}catch(e){console.warn('YARDIVO normalized wipe sync',e)}
 }
 
 function rerenderAll(){
@@ -30100,9 +30314,9 @@ async function wipe(){
   if(r!=='admin'){alert('Samo Admin može izvršiti potpuni reset podataka.');return}
 
   const ok=confirm(
-    'OBRISATI SVE OPERATIVNE PODATKE?\n\n'+
-    'Brišu se SVE najave, incidenti, nenajavljeni dolasci, EPAL evidencija, kamioni/dolasci, promjene, povijesti, logovi, upozorenja i SVE NOTIFIKACIJE.\n\n'+
-    'Nakon ove radnje operativni sustav mora biti potpuno prazan.'
+    'OBRISATI APSOLUTNO SVE PODATKE I POSTAVKE?\n\n'+
+    'Briše se cijelo poslovno stanje YARDIVO-a: najave, incidenti, Supplier podaci, kamioni, EPAL, termini, konfiguracije rampi/skladišta, Smart/KPI/logovi, audit, neradni dani, notifikacije i ostale postavke.\n\n'+
+    'KORISNIČKI RAČUNI I PROFILI OSTAJU SAČUVANI.'
   );
   if(!ok)return;
 
@@ -30123,8 +30337,8 @@ async function wipe(){
   try{safeStorage.setItem('yardivo_yms_incidents_v1','[]')}catch(_){}
   try{localStorage.setItem('yardivo_live_notifications_v1','[]')}catch(_){}
 
-  await clearNormalizedRows();
   await clearCloudState();
+  await clearNormalizedRows();
   clearOperationalStorage();
 
   /* Recreate only canonical empty datasets so no legacy fallback can restore old records. */
@@ -30729,7 +30943,7 @@ async function renderProfiles(){
     const res=await invokeUsers('list');
     const users=Array.isArray(res)?res:(Array.isArray(res?.users)?res.users:[]);
     host.innerHTML=
-      `<div class="yardivo-profile-list-title"><span>PROFILI NA SERVERU</span><span class="yardivo-profile-count">${users.length}</span></div>`+
+      `<div class="yardivo-profile-list-title"><span>PROFILI NA SERVERU</span><span style="display:flex;align-items:center;gap:8px"><span class="yardivo-profile-count">${users.length}</span><button type="button" class="action danger" id="yardivoDeleteAllNonAdminUsers">BRIŠI SVE KORISNIKE</button></span></div>`+
       '<div class="master-user-row"><strong>Korisnik</strong><strong>Rola</strong><strong>Lokacija</strong><strong>Status</strong><strong>Akcije</strong></div>'+
       users.map(u=>`<div class="master-user-row">
         <div><strong>${esc(u.username)}</strong></div>
@@ -30739,7 +30953,7 @@ async function renderProfiles(){
         <div>
           <button class="action" data-profile-toggle="${esc(u.auth_user_id)}" data-active="${u.active?'1':'0'}">${u.active?'DEAKT.':'AKTIV.'}</button>
           <button class="action" data-profile-password="${esc(u.auth_user_id)}" data-profile-user="${esc(u.username)}">PROMIJENI ŠIFRU</button>
-          ${u.username==='dujemales'?'':` <button class="action danger" data-profile-delete="${esc(u.auth_user_id)}">OBRIŠI</button>`}
+          ${normRole(u.app_role)==='admin'?'':` <button class="action danger" data-profile-delete="${esc(u.auth_user_id)}">OBRIŠI</button>`}
         </div>
       </div>`).join('');
 
@@ -30773,6 +30987,32 @@ async function renderProfiles(){
         }
       };
     });
+    const bulkDelete=document.getElementById('yardivoDeleteAllNonAdminUsers');
+    if(bulkDelete){
+      bulkDelete.onclick=async()=>{
+        const removable=users.filter(u=>normRole(u.app_role)!=='admin'&&u.auth_user_id);
+        if(!removable.length){alert('Nema korisnika za brisanje. Admin računi se ne brišu.');return}
+        if(!confirm(`TRAJNO OBRISATI ${removable.length} KORISNIKA?\n\nSvi Admin računi ostaju sačuvani.`))return;
+        const typed=prompt('Za konačnu potvrdu upiši: BRISI SVE KORISNIKE');
+        if(typed===null)return;
+        const norm=typed.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        if(norm!=='BRISI SVE KORISNIKE'){alert('Brisanje nije izvršeno.');return}
+        bulkDelete.disabled=true;bulkDelete.textContent='BRIŠEM KORISNIKE…';
+        let deleted=0,failed=[];
+        for(const u of removable){
+          try{await invokeUsers('delete',{auth_user_id:u.auth_user_id});deleted++}
+          catch(e){failed.push(`${u.username||u.auth_user_id}: ${e?.message||e}`)}
+        }
+        await renderProfiles();
+        if(failed.length){
+          alert(`Obrisano: ${deleted}. Neuspjelo: ${failed.length}.\n\n`+failed.join('\n'));
+        }else{
+          try{showYmsToast?.('success','KORISNICI OBRISANI',`Obrisano ${deleted} korisnika. Admin računi su sačuvani.`)}catch(_){}
+          alert(`Obrisano ${deleted} korisnika. Admin računi su ostali sačuvani.`);
+        }
+      };
+    }
+
     host.querySelectorAll('[data-profile-delete]').forEach(btn=>{
       btn.onclick=async()=>{
         if(!confirm('Trajno obrisati ovaj korisnički profil?'))return;
@@ -34517,11 +34757,17 @@ function supplierInboxRole(){
  try{return String((window.currentSession||currentSession||{}).role||'').toLowerCase().trim()}catch(_){return String(window.currentSession?.role||'').toLowerCase().trim()}
 }
 function supplierInboxActiveWarehouse(){
- try{return String((typeof activeWarehouse!=='undefined'?activeWarehouse:window.activeWarehouse)||'').toUpperCase().trim()}catch(_){return''}
+ let w='';
+ try{
+  if(typeof getActiveWarehouse==='function')w=getActiveWarehouse();
+  if(!w&&typeof activeWarehouse!=='undefined')w=activeWarehouse;
+  if(!w)w=window.activeWarehouse||localStorage.getItem('yardivo_active_warehouse')||'';
+ }catch(_){try{w=localStorage.getItem('yardivo_active_warehouse')||''}catch(__){}}
+ w=String(w||'').toUpperCase().trim();
+ return w==='SVA'?'ALL':w;
 }
 function supplierInboxRows(rows){
  rows=Array.isArray(rows)?rows:[];
- if(supplierInboxRole()!=='inventory')return rows;
  const aw=supplierInboxActiveWarehouse();
  if(!aw||aw==='ALL')return [];
  return rows.filter(x=>String(x?.warehouse||'').toUpperCase().trim()===aw);
@@ -34554,7 +34800,7 @@ function renderStable(rows,force=false){
       if(wh.innerHTML!==html){wh.innerHTML=html;if([...wh.options].some(o=>o.value===old))wh.value=old}
     }
   }
-  const fS=document.getElementById('ysrStatusFilter')?.value||'',fW=inv?'':(wh?.value||''),q=(document.getElementById('ysrSearch')?.value||'').trim().toLowerCase();
+  const fS=document.getElementById('ysrStatusFilter')?.value||'',fW=aw&&aw!=='ALL'?aw:'',q=(document.getElementById('ysrSearch')?.value||'').trim().toLowerCase();
   const filtered=scopedRows.filter(x=>{
    const rowWh=String(x.warehouse||'').toUpperCase().trim();
    if(fW&&rowWh!==String(fW).toUpperCase().trim())return false;
@@ -37222,6 +37468,39 @@ window.YardivoSupplierHistoryDetail={open,close};
 })();
 </script>
 <script id="yardivo-v583-supplier-stability-marker">window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-supplier-planner-input-freeze-fix';</script>
+
+<style id="yardivo-admin-bulk-delete-users-v583">
+#yardivoDeleteAllNonAdminUsers{
+  white-space:nowrap!important;
+  font-weight:1000!important;
+  border-width:1px!important;
+}
+@media(max-width:760px){
+  #masterUserAdmin .yardivo-profile-list-title{align-items:flex-start!important;gap:8px!important}
+  #masterUserAdmin .yardivo-profile-list-title>span:last-child{flex-wrap:wrap!important;justify-content:flex-end!important}
+}
+</style>
+
+<script id="yardivo-full-data-v583">
+(function(){'use strict';if(window.__yardivoFullDataV583)return;window.__yardivoFullDataV583=true;
+const enc=new TextEncoder(),str=o=>JSON.stringify(o,null,2);
+async function hash(t){const b=await crypto.subtle.digest('SHA-256',enc.encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+function stat(t,k){const e=document.getElementById('yardivoFullDataStatus');if(e){e.textContent=t;e.style.borderColor=k==='e'?'rgba(248,113,113,.5)':k==='o'?'rgba(45,212,191,.5)':'rgba(148,163,184,.18)'}}
+const cnt=p=>({announcements:p.announcements?.length||0,incidents:p.incidents?.length||0,state:p.state?.length||0,audit_log:p.audit_log?.length||0});
+async function exp(){stat('ČITAM KOMPLETNE PODATKE SA SERVERA…');const d=await window.YardivoSupabase.fullDataSnapshot(),c=cnt(d),core={...d,manifest:{format:'YARDIVO FULL DATA',schema:'yardivo-full-data-v1',version:'YARDIVO DEV V5.8.3',exportedAt:d.exportedAt,source:'SERVER / DATABASE',counts:c}},checksum=await hash(str(core)),pack={...core,integrity:{algorithm:'SHA-256',checksum}},blob=new Blob([str(pack)],{type:'application/json;charset=utf-8'}),a=document.createElement('a'),stamp=new Date().toISOString().replace(/[:.]/g,'-');a.href=URL.createObjectURL(blob);a.download=`YARDIVO_FULL_DATA_${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);stat(`EXPORT USPJEŠAN · ${c.announcements} najava · ${c.incidents} incidenata · ${c.state} state · ${c.audit_log} audit · SHA-256 OK`,'o')}
+async function verify(p){if(!p||p.schema!=='yardivo-full-data-v1'||!p.integrity?.checksum)throw new Error('Neispravan YARDIVO FULL DATA backup.');const x={...p};delete x.integrity;if(await hash(str(x))!==p.integrity.checksum)throw new Error('CHECKSUM NIJE ISPRAVAN — backup je oštećen ili promijenjen.');return true}
+async function restore(file){stat('PROVJERAVAM BACKUP I CHECKSUM…');let p;try{p=JSON.parse(await file.text())}catch(_){throw new Error('Datoteka nije valjani JSON.')}await verify(p);const c=cnt(p);if(!confirm(`RESTORE FULL DATA?\n\n${p.exportedAt||''}\nNajave: ${c.announcements}\nIncidenti: ${c.incidents}\nState: ${c.state}\nAudit: ${c.audit_log}\n\nPostojeći poslovni podaci bit će zamijenjeni. Korisnici ostaju.`))return stat('RESTORE OTKAZAN');if((prompt('Za konačnu potvrdu upiši: RESTORE YARDIVO')||'').trim().toUpperCase()!=='RESTORE YARDIVO')return stat('RESTORE OTKAZAN');stat('VRAĆAM PODATKE NA SERVER… NE ZATVARAJ YARDIVO.');const r=await window.YardivoSupabase.restoreFullData(p);stat(`RESTORE USPJEŠAN · ${r.announcements} najava · ${r.incidents} incidenata · ${r.state} state`,'o');setTimeout(()=>location.reload(),900)}
+function install(){
+ if(document.getElementById('yardivoFullDataBackupCard'))return bind();
+ const danger=[...document.querySelectorAll('*')].find(e=>e.children.length<12&&/OPASNA ZONA/i.test(e.textContent||'')&&e.querySelector('button'));
+ if(!danger)return;
+ const card=document.createElement('div');card.id='yardivoFullDataBackupCard';card.className='dangerCard';card.style.cssText='margin:14px 0;border:1px solid rgba(45,212,191,.28);border-radius:14px;padding:16px';
+ card.innerHTML='<div class="dangerTitle" style="color:#5eead4;font-weight:1000">FULL DATA BACKUP / RESTORE</div><p><strong>EXPORT FULL DATA</strong> povlači svježi snapshot direktno sa servera/baze. Browser cache nije izvor backupa.</p><div id="yardivoFullDataStatus" style="margin:12px 0;padding:10px 12px;border:1px solid rgba(148,163,184,.18);border-radius:10px;font-size:12px;font-weight:800">SPREMNO ZA SERVER EXPORT</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="action primary" id="yardivoExportFullDataBtn">EXPORT FULL DATA</button><button type="button" class="action" id="yardivoRestoreFullDataBtn">IMPORT / RESTORE FULL DATA</button><input type="file" id="yardivoRestoreFullDataFile" accept=".json,application/json" hidden></div><p style="margin-top:10px;font-size:11px;opacity:.72">Backup ima manifest, broj zapisa i SHA-256 checksum. Restore provjerava datoteku prije upisa. Korisnički računi ostaju sačuvani.</p>';
+ danger.insertBefore(card,danger.firstChild);bind();
+}
+function bind(){const e=document.getElementById('yardivoExportFullDataBtn'),r=document.getElementById('yardivoRestoreFullDataBtn'),f=document.getElementById('yardivoRestoreFullDataFile');if(e&&!e.dataset.b){e.dataset.b=1;e.onclick=async()=>{e.disabled=true;try{await exp()}catch(x){stat('EXPORT NIJE USPIO · '+(x.message||x),'e');alert(x.message||x)}finally{e.disabled=false}}}if(r&&!r.dataset.b){r.dataset.b=1;r.onclick=()=>f?.click()}if(f&&!f.dataset.b){f.dataset.b=1;f.onchange=async()=>{const z=f.files?.[0];if(!z)return;r.disabled=true;try{await restore(z)}catch(x){stat('RESTORE NIJE USPIO · '+(x.message||x),'e');alert(x.message||x)}finally{r.disabled=false;f.value=''}}}}
+new MutationObserver(install).observe(document.documentElement,{childList:true,subtree:true});document.addEventListener('DOMContentLoaded',install);install();window.YardivoFullDataV583={export:exp,verify,restore};
+})();</script>
 </body>
 </html>
 
@@ -39468,26 +39747,115 @@ function hrVoice(){
 }
 function available(){return !!(window.speechSynthesis&&window.SpeechSynthesisUtterance&&hrVoice())}
 function cleanText(s){
-  return String(s||'').replace(/[×✕]/g,' ').replace(/\bID[:#]?\s*[\w-]+/gi,' ').replace(/\s+/g,' ').trim();
+  return String(s||'')
+    .replace(/[×✕]/g,' ')
+    .replace(/\bID[:#]?\s*[\w-]+/gi,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+const WH_NAMES={
+  W101:{name:'Ambijent',location:'Velika Gorica'},
+  W103:{name:'Svježe i hlađeno',location:'Velika Gorica'},
+  W104:{name:'Smrznuto',location:'Velika Gorica'},
+  W201:{name:'Ambijent',location:'Dugopolje'},
+  W202:{name:'W202',location:'Dugopolje'},
+  W203:{name:'Svježe i hlađeno',location:'Dugopolje'},
+  W204:{name:'Smrznuto',location:'Dugopolje'}
+};
+function whLabel(code){
+  const w=String(code||'').toUpperCase().trim();
+  const x=WH_NAMES[w];
+  if(!x)return '';
+  return x.name&&x.location?`${x.name}, ${x.location}`:(x.location||x.name||'');
+}
+function shortDate(v){
+  const s=String(v||'').trim();
+  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m)return `${m[3]}.${m[2]}.`;
+  m=s.match(/^(\d{1,2})[./-](\d{1,2})/);
+  if(m)return `${String(m[1]).padStart(2,'0')}.${String(m[2]).padStart(2,'0')}.`;
+  return '';
+}
+function shortTime(v){
+  const m=String(v||'').match(/\b(\d{1,2}):(\d{2})\b/);
+  if(!m)return '';
+  const h=Number(m[1]),min=Number(m[2]);
+  return min?`${h} sati i ${min} minuta`:`${h} sati`;
+}
+function rampValue(v){
+  const m=String(v||'').match(/(?:RAMPA\s*|R)(\d+)/i);
+  return m?Number(m[1]):'';
+}
+function firstMatch(text,re){
+  const m=String(text||'').match(re);return m?.[1]?.trim()||'';
+}
+function extractSupplier(n,text){
+  return cleanText(
+    n?.supplier||n?.supplier_name||n?.supplierName||n?.meta?.supplier||
+    firstMatch(text,/(?:DOBAVLJAČ|DOBAVLJAC)\s*[:\-]?\s*([^·,|]+)/i)||
+    ''
+  );
+}
+function categoryLabel(n,text){
+  const event=String(n?.event||n?.type||'').toUpperCase();
+  const t=String((n?.title||'')+' '+(text||'')).toUpperCase();
+  if(event==='SUPPLIER_REQUEST'||/NOV[AI]\s+(?:ZAHTJEV\s+)?DOBAVLJAČA|NOVA NAJAVA|SUPPLIER ZAHTJEV/.test(t))return'NOVA NAJAVA';
+  if(event==='INCIDENT'||/INCIDENT/.test(t))return'NOVI INCIDENT';
+  if(event==='YARD_ARRIVAL'||/DVORIŠT|DVORIST|ULAZAK KAMIONA|KAMION U DVORIŠTU/.test(t))return'KAMION JE UŠAO U DVORIŠTE';
+  if(event==='DOCK_ARRIVAL'||/NA RAMPI/.test(t))return'KAMION JE NA RAMPI';
+  if(event==='RECEIVED'||/ZAPRIMLJEN/.test(t))return'ISPORUKA JE ZAPRIMLJENA';
+  if(event==='REJECTED'||/ODBIJEN/.test(t))return'ISPORUKA JE ODBIJENA';
+  if(event==='YARD_DEPARTURE'||/IZLAZ|IZAŠAO|IZASAO|ODLAZAK/.test(t))return'KAMION JE NAPUSTIO LOKACIJU';
+  if(/PROMJEN.*TERMIN|NOVI TERMIN|RESCHEDULE/.test(t))return'PROMJENA TERMINA';
+  if(/SMART/.test(t))return'YARDIVO SMART';
+  if(/NAJAV/.test(t))return'NOVA NAJAVA';
+  return cleanText(n?.title||'NOVA NOTIFIKACIJA').replace(/[🚛↗✓⚠]/g,'').trim();
 }
 function speechTextFromNotification(n){
   if(!n)return'';
-  const title=cleanText(n.title||'');
-  const body=cleanText(n.body||n.message||'');
-  const wh=cleanText(window.YardivoNotifications?.resolvedWarehouse?.(n)||n.warehouse||'');
-  const parts=[];
-  if(wh)parts.push(`Skladište ${wh}.`);
-  if(title)parts.push(`${title}.`);
-  if(body && !title.toLowerCase().includes(body.toLowerCase()))parts.push(body);
+  const raw=cleanText(`${n.title||''} ${n.body||n.message||''}`);
+  const wh=String(window.YardivoNotifications?.resolvedWarehouse?.(n)||n.warehouse||firstMatch(raw,/\b(W(?:101|103|104|201|202|203|204))\b/i)||'').toUpperCase();
+  const supplier=extractSupplier(n,raw);
+  const date=shortDate(n.date||n.delivery_date||n.meta?.date||n.meta?.delivery_date||firstMatch(raw,/(\d{4}-\d{2}-\d{2}|\d{1,2}[./-]\d{1,2}[./-]?\d{0,4})/));
+  const time=shortTime(n.time||n.requested_time||n.meta?.time||n.meta?.requested_time||firstMatch(raw,/(\d{1,2}:\d{2})/));
+  const dock=rampValue(n.dock||n.meta?.dock||raw);
+  const cat=categoryLabel(n,raw);
+  const parts=[`${cat}.`];
+  if(supplier)parts.push(`Dobavljač ${supplier}.`);
+  const wl=whLabel(wh);if(wl)parts.push(`${wl}.`);
+  if(date&&time)parts.push(`${date} u ${time}.`);
+  else if(date)parts.push(`${date}.`);
+  else if(time)parts.push(`U ${time}.`);
+  if(dock)parts.push(`Rampa ${dock}.`);
+  if(cat==='NOVI INCIDENT'){
+    const sev=cleanText(n.severity||n.seriousness||n.meta?.severity||'');
+    if(sev)parts.push(`${sev}.`);
+  }
   return cleanText(parts.join(' '));
+}
+function speechTextFromToastElement(el){
+  if(!el)return'';
+  const clone=el.cloneNode(true);
+  clone.querySelectorAll('button,.y-live-toast-close,[aria-label*="zatv" i],[title*="zatv" i]').forEach(x=>x.remove());
+  let raw=cleanText(clone.innerText||clone.textContent||'');
+  const wh=firstMatch(raw,/\b(W(?:101|103|104|201|202|203|204))\b/i);
+  const category=categoryLabel({},raw);
+  const supplier=firstMatch(raw,/(?:NOVA NAJAVA|NOVI SUPPLIER ZAHTJEV|NOVI ZAHTJEV DOBAVLJAČA|KAMION U DVORIŠTU|KAMION NA RAMPI|KAMION ZAPRIMLJEN|KAMION ODBIJEN|NOVI INCIDENT)[\s:·\-]*([^·\n]+)/i)
+    .replace(/\bW(?:101|103|104|201|202|203|204)\b.*$/i,'').trim();
+  const date=shortDate(firstMatch(raw,/(\d{4}-\d{2}-\d{2}|\d{1,2}[./-]\d{1,2}[./-]?\d{0,4})/));
+  const time=shortTime(firstMatch(raw,/(\d{1,2}:\d{2})/));
+  const dock=rampValue(raw);
+  const out=[`${category}.`];
+  if(supplier)out.push(`Dobavljač ${supplier}.`);
+  const wl=whLabel(wh);if(wl)out.push(`${wl}.`);
+  if(date&&time)out.push(`${date} u ${time}.`);else if(date)out.push(`${date}.`);else if(time)out.push(`U ${time}.`);
+  if(dock)out.push(`Rampa ${dock}.`);
+  return cleanText(out.join(' '));
 }
 function toastText(el,n){
   const fromNotif=speechTextFromNotification(n);
   if(fromNotif)return fromNotif;
-  if(!el)return'';
-  const clone=el.cloneNode(true);
-  clone.querySelectorAll('button,.y-live-toast-close,[aria-label*="zatv" i],[title*="zatv" i]').forEach(x=>x.remove());
-  return cleanText(clone.innerText||clone.textContent||'');
+  return speechTextFromToastElement(el);
 }
 function stop(){
   queue=[];speaking=false;currentUtterance=null;
@@ -39501,7 +39869,7 @@ function say(text,onDone){
     currentUtterance=u;u.lang='hr-HR';u.voice=v;u.volume=c.volume;u.rate=Math.max(.65,Math.min(1.25,Number(c.rate)||.94));u.pitch=1.02;
     let finished=false;
     const done=()=>{if(finished)return;finished=true;if(currentUtterance===u)currentUtterance=null;onDone?.()};
-    u.onend=done;u.onerror=done;speechSynthesis.speak(u);return true;
+    u.onend=done;u.onerror=done;try{speechSynthesis.resume()}catch(_){}speechSynthesis.speak(u);return true;
   }catch(_){currentUtterance=null;onDone?.();return false}
 }
 function pump(){
@@ -39512,16 +39880,12 @@ function pump(){
 function enqueueText(text,key){
   if(!cfg().enabled||!available())return;
   text=cleanText(text);if(!text)return;
-  if(key){
-    const x=spoken();if(x.has(String(key)))return;
-    mark(key);
-  }
   queue.push({text,key:key||''});pump();
 }
 function enqueue(n){if(n)enqueueText(speechTextFromNotification(n),n.id||n.notificationId||'')}
 
 const TOAST_SELECTORS=[
-  '.y5-toast','.y-live-toast','.yardivo-toast','.notification-toast','.notif-toast','[data-yardivo-toast]','[role="alert"]'
+  '.y5-toast','.y-live-toast','.yardivo-toast','.notification-toast','.notif-toast','.toast','.toast-notification','.notification-popup','.notification-bubble','[data-yardivo-toast]','[data-notification-toast]','[role="alert"]','[aria-live="assertive"]'
 ].join(',');
 
 function looksLikeSettingsOrModal(el){
@@ -39543,14 +39907,16 @@ function toastKey(el){
   const born=el.dataset?.voiceBornV583||(el.dataset.voiceBornV583=String(Date.now())+'-'+Math.random().toString(36).slice(2,8));
   return 'toast:'+born+':'+txt.slice(0,120);
 }
-function processToast(el,n){
-  if(!el||looksLikeSettingsOrModal(el)||!isVisible(el))return;
+function processToast(el,n,attempt){
+  if(!el||looksLikeSettingsOrModal(el))return;
+  attempt=Number(attempt||0);
+  if(!isVisible(el)){if(attempt<6)setTimeout(()=>processToast(el,n,attempt+1),70+attempt*70);return}
   if(el.dataset?.yardivoVoiceSeenV583==='1')return;
   el.dataset.yardivoVoiceSeenV583='1';
   const key=n?.id||n?.notificationId||toastKey(el);
   if(observedToastKeys.has(String(key)))return;
   observedToastKeys.add(String(key));
-  enqueueText(toastText(el,n),key);
+  const text=toastText(el,n);if(text)enqueueText(text,key);
 }
 function inspectNode(node){
   if(!(node instanceof Element))return;
@@ -39564,7 +39930,11 @@ function installToastObserver(){
 }
 window.addEventListener('yardivo:visible-toast',e=>{
   const n=e?.detail?.notification,el=e?.detail?.element;
-  if(el)processToast(el,n); else if(n)enqueue(n);
+  if(el){processToast(el,n);return}
+  setTimeout(()=>{
+    const c=[...document.querySelectorAll(TOAST_SELECTORS)].filter(x=>isVisible(x)&&!looksLikeSettingsOrModal(x)&&x.dataset?.yardivoVoiceSeenV583!=='1');
+    const newest=c[c.length-1];if(newest)processToast(newest,n);else if(n)enqueue(n);
+  },50);
 });
 
 function test(){
@@ -39590,12 +39960,12 @@ function installSettings(){
   if(!host)return;
   const d=document.createElement('div');d.id='yardivoVoiceSettingsV583';
   d.innerHTML=`<div class="yv-title">GLASOVNE NOTIFIKACIJE</div>
-  <div class="yv-sub">Čita svaku notifikaciju koja se stvarno pojavi desno u popup oblačiću: najave, incidente, ulazak kamiona, dolazak na rampu, zaprimanje, promjene termina i ostale notifikacije koje korisnik vidi.</div>
+  <div class="yv-sub">Čita kratki sažetak svake notifikacije koja se pojavi desno. Koristi naziv i lokaciju skladišta, bez W101/W201 kodova i tehničkih detalja.</div>
   <div class="yv-row"><label>HRVATSKI ŽENSKI GLAS</label><button type="button" id="yardivoVoiceToggleV583">OFF</button></div>
   <div class="yv-row"><label>GLASNOĆA</label><div style="display:flex;align-items:center;gap:8px"><input id="yardivoVoiceVolumeV583" type="range" min="0" max="100" step="5"><span id="yardivoVoiceVolumeValueV583"></span></div></div>
   <div class="yv-row"><div><label>TEST GLASA</label><div id="yardivoVoiceStatusV583"></div></div><button type="button" id="yardivoVoiceTestV583">TESTIRAJ GLAS</button></div>`;
   host.appendChild(d);
-  d.querySelector('#yardivoVoiceToggleV583').addEventListener('click',()=>{const next=!cfg().enabled;save({enabled:next});if(!next)stop()});
+  d.querySelector('#yardivoVoiceToggleV583').addEventListener('click',()=>{const next=!cfg().enabled;save({enabled:next});if(!next)stop();else try{speechSynthesis.resume()}catch(_){}});
   const vol=d.querySelector('#yardivoVoiceVolumeV583');
   const applyVol=e=>{const v=Math.max(0,Math.min(100,Number(e.target.value)||0));save({volume:v/100})};
   vol.addEventListener('input',applyVol);vol.addEventListener('change',applyVol);
@@ -39623,6 +39993,6 @@ try{
 setTimeout(()=>{installSettings();installToastObserver()},300);
 
 window.YardivoVoiceNotificationsV583={enabled:()=>cfg().enabled,volume:()=>cfg().volume,test,stop,enqueue,enqueueText,available,config:cfg};
-window.YARDIVO_DEV_BUILD='20260909-dev-v5.8.3-voice-all-visible-notifications-fix';
+window.YARDIVO_DEV_BUILD='20260909-dev-v5.8.3-full-data-export-restore';
 })();
 </script>
