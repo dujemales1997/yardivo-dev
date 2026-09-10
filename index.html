@@ -37870,7 +37870,7 @@ window.YardivoSettingsHardFixV583={
  deleteAllSuppliers,
  category:()=>selectedCategory
 };
-window.YARDIVO_DEV_BUILD='20260910-dev-v5.8.3-supplier-auto-day-slot-history-contrast-fix';
+window.YARDIVO_DEV_BUILD='20260910-dev-v5.8.3-supplier-fullscreen-day-map-fix';
 })();
 </script>
 
@@ -38171,6 +38171,279 @@ window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>{bind();contras
 bind();contrast();
 window.YardivoSupplierAutoDaySlotV583={refresh:bind,render:()=>{const r=supplierRoot(),d=dateInput(r||document)?.value;if(r&&d)return render(r,d)},chosen:()=>({...chosen})};
 window.YARDIVO_DEV_BUILD='20260910-dev-v5.8.3-supplier-auto-day-slot-history-contrast-fix';
+})();
+</script>
+
+
+<style id="yardivo-supplier-day-map-real-slots-hard-fix-style">
+#yardivoSupplierPortal #yardivoSupplierDayMapLaunch{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:10px 0 0;
+}
+#yardivoSupplierPortal #yardivoSupplierDayMapLaunch .action.primary{
+  font-weight:1000!important;
+}
+#yardivoSupplierPortal .yardivo-supplier-auto-slot-wrap .yardivo-map-note{
+  margin-top:8px;
+  color:#86aabd;
+  font-size:9px;
+  font-weight:800;
+}
+</style>
+<script id="yardivo-supplier-day-map-real-slots-hard-fix">
+(function(){
+'use strict';
+if(window.__YARDIVO_SUPPLIER_DAY_MAP_REAL_SLOTS_HARD_FIX__)return;
+window.__YARDIVO_SUPPLIER_DAY_MAP_REAL_SLOTS_HARD_FIX__=true;
+
+function root(){return document.getElementById('yardivoSupplierPortal')}
+function q(sel,r=document){try{return r.querySelector(sel)}catch(_){return null}}
+function dateEl(r){return q('#yspDate',r)||q('input[type="date"]',r)}
+function whEl(r){return q('#yspWarehouse',r)||q('select[name*="warehouse" i]',r)}
+function palEl(r){return q('#yspPallets',r)||q('input[name*="pallet" i]',r)}
+function timeEl(r){return q('#yspTime',r)}
+function dockEl(r){return q('#yspDock',r)}
+
+function humanDate(v){
+ try{return new Intl.DateTimeFormat('hr-HR',{day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(v+'T12:00:00'))}catch(_){return v}
+}
+
+/* The original planner is the source of truth. We open it instead of trying
+   to reconstruct its availability result in a second planner. */
+function openAuthoritativeMap(){
+ const r=root(),d=dateEl(r)?.value||'';
+ if(!r||!d){alert('Prvo odaberi željeni datum dostave.');return}
+ const api=window.YardivoSupplierSlotMapV583;
+ if(!api?.open){alert('YARDIVO mapa slobodnih termina trenutno nije dostupna.');return}
+
+ /* Persist requested date in the visible supplier form. Existing map reads
+    warehouse/pallets/form state and remains authoritative for occupancy. */
+ try{api.open()}catch(e){
+   console.error('[YARDIVO Supplier day map]',e);
+   alert('Mapa slobodnih termina se nije mogla otvoriti: '+(e?.message||e));
+   return;
+ }
+
+ /* Existing map is a 7-day planner. After it renders, hide other day groups
+    where possible and visually emphasize the supplier-selected date. */
+ let tries=0;
+ const focus=()=>{
+   tries++;
+   const candidates=[...document.querySelectorAll('body *')].filter(el=>{
+     if(el.closest('#yardivoSupplierPortal'))return false;
+     const txt=String(el.textContent||'');
+     return txt.includes(d)||txt.includes(humanDate(d));
+   });
+   if(candidates.length){
+     const target=candidates.find(x=>/slobod|termin|ramp/i.test(String(x.parentElement?.textContent||'')))||candidates[0];
+     try{target.scrollIntoView({block:'center',behavior:'smooth'})}catch(_){}
+     target.style.setProperty('outline','2px solid #5eead4','important');
+     target.style.setProperty('outline-offset','3px','important');
+   }else if(tries<8)setTimeout(focus,120);
+ };
+ setTimeout(focus,80);
+}
+
+function install(){
+ const r=root();if(!r)return;
+ const d=dateEl(r);if(!d)return;
+ const wrap=q('.yardivo-supplier-auto-slot-wrap',r);
+ if(!wrap)return;
+
+ /* Replace misleading empty pseudo-map with an explicit launch into the
+    already existing authoritative YARDIVO free-slot map. */
+ let launch=q('#yardivoSupplierDayMapLaunch',wrap);
+ if(!launch){
+   launch=document.createElement('div');
+   launch.id='yardivoSupplierDayMapLaunch';
+   launch.innerHTML=
+     '<button type="button" class="action primary" id="yardivoOpenRealDayMap">PRIKAŽI SLOBODNE TERMINE I RAMPE</button>'+
+     '<div class="yardivo-map-note">Mapa koristi stvarnu YARDIVO raspoloživost rampi, zauzeća i trajanja za odabrani datum.</div>';
+   const grid=q('#yardivoSupplierDayGrid',wrap);
+   if(grid)grid.insertAdjacentElement('beforebegin',launch);
+   else wrap.appendChild(launch);
+ }
+ const b=q('#yardivoOpenRealDayMap',launch);
+ if(b&&!b.dataset.bound){b.dataset.bound='1';b.onclick=openAuthoritativeMap}
+
+ /* Date selection automatically opens the real map, per supplier workflow. */
+ if(!d.dataset.realDayMapBound){
+   d.dataset.realDayMapBound='1';
+   const auto=()=>{
+     if(!d.value)return;
+     /* Let form state settle before planner reads it. */
+     setTimeout(openAuthoritativeMap,120);
+   };
+   d.addEventListener('change',auto,true);
+ }
+
+ /* If old auto-render says "no slots", do not claim there are none.
+    The real planner is authoritative. */
+ const grid=q('#yardivoSupplierDayGrid',wrap);
+ if(grid && /NEMA PRONAĐENIH SLOBODNIH TERMINA/i.test(grid.textContent||'')){
+   grid.innerHTML='<div style="grid-column:1/-1;padding:10px;border:1px dashed #36586b;border-radius:10px;color:#a9c3d2;font-size:10px;font-weight:800">ODABERI “PRIKAŽI SLOBODNE TERMINE I RAMPE” za stvarnu dnevnu mapu. Ako ne želiš termin, nastavi samo s datumom.</div>';
+ }
+}
+let t=0;
+new MutationObserver(()=>{clearTimeout(t);t=setTimeout(install,50)}).observe(document.documentElement,{childList:true,subtree:true});
+document.addEventListener('DOMContentLoaded',()=>setTimeout(install,100));
+window.addEventListener('load',()=>setTimeout(install,400));
+install();
+window.YardivoSupplierRealDayMapV583={open:openAuthoritativeMap,refresh:install};
+window.YARDIVO_DEV_BUILD='20260910-dev-v5.8.3-supplier-day-map-real-slots-hard-fix';
+})();
+</script>
+
+
+<style id="yardivo-supplier-fullscreen-day-map-v583-style">
+/* Supplier free-slot map MUST be a true fullscreen modal. */
+#yardivoSupplierFullscreenMapV583{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100dvh!important;
+  z-index:2147483646!important;
+  background:#06131d!important;
+  color:#e8f7ff!important;
+  display:none;
+  flex-direction:column;
+  overflow:hidden!important;
+}
+#yardivoSupplierFullscreenMapV583.open{display:flex!important}
+#yardivoSupplierFullscreenMapV583 .yfs-head{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:14px 18px;
+  border-bottom:1px solid #29485d;
+  background:#0b2230;
+}
+#yardivoSupplierFullscreenMapV583 .yfs-title{font-size:15px;font-weight:1000}
+#yardivoSupplierFullscreenMapV583 .yfs-sub{font-size:10px;color:#91b4c7;font-weight:800;margin-top:3px}
+#yardivoSupplierFullscreenMapV583 .yfs-close{
+  border:1px solid #46667a;background:#102b3a;color:#fff;border-radius:9px;
+  min-width:42px;height:38px;font-weight:1000;cursor:pointer
+}
+#yardivoSupplierFullscreenMapV583 .yfs-body{
+  flex:1 1 auto;
+  min-height:0;
+  overflow:auto;
+  padding:16px;
+}
+#yardivoSupplierFullscreenMapV583 .yfs-host{
+  min-height:calc(100dvh - 110px);
+  width:100%;
+}
+body.yardivo-supplier-map-open{overflow:hidden!important}
+</style>
+<script id="yardivo-supplier-fullscreen-day-map-v583">
+(function(){
+'use strict';
+if(window.__YARDIVO_SUPPLIER_FULLSCREEN_DAY_MAP_V583__)return;
+window.__YARDIVO_SUPPLIER_FULLSCREEN_DAY_MAP_V583__=true;
+
+let originalParent=null,originalNext=null,movedNode=null;
+function sr(){return document.getElementById('yardivoSupplierPortal')}
+function q(sel,r=document){try{return r.querySelector(sel)}catch(_){return null}}
+function selectedDate(){const r=sr();return q('#yspDate',r)?.value||q('input[type="date"]',r)?.value||''}
+function shell(){
+ let x=document.getElementById('yardivoSupplierFullscreenMapV583');
+ if(x)return x;
+ x=document.createElement('div');x.id='yardivoSupplierFullscreenMapV583';
+ x.innerHTML='<div class="yfs-head"><div><div class="yfs-title">SLOBODNI TERMINI I RAMPE</div><div class="yfs-sub" id="yardivoFsMapDate">DNEVNA MAPA</div></div><button type="button" class="yfs-close" aria-label="Zatvori">✕</button></div><div class="yfs-body"><div class="yfs-host" id="yardivoFsMapHost"></div></div>';
+ document.body.appendChild(x);
+ q('.yfs-close',x).onclick=close;
+ x.addEventListener('click',e=>{if(e.target===x)close()});
+ return x;
+}
+function findPlanner(){
+ /* Find the modal/panel created by the existing authoritative slot map.
+    Exclude our fullscreen shell and supplier form itself. */
+ const candidates=[...document.body.querySelectorAll('div,section')].filter(el=>{
+   if(el.id==='yardivoSupplierFullscreenMapV583'||el.closest('#yardivoSupplierFullscreenMapV583'))return false;
+   if(el.closest('#yardivoSupplierPortal'))return false;
+   const txt=String(el.textContent||'').toUpperCase();
+   if(!/SLOBODN|TERMIN|RAMPA/.test(txt))return false;
+   const cs=getComputedStyle(el);
+   return cs.position==='fixed'||cs.position==='absolute'||el.getAttribute('role')==='dialog';
+ });
+ candidates.sort((a,b)=>(b.textContent||'').length-(a.textContent||'').length);
+ return candidates[0]||null;
+}
+function adoptPlanner(){
+ let tries=0;
+ const run=()=>{
+   tries++;
+   const planner=findPlanner();
+   if(planner){
+     const host=document.getElementById('yardivoFsMapHost');if(!host)return;
+     if(movedNode&&movedNode!==planner)return;
+     originalParent=planner.parentNode;originalNext=planner.nextSibling;movedNode=planner;
+     planner.style.setProperty('position','relative','important');
+     planner.style.setProperty('inset','auto','important');
+     planner.style.setProperty('width','100%','important');
+     planner.style.setProperty('height','100%','important');
+     planner.style.setProperty('max-width','none','important');
+     planner.style.setProperty('max-height','none','important');
+     planner.style.setProperty('margin','0','important');
+     planner.style.setProperty('transform','none','important');
+     planner.style.setProperty('z-index','1','important');
+     host.appendChild(planner);
+   }else if(tries<15)setTimeout(run,80);
+ };
+ setTimeout(run,30);
+}
+function open(){
+ const d=selectedDate();
+ if(!d){alert('Prvo odaberi željeni datum dostave.');return}
+ const x=shell();
+ document.getElementById('yardivoFsMapDate').textContent='ODABRANI DATUM · '+d.split('-').reverse().join('.');
+ x.classList.add('open');document.body.classList.add('yardivo-supplier-map-open');
+
+ /* Existing planner remains source of truth. */
+ try{
+   if(window.YardivoSupplierSlotMapV583?.open)window.YardivoSupplierSlotMapV583.open();
+   else throw new Error('Mapa slobodnih termina nije dostupna.');
+ }catch(e){
+   close();alert(e?.message||e);return;
+ }
+ adoptPlanner();
+}
+function close(){
+ const x=document.getElementById('yardivoSupplierFullscreenMapV583');
+ if(movedNode&&originalParent){
+   try{
+     if(originalNext&&originalNext.parentNode===originalParent)originalParent.insertBefore(movedNode,originalNext);
+     else originalParent.appendChild(movedNode);
+   }catch(_){}
+ }
+ movedNode=null;originalParent=null;originalNext=null;
+ x?.classList.remove('open');document.body.classList.remove('yardivo-supplier-map-open');
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('yardivoSupplierFullscreenMapV583')?.classList.contains('open'))close()});
+
+/* Override only Supplier-facing opener. Existing Inventory planner is untouched. */
+function bind(){
+ const r=sr();if(!r)return;
+ const btn=q('#yardivoOpenRealDayMap',r);
+ if(btn&&!btn.dataset.fullscreenBound){
+   btn.dataset.fullscreenBound='1';
+   btn.onclick=open;
+ }
+ const d=q('#yspDate',r)||q('input[type="date"]',r);
+ if(d&&!d.dataset.fullscreenAutoBound){
+   d.dataset.fullscreenAutoBound='1';
+   d.addEventListener('change',()=>{if(d.value)setTimeout(open,160)},true);
+ }
+}
+let t=0;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(bind,60)}).observe(document.documentElement,{childList:true,subtree:true});
+document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,120));window.addEventListener('load',()=>setTimeout(bind,450));bind();
+window.YardivoSupplierFullscreenDayMapV583={open,close,refresh:bind};
+window.YARDIVO_DEV_BUILD='20260910-dev-v5.8.3-supplier-fullscreen-day-map-fix';
 })();
 </script>
 
