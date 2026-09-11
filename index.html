@@ -37870,7 +37870,7 @@ window.YardivoSettingsHardFixV583={
  deleteAllSuppliers,
  category:()=>selectedCategory
 };
-window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-supplier-daily-map-button-final';
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-supplier-right-daily-map-final';
 })();
 </script>
 
@@ -39435,6 +39435,250 @@ bind();
 
 window.YardivoSupplierDailyMapV583={open,close,refresh,selected:()=>selected};
 window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-supplier-daily-map-button-final';
+})();
+</script>
+
+
+<style id="yardivo-supplier-right-daily-map-final-v583-style">
+#yardivoSupplierPortal .ysp-slot-planner-v583,
+#yardivoSupplierPortal .yardivo-supplier-auto-slot-wrap,
+#yardivoSupplierPortal #yardivoSupplierSlotPrereqV583,
+#yardivoSupplierPortal #yardivoSupplierSlotControlV583,
+#yspSlotMapV583,
+#yardivoSupplierFullscreenMapV583,
+#yardivoSupplierDailyMapV583{
+  display:none!important;
+}
+#yardivoSupplierPortal .yardivo-supplier-new-layout-v583{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(420px,46%);
+  gap:14px;
+  align-items:start;
+}
+#yardivoSupplierPortal .yardivo-supplier-map-side-v583{
+  position:sticky;
+  top:14px;
+  border:1px solid #29465d;
+  border-radius:12px;
+  background:#071923;
+  overflow:hidden;
+  min-height:520px;
+}
+#yardivoSupplierPortal .ysr-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+  padding:12px 13px;border-bottom:1px solid #29465d;background:#0b2030;
+}
+#yardivoSupplierPortal .ysr-title{color:#fff;font-size:12px;font-weight:1000}
+#yardivoSupplierPortal .ysr-sub{margin-top:3px;color:#8faabd;font-size:9px;font-weight:850}
+#yardivoSupplierPortal .ysr-full{
+  border:1px solid #46708a;border-radius:8px;background:#103348;color:#fff;
+  min-height:34px;padding:0 10px;font-size:9px;font-weight:1000;cursor:pointer
+}
+#yardivoSupplierPortal .ysr-full:disabled{opacity:.38;cursor:not-allowed}
+#yardivoSupplierPortal .ysr-info{
+  display:flex;flex-wrap:wrap;gap:6px;padding:9px 11px;
+  border-bottom:1px solid #203d50;background:#081923
+}
+#yardivoSupplierPortal .ysr-chip{
+  padding:5px 7px;border:1px solid #29465d;border-radius:6px;background:#0a1c2b;
+  color:#b9d6e9;font-size:8px;font-weight:950
+}
+#yardivoSupplierPortal .ysr-scroll{overflow:auto;max-height:68vh;min-height:430px}
+#yardivoSupplierPortal .ysr-grid{
+  display:grid;min-width:680px;width:100%;border-top:1px solid #29465d;border-left:1px solid #29465d
+}
+#yardivoSupplierPortal .ysr-corner,
+#yardivoSupplierPortal .ysr-ramp{
+  position:sticky;top:0;z-index:4;min-height:42px;display:flex;align-items:center;justify-content:center;
+  background:#0b2030;color:#b9d6e9;font-size:9px;font-weight:1000;
+  border-right:1px solid #29465d;border-bottom:1px solid #29465d
+}
+#yardivoSupplierPortal .ysr-time{
+  position:sticky;left:0;z-index:3;min-height:54px;display:flex;align-items:flex-start;justify-content:center;
+  padding-top:7px;background:#0a1c2b;color:#b9d6e9;font-size:9px;font-weight:1000;
+  border-right:1px solid #29465d;border-bottom:1px solid #29465d
+}
+#yardivoSupplierPortal .ysr-cell{
+  min-height:54px;padding:4px;border-right:1px solid #244156;border-bottom:1px solid #244156;background:#081923
+}
+#yardivoSupplierPortal .ysr-free{
+  width:100%;min-height:45px;border:1px solid #2f8053;border-radius:6px;background:#0d281b;
+  color:#bdf2cf;cursor:pointer;text-align:left;padding:6px
+}
+#yardivoSupplierPortal .ysr-free:hover{background:#123b28;border-color:#4fbd79}
+#yardivoSupplierPortal .ysr-free.sel{outline:2px solid #5eead4;background:#0f4a42;color:#fff}
+#yardivoSupplierPortal .ysr-free strong{display:block;font-size:9px}
+#yardivoSupplierPortal .ysr-free small{display:block;margin-top:2px;font-size:7.5px;opacity:.86}
+#yardivoSupplierPortal .ysr-busy{
+  min-height:45px;display:flex;align-items:center;justify-content:center;border:1px solid #263b49;
+  border-radius:6px;background:#0a1620;color:#526b7b;font-size:7.5px;font-weight:900
+}
+#yardivoSupplierPortal .ysr-empty{padding:24px 18px;color:#91aab8;text-align:center;font-size:10px;line-height:1.5;font-weight:900}
+#yardivoSupplierPortal .ysr-choice{
+  padding:9px 11px;border-top:1px solid #29465d;background:#0b2030;color:#9eb8c7;font-size:9px;font-weight:950
+}
+#yardivoSupplierPortal .ysr-choice.ready{color:#7ff3dc}
+
+#yardivoSupplierRightMapFullscreenV583{
+  position:fixed!important;inset:0!important;z-index:2147483647!important;display:none;
+  flex-direction:column;width:100vw!important;height:100dvh!important;background:#06131d!important
+}
+#yardivoSupplierRightMapFullscreenV583.open{display:flex!important}
+#yardivoSupplierRightMapFullscreenV583 .ysrf-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 17px;
+  border-bottom:1px solid #29465d;background:#0b2030
+}
+#yardivoSupplierRightMapFullscreenV583 .ysrf-title{color:#fff;font-size:16px;font-weight:1000}
+#yardivoSupplierRightMapFullscreenV583 .ysrf-close{
+  min-width:44px;min-height:38px;border:1px solid #42647a;border-radius:8px;
+  background:#102b3a;color:#fff;font-weight:1000;cursor:pointer
+}
+#yardivoSupplierRightMapFullscreenV583 .ysrf-body{flex:1 1 auto;min-height:0;overflow:auto;padding:14px}
+#yardivoSupplierRightMapFullscreenV583 .yardivo-supplier-map-side-v583{
+  position:relative!important;top:auto!important;min-height:calc(100dvh - 90px)!important;
+  width:100%!important;max-width:none!important;border-radius:0!important
+}
+body.ysrf-open{overflow:hidden!important}
+@media(max-width:1100px){
+  #yardivoSupplierPortal .yardivo-supplier-new-layout-v583{grid-template-columns:1fr}
+  #yardivoSupplierPortal .yardivo-supplier-map-side-v583{position:relative;top:auto}
+}
+</style>
+
+<script id="yardivo-supplier-right-daily-map-final-v583">
+(function(){
+'use strict';
+if(window.__YARDIVO_SUPPLIER_RIGHT_DAILY_MAP_FINAL_V583__)return;
+window.__YARDIVO_SUPPLIER_RIGHT_DAILY_MAP_FINAL_V583__=true;
+
+let selected=null,lastSig='',fsParent=null,fsNext=null;
+const $=id=>document.getElementById(id);
+const hm=v=>String(v||'').slice(0,5);
+
+function portal(){return $('yardivoSupplierPortal')}
+function wh(){return String($('yspWarehouse')?.value||'').toUpperCase().trim()}
+function date(){return String($('yspDate')?.value||'').trim()}
+function pallets(){const n=Number($('yspPallets')?.value||0);return Number.isFinite(n)&&n>0?n:0}
+function valid(){const w=wh(),d=date(),p=pallets();return{w,d,p,ok:!!w&&!!d&&p>0}}
+function fmtDate(d){try{return new Date(d+'T12:00:00').toLocaleDateString('hr-HR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'})}catch(_){return d}}
+
+function killLegacy(){
+ portal()?.querySelectorAll('.ysp-slot-planner-v583,.yardivo-supplier-auto-slot-wrap,#yardivoSupplierSlotPrereqV583,#yardivoSupplierSlotControlV583').forEach(x=>x.remove());
+ ['yspSlotMapV583','yardivoSupplierFullscreenMapV583','yardivoSupplierDailyMapV583'].forEach(id=>{
+   const el=$(id);if(el){el.classList.remove('open');el.style.setProperty('display','none','important')}
+ });
+ document.body.classList.remove('yardivo-native-slot-map-open','yardivo-supplier-map-open','ysdm-open');
+}
+function findFormCard(){
+ const r=portal();if(!r)return null;
+ return $('yspNewForm') || r.querySelector('form') || [...r.querySelectorAll('.card,.panel,section,div')].find(x=>{
+   const t=String(x.textContent||'').toUpperCase();
+   return /NOVA NAJAVA|SKLADIŠTE|BROJ PALETA/.test(t) && x.querySelector('input,select');
+ });
+}
+function ensureLayout(){
+ const form=findFormCard();if(!form)return null;
+ if(form.closest('.yardivo-supplier-new-layout-v583'))return form.closest('.yardivo-supplier-new-layout-v583');
+ const layout=document.createElement('div');layout.className='yardivo-supplier-new-layout-v583';
+ form.parentNode.insertBefore(layout,form);layout.appendChild(form);
+ const side=document.createElement('div');side.className='yardivo-supplier-map-side-v583';side.id='yardivoSupplierRightDailyMapV583';
+ side.innerHTML=
+   '<div class="ysr-head"><div><div class="ysr-title">DNEVNA MAPA · SLOBODNI TERMINI</div><div class="ysr-sub" id="ysrSub">Odaberi skladište, datum i broj paleta.</div></div><button type="button" class="ysr-full" id="ysrFull" disabled>PRIKAŽI PREKO CIJELOG EKRANA</button></div>'+
+   '<div class="ysr-info" id="ysrInfo"></div>'+
+   '<div class="ysr-scroll"><div id="ysrBoard"><div class="ysr-empty">Mapa će se prikazati kada odabereš skladište, datum i broj paleta.</div></div></div>'+
+   '<div class="ysr-choice" id="ysrChoice">TERMIN NIJE ODABRAN</div>';
+ layout.appendChild(side);
+ $('ysrFull').onclick=openFullscreen;
+ return layout;
+}
+function slots(v){
+ try{const a=window.YardivoSupplierSlotMapV583?.free?.(v.w,v.d,v.p);return Array.isArray(a)?a:[]}
+ catch(e){console.error('[YARDIVO] Supplier right daily map free()',e);return []}
+}
+function draw(){
+ killLegacy();ensureLayout();
+ const v=valid(),side=$('yardivoSupplierRightDailyMapV583');if(!side)return;
+ const sub=$('ysrSub'),info=$('ysrInfo'),board=$('ysrBoard'),full=$('ysrFull'),choice=$('ysrChoice');
+ full.disabled=!v.ok;
+ if(!v.ok){
+   const miss=[];if(!v.w)miss.push('skladište');if(!v.d)miss.push('datum');if(!v.p)miss.push('broj paleta');
+   sub.textContent='Nedostaje: '+miss.join(' + ');info.innerHTML='';
+   board.innerHTML='<div class="ysr-empty">Za prikaz dnevne mape prvo odaberi <b>skladište</b>, <b>datum</b> i unesi <b>broj paleta</b>.</div>';
+   choice.textContent='TERMIN NIJE ODABRAN';choice.classList.remove('ready');return;
+ }
+ sub.textContent=`${fmtDate(v.d)} · ${v.w} · ${v.p} paleta`;
+ const a=slots(v),docks=[...new Set(a.map(x=>Number(x.dock)).filter(Boolean))].sort((x,y)=>x-y),
+       times=[...new Set(a.map(x=>hm(x.time)).filter(Boolean))].sort(),
+       maxNeed=Math.max(30,...a.map(x=>Number(x.need)||30));
+ info.innerHTML=`<span class="ysr-chip">${v.w}</span><span class="ysr-chip">${v.d}</span><span class="ysr-chip">${v.p} paleta</span><span class="ysr-chip">do ${maxNeed} min</span><span class="ysr-chip">${a.length} slobodnih</span>`;
+ if(!a.length||!docks.length||!times.length){
+   board.innerHTML='<div class="ysr-empty">Za ovaj datum i količinu nema slobodnog termina. Dobavljač može poslati najavu bez termina, a Zalihe kasnije mogu predložiti termin.</div>';return;
+ }
+ const by=new Map(a.map(x=>[`${hm(x.time)}|${Number(x.dock)}`,x]));
+ let html=`<div class="ysr-grid" style="grid-template-columns:76px repeat(${docks.length},minmax(120px,1fr))">`;
+ html+='<div class="ysr-corner">VRIJEME</div>'+docks.map(r=>`<div class="ysr-ramp">RAMPA ${r}</div>`).join('');
+ times.forEach(t=>{
+   html+=`<div class="ysr-time">${t}</div>`;
+   docks.forEach(r=>{
+     const x=by.get(`${t}|${r}`);
+     if(x){
+       const sel=selected&&selected.date===v.d&&selected.time===t&&Number(selected.dock)===r;
+       html+=`<div class="ysr-cell"><button type="button" class="ysr-free ${sel?'sel':''}" data-ysr-time="${t}" data-ysr-dock="${r}" data-ysr-need="${Number(x.need)||30}"><strong>${t} · R${r}</strong><small>SLOBODNO · ${Number(x.need)||30} min</small></button></div>`;
+     }else html+='<div class="ysr-cell"><div class="ysr-busy">ZAUZETO</div></div>';
+   });
+ });
+ html+='</div>';board.innerHTML=html;
+ board.querySelectorAll('[data-ysr-time]').forEach(b=>b.onclick=()=>{
+   selected={date:v.d,time:b.dataset.ysrTime,dock:Number(b.dataset.ysrDock),need:Number(b.dataset.ysrNeed)||30};
+   if(!$('yspTime')){const x=document.createElement('input');x.type='hidden';x.id='yspTime';findFormCard()?.appendChild(x)}
+   if(!$('yspDock')){const x=document.createElement('input');x.type='hidden';x.id='yspDock';findFormCard()?.appendChild(x)}
+   $('yspTime').value=selected.time;$('yspDock').value='R'+selected.dock;
+   draw();$('ysrChoice').textContent=`ODABRANO · ${selected.time} · RAMPA ${selected.dock} · ${selected.need} min`;$('ysrChoice').classList.add('ready');
+ });
+}
+function ensureFullscreen(){
+ let fs=$('yardivoSupplierRightMapFullscreenV583');if(fs)return fs;
+ fs=document.createElement('div');fs.id='yardivoSupplierRightMapFullscreenV583';
+ fs.innerHTML='<div class="ysrf-head"><div class="ysrf-title">DNEVNA MAPA · SLOBODNI TERMINI I RAMPE</div><button type="button" class="ysrf-close" id="ysrfClose">✕</button></div><div class="ysrf-body" id="ysrfBody"></div>';
+ document.body.appendChild(fs);$('ysrfClose').onclick=closeFullscreen;return fs;
+}
+function openFullscreen(){
+ const v=valid();if(!v.ok)return;
+ const side=$('yardivoSupplierRightDailyMapV583');if(!side)return;
+ const fs=ensureFullscreen(),body=$('ysrfBody');
+ fsParent=side.parentNode;fsNext=side.nextSibling;body.appendChild(side);
+ fs.classList.add('open');document.body.classList.add('ysrf-open');
+}
+function closeFullscreen(){
+ const fs=$('yardivoSupplierRightMapFullscreenV583'),side=$('yardivoSupplierRightDailyMapV583');
+ if(side&&fsParent){try{if(fsNext&&fsNext.parentNode===fsParent)fsParent.insertBefore(side,fsNext);else fsParent.appendChild(side)}catch(_){}}
+ fsParent=null;fsNext=null;fs?.classList.remove('open');document.body.classList.remove('ysrf-open');
+}
+function onInput(){
+ const v=valid(),sig=`${v.w}|${v.d}|${v.p}`;
+ if(sig!==lastSig){lastSig=sig;selected=null;if($('yspTime'))$('yspTime').value='';if($('yspDock'))$('yspDock').value=''}
+ setTimeout(draw,30);
+}
+function bind(){
+ killLegacy();ensureLayout();
+ const r=portal();if(!r)return;
+ [
+   $('yspWarehouse')||r.querySelector('select[name*="warehouse" i]'),
+   $('yspDate')||r.querySelector('input[type="date"]'),
+   $('yspPallets')||r.querySelector('input[name*="pallet" i]')
+ ].filter(Boolean).forEach(el=>{
+   if(el.dataset.ysrBound)return;el.dataset.ysrBound='1';
+   el.addEventListener('change',onInput,true);el.addEventListener('input',onInput,true);
+ });
+ const cal=$('yspMiniCal');if(cal&&!cal.dataset.ysrBound){cal.dataset.ysrBound='1';cal.addEventListener('click',()=>setTimeout(onInput,40),true)}
+ draw();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('yardivoSupplierRightMapFullscreenV583')?.classList.contains('open'))closeFullscreen()});
+let timer=0;new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(bind,70)}).observe(document.documentElement,{childList:true,subtree:true});
+document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,110));window.addEventListener('load',()=>setTimeout(bind,350));bind();
+
+window.YardivoSupplierRightDailyMapV583={refresh:bind,draw,fullscreen:openFullscreen,selected:()=>selected};
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-supplier-right-daily-map-final';
 })();
 </script>
 
