@@ -6663,15 +6663,15 @@ var currentSession=null;
 <label>PRIKAZ SKLADIŠTA
             <select id="globalWarehouse">
 <option value="ALL">Sva skladišta</option>
-<optgroup label="Velika Gorica">
-<option value="W101">W101 · Ambijent</option>
-<option value="W103">W103 · Svježe i hlađeno</option>
-<option value="W104">W104 · Smrznuto</option>
+<optgroup label="Lokacija 1">
+<option value="W101">W101 · Skladište</option>
+<option value="W103">W103 · Skladište</option>
+<option value="W104">W104 · Skladište</option>
 </optgroup>
-<optgroup label="Dugopolje">
-<option value="W201">W201 · Ambijent</option>
-<option value="W203">W203 · Svježe i hlađeno</option>
-<option value="W204">W204 · Smrznuto</option>
+<optgroup label="Lokacija 2">
+<option value="W201">W201 · Skladište</option>
+<option value="W203">W203 · Skladište</option>
+<option value="W204">W204 · Skladište</option>
 </optgroup>
 </select>
 </label>
@@ -6693,8 +6693,8 @@ var currentSession=null;
 <label>ODABERI LOKACIJU
           <select id="homeLocationSelect">
 <option value="">Odaberi lokaciju...</option>
-<option value="VG">VELIKA GORICA</option>
-<option value="DU">DUGOPOLJE</option>
+<option value="VG">Lokacija 1</option>
+<option value="DU">Lokacija 2</option>
 </select>
 </label>
 <span id="homeLocationStatus">Lokacija nije odabrana</span><span class="home-storage-status" id="homeStorageStatus"></span>
@@ -6709,7 +6709,7 @@ var currentSession=null;
 <h1>YARDIVO · POČETNI IZBORNIK</h1>
 <div class="home-selected-location" id="homeSelectedLocation">ODABERI LOKACIJU</div><p id="homeMenuSubtitle">Odaberi lokaciju, zatim sekciju u koju želiš ući</p>
 </div>
-<div class="home-location-warning" id="homeLocationWarning">Prvo odaberi VELIKA GORICA ili DUGOPOLJE.</div>
+<div class="home-location-warning" id="homeLocationWarning">Prvo odaberi Lokacija 1 ili Lokacija 2.</div>
 <div class="home-menu-grid" id="homeMenuGrid">
 <button class="home-menu-card" data-home-target="dashboard" type="button">
 <span class="icon">◫</span>
@@ -6886,7 +6886,7 @@ var currentSession=null;
 </section>
 <section class="view" id="suppliers"><section class="panel"><div class="panel-head"><div><h2>DOBAVLJAČI</h2><small id="supplierCount"></small></div><input id="supplierPretraži" placeholder="Pretraži dobavljača..."/></div><div class="cards" id="supplierGrid"></div></section>
 <section class="panel" style="margin-top:12px">
-<div class="panel-head"><div><h2>SKLADIŠTA</h2><small>Velika Gorica i Dugopolje</small></div></div>
+<div class="panel-head"><div><h2>SKLADIŠTA</h2><small>Lokacija 1 i Lokacija 2</small></div></div>
 <div class="panel-body">
 <div class="warehouse-cards" id="warehouseCards"></div>
 </div>
@@ -6983,15 +6983,15 @@ var currentSession=null;
 <label>Skladište
                   <select id="annWarehouse" required="">
 <option value="">Odaberi skladište...</option>
-<optgroup label="Velika Gorica">
-<option value="W101">W101 · Ambijent</option>
-<option value="W103">W103 · Svježe i hlađeno</option>
-<option value="W104">W104 · Smrznuto</option>
+<optgroup label="Lokacija 1">
+<option value="W101">W101 · Skladište</option>
+<option value="W103">W103 · Skladište</option>
+<option value="W104">W104 · Skladište</option>
 </optgroup>
-<optgroup label="Dugopolje">
-<option value="W201">W201 · Ambijent</option>
-<option value="W203">W203 · Svježe i hlađeno</option>
-<option value="W204">W204 · Smrznuto</option>
+<optgroup label="Lokacija 2">
+<option value="W201">W201 · Skladište</option>
+<option value="W203">W203 · Skladište</option>
+<option value="W204">W204 · Skladište</option>
 </optgroup>
 </select>
 </label>
@@ -7082,15 +7082,15 @@ AUTOMATSKA PREPORUKA</small>
 <label>SKLADIŠTE</label>
 <select id="savedWarehouseFilter">
 <option value="ALL">Sva skladišta</option>
-<optgroup label="Velika Gorica">
-<option value="W101">W101 · Ambijent</option>
-<option value="W103">W103 · Svježe i hlađeno</option>
-<option value="W104">W104 · Smrznuto</option>
+<optgroup label="Lokacija 1">
+<option value="W101">W101 · Skladište</option>
+<option value="W103">W103 · Skladište</option>
+<option value="W104">W104 · Skladište</option>
 </optgroup>
-<optgroup label="Dugopolje">
-<option value="W201">W201 · Ambijent</option>
-<option value="W203">W203 · Svježe i hlađeno</option>
-<option value="W204">W204 · Smrznuto</option>
+<optgroup label="Lokacija 2">
+<option value="W201">W201 · Skladište</option>
+<option value="W203">W203 · Skladište</option>
+<option value="W204">W204 · Skladište</option>
 </optgroup>
 </select>
 </div>
@@ -7184,13 +7184,13 @@ AUTOMATSKA PREPORUKA</small>
 <div class="daily-map-controls">
 <label style="display:flex;align-items:center;gap:7px;font-size:9px;font-weight:900;color:#9bb1c2">SKLADIŠTE
               <select id="dailyMapWarehouseSelect" style="min-width:230px">
-<option value="W101">W101 · Velika Gorica · Ambijent</option>
-<option value="W103">W103 · Velika Gorica · Svježe i hlađeno</option>
-<option value="W104">W104 · Velika Gorica · Smrznuto</option>
-<option value="W201">W201 · Dugopolje · Ambijent</option>
-<option value="W202">W202 · Dugopolje · W202</option>
-<option value="W203">W203 · Dugopolje · Svježe i hlađeno</option>
-<option value="W204">W204 · Dugopolje · Smrznuto</option>
+<option value="W101">W101 · Lokacija 1 · Skladište</option>
+<option value="W103">W103 · Lokacija 1 · Skladište</option>
+<option value="W104">W104 · Lokacija 1 · Skladište</option>
+<option value="W201">W201 · Lokacija 2 · Skladište</option>
+<option value="W202">W202 · Lokacija 2 · W202</option>
+<option value="W203">W203 · Lokacija 2 · Skladište</option>
+<option value="W204">W204 · Lokacija 2 · Skladište</option>
 </select>
 </label>
 <button class="secondary" id="dailyPrevDay" type="button">‹ PRETHODNI DAN</button>
@@ -7422,12 +7422,12 @@ AUTOMATSKA PREPORUKA</small>
 <label>Datum incidenta<input id="incDate" required="" type="date"/></label>
 <label>Skladište<select id="incWarehouse" required="">
 <option value="">Odaberi...</option>
-<option value="W101">W101 · Velika Gorica · Ambijent</option>
-<option value="W103">W103 · Velika Gorica · Svježe i hlađeno</option>
-<option value="W104">W104 · Velika Gorica · Smrznuto</option>
-<option value="W201">W201 · Dugopolje · Ambijent</option>
-<option value="W203">W203 · Dugopolje · Svježe i hlađeno</option>
-<option value="W204">W204 · Dugopolje · Smrznuto</option>
+<option value="W101">W101 · Lokacija 1 · Skladište</option>
+<option value="W103">W103 · Lokacija 1 · Skladište</option>
+<option value="W104">W104 · Lokacija 1 · Skladište</option>
+<option value="W201">W201 · Lokacija 2 · Skladište</option>
+<option value="W203">W203 · Lokacija 2 · Skladište</option>
+<option value="W204">W204 · Lokacija 2 · Skladište</option>
 </select></label><label>Dobavljač<select id="incSupplier" required=""></select></label>
 </div>
 <div class="form-grid">
@@ -7624,8 +7624,8 @@ AUTOMATSKA PREPORUKA</small>
 <label>LOKACIJA
         <select id="epalLocationFilter">
 <option value="CURRENT">Trenutna lokacija</option>
-<option value="VG">Velika Gorica</option>
-<option value="DU">Dugopolje</option>
+<option value="VG">Lokacija 1</option>
+<option value="DU">Lokacija 2</option>
 <option value="ALL">Sve lokacije</option>
 </select>
 </label>
@@ -7824,12 +7824,12 @@ AUTOMATSKA PREPORUKA</small>
 <div class="form-grid">
 <label>Skladište
         <select id="rampSettingsWarehouse">
-<option value="W101">W101 · Velika Gorica · Ambijent</option>
-<option value="W103">W103 · Velika Gorica · Svježe i hlađeno</option>
-<option value="W104">W104 · Velika Gorica · Smrznuto</option>
-<option value="W201">W201 · Dugopolje · Ambijent</option>
-<option value="W203">W203 · Dugopolje · Svježe i hlađeno</option>
-<option value="W204">W204 · Dugopolje · Smrznuto</option>
+<option value="W101">W101 · Lokacija 1 · Skladište</option>
+<option value="W103">W103 · Lokacija 1 · Skladište</option>
+<option value="W104">W104 · Lokacija 1 · Skladište</option>
+<option value="W201">W201 · Lokacija 2 · Skladište</option>
+<option value="W203">W203 · Lokacija 2 · Skladište</option>
+<option value="W204">W204 · Lokacija 2 · Skladište</option>
 </select>
 </label>
 <label>Nova rampa
@@ -7932,18 +7932,18 @@ AUTOMATSKA PREPORUKA</small>
 })();
 </script>
 <script>
-const suppliers=['PZ MARINA', 'PODRAVKA', 'METEOR GRUPA LABUD D.O.O.', 'KIM D.O.O.', 'VINDIJA D.O.O.', 'COCA COLA HBC HRVATSKA DOO', 'DUPIN', 'KRAŠ D.D.', 'SAPONIA DD', 'ATLANTIC TRADE', 'AWT INTERNATIONAL DOO', 'PAŠKA SIRANA', 'BADEL 1862', 'GAVRILOVIĆ', 'LUXOR D.O.O.', 'ALCA ZAGREB DOO', 'SARDINA D.O.O.', 'AFRODITA COMMERC DOO', 'KLARA ZP D.D.', 'PIK RIJEKA DD', 'ZAGREBAČKA PIVOVARA', 'VINDIJA KOKA', 'DR. OETKER DOO', 'PZ VISGA VIS', 'ENCIAN D.O.O.', 'HEINEKEN HRVATSKA D.O.O.', 'DISA', 'NIKAS', 'CARLSBERG CROATIA', 'PAMPERO D.O.O.', 'TRI MARINE INTERNAT. S.A.', 'KOLEDA D.O.O.', 'QUICKPACK CROATIA D.O.O.', 'MILLANO SP. Z O.O.WYSOGOTOWSKA 15, PRZEZMIEROWO 62-081', 'TRGOVINA KRK D.D.', 'A.I.A. S.P.A.', 'AMERICAN DONUT D.O.O', 'TVORNICA ULJA VINKOVCI D.O.O.', 'VINA DEVALENTINIS', 'KLARA MARIĆ D.O.O.', 'UGOSTIT. ZRINSKI D.O.O', 'MITTELCO SRL A SOCIOUNICO', 'DUBROVAČKI PODRUMI D.D.', 'AKSAM', 'PALOMA D.D.', 'FLUXUS D.O.O.', 'FETTE DI SOLE SRLVIA LA MADDALENA SNC', 'CREM CAFFE SUŠAC D.O.O.', 'POLJO POSPREMIC D.O.O.', 'BEWA SP.Z.O.O.', 'TIMAR PROMET D.O.O.', 'MARIKOMERC D.O.O.', 'MILD FOODS D.O.O.', 'FANOLA D.O.O.', 'NATURALA D.O.O.', 'AROMA BIŠKIĆ D.O.O.', 'PROTEINI ADRIA D.O.O', 'MLIN PODRAVSKI D.O.O', 'GRAAL S.A.', 'KOGUTEX TJESTENINED.O.O.', 'VITAMINKA JSC PRILEP', 'NELT EUROPE D.O.O.', 'OSJEČKO 1664 D.O.O.', 'PETRIČEVIĆ D.O.O.', 'HISTRIS KVALITETA', 'EUROLAB INTERNACIONAL GRUP D.O.O.', 'BARPROM-TRGOVINAD.O.O.', 'BEK PUŠNICA D.O.O.', 'JUICEFAST D.O.O.', 'T.T.T. D.O.O.', 'HLAD USLUGE D.O.O.', 'IMANJE KAPRONCAVL. ZVONIMIR PAVLIC', 'CANNONA INTERNATIONAL D.O.O.', 'FLEXWAY ADRIATIC D.O.O.', 'DRUŠTVO ZA PROIZ. IPROMET ZDAVA HRANA VITALIA NIKOLA I DR.', 'TINA d.o.o.', 'SOLBEV D.O.O.', 'ENP SUPPLY D.O.O.', 'MIJUKIĆ-PROMSUŠIONICA MESA, VL. JURE LEŠINA', 'MLIN JERTOVEC D.O.O.', 'EPSKO D.O.O.', 'PAK-RAMPART D.O.O. VISOKO', 'BIOLES HORIZONTD.O.O. PODRUŽNICA CENTAR BIOMASE', 'OPG MILATIĆ IVO', 'FERENČIĆ PBP', 'SPORTUS TRADE D.O.O.', 'Z.T.D. D.O.O.', 'ZD KOZIEGNIZAKY SP.Z.O.O.', 'CFOND IT SOLUTIONSS.R.O.', 'LOLA PLAST D.O.O.', 'VOPEX D.O.O.', 'PAK CENTAR D.O.O.', 'EZ GROUP NOVA D.O.O.', 'IZI NATURA D.O.O.', 'AGRO TECH D.O.O.', 'BALTICOVO AS', 'DAŠ POPS D.O.O.', 'ORBICO', 'KOTANYI D.O.O.', 'DUKAT D.D.', 'FRAGARIA D.O.O.', 'TRGOMIX D.O.O.', 'OBALA GRUPA D.O.O.', 'STRIDON PROMET DOO', 'BEIERSDORF D.O.O.', 'PREMIUM D.O.O.', 'PERUTNINA PTUJ-PIPOD.O.O.', 'ANAMARIA COMPANY DOO', 'TVORNICA ULJA ČEPIND.D.', 'ČAKOVEČKI MLINOVI', 'NATURALIS D.O.O.', 'ŠAFRAM D.O.O.', 'STANIĆ DOO', 'PAG 91 DOO', 'EUROALP D.O.O.', 'CLARUM', 'LEVENTIĆ D.O.O.', 'POHIT DOO', 'FRANCK D.D.', 'ROX D.O.O.', 'NET D.O.O.', 'REKORD TIM D.O.O.', 'PRŠUT VOŠTANE D.O.O', 'IRA-COMMERCED.O.O.', 'PAGO CROATIA DOO', 'WELTPLAST', 'SOLANA PAG D.O.O.', 'SAMBI D.O.O.', 'COOPADRIA D.O.O.', 'GARDENPETHOME D.O.O.', 'TOP KAN D.O.O.', 'ZAPREŠIĆANKA D.O.O.', 'FRENKI D.O.O.', 'MIH SIRANA KOLAN TRGOVINA D.O.O.', 'BIO PLOD D.O.O.', 'BROLO D.O.O.', 'BOMARK AMBALAŽA D.O.O.', 'TERRA ENO OLEA', 'DARNA D.O.O.', 'SALVIA D.O.O.', 'ZAJEDNIČKI OBRT VINA CATTUNAR', 'KUDELIĆ D.O.O. ZA PROIZV.PRERADU I TRG.', 'ČOKOLAND D.O.O.', 'INTERCOMERCE EXPORT-IMPORT D.O.O.', 'COMMEL-ZAGREB D.O.O.', 'FARCHIONI OLII-S.P.A', 'STUDENAC D.O.O.', 'GRANOLIO D.D.', 'C.A.K. D.O.O.', 'ADVENT', 'TEKSTILPROMET D.D. ZAGREB', 'MLINAR PEK. IND. D.OO.', 'EKOS GREEN D.O.O.', 'POLJOPROMET DOO', 'DES', 'MEGGLE HRVATSKA D.O.O.', 'AROTOL D.O.O.', 'BLATO 1902 D.D.', 'HERCEGOVINA VINO D.O.O.', 'ARABESCA DOO', 'VRANA D.O.O.', 'DON DON D.O.O.', 'KUTJEVO D.D.', 'KANAAN D.O.O.', 'VM2 D.O.O.', 'ZAGREBAČKI HOLDINGOTPAD D.O.O.', 'MADIRAZZA D.O.O.', 'NADALINA D.O.O.', 'SOLANA STON D.O.O.', 'ZDENKA-MLIJEČNI PROIZVODI DOO', 'FILIR D.O.O.', 'PPD CROATIA D.O.O.', 'PZ PUTNIKOVIĆ', 'ORGULA GRUPA D.O.O.', 'HERMES INTERNATIONAL D.O.O.', 'DINGAČ PZ I VIN.', 'VRUTAK D.O.O.', 'HERBARIUM D.O.O.', 'DRENIK D.O.O.', 'DELAMARIS ZAGREB D.O.O.', 'ŽITOPROIZVOD D.D.', 'VIOLETA D.O.O.', 'ANNONA D.O.O.', 'PELJEŠKI VINOGRADARD.O.O.', 'APIMEL D.O.O.', 'MM MESNA INDUSTRIJAD.O.O.', 'ISKRA ZELINA KEM.INDUST. D.O.O', 'INSAKO D.O.O.', 'PELJEŠKI VRHOVI PZ JANJINA', 'MARODI D.O.O.', 'FIBIS D.O.O.', 'SATO D.O.O.', 'RIO-PAK D.O.O.', 'DRNIŠKA PRŠUTANA D.O.O.', 'GIANA D.O.O.', 'ARC ADRIATIC D.O.O.', 'KRAS MESNA INDUSTRIJA D.O.O.', 'VELETABAK D.O.O.', 'TJESTENINA CETINA D.O.O.', 'SELECT FOOD D.O.O.', 'CVJETKO D.O.O.', 'TRGOVINA JUKIĆ D.O.O.', 'SPARTA TRGOVINA D.O.O.', 'PISINIUM D. O. O.', 'ZIGANTE TARTUFI D.O.O.', 'EKOS CAKES.', 'DALMATINSKI SIREVI D.O.O.', 'BRODPLAST D.O.O.', 'SOLANA NIN D.O.O.', 'MARJAN VOĆE D.O.O.', 'DOLIUM D.O.O.', 'DBA GRUPA D.O.O.', 'ŽITO D.D.', 'CENTAURUS D.O.O.', 'INTERSNACK ADRIA D.O.O.', 'PERNOD RICARD CROATIA D.O.O.', 'AUTOMATIC SERVIS D.O. O.', 'ADRIATICON D.O.O.', 'BRIOŠ TIM D.O.O.', 'PAN PEK D.O.O.', 'AGROLAGUNA D.O.O.', 'JAMNICA PLUS D.O.O.', 'ZVIJEZDA PLUS D.O.O.', 'PIK VRBOVEC PLUS D.O.O.', 'PELAGOS NET FARMA D.O.O.', 'MCI D.O.O. MLJEKARALIVNO', 'BIOVEGA D.O.O.', 'MORALIS D.O.O.', 'MIRNA VERIS D.O.O.', 'ROTO DINAMIC D.O.O', 'ALDEN D. O. O.', 'BERLINER D.O.O.', 'G3 SPIRITS D.O.O.', 'JARBOLET D.O.O.', 'VIZA MG D.O.O.', 'REVISO D.O.O.', 'FORTUNA FOOD D.O.O.', 'EURO ROSA IP D.O.O.', 'HUZAR SP.ZO.O.', 'ATLANTA POLAND S.A', 'JADRAN ČARAPE PROIZ.D.O.O.', 'PARTNER IN PET FOODHUNGARIA KFT', 'INSTANTA SP.Z O.O.', 'STANIĆ BEVERAGES D.O.O.', 'HRVATSKA INDUSTRIJAŠEĆERA', 'HANAEL FOOD D.O.O.', 'SPOMET SP.J', 'LORENZ P.S.A.', 'PEKAR TOMO D.O.O.', 'BONDUELLE CENTRAL EUROPE KFT', 'DRINK ID SP. Z O.O.', 'DALAX TRGOVINA D.O.O', 'CIEMME ALIMENTARIS .R.L.', 'ČARAPANKO D.O.O.', 'ABACO D.O.O.', 'VRBNIK PZ', 'ZMH HORVAT D.O.O. ZA POLJOPR. PROIZVODNJU I TRGOVINU', 'PIVOVARA DARUVAR D.O.O.', 'DIZMAR D.O.O.', 'PERFA OVO D.O.O.', 'ARANEA TOYS D.O.O.', 'MOHOR TRGOVINA D.O.O'];
+const suppliers=['Dobavljač 1', 'Dobavljač 2', 'Dobavljač 3', 'Dobavljač 4', 'Dobavljač 5', 'Dobavljač 6', 'Dobavljač 7', 'Dobavljač 8', 'Dobavljač 9', 'Dobavljač 10', 'Dobavljač 11', 'Dobavljač 12', 'Dobavljač 13', 'Dobavljač 14', 'Dobavljač 15', 'Dobavljač 16', 'Dobavljač 17', 'Dobavljač 18', 'Dobavljač 19', 'Dobavljač 20', 'Dobavljač 21', 'Dobavljač 22', 'Dobavljač 23', 'Dobavljač 24', 'Dobavljač 25', 'Dobavljač 26', 'Dobavljač 27', 'Dobavljač 28', 'Dobavljač 29', 'Dobavljač 30', 'Dobavljač 31', 'Dobavljač 32', 'Dobavljač 33', 'Dobavljač 34', 'Dobavljač 35', 'Dobavljač 36', 'Dobavljač 37', 'Dobavljač 38', 'Dobavljač 39', 'Dobavljač 40', 'Dobavljač 41', 'Dobavljač 42', 'Dobavljač 43', 'Dobavljač 44', 'Dobavljač 45', 'Dobavljač 46', 'Dobavljač 47', 'Dobavljač 48', 'Dobavljač 49', 'Dobavljač 50', 'Dobavljač 51', 'Dobavljač 52', 'Dobavljač 53', 'Dobavljač 54', 'Dobavljač 55', 'Dobavljač 56', 'Dobavljač 57', 'Dobavljač 58', 'Dobavljač 59', 'Dobavljač 60', 'Dobavljač 61', 'Dobavljač 62', 'Dobavljač 63', 'Dobavljač 64', 'Dobavljač 65', 'Dobavljač 66', 'Dobavljač 67', 'Dobavljač 68', 'Dobavljač 69', 'Dobavljač 70', 'Dobavljač 71', 'Dobavljač 72', 'Dobavljač 73', 'Dobavljač 74', 'Dobavljač 75', 'Dobavljač 76', 'Dobavljač 77', 'Dobavljač 78', 'Dobavljač 79', 'Dobavljač 80', 'Dobavljač 81', 'Dobavljač 82', 'Dobavljač 83', 'Dobavljač 84', 'Dobavljač 85', 'Dobavljač 86', 'Dobavljač 87', 'Dobavljač 88', 'Dobavljač 89', 'Dobavljač 90', 'Dobavljač 91', 'Dobavljač 92', 'Dobavljač 93', 'Dobavljač 94', 'Dobavljač 95', 'Dobavljač 96', 'Dobavljač 97', 'Dobavljač 98', 'Dobavljač 99', 'Dobavljač 100', 'Dobavljač 101', 'Dobavljač 102', 'Dobavljač 103', 'Dobavljač 104', 'Dobavljač 105', 'Dobavljač 106', 'Dobavljač 107', 'Dobavljač 108', 'Dobavljač 109', 'Dobavljač 110', 'Dobavljač 111', 'Dobavljač 112', 'Dobavljač 113', 'Dobavljač 114', 'Dobavljač 115', 'Dobavljač 116', 'Dobavljač 117', 'Dobavljač 118', 'Dobavljač 119', 'Dobavljač 120', 'Dobavljač 121', 'Dobavljač 122', 'Dobavljač 123', 'Dobavljač 124', 'Dobavljač 125', 'Dobavljač 126', 'Dobavljač 127', 'Dobavljač 128', 'Dobavljač 129', 'Dobavljač 130', 'Dobavljač 131', 'Dobavljač 132', 'Dobavljač 133', 'Dobavljač 134', 'Dobavljač 135', 'Dobavljač 136', 'Dobavljač 137', 'Dobavljač 138', 'Dobavljač 139', 'Dobavljač 140', 'Dobavljač 141', 'Dobavljač 142', 'Dobavljač 143', 'Dobavljač 144', 'Dobavljač 145', 'Dobavljač 146', 'Dobavljač 147', 'Dobavljač 148', 'Dobavljač 149', 'Dobavljač 150', 'Dobavljač 151', 'Dobavljač 152', 'Dobavljač 153', 'Dobavljač 154', 'Dobavljač 155', 'Dobavljač 156', 'Dobavljač 157', 'Dobavljač 158', 'Dobavljač 159', 'Dobavljač 160', 'Dobavljač 161', 'Dobavljač 162', 'Dobavljač 163', 'Dobavljač 164', 'Dobavljač 165', 'Dobavljač 166', 'Dobavljač 167', 'Dobavljač 168', 'Dobavljač 169', 'Dobavljač 170', 'Dobavljač 171', 'Dobavljač 172', 'Dobavljač 173', 'Dobavljač 174', 'Dobavljač 175', 'Dobavljač 176', 'Dobavljač 177', 'Dobavljač 178', 'Dobavljač 179', 'Dobavljač 180', 'Dobavljač 181', 'Dobavljač 182', 'Dobavljač 183', 'Dobavljač 184', 'Dobavljač 185', 'Dobavljač 186', 'Dobavljač 187', 'Dobavljač 188', 'Dobavljač 189', 'Dobavljač 190', 'Dobavljač 191', 'Dobavljač 192', 'Dobavljač 193', 'Dobavljač 194', 'Dobavljač 195', 'Dobavljač 196', 'Dobavljač 197', 'Dobavljač 198', 'Dobavljač 199', 'Dobavljač 200', 'Dobavljač 201', 'Dobavljač 202', 'Dobavljač 203', 'Dobavljač 204', 'Dobavljač 205', 'Dobavljač 206', 'Dobavljač 207', 'Dobavljač 208', 'Dobavljač 209', 'Dobavljač 210', 'Dobavljač 211', 'Dobavljač 212', 'Dobavljač 213', 'Dobavljač 214', 'Dobavljač 215', 'Dobavljač 216', 'Dobavljač 217', 'Dobavljač 218', 'Dobavljač 219', 'Dobavljač 220', 'Dobavljač 221', 'Dobavljač 222', 'Dobavljač 223', 'Dobavljač 224', 'Dobavljač 225', 'Dobavljač 226', 'Dobavljač 227', 'Dobavljač 228', 'Dobavljač 229', 'Dobavljač 230', 'Dobavljač 231', 'Dobavljač 232', 'Dobavljač 233', 'Dobavljač 234', 'Dobavljač 235', 'Dobavljač 236', 'Dobavljač 237', 'Dobavljač 238', 'Dobavljač 239', 'Dobavljač 240', 'Dobavljač 241', 'Dobavljač 242', 'Dobavljač 243', 'Dobavljač 244', 'Dobavljač 245', 'Dobavljač 246', 'Dobavljač 247', 'Dobavljač 248', 'Dobavljač 249', 'Dobavljač 250', 'Dobavljač 251', 'Dobavljač 252', 'Dobavljač 253', 'Dobavljač 254', 'Dobavljač 255', 'Dobavljač 256', 'Dobavljač 257', 'Dobavljač 258', 'Dobavljač 259', 'Dobavljač 260', 'Dobavljač 261', 'Dobavljač 262'];
 const timeSlots=["06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00"];
 const docks=[{id:'R1',name:'Rampa 1'},{id:'R2',name:'Rampa 2'},{id:'R3',name:'Rampa 3'},{id:'R4',name:'Rampa 4'},{id:'R5',name:'Rampa 5'},{id:'R6',name:'Rampa 6'}];
 const defaultTrucks=[
-{id:1,supplier:'PODRAVKA',plate:'ZG 1234 AB',carrier:'Prijevoznik One',trailer:'TR-458',status:'Na rampi',location:'',dock:'Rampa 1',entered:Date.now()-27*60000,arrival:'07:15',priority:'High'},
-{id:2,supplier:'VINDIJA D.O.O.',plate:'LJ 5678 CD',carrier:'Logis Plus',trailer:'TR-721',status:'Na rampi',location:'',dock:'Rampa 2',entered:Date.now()-37*60000,arrival:'07:05',priority:'High'},
-{id:3,supplier:'COCA COLA HBC HRVATSKA DOO',plate:'ST 9012 EF',carrier:'TransCargo',trailer:'TR-335',status:'Na rampi',location:'',dock:'Rampa 3',entered:Date.now()-12*60000,arrival:'07:30',priority:'High'},
-{id:4,supplier:'KRAŠ D.D.',plate:'RI 3456 GH',carrier:'SpeedTrans',trailer:'TR-109',status:'Na rampi',location:'',dock:'Rampa 4',entered:Date.now()-22*60000,arrival:'07:20',priority:'Medium'},
-{id:5,supplier:'ATLANTIC TRADE',plate:'OS 7890 IJ',carrier:'EuroLogist',trailer:'TR-642',status:'Na rampi',location:'',dock:'Rampa 5',entered:Date.now()-4*60000,arrival:'08:00',priority:'Medium'},
-{id:6,supplier:'DUKAT D.D.',plate:'ZG 4321 KL',carrier:'Logis Plus',trailer:'TR-823',status:'Na čekanju',location:'Y03',dock:'',entered:Date.now()-45*60000,arrival:'07:40',priority:'High'},
-{id:7,supplier:'FRANCK D.D.',plate:'RI 6543 MN',carrier:'Prijevoznik One',trailer:'TR-411',status:'Na čekanju',location:'Y07',dock:'',entered:Date.now()-8*60000,arrival:'07:42',priority:'Low'},
-{id:8,supplier:'JAMNICA PLUS D.O.O.',plate:'ST 1111 OP',carrier:'TransCargo',trailer:'TR-998',status:'Na čekanju',location:'Y12',dock:'',entered:Date.now()-32*60000,arrival:'07:10',priority:'Low'}
+{id:1,supplier:'Dobavljač 2',plate:'ZG 1234 AB',carrier:'Prijevoznik One',trailer:'TR-458',status:'Na rampi',location:'',dock:'Rampa 1',entered:Date.now()-27*60000,arrival:'07:15',priority:'High'},
+{id:2,supplier:'Dobavljač 5',plate:'LJ 5678 CD',carrier:'Logis Plus',trailer:'TR-721',status:'Na rampi',location:'',dock:'Rampa 2',entered:Date.now()-37*60000,arrival:'07:05',priority:'High'},
+{id:3,supplier:'Dobavljač 6',plate:'ST 9012 EF',carrier:'TransCargo',trailer:'TR-335',status:'Na rampi',location:'',dock:'Rampa 3',entered:Date.now()-12*60000,arrival:'07:30',priority:'High'},
+{id:4,supplier:'Dobavljač 8',plate:'RI 3456 GH',carrier:'SpeedTrans',trailer:'TR-109',status:'Na rampi',location:'',dock:'Rampa 4',entered:Date.now()-22*60000,arrival:'07:20',priority:'Medium'},
+{id:5,supplier:'Dobavljač 10',plate:'OS 7890 IJ',carrier:'EuroLogist',trailer:'TR-642',status:'Na rampi',location:'',dock:'Rampa 5',entered:Date.now()-4*60000,arrival:'08:00',priority:'Medium'},
+{id:6,supplier:'Dobavljač 100',plate:'ZG 4321 KL',carrier:'Logis Plus',trailer:'TR-823',status:'Na čekanju',location:'Y03',dock:'',entered:Date.now()-45*60000,arrival:'07:40',priority:'High'},
+{id:7,supplier:'Dobavljač 119',plate:'RI 6543 MN',carrier:'Prijevoznik One',trailer:'TR-411',status:'Na čekanju',location:'Y07',dock:'',entered:Date.now()-8*60000,arrival:'07:42',priority:'Low'},
+{id:8,supplier:'Dobavljač 222',plate:'ST 1111 OP',carrier:'TransCargo',trailer:'TR-998',status:'Na čekanju',location:'Y12',dock:'',entered:Date.now()-32*60000,arrival:'07:10',priority:'Low'}
 ];
 let trucks=JSON.parse(safeStorage.getItem('yms_trucks_v2')||'null')||defaultTrucks;
 const save=()=>safeStorage.setItem('yms_trucks_v2',JSON.stringify(trucks));
@@ -8473,13 +8473,13 @@ document.getElementById('searchInput')?.addEventListener('input',renderTable);
 
 // ===== LOKACIJE I SKLADIŠTA =====
 const WAREHOUSES={
-  W101:{code:'W101',location:'Velika Gorica',name:'Ambijent',ramps:6,receptionStart:'06:00',receptionEnd:'13:00'},
-  W103:{code:'W103',location:'Velika Gorica',name:'Svježe i hlađeno',ramps:null,receptionStart:null,receptionEnd:null},
-  W104:{code:'W104',location:'Velika Gorica',name:'Smrznuto',ramps:null,receptionStart:null,receptionEnd:null},
-  W201:{code:'W201',location:'Dugopolje',name:'Ambijent',ramps:6,receptionStart:'06:00',receptionEnd:'13:00'},
-  W202:{code:'W202',location:'Dugopolje',name:'W202',ramps:null,receptionStart:null,receptionEnd:null},
-  W203:{code:'W203',location:'Dugopolje',name:'Svježe i hlađeno',ramps:null,receptionStart:null,receptionEnd:null},
-  W204:{code:'W204',location:'Dugopolje',name:'Smrznuto',ramps:null,receptionStart:null,receptionEnd:null}
+  W101:{code:'W101',location:'Lokacija 1',location_id:'VG',name:'Skladište 1',ramps:6,receptionStart:'06:00',receptionEnd:'13:00'},
+  W103:{code:'W103',location:'Lokacija 1',location_id:'VG',name:'Skladište 2',ramps:null,receptionStart:null,receptionEnd:null},
+  W104:{code:'W104',location:'Lokacija 1',location_id:'VG',name:'Skladište 3',ramps:null,receptionStart:null,receptionEnd:null},
+  W201:{code:'W201',location:'Lokacija 2',location_id:'DU',name:'Skladište 4',ramps:6,receptionStart:'06:00',receptionEnd:'13:00'},
+  W202:{code:'W202',location:'Lokacija 2',location_id:'DU',name:'Skladište 5',ramps:null,receptionStart:null,receptionEnd:null},
+  W203:{code:'W203',location:'Lokacija 2',location_id:'DU',name:'Skladište 6',ramps:null,receptionStart:null,receptionEnd:null},
+  W204:{code:'W204',location:'Lokacija 2',location_id:'DU',name:'Skladište 7',ramps:null,receptionStart:null,receptionEnd:null}
 };
 let activeWarehouse=safeStorage.getItem('studenac_active_warehouse')||'ALL';
 function whLabel(code){if(!code||code==='ALL')return'Sva skladišta';const w=WAREHOUSES[code];return w?`${w.code} · ${w.location} · ${w.name}`:code}
@@ -11723,7 +11723,7 @@ function canChangeReceptionStatus(){
 }
 
 function locationLabel(code){
-  return code==='DU'?'Dugopolje':'Velika Gorica';
+  return code==='DU'?'Lokacija 2':'Lokacija 1';
 }
 function yardivoLoadDynamicWarehousesIntoSystem(){
   try{
@@ -11731,7 +11731,7 @@ function yardivoLoadDynamicWarehousesIntoSystem(){
     if(!Array.isArray(rows))return;
     rows.forEach(x=>{
       const code=String(x?.code||'').trim().toUpperCase();
-      const loc=x?.location==='DU'?'Dugopolje':'Velika Gorica';
+      const loc=x?.location==='DU'?'Lokacija 2':'Lokacija 1';
       if(!code)return;
       if(typeof WAREHOUSES!=='undefined'){
         if(!WAREHOUSES[code]){
@@ -11755,7 +11755,7 @@ function yardivoLoadDynamicWarehousesIntoSystem(){
 function allWarehousesForLocation(code){
   yardivoLoadDynamicWarehousesIntoSystem();
   try{
-    const wanted=code==='DU'?'dugopolje':'velika gorica';
+    const wanted=code==='DU'?'Lokacija 2':'Lokacija 1';
     return Object.values(WAREHOUSES||{})
       .filter(w=>String(w?.location||'').toLowerCase()===wanted)
       .map(w=>String(w.code))
@@ -11824,8 +11824,8 @@ function yardivoRefreshAllWarehouseUi(){
     if(loc){
       out+=codes.map(c=>`<option value="${c}">${warehouseOptionLabel(c)}</option>`).join('');
     }else{
-      out+='<optgroup label="Velika Gorica">'+warehousesForLocation('VG').map(c=>`<option value="${c}">${warehouseOptionLabel(c)}</option>`).join('')+'</optgroup>';
-      out+='<optgroup label="Dugopolje">'+warehousesForLocation('DU').map(c=>`<option value="${c}">${warehouseOptionLabel(c)}</option>`).join('')+'</optgroup>';
+      out+='<optgroup label="Lokacija 1">'+warehousesForLocation('VG').map(c=>`<option value="${c}">${warehouseOptionLabel(c)}</option>`).join('')+'</optgroup>';
+      out+='<optgroup label="Lokacija 2">'+warehousesForLocation('DU').map(c=>`<option value="${c}">${warehouseOptionLabel(c)}</option>`).join('')+'</optgroup>';
     }
     sel.innerHTML=out;
     if([...sel.options].some(o=>o.value===old))sel.value=old;
@@ -12810,7 +12810,7 @@ function addNavAndView(){
 }
 function renderArchive(){const host=document.getElementById('incidentGallery');if(!host)return;let a=(typeof incidents!=='undefined'&&Array.isArray(incidents)?incidents:[]);const d=document.getElementById('iaDate')?.value,s=document.getElementById('iaSupplier')?.value,w=document.getElementById('iaWarehouse')?.value,v=document.getElementById('iaSeverity')?.value;a=a.filter(x=>x.photo&&(!d||x.date===d)&&(!s||x.supplier===s)&&(!w||x.warehouse===w)&&(!v||x.severity===v));const sup=document.getElementById('iaSupplier');if(sup&&sup.options.length<=1)[...new Set((typeof incidents!=='undefined'&&Array.isArray(incidents)?incidents:[]).map(x=>x.supplier).filter(Boolean))].sort().forEach(x=>sup.add(new Option(x,x)));document.getElementById('incidentArchiveCount').textContent=`${a.length} fotografija`;host.innerHTML=a.length?a.map(i=>`<article class="incident-photo-card" data-iid="${i.id}"><img src="${i.photo}" alt="Fotografija incidenta"><div class="body"><strong>${i.supplier||'—'}</strong>${i.date||'—'} · ${i.warehouse||'—'}<br>${i.type||'Incident'} · ${i.severity||'—'}<br>Status: ${i.status||'Otvoren'} · ${Number(i.value||0).toFixed(2)} €</div></article>`).join(''):'<div class="overview-empty">Nema fotografija za odabrane filtre.</div>';host.querySelectorAll('[data-iid]').forEach(c=>c.onclick=()=>{const i=(typeof incidents!=='undefined'&&Array.isArray(incidents)?incidents:[]).find(x=>String(x.id)===c.dataset.iid);if(i)alert(`${i.supplier}\n${i.date} · ${i.warehouse||'—'}\n${i.type} · ${i.severity}\nStatus: ${i.status||'Otvoren'}\nOdgovoran: ${i.owner||'—'}\nŠteta: ${Number(i.value||0).toFixed(2)} €\n\n${i.note||''}`)});}
 
-function addSettings(){const grid=document.querySelector('#settings .settings-grid');if(!grid||document.getElementById('masterUserAdmin'))return;grid.insertAdjacentHTML('afterbegin',`<section class="panel" id="masterUserAdmin"><div class="panel-head"><div><h2>KORISNICI, ROLE I PERMISSIONS</h2><small>Admin kreira račune i dodjeljuje pristup</small></div></div><div class="master-settings-body"><div class="master-admin-grid"><div><div class="form-grid"><label>Ime i prezime<input id="muName"></label><label>Username<input id="muUser" autocomplete="off"></label><label>Privremena lozinka<input id="muPass" type="password" autocomplete="new-password"></label><label>Rola<select id="muRole"><option value="inventory">Upravljanje zalihama</option><option value="reception">Prijam</option><option value="gate">Porta</option><option value="manager">Voditelj</option><option value="admin">Admin</option></select></label><label>Lokacija<select id="muLocation"><option value="DU">Dugopolje</option><option value="VG">Velika Gorica</option><option value="ALL">Sve lokacije</option></select></label>
+function addSettings(){const grid=document.querySelector('#settings .settings-grid');if(!grid||document.getElementById('masterUserAdmin'))return;grid.insertAdjacentHTML('afterbegin',`<section class="panel" id="masterUserAdmin"><div class="panel-head"><div><h2>KORISNICI, ROLE I PERMISSIONS</h2><small>Admin kreira račune i dodjeljuje pristup</small></div></div><div class="master-settings-body"><div class="master-admin-grid"><div><div class="form-grid"><label>Ime i prezime<input id="muName"></label><label>Username<input id="muUser" autocomplete="off"></label><label>Privremena lozinka<input id="muPass" type="password" autocomplete="new-password"></label><label>Rola<select id="muRole"><option value="inventory">Upravljanje zalihama</option><option value="reception">Prijam</option><option value="gate">Porta</option><option value="manager">Voditelj</option><option value="admin">Admin</option></select></label><label>Lokacija<select id="muLocation"><option value="DU">Lokacija 2</option><option value="VG">Lokacija 1</option><option value="ALL">Sve lokacije</option></select></label>
 <label>SKLADIŠTA
   <div style="font-size:10px;color:#91a6b2;margin:0 0 6px">Odaberi lokaciju, zatim pojedina skladišta ili <b>SVA SKLADIŠTA</b>. Za Admina ili Voditelja možeš odabrati <b>Sve lokacije</b>.</div><div id="muWarehousePicker" style="margin-top:6px;padding:9px;border:1px solid #304958;border-radius:8px;background:#09131a;min-height:44px"></div>
 </label>
@@ -12851,7 +12851,7 @@ function yardivoInternalUserWarehouseRows(){
   const codes=loc==='ALL'
     ? ['W101','W103','W104','W201','W203','W204']
     : (loc==='DU'?['W201','W203','W204']:['W101','W103','W104']);
-  return codes.map(code=>({code,name:code,location:code.startsWith('W2')?'Dugopolje':'Velika Gorica'}));
+  return codes.map(code=>({code,name:code,location:code.startsWith('W2')?'Lokacija 2':'Lokacija 1'}));
 }
 function yardivoRenderInternalUserWarehousePicker(selected=[]){
   const host=document.getElementById('muWarehousePicker'); if(!host)return;
@@ -12986,7 +12986,7 @@ function canSwitchLocation(){
 }
 
 function locationLabel(loc){
-  return loc==='DU'?'Dugopolje':loc==='VG'?'Velika Gorica':loc;
+  return loc==='DU'?'Lokacija 2':loc==='VG'?'Lokacija 1':loc;
 }
 
 function setActiveWarehouse(next){
@@ -13023,13 +13023,13 @@ function configureHomeLocation(){
       : 'DU';
 
     sel.innerHTML=[
-      '<option value="DU">Dugopolje</option>',
-      '<option value="VG">Velika Gorica</option>'
+      '<option value="DU">Lokacija 2</option>',
+      '<option value="VG">Lokacija 1</option>'
     ].join('');
     sel.disabled=false;
     sel.removeAttribute('aria-disabled');
     sel.title=role()==='inventory'
-      ? 'Upravljanje zalihama može birati Dugopolje ili Veliku Goricu.'
+      ? 'Upravljanje zalihama može birati Lokacija 2 ili Veliku Goricu.'
       : 'Rola ima pristup objema lokacijama.';
     sel.value=current;
     s.location=current;
@@ -14012,24 +14012,24 @@ window.YardivoCleanCore={load,save,role,applyHome,driverOpen,driverSave,gateFind
     let data=load().filter(a=>!a.qaOverviewTest);
     const base=Date.now()+500000;
     const rows=[
-      make(base+1,'Podravka','07:00',0,'Zaprimljeno',24,1,'ZG-QA-101','Ivan Horvat'),
-      make(base+2,'Podravka','08:00',8,'Zaprimljeno',18,2,'ZG-QA-102','Marko Marić'),
-      make(base+3,'Podravka','09:00',32,'Zaprimljeno',30,3,'ZG-QA-103','Ana Kovač'),
-      make(base+4,'Kraš','07:30',-7,'Zaprimljeno',16,1,'ZG-QA-201','Luka Barić'),
-      make(base+5,'Kraš','08:30',14,'Zaprimljeno',22,2,'ZG-QA-202','Petar Jurić'),
-      make(base+6,'Kraš','10:00',48,'Odbijen',12,4,'ZG-QA-203','Miro Matić'),
-      make(base+7,'Vindija','06:45',3,'Zaprimljeno',28,1,'VZ-QA-301','Josip Novak'),
-      make(base+8,'Vindija','09:15',21,'Na rampi',20,3,'VZ-QA-302','Tomislav Ivić'),
-      make(base+9,'Vindija','11:00',null,'NO-SHOW',26,5,'VZ-QA-303','Dario Babić'),
-      make(base+10,'Dukat','07:15',1,'Zaprimljeno',32,2,'ZG-QA-401','Mario Radić'),
-      make(base+11,'Dukat','08:45',0,'Zaprimljeno',34,2,'ZG-QA-402','Nikola Perić'),
-      make(base+12,'Dukat','10:15',12,'U dvorištu',25,4,'ZG-QA-403','Filip Božić'),
-      make(base+13,'Atlantic','07:50',27,'Zaprimljeno',15,1,'ST-QA-501','Ante Bilić'),
-      make(base+14,'Atlantic','09:40',65,'Odbijen',19,6,'ST-QA-502','Mate Šarić'),
-      make(base+15,'Atlantic','12:00',null,'NO-SHOW',21,6,'ST-QA-503','Ivo Grgić'),
-      make(base+16,'Franck','06:30',-12,'Zaprimljeno',14,1,'ZG-QA-601','Karlo Vuk'),
-      make(base+17,'Franck','08:20',17,'Zaprimljeno',17,3,'ZG-QA-602','Leon Kralj'),
-      make(base+18,'Franck','10:50',6,'Na rampi',23,5,'ZG-QA-603','Roko Pavlović')
+      make(base+1,'Dobavljač 2','07:00',0,'Zaprimljeno',24,1,'ZG-QA-101','Ivan Horvat'),
+      make(base+2,'Dobavljač 2','08:00',8,'Zaprimljeno',18,2,'ZG-QA-102','Marko Marić'),
+      make(base+3,'Dobavljač 2','09:00',32,'Zaprimljeno',30,3,'ZG-QA-103','Ana Kovač'),
+      make(base+4,'Dobavljač 8','07:30',-7,'Zaprimljeno',16,1,'ZG-QA-201','Luka Barić'),
+      make(base+5,'Dobavljač 8','08:30',14,'Zaprimljeno',22,2,'ZG-QA-202','Petar Jurić'),
+      make(base+6,'Dobavljač 8','10:00',48,'Odbijen',12,4,'ZG-QA-203','Miro Matić'),
+      make(base+7,'Dobavljač 5','06:45',3,'Zaprimljeno',28,1,'VZ-QA-301','Josip Novak'),
+      make(base+8,'Dobavljač 5','09:15',21,'Na rampi',20,3,'VZ-QA-302','Tomislav Ivić'),
+      make(base+9,'Dobavljač 5','11:00',null,'NO-SHOW',26,5,'VZ-QA-303','Dario Babić'),
+      make(base+10,'Dobavljač 100','07:15',1,'Zaprimljeno',32,2,'ZG-QA-401','Mario Radić'),
+      make(base+11,'Dobavljač 100','08:45',0,'Zaprimljeno',34,2,'ZG-QA-402','Nikola Perić'),
+      make(base+12,'Dobavljač 100','10:15',12,'U dvorištu',25,4,'ZG-QA-403','Filip Božić'),
+      make(base+13,'Dobavljač 10','07:50',27,'Zaprimljeno',15,1,'ST-QA-501','Ante Bilić'),
+      make(base+14,'Dobavljač 10','09:40',65,'Odbijen',19,6,'ST-QA-502','Mate Šarić'),
+      make(base+15,'Dobavljač 10','12:00',null,'NO-SHOW',21,6,'ST-QA-503','Ivo Grgić'),
+      make(base+16,'Dobavljač 119','06:30',-12,'Zaprimljeno',14,1,'ZG-QA-601','Karlo Vuk'),
+      make(base+17,'Dobavljač 119','08:20',17,'Zaprimljeno',17,3,'ZG-QA-602','Leon Kralj'),
+      make(base+18,'Dobavljač 119','10:50',6,'Na rampi',23,5,'ZG-QA-603','Roko Pavlović')
     ];
     // Record some realistic appointment-change history.
     rows[2].changeHistory.push({changedAt:new Date().toISOString(),oldDate:localDate(),oldTime:'08:45',oldDock:2,newDate:localDate(),newTime:'09:00',newDock:3,reason:'Promjena termina',countsAsLate:false});
@@ -14041,9 +14041,9 @@ window.YardivoCleanCore={load,save,role,applyHome,driverOpen,driverSave,gateFind
       let inc=JSON.parse(localStorage.getItem('yardivo_yms_incidents_v1')||'[]');
       inc=inc.filter(i=>!i.qaOverviewTest);
       inc.push(
-        {id:base+101,date:localDate(),supplier:'Atlantic',type:'Oštećenje robe',severity:'Visoka',status:'Otvoren',pallets:2,sku:4,value:450,note:'QA test incident',qaOverviewTest:true},
-        {id:base+102,date:localDate(),supplier:'Kraš',type:'Temperatura',severity:'Srednja',status:'Otvoren',pallets:1,sku:2,value:120,note:'QA test incident',qaOverviewTest:true},
-        {id:base+103,date:localDate(),supplier:'Vindija',type:'Dokumentacija',severity:'Niska',status:'Zatvoren',pallets:0,sku:1,value:0,note:'QA test incident',qaOverviewTest:true}
+        {id:base+101,date:localDate(),supplier:'Dobavljač 10',type:'Oštećenje robe',severity:'Visoka',status:'Otvoren',pallets:2,sku:4,value:450,note:'QA test incident',qaOverviewTest:true},
+        {id:base+102,date:localDate(),supplier:'Dobavljač 8',type:'Temperatura',severity:'Srednja',status:'Otvoren',pallets:1,sku:2,value:120,note:'QA test incident',qaOverviewTest:true},
+        {id:base+103,date:localDate(),supplier:'Dobavljač 5',type:'Dokumentacija',severity:'Niska',status:'Zatvoren',pallets:0,sku:1,value:0,note:'QA test incident',qaOverviewTest:true}
       );
       localStorage.setItem('yardivo_yms_incidents_v1',JSON.stringify(inc));
       if(Array.isArray(incidents))incidents.splice(0,incidents.length,...inc);
@@ -14961,14 +14961,14 @@ body[data-yms-role="gate"] [data-home-target="operations"]{display:none!importan
     const sel=document.getElementById('globalWarehouse');
     if(!sel)return;
 
-    // PORTA is the deliberate exception: one combined Dugopolje feed.
+    // PORTA is the deliberate exception: one combined Lokacija 2 feed.
     if(role()==='gate'){
       try{
         activeWarehouse='ALL';
         safeStorage?.setItem?.('studenac_active_warehouse','ALL');
       }catch(e){}
       const info=document.getElementById('globalWarehouseInfo');
-      if(info)info.textContent=currentSession?.location==='DU'?'SVA SKLADIŠTA · DUGOPOLJE':'SVA SKLADIŠTA · VELIKA GORICA';
+      if(info)info.textContent=currentSession?.location==='DU'?'SVA SKLADIŠTA · Lokacija 2':'SVA SKLADIŠTA · Lokacija 1';
       // Do not push W201/W203/W204 into Gate check-in filters.
       try{window.renderPortaSharedAnnouncements?.()}catch(e){}
       try{window.renderPortaVerifiedList?.()}catch(e){}
@@ -15639,7 +15639,7 @@ function localDate(){const d=new Date();return `${d.getFullYear()}-${String(d.ge
 function load(){try{const x=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(x)?x:[]}catch(e){return []}}
 function save(rows){localStorage.setItem(KEY,JSON.stringify(rows))}
 function locationForWarehouse(wh){return String(wh||'').startsWith('W2')?'DU':'VG'}
-function locName(loc){return loc==='DU'?'Dugopolje':loc==='VG'?'Velika Gorica':'Sve lokacije'}
+function locName(loc){return loc==='DU'?'Lokacija 2':loc==='VG'?'Lokacija 1':'Sve lokacije'}
 function warehouseName(code){try{return `${code} · ${WAREHOUSES?.[code]?.name||''}`}catch(e){return code}}
 function allAnnouncements(){try{return Array.isArray(announcements)?announcements:[]}catch(e){return []}}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -15852,7 +15852,7 @@ function ensurePanel(){
  <div class="panel-body">
    <div class="epal-toolbar">
      <label>LOKACIJA
-       <select id="epalInitialLocation"><option value="VG">Velika Gorica</option><option value="DU">Dugopolje</option></select>
+       <select id="epalInitialLocation"><option value="VG">Lokacija 1</option><option value="DU">Lokacija 2</option></select>
      </label>
    </div>
    <div class="epal-initial-grid" id="epalInitialGrid"></div>
@@ -15874,7 +15874,7 @@ function saveInputs(){
  document.querySelectorAll('[data-epal-initial]').forEach(i=>data[i.dataset.epalInitial]=Math.max(0,Math.floor(Number(i.value||0))));
  data.updatedAt=new Date().toISOString();data.updatedBy=currentSession?.username||currentSession?.user||'Admin';
  save(data);
- try{showYmsToast?.('success','EPAL POČETNO STANJE SPREMLJENO',loc==='DU'?'Dugopolje':'Velika Gorica')}catch(e){}
+ try{showYmsToast?.('success','EPAL POČETNO STANJE SPREMLJENO',loc==='DU'?'Lokacija 2':'Lokacija 1')}catch(e){}
  try{YardivoEPAL?.render?.()}catch(e){}
 }
 function totalForWarehouse(wh){return Math.max(0,Number(load()[wh]||0))}
@@ -16055,7 +16055,7 @@ function renderControlTower(){
  const codes=activeLoc()==='DU'?['W201','W203','W204']:['W101','W103','W104'];
  document.getElementById('ctWarehouseGrid').innerHTML=codes.map(w=>{
    const d=day.filter(a=>a.warehouse===w),onDock=d.filter(isDock).length,inYard=d.filter(isYard).length,det=d.filter(a=>metrics(a).level==='bad').length;
-   return `<div class="ct-wh"><h3>${w} · ${esc(WAREHOUSES?.[w]?.name||'')}</h3><small>${activeLoc()==='DU'?'Dugopolje':'Velika Gorica'}</small><div class="ct-wh-kpis"><div><small>DVORIŠTE</small><strong>${inYard}</strong></div><div><small>RAMPA</small><strong>${onDock}</strong></div><div><small>DETENTION</small><strong>${det}</strong></div></div></div>`;
+   return `<div class="ct-wh"><h3>${w} · ${esc(WAREHOUSES?.[w]?.name||'')}</h3><small>${activeLoc()==='DU'?'Lokacija 2':'Lokacija 1'}</small><div class="ct-wh-kpis"><div><small>DVORIŠTE</small><strong>${inYard}</strong></div><div><small>RAMPA</small><strong>${onDock}</strong></div><div><small>DETENTION</small><strong>${det}</strong></div></div></div>`;
  }).join('');
 
  const scores=supplierScores().slice(0,8);
@@ -16199,7 +16199,7 @@ function search(){
    <div class="order-search-grid">
      <div class="order-search-kpi"><small>DOBAVLJAČ</small><strong>${esc(a.supplier||'—')}</strong></div>
      <div class="order-search-kpi"><small>DATUM / TERMIN</small><strong>${esc(a.date||'—')} · ${esc(a.time||'—')}</strong></div>
-     <div class="order-search-kpi"><small>LOKACIJA</small><strong>${String(a.warehouse||'').startsWith('W2')?'Dugopolje':'Velika Gorica'}</strong></div>
+     <div class="order-search-kpi"><small>LOKACIJA</small><strong>${String(a.warehouse||'').startsWith('W2')?'Lokacija 2':'Lokacija 1'}</strong></div>
      <div class="order-search-kpi"><small>SKLADIŠTE</small><strong>${esc(a.warehouse||'—')}</strong></div>
      <div class="order-search-kpi"><small>RAMPA</small><strong>${esc(a.dock||'—')}</strong></div>
      <div class="order-search-kpi"><small>STATUS</small><strong>${esc(a.status||'—')}</strong></div>
@@ -16953,7 +16953,7 @@ const EXPORT_VIEWS=[['dashboard','Dashboard'],['dailyMap','Dnevna mapa'],['weekl
 function safe(v){return v==null?'':v}
 function anns(){try{return Array.isArray(announcements)?announcements:[]}catch(e){return []}}
 function incs(){try{return Array.isArray(incidents)?incidents:[]}catch(e){return []}}
-function locName(){try{return currentSession?.location==='DU'?'Dugopolje':'Velika Gorica'}catch(e){return ''}}
+function locName(){try{return currentSession?.location==='DU'?'Lokacija 2':'Lokacija 1'}catch(e){return ''}}
 function fmt(v){if(!v)return '';const d=new Date(v);return isNaN(d)?String(v):d.toLocaleString('hr-HR')}
 function delay(a){try{const d=delayMinutes(a);return d==null?'':Math.round(Number(d))}catch(e){return ''}}
 function stat(a){try{return operationalPlanStatus(a)||normalizedPlanStatus(a)||a.status||''}catch(e){return a.status||''}}
@@ -30936,7 +30936,7 @@ window.YardivoAdminUsersServerV583.invoke=invokeUsers;
 
 function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function roleLabel(r){return ({admin:'Admin',manager:'Voditelj',inventory:'Upravljanje zalihama',reception:'Prijam',gate:'Porta',supplier:'Dobavljač'})[normRole(r)]||r||'—'}
-function locLabel(l){return l==='DU'?'Dugopolje':l==='VG'?'Velika Gorica':l==='ALL'?'Sve lokacije':l||'—'}
+function locLabel(l){return l==='DU'?'Lokacija 2':l==='VG'?'Lokacija 1':l==='ALL'?'Sve lokacije':l||'—'}
 
 async function renderProfiles(){
   const host=document.getElementById('masterUserList');
@@ -31962,7 +31962,7 @@ function ensure(){
             <label>KONTAKT OSOBA<input id="ysaContactName" autocomplete="off"></label>
             <label>KONTAKT E-MAIL<input id="ysaContactEmail" type="email" autocomplete="off"></label>
             <label>TELEFON · OPCIONALNO<input id="ysaContactPhone" type="tel" autocomplete="off"></label>
-            <label>LOKACIJA<select id="ysaLocation"><option value="DU">Dugopolje</option><option value="VG">Velika Gorica</option><option value="ALL">SVA SKLADIŠTA · DU + VG</option></select></label>
+            <label>LOKACIJA<select id="ysaLocation"><option value="DU">Lokacija 2</option><option value="VG">Lokacija 1</option><option value="ALL">SVA SKLADIŠTA · DU + VG</option></select></label>
             <div style="grid-column:1/-1">
               <label>SKLADIŠTA DOSTUPNA DOBAVLJAČU</label>
               <div id="ysaWarehousePicker" style="margin-top:7px;padding:10px;border:1px solid #304958;border-radius:8px;background:#09131a"></div>
@@ -32004,7 +32004,7 @@ function yardivoSupplierWarehouseRows(){
           return {
             code,
             name:w?.name||code,
-            location:w?.location||(String(code).startsWith('W2')?'Dugopolje':String(code).startsWith('W1')?'Velika Gorica':'')
+            location:w?.location||(String(code).startsWith('W2')?'Lokacija 2':String(code).startsWith('W1')?'Lokacija 1':'')
           };
         });
     }
@@ -32016,14 +32016,14 @@ function yardivoSupplierWarehouseRows(){
   const codes=loc==='ALL'?[...fallback.VG,...fallback.DU]:(fallback[loc]||[]);
   return codes.map(code=>({
     code,name:code,
-    location:String(code).startsWith('W2')?'Dugopolje':'Velika Gorica'
+    location:String(code).startsWith('W2')?'Lokacija 2':'Lokacija 1'
   }));
 }
 function yardivoRenderSupplierWarehousePicker(){
   const host=document.getElementById('ysaWarehousePicker'); if(!host)return;
   const rows=yardivoSupplierWarehouseRows();
   const loc=document.getElementById('ysaLocation')?.value||'DU';
-  const locName=loc==='DU'?'DUGOPOLJE':loc==='VG'?'VELIKA GORICA':'SVA SKLADIŠTA · DU + VG';
+  const locName=loc==='DU'?'Lokacija 2':loc==='VG'?'Lokacija 1':'SVA SKLADIŠTA · DU + VG';
   host.innerHTML='<div style="margin-bottom:8px;font-size:10px;font-weight:950;color:#d8e7ef">SKLADIŠTA · '+locName+'</div>'+
     '<label style="display:flex;flex-direction:row;align-items:center;gap:8px;margin-bottom:9px"><input id="ysaAllWarehouses" type="checkbox" style="width:auto"> OZNAČI SVA SKLADIŠTA</label>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:7px">'+
@@ -32107,9 +32107,9 @@ function ensureWarehouseAdmin(){
       <div class="panel-head"><div><h2>DODAJ SKLADIŠTE</h2><small>Admin dodaje skladište po lokaciji</small></div></div>
       <div class="master-settings-body">
         <div class="ywa-grid">
-          <label>LOKACIJA<select id="ywaLocation"><option value="DU">Dugopolje</option><option value="VG">Velika Gorica</option></select></label>
+          <label>LOKACIJA<select id="ywaLocation"><option value="DU">Lokacija 2</option><option value="VG">Lokacija 1</option></select></label>
           <label>OZNAKA SKLADIŠTA<input id="ywaCode" placeholder="npr. W202" autocomplete="off"></label>
-          <label>NAZIV<input id="ywaName" placeholder="npr. W202 Ambijent" autocomplete="off"></label>
+          <label>NAZIV<input id="ywaName" placeholder="npr. W202 Skladište" autocomplete="off"></label>
           <label>BROJ RAMPI · OPCIONALNO<input id="ywaRamps" type="number" min="0" max="99"></label>
         </div>
         <button id="ywaSave" class="primary" type="button" style="margin-top:10px">DODAJ SKLADIŠTE</button>
@@ -32131,7 +32131,7 @@ function ensureWarehouseAdmin(){
       if(typeof WAREHOUSES!=='undefined'){
         WAREHOUSES[code]={
           code,
-          location:location==='DU'?'Dugopolje':'Velika Gorica',
+          location:location==='DU'?'Lokacija 2':'Lokacija 1',
           name,
           ramps,
           receptionStart:null,
@@ -32265,8 +32265,8 @@ function ensureLocations(){
   const current=String(locSel.value||'DU').toUpperCase();
   const canAll=['admin','inventory'].includes(r);
   const opts=canAll
-    ? [['DU','Dugopolje'],['VG','Velika Gorica'],['ALL','Sve lokacije']]
-    : [['DU','Dugopolje'],['VG','Velika Gorica']];
+    ? [['DU','Lokacija 2'],['VG','Lokacija 1'],['ALL','Sve lokacije']]
+    : [['DU','Lokacija 2'],['VG','Lokacija 1']];
   locSel.innerHTML=opts.map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
   locSel.value=opts.some(x=>x[0]===current)?current:'DU';
 }
@@ -32274,14 +32274,14 @@ function ensureLocations(){
 function warehouseRowsForLocation(loc){
   const fallback = {
     DU: [
-      {code:'W201',name:'W201',location:'Dugopolje'},
-      {code:'W203',name:'W203',location:'Dugopolje'},
-      {code:'W204',name:'W204',location:'Dugopolje'}
+      {code:'W201',name:'W201',location:'Lokacija 2'},
+      {code:'W203',name:'W203',location:'Lokacija 2'},
+      {code:'W204',name:'W204',location:'Lokacija 2'}
     ],
     VG: [
-      {code:'W101',name:'W101',location:'Velika Gorica'},
-      {code:'W103',name:'W103',location:'Velika Gorica'},
-      {code:'W104',name:'W104',location:'Velika Gorica'}
+      {code:'W101',name:'W101',location:'Lokacija 1'},
+      {code:'W103',name:'W103',location:'Lokacija 1'},
+      {code:'W104',name:'W104',location:'Lokacija 1'}
     ]
   };
 
@@ -32305,8 +32305,8 @@ function warehouseRowsForLocation(loc){
             code,
             name:w?.name||code,
             location:w?.location||(
-              String(code).startsWith('W2')?'Dugopolje':
-              String(code).startsWith('W1')?'Velika Gorica':''
+              String(code).startsWith('W2')?'Lokacija 2':
+              String(code).startsWith('W1')?'Lokacija 1':''
             )
           };
         });
@@ -35025,7 +35025,7 @@ function allWh(loc){
   return loc==='DU'?['W201','W203','W204']:['W101','W103','W104'];
 }
 function locationName(loc){
-  return loc==='DU'?'Dugopolje':loc==='VG'?'Velika Gorica':'Sve lokacije';
+  return loc==='DU'?'Lokacija 2':loc==='VG'?'Lokacija 1':'Sve lokacije';
 }
 function selectedWarehouses(){
   return [...document.querySelectorAll('#ymWarehouseGrid input[name="ymWarehouse"]:checked')].map(x=>x.value);
@@ -35093,7 +35093,7 @@ function renderWarehouses(){
   const rows=loc==='ALL'?[...new Set([...allWh('VG'),...allWh('DU')])]:allWh(loc);
   host.innerHTML=rows.map(w=>{
     const wh=String(w);
-    const place=wh.startsWith('W2')?'Dugopolje':'Velika Gorica';
+    const place=wh.startsWith('W2')?'Lokacija 2':'Lokacija 1';
     return `<label><input name="ymWarehouse" type="checkbox" value="${esc(wh)}"><span><strong>${esc(wh)}</strong>${loc==='ALL'?`<br><small>${place}</small>`:''}</span></label>`;
   }).join('');
   const all=document.getElementById('ymAllWarehouses');
@@ -35132,8 +35132,8 @@ function ensureModal(){
         <div class="ym-step-title">2 · LOKACIJA I SKLADIŠTA</div>
         <label>Dodijeljena lokacija
           <select id="ymLocation">
-            <option value="VG">Velika Gorica</option>
-            <option value="DU">Dugopolje</option>
+            <option value="VG">Lokacija 1</option>
+            <option value="DU">Lokacija 2</option>
             <option value="ALL">Sve lokacije</option>
           </select>
         </label>
@@ -35456,7 +35456,7 @@ function renderWh(){
   const host=document.getElementById('yufWarehouseGrid');if(!host)return;
   const rows=loc==='ALL'?[...new Set([...allWh('VG'),...allWh('DU')])]:allWh(loc);
   host.innerHTML=rows.map(w=>{
-    const place=String(w).startsWith('W2')?'Dugopolje':'Velika Gorica';
+    const place=String(w).startsWith('W2')?'Lokacija 2':'Lokacija 1';
     return `<label><input type="checkbox" name="yufWarehouse" value="${esc(w)}"><span><strong>${esc(w)}</strong>${loc==='ALL'?`<br><small>${place}</small>`:''}</span></label>`;
   }).join('');
   const all=document.getElementById('yufAllWarehouses');if(all)all.checked=false;
@@ -35538,8 +35538,8 @@ function ensure(){
             <strong>2 · LOKACIJA I SKLADIŠTA</strong>
             <label style="margin-top:10px">Lokacija
               <select id="yufLocation">
-                <option value="VG">Velika Gorica</option>
-                <option value="DU">Dugopolje</option>
+                <option value="VG">Lokacija 1</option>
+                <option value="DU">Lokacija 2</option>
                 <option value="ALL">Sve lokacije</option>
               </select>
             </label>
@@ -36343,8 +36343,8 @@ function locCode(){
   try{return String(window.currentSession?.location||'').toUpperCase()}catch(_){return''}
 }
 function locLabel(code){
-  if(code==='DU')return'DUGOPOLJE';
-  if(code==='VG')return'VELIKA GORICA';
+  if(code==='DU')return'Lokacija 2';
+  if(code==='VG')return'Lokacija 1';
   return'LOKACIJA NIJE ODABRANA';
 }
 function currentWh(){
@@ -37870,7 +37870,7 @@ window.YardivoSettingsHardFixV583={
  deleteAllSuppliers,
  category:()=>selectedCategory
 };
-window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-supplier-right-daily-map-final';
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-neutral-test-master-data-final';
 })();
 </script>
 
@@ -39682,6 +39682,194 @@ window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-supplier-right-daily-map-final';
 })();
 </script>
 
+
+<style id="yardivo-master-data-registry-final-v583-style">
+#yardivoMasterDataRegistryV583{margin-top:14px;border:1px solid #29485d;border-radius:12px;background:#081923;overflow:hidden}
+#yardivoMasterDataRegistryV583 .ymd-head{padding:13px 14px;border-bottom:1px solid #29485d;background:#0b2230}
+#yardivoMasterDataRegistryV583 .ymd-title{font-size:12px;font-weight:1000;color:#fff}
+#yardivoMasterDataRegistryV583 .ymd-sub{margin-top:4px;font-size:9px;font-weight:800;line-height:1.5;color:#8faabd}
+#yardivoMasterDataRegistryV583 .ymd-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:12px}
+#yardivoMasterDataRegistryV583 .ymd-card{border:1px solid #29485d;border-radius:10px;background:#0a1d29;padding:11px}
+#yardivoMasterDataRegistryV583 .ymd-card h4{margin:0 0 8px;color:#dff5ff;font-size:10px;font-weight:1000}
+#yardivoMasterDataRegistryV583 .ymd-list{display:flex;flex-direction:column;gap:5px;margin-bottom:9px;max-height:210px;overflow:auto}
+#yardivoMasterDataRegistryV583 .ymd-row{padding:7px 8px;border:1px solid #203d50;border-radius:8px;background:#071722;color:#d7eaf4;font-size:9px;font-weight:850}
+#yardivoMasterDataRegistryV583 .ymd-row small{display:block;margin-top:2px;color:#6f8fa1;font-size:8px}
+#yardivoMasterDataRegistryV583 .ymd-add{display:grid;gap:6px}
+#yardivoMasterDataRegistryV583 .ymd-add input,#yardivoMasterDataRegistryV583 .ymd-add select{min-height:34px;border:1px solid #31536a;border-radius:7px;background:#071722;color:#fff;padding:0 9px;font-size:9px}
+#yardivoMasterDataRegistryV583 .ymd-add button{min-height:36px;border:1px solid #46708a;border-radius:7px;background:#103348;color:#fff;font-size:9px;font-weight:1000;cursor:pointer}
+#yardivoMasterDataRegistryV583 .ymd-note{padding:0 12px 12px;color:#6f8fa1;font-size:8px;font-weight:800;line-height:1.5}
+@media(max-width:1000px){#yardivoMasterDataRegistryV583 .ymd-grid{grid-template-columns:1fr}}
+</style>
+
+<script id="yardivo-master-data-registry-final-v583">
+(function(){
+'use strict';
+if(window.__YARDIVO_MASTER_DATA_REGISTRY_FINAL_V583__)return;
+window.__YARDIVO_MASTER_DATA_REGISTRY_FINAL_V583__=true;
+
+const KEY='yardivo_master_data_registry_v583';
+const SUPPLIER_COUNT=262;
+const seed={
+ suppliers:Array.from({length:SUPPLIER_COUNT},(_,i)=>({id:'SUP'+String(i+1).padStart(3,'0'),name:'Dobavljač '+(i+1),active:true})),
+ locations:[{id:'VG',name:'Lokacija 1',active:true},{id:'DU',name:'Lokacija 2',active:true}],
+ warehouses:[
+  {id:'W101',name:'Skladište 1',location_id:'VG',ramps:6,active:true},
+  {id:'W103',name:'Skladište 2',location_id:'VG',ramps:0,active:true},
+  {id:'W104',name:'Skladište 3',location_id:'VG',ramps:0,active:true},
+  {id:'W201',name:'Skladište 4',location_id:'DU',ramps:6,active:true},
+  {id:'W202',name:'Skladište 5',location_id:'DU',ramps:0,active:true},
+  {id:'W203',name:'Skladište 6',location_id:'DU',ramps:0,active:true},
+  {id:'W204',name:'Skladište 7',location_id:'DU',ramps:0,active:true}
+ ]
+};
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function load(){
+ try{const raw=localStorage.getItem(KEY),d=raw?JSON.parse(raw):null;if(d&&Array.isArray(d.suppliers)&&Array.isArray(d.locations)&&Array.isArray(d.warehouses))return d}catch(_){}
+ return clone(seed);
+}
+function nextId(prefix,arr,start=1){let max=start-1;arr.forEach(x=>{const m=String(x.id||'').match(/(\d+)$/);if(m)max=Math.max(max,Number(m[1])||0)});return prefix+String(max+1).padStart(3,'0')}
+function nextWh(arr){let max=300;arr.forEach(x=>{const m=String(x.id||'').match(/^W(\d+)$/i);if(m)max=Math.max(max,Number(m[1])||0)});return 'W'+(max+1)}
+function save(d){try{localStorage.setItem(KEY,JSON.stringify(d))}catch(_){}syncRuntime(d);window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:clone(d)}));return d}
+function addSupplier(name){const d=load(),n=String(name||'').trim();if(!n)return null;const x={id:nextId('SUP',d.suppliers),name:n,active:true};d.suppliers.push(x);save(d);return x}
+function addLocation(name){const d=load(),n=String(name||'').trim();if(!n)return null;const x={id:nextId('L',d.locations,3),name:n,active:true};d.locations.push(x);save(d);return x}
+function addWarehouse(name,location_id){const d=load(),n=String(name||'').trim(),lid=String(location_id||'');if(!n||!d.locations.some(x=>x.id===lid))return null;const x={id:nextWh(d.warehouses),name:n,location_id:lid,ramps:0,active:true};d.warehouses.push(x);save(d);return x}
+
+function syncRuntime(d=load()){
+ try{if(typeof suppliers!=='undefined'&&Array.isArray(suppliers))suppliers.splice(0,suppliers.length,...d.suppliers.filter(x=>x.active!==false).map(x=>x.name))}catch(_){}
+ try{
+  if(typeof WAREHOUSES!=='undefined'&&WAREHOUSES)d.warehouses.filter(x=>x.active!==false).forEach(w=>{
+   const l=d.locations.find(x=>x.id===w.location_id),old=WAREHOUSES[w.id]||{};
+   WAREHOUSES[w.id]={...old,code:w.id,location:l?.name||w.location_id,location_id:w.location_id,name:w.name,ramps:Number(w.ramps)||0};
+  });
+ }catch(_){}
+ try{if(typeof validLocation==='function')validLocation=code=>d.locations.some(x=>x.active!==false&&x.id===String(code||'').toUpperCase())}catch(_){}
+ try{if(typeof homeLocationChosen==='function')homeLocationChosen=()=>d.locations.some(x=>x.active!==false&&x.id===String(window.currentSession?.location||'').toUpperCase())}catch(_){}
+ try{if(typeof locLabel==='function')locLabel=code=>d.locations.find(x=>x.id===String(code||'').toUpperCase())?.name||'LOKACIJA NIJE ODABRANA'}catch(_){}
+ try{if(typeof allWarehousesForLocation==='function')allWarehousesForLocation=code=>d.warehouses.filter(x=>x.active!==false&&x.location_id===String(code||'').toUpperCase()).map(x=>x.id)}catch(_){}
+ try{if(typeof defaultWarehouseForLocation==='function')defaultWarehouseForLocation=code=>d.warehouses.find(x=>x.active!==false&&x.location_id===String(code||'').toUpperCase())?.id||'ALL'}catch(_){}
+ syncDom(d);
+}
+function syncDom(d=load()){
+ const home=document.getElementById('homeLocationSelect');
+ if(home){
+  const current=home.value;
+  home.innerHTML='<option value="">Odaberi lokaciju...</option>'+d.locations.filter(x=>x.active!==false).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+  if([...home.options].some(o=>o.value===current))home.value=current;
+ }
+ const warn=document.getElementById('homeLocationWarning');if(warn)warn.textContent='Prvo odaberi lokaciju.';
+ document.querySelectorAll('select').forEach(sel=>{
+  if(!/warehouse|sklad/i.test(String(sel.id||'')+' '+String(sel.name||'')))return;
+  const current=sel.value;
+  const leading=[...sel.options].filter(o=>!/^W\d+$/i.test(o.value)).map(o=>`<option value="${esc(o.value)}">${esc(o.textContent)}</option>`).join('');
+  sel.innerHTML=leading+d.warehouses.filter(x=>x.active!==false).map(w=>{
+   const l=d.locations.find(x=>x.id===w.location_id);
+   return `<option value="${esc(w.id)}">${esc(w.name)} · ${esc(l?.name||'')}</option>`;
+  }).join('');
+  if([...sel.options].some(o=>o.value===current))sel.value=current;
+ });
+ const supplierSelect=document.getElementById('supplierSelect');
+ if(supplierSelect){
+  const current=supplierSelect.value;
+  supplierSelect.innerHTML='<option value="">Odaberi dobavljača...</option>'+d.suppliers.filter(x=>x.active!==false).map(x=>`<option value="${esc(x.name)}">${esc(x.name)}</option>`).join('');
+  if([...supplierSelect.options].some(o=>o.value===current))supplierSelect.value=current;
+ }
+}
+function target(){
+ const settings=document.getElementById('settings');if(!settings)return null;
+ return document.getElementById('masterUserAdmin')||settings.querySelector('.settings-grid');
+}
+function render(){
+ const t=target();if(!t)return;
+ let box=document.getElementById('yardivoMasterDataRegistryV583');
+ if(!box){box=document.createElement('div');box.id='yardivoMasterDataRegistryV583';(t.querySelector('.master-settings-body,.panel-body')||t).appendChild(box)}
+ const d=load(),locOptions=d.locations.filter(x=>x.active!==false).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+ const rows=(arr,detail)=>arr.filter(x=>x.active!==false).map(x=>`<div class="ymd-row"><div>${esc(x.name)}</div><small>${esc(detail(x))}</small></div>`).join('');
+ box.innerHTML=
+  '<div class="ymd-head"><div class="ymd-title">MASTER PODACI YARDIVO</div><div class="ymd-sub">Dobavljači, lokacije i skladišta su poslovni objekti YARDIVO-a, a ne korisnički accounti. Dok traje test, koriste se neutralni nazivi.</div></div>'+
+  '<div class="ymd-grid">'+
+   '<div class="ymd-card"><h4>DOBAVLJAČI</h4><div class="ymd-list">'+rows(d.suppliers,x=>x.id)+'</div><div class="ymd-add"><input id="ymdSupplierName" placeholder="Naziv dobavljača"><button id="ymdAddSupplier">DODAJ DOBAVLJAČA U YARDIVO</button></div></div>'+
+   '<div class="ymd-card"><h4>LOKACIJE</h4><div class="ymd-list">'+rows(d.locations,x=>x.id)+'</div><div class="ymd-add"><input id="ymdLocationName" placeholder="Naziv lokacije"><button id="ymdAddLocation">DODAJ LOKACIJU</button></div></div>'+
+   '<div class="ymd-card"><h4>SKLADIŠTA</h4><div class="ymd-list">'+rows(d.warehouses,x=>{const l=d.locations.find(y=>y.id===x.location_id);return x.id+' · '+(l?.name||'')})+'</div><div class="ymd-add"><input id="ymdWarehouseName" placeholder="Naziv skladišta"><select id="ymdWarehouseLocation">'+locOptions+'</select><button id="ymdAddWarehouse">DODAJ SKLADIŠTE</button></div></div>'+
+  '</div><div class="ymd-note">Kad odlučiš koristiti stvarne podatke, unosiš ih ovdje jednom i YARDIVO ih koristi kroz operativne ekrane.</div>';
+ document.getElementById('ymdAddSupplier').onclick=()=>{const e=document.getElementById('ymdSupplierName');if(addSupplier(e.value)){e.value='';render()}};
+ document.getElementById('ymdAddLocation').onclick=()=>{const e=document.getElementById('ymdLocationName');if(addLocation(e.value)){e.value='';render()}};
+ document.getElementById('ymdAddWarehouse').onclick=()=>{const n=document.getElementById('ymdWarehouseName'),l=document.getElementById('ymdWarehouseLocation');if(addWarehouse(n.value,l.value)){n.value='';render()}};
+}
+let timer=0;
+new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{syncRuntime();render()},90)}).observe(document.documentElement,{childList:true,subtree:true});
+document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{syncRuntime();render()},120));
+window.addEventListener('load',()=>setTimeout(()=>{syncRuntime();render()},350));
+window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>syncRuntime(),60));
+syncRuntime();render();
+window.YardivoMasterDataV583={all:()=>clone(load()),save,addSupplier,addLocation,addWarehouse,refresh:()=>{syncRuntime();render()}};
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-neutral-test-master-data-final';
+})();
+</script>
+
+
+<script id="yardivo-test-data-runtime-anonymizer-v583">
+(function(){
+'use strict';
+if(window.__YARDIVO_TEST_DATA_RUNTIME_ANONYMIZER_V583__)return;
+window.__YARDIVO_TEST_DATA_RUNTIME_ANONYMIZER_V583__=true;
+
+const COUNT=262;
+function aliasSupplier(v){
+  v=String(v||'').trim();
+  if(!v)return v;
+  if(/^Dobavljač\s+\d+$/i.test(v))return v.replace(/^dobavljač/i,'Dobavljač');
+  let h=2166136261;
+  for(let i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}
+  return 'Dobavljač '+((h>>>0)%COUNT+1);
+}
+function neutralLocationForWarehouse(w){
+  w=String(w||'').toUpperCase();
+  if(/^W1/.test(w))return'Lokacija 1';
+  if(/^W2/.test(w))return'Lokacija 2';
+  return'';
+}
+function cleanObject(o){
+  if(!o||typeof o!=='object')return false;
+  let changed=false;
+  for(const k of ['supplier','supplierName','supplier_name','vendor','vendorName','vendor_name']){
+    if(Object.prototype.hasOwnProperty.call(o,k)&&o[k]){
+      const n=aliasSupplier(o[k]);
+      if(n!==o[k]){o[k]=n;changed=true}
+    }
+  }
+  if(o.warehouse){
+    const loc=neutralLocationForWarehouse(o.warehouse);
+    for(const k of ['location','locationName','location_name']){
+      if(Object.prototype.hasOwnProperty.call(o,k)&&o[k]&&loc&&o[k]!==loc){o[k]=loc;changed=true}
+    }
+  }
+  return changed;
+}
+function cleanArray(a){
+  if(!Array.isArray(a))return false;
+  let c=false;a.forEach(x=>{if(cleanObject(x))c=true});return c;
+}
+function run(){
+  let ann=false,inc=false,tr=false;
+  try{if(typeof announcements!=='undefined')ann=cleanArray(announcements)}catch(_){}
+  try{if(typeof incidents!=='undefined')inc=cleanArray(incidents)}catch(_){}
+  try{if(typeof trucks!=='undefined')tr=cleanArray(trucks)}catch(_){}
+  try{if(ann&&typeof saveAnnouncements==='function')saveAnnouncements()}catch(_){}
+  try{if(inc&&typeof saveIncidents==='function')saveIncidents()}catch(_){}
+  try{if(tr&&typeof saveTrucks==='function')saveTrucks()}catch(_){}
+  if(ann||inc||tr){
+    try{window.YardivoSupabase?.syncNow?.()}catch(_){}
+    try{window.dispatchEvent(new CustomEvent('yardivo:test-data-anonymized'))}catch(_){}
+  }
+}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(run,700));
+window.addEventListener('yardivo:data-synced',()=>setTimeout(run,120));
+window.addEventListener('yardivo:login',()=>setTimeout(run,800));
+window.YardivoTestDataAnonymizerV583={run,aliasSupplier};
+})();
+</script>
+
 </body>
 </html>
 
@@ -40866,13 +41054,13 @@ body[data-yardivo-role="gate"] #settings.yardivo-settings-tabs-ready .settings-g
 'use strict';
 
 const WAREHOUSE_META={
- W101:{location:'Velika Gorica',name:'Ambijent'},
- W103:{location:'Velika Gorica',name:'Svježe i hlađeno'},
- W104:{location:'Velika Gorica',name:'Smrznuto'},
- W201:{location:'Dugopolje',name:'Ambijent'},
- W202:{location:'Dugopolje',name:'W202'},
- W203:{location:'Dugopolje',name:'Svježe i hlađeno'},
- W204:{location:'Dugopolje',name:'Smrznuto'}
+ W101:{location:'Lokacija 1',name:'Skladište'},
+ W103:{location:'Lokacija 1',name:'Skladište'},
+ W104:{location:'Lokacija 1',name:'Skladište'},
+ W201:{location:'Lokacija 2',name:'Skladište'},
+ W202:{location:'Lokacija 2',name:'W202'},
+ W203:{location:'Lokacija 2',name:'Skladište'},
+ W204:{location:'Lokacija 2',name:'Skladište'}
 };
 const WH_CODES=Object.keys(WAREHOUSE_META);
 let currentTab='ramps';
@@ -40884,7 +41072,7 @@ function role(){
 function ensureW202Model(){
  try{
    if(typeof WAREHOUSES==='object'&&!WAREHOUSES.W202){
-     WAREHOUSES.W202={code:'W202',location:'Dugopolje',name:'W202',ramps:null,receptionStart:null,receptionEnd:null};
+     WAREHOUSES.W202={code:'W202',location:'Lokacija 2',name:'W202',ramps:null,receptionStart:null,receptionEnd:null};
    }
  }catch(_){}
 }
@@ -40894,7 +41082,7 @@ function ensureWarehouseOptions(){
    const vals=[...sel.options].map(o=>o.value);
    if(vals.includes('W201')&&vals.includes('W203')&&!vals.includes('W202')){
      const opt=document.createElement('option');
-     opt.value='W202';opt.textContent='W202 · Dugopolje';
+     opt.value='W202';opt.textContent='W202 · Lokacija 2';
      const before=[...sel.options].find(o=>o.value==='W203');
      if(before)sel.insertBefore(opt,before);else sel.appendChild(opt);
    }
@@ -41212,13 +41400,13 @@ window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-settings-tabs-warehouse-ramp-count
 'use strict';
 
 const WH_META={
-  W101:['Velika Gorica','Ambijent'],
-  W103:['Velika Gorica','Svježe i hlađeno'],
-  W104:['Velika Gorica','Smrznuto'],
-  W201:['Dugopolje','Ambijent'],
-  W202:['Dugopolje','W202'],
-  W203:['Dugopolje','Svježe i hlađeno'],
-  W204:['Dugopolje','Smrznuto']
+  W101:['Lokacija 1','Skladište'],
+  W103:['Lokacija 1','Skladište'],
+  W104:['Lokacija 1','Skladište'],
+  W201:['Lokacija 2','Skladište'],
+  W202:['Lokacija 2','W202'],
+  W203:['Lokacija 2','Skladište'],
+  W204:['Lokacija 2','Skladište']
 };
 const WHS=Object.keys(WH_META);
 const HOURS_KEY='yardivo_reception_master_hours_v1';
@@ -41935,13 +42123,13 @@ function cleanText(s){
     .trim();
 }
 const WH_NAMES={
-  W101:{name:'Ambijent',location:'Velika Gorica'},
-  W103:{name:'Svježe i hlađeno',location:'Velika Gorica'},
-  W104:{name:'Smrznuto',location:'Velika Gorica'},
-  W201:{name:'Ambijent',location:'Dugopolje'},
-  W202:{name:'W202',location:'Dugopolje'},
-  W203:{name:'Svježe i hlađeno',location:'Dugopolje'},
-  W204:{name:'Smrznuto',location:'Dugopolje'}
+  W101:{name:'Skladište 1',location:'Lokacija 1'},
+  W103:{name:'Skladište 2',location:'Lokacija 1'},
+  W104:{name:'Skladište 3',location:'Lokacija 1'},
+  W201:{name:'Skladište 4',location:'Lokacija 2'},
+  W202:{name:'Skladište 5',location:'Lokacija 2'},
+  W203:{name:'Skladište 6',location:'Lokacija 2'},
+  W204:{name:'Skladište 7',location:'Lokacija 2'}
 };
 function whLabel(code){
   const w=String(code||'').toUpperCase().trim();
@@ -42125,7 +42313,7 @@ function test(){
   stop();
   const c=cfg();speaking=true;
   try{
-    const u=new SpeechSynthesisUtterance('Nova najava dobavljača. Podravka je najavila isporuku u skladište W101. Dolazak je planiran u 14 sati i 30 minuta, na rampi 3. Količina isporuke je 24 palete.');
+    const u=new SpeechSynthesisUtterance('Nova najava dobavljača. Dobavljač 2 je najavila isporuku u skladište W101. Dolazak je planiran u 14 sati i 30 minuta, na rampi 3. Količina isporuke je 24 palete.');
     currentUtterance=u;u.lang='hr-HR';u.voice=hrVoice();u.volume=c.volume;u.rate=c.rate;u.pitch=1.02;
     const done=()=>{speaking=false;currentUtterance=null;if(!original)save({enabled:false})};
     u.onend=done;u.onerror=done;speechSynthesis.speak(u);
