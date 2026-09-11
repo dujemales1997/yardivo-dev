@@ -37862,7 +37862,7 @@ window.YardivoSettingsHardFixV583={
  deleteAllSuppliers,
  category:()=>selectedCategory
 };
-window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-unified-dynamic-ramps-settings';
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-supplier-location-warehouse-binding-fix';
 })();
 </script>
 
@@ -40500,6 +40500,715 @@ new MutationObserver(()=>{
 install();
 window.YardivoUnifiedRampsV583={render,refresh:refreshAll,active:()=>chooseActive()};
 window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-unified-dynamic-ramps-settings';
+})();
+</script>
+
+
+<style id="yardivo-home-original-theme-hard-fix-v583">
+body.home-menu-mode #homeMenu{
+  background:var(--bg,#07111d)!important;
+}
+body.home-menu-mode #homeMenu:before{
+  display:none!important;
+}
+body.home-menu-mode .home-menu-card,
+#homeMenuGrid .home-menu-card{
+  background:linear-gradient(180deg,#0a1622,#09131e)!important;
+  border-color:#1b2c3c!important;
+  color:var(--text,#f7f9fc)!important;
+  box-shadow:0 12px 28px rgba(0,0,0,.10)!important;
+}
+body.home-menu-mode .home-menu-card:hover,
+body.home-menu-mode .home-menu-card:focus{
+  background:linear-gradient(180deg,#0d1a27,#0a141f)!important;
+  border-color:#2b8cff!important;
+}
+body.home-menu-mode .home-location-box{
+  background:linear-gradient(180deg,#0a1622,#09131e)!important;
+  border:1px solid #1b2c3c!important;
+  border-radius:8px!important;
+  padding:10px 12px!important;
+}
+body.home-menu-mode .home-location-box select{
+  background:#07111c!important;
+  border-color:#213447!important;
+  color:#fff!important;
+}
+</style>
+
+
+<script id="yardivo-master-data-persistence-dropdown-warehouse-fix-v583">
+(function(){
+'use strict';
+if(window.__YARDIVO_MASTER_DATA_PERSISTENCE_FIX_V583__)return;
+window.__YARDIVO_MASTER_DATA_PERSISTENCE_FIX_V583__=true;
+
+const KEY='yardivo_master_data_registry_v583';
+
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function load(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    const d=raw?JSON.parse(raw):null;
+    if(d&&Array.isArray(d.suppliers)&&Array.isArray(d.locations)&&Array.isArray(d.warehouses))return d;
+  }catch(_){}
+  try{return window.YardivoMasterDataV583?.all?.()||{suppliers:[],locations:[],warehouses:[]}}catch(_){}
+  return {suppliers:[],locations:[],warehouses:[]};
+}
+function persist(d){
+  try{localStorage.setItem(KEY,JSON.stringify(d))}catch(_){}
+  try{window.YardivoMasterDataV583?.save?.(clone(d))}catch(_){}
+  /* Business master data must survive logout/relogin; flush the existing server-state transport. */
+  setTimeout(()=>{try{window.YardivoSupabase?.syncNow?.()}catch(_){}},40);
+  return d;
+}
+function locLabel(id){
+  const d=load();
+  return d.locations.find(x=>x.id===String(id||''))?.name||String(id||'');
+}
+function refreshHomeLocationDropdown(){
+  const d=load(),sel=document.getElementById('homeLocationSelect');
+  if(!sel)return;
+  const current=String(window.currentSession?.location||sel.value||'');
+  sel.innerHTML='<option value="">Odaberi lokaciju...</option>'+
+    d.locations.filter(x=>x.active!==false).map(x=>{
+      const o=document.createElement('option');
+      o.value=x.id;o.textContent=x.name;return o.outerHTML;
+    }).join('');
+  if([...sel.options].some(o=>o.value===current))sel.value=current;
+  else sel.value='';
+
+  const warning=document.getElementById('homeLocationWarning');
+  if(warning)warning.textContent=d.locations.length?'Prvo odaberi lokaciju.':'Nema lokacija. Dodaj lokaciju u Postavkama.';
+}
+function refreshWarehouseSelectors(){
+  const d=load();
+  document.querySelectorAll('select').forEach(sel=>{
+    const id=String(sel.id||''),name=String(sel.name||'');
+    /* IMPORTANT: this is a LOCATION selector used while creating a warehouse. Never rewrite it as a warehouse selector. */
+    if(id==='ymdWarehouseLocation')return;
+    if(sel.closest('#yardivoMasterDataRegistryV583') && id!=='rampSettingsWarehouse')return;
+    if(!/warehouse|sklad/i.test(id+' '+name))return;
+
+    const current=sel.value;
+    const leading=[...sel.options].filter(o=>!/^W\d+$/i.test(o.value))
+      .map(o=>`<option value="${String(o.value).replace(/"/g,'&quot;')}">${o.textContent}</option>`).join('');
+    sel.innerHTML=leading+d.warehouses.filter(x=>x.active!==false).map(w=>{
+      const l=d.locations.find(x=>x.id===w.location_id);
+      return `<option value="${w.id}">${w.name}${l?.name?' · '+l.name:''}</option>`;
+    }).join('');
+    if([...sel.options].some(o=>o.value===current))sel.value=current;
+  });
+}
+function refreshMasterWarehouseLocationSelect(){
+  const d=load(),sel=document.getElementById('ymdWarehouseLocation');
+  if(!sel)return;
+  const current=sel.value;
+  sel.innerHTML=d.locations.filter(x=>x.active!==false).map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+  if([...sel.options].some(o=>o.value===current))sel.value=current;
+  if(!sel.value&&sel.options.length)sel.selectedIndex=0;
+}
+function nextWh(arr){
+  let max=0;
+  arr.forEach(x=>{const m=String(x.id||'').match(/^W(\d+)$/i);if(m)max=Math.max(max,Number(m[1])||0)});
+  return 'W'+String(max+1).padStart(3,'0');
+}
+function addWarehouseFixed(name,locationId){
+  const d=load(),n=String(name||'').trim(),lid=String(locationId||'').trim();
+  if(!n)throw new Error('Upiši naziv skladišta.');
+  if(!lid||!d.locations.some(x=>x.id===lid))throw new Error('Odaberi lokaciju skladišta.');
+  const x={id:nextWh(d.warehouses),name:n,location_id:lid,ramps:0,active:true};
+  d.warehouses.push(x);
+  persist(d);
+  try{window.YardivoMasterDataV583?.refresh?.()}catch(_){}
+  try{window.YardivoUnifiedRampsV583?.refresh?.()}catch(_){}
+  refreshAll();
+  return x;
+}
+function bindWarehouseAdd(){
+  const btn=document.getElementById('ymdAddWarehouse');
+  if(!btn||btn.dataset.masterDataBugfixBound==='1')return;
+  btn.dataset.masterDataBugfixBound='1';
+  btn.addEventListener('click',e=>{
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const n=document.getElementById('ymdWarehouseName');
+    const l=document.getElementById('ymdWarehouseLocation');
+    try{
+      const x=addWarehouseFixed(n?.value,l?.value);
+      if(n)n.value='';
+      try{showYmsToast?.('success','SKLADIŠTE DODANO',`${x.name} · ${locLabel(x.location_id)}`)}catch(_){}
+    }catch(err){
+      alert(err?.message||err);
+    }
+  },true);
+}
+function refreshAll(){
+  refreshHomeLocationDropdown();
+  refreshMasterWarehouseLocationSelect();
+  refreshWarehouseSelectors();
+  bindWarehouseAdd();
+
+  /* Replace old two-location assumptions in the live global helpers. */
+  try{window.locationLabel=locLabel}catch(_){}
+  try{window.locLabel=locLabel}catch(_){}
+  try{
+    window.homeLocationChosen=function(){
+      const d=load(),id=String(window.currentSession?.location||'');
+      return d.locations.some(x=>x.active!==false&&x.id===id);
+    };
+  }catch(_){}
+  try{
+    window.validLocation=function(code){
+      const d=load(),id=String(code||'');
+      return d.locations.some(x=>x.active!==false&&x.id===id);
+    };
+  }catch(_){}
+  try{
+    window.defaultWarehouseForLocation=function(code){
+      const d=load(),id=String(code||'');
+      return d.warehouses.find(x=>x.active!==false&&x.location_id===id)?.id||'ALL';
+    };
+  }catch(_){}
+  try{
+    window.allWarehousesForLocation=function(code){
+      const d=load(),id=String(code||'');
+      return d.warehouses.filter(x=>x.active!==false&&x.location_id===id).map(x=>x.id);
+    };
+  }catch(_){}
+  try{window.updateHomeLocationUI?.()}catch(_){}
+}
+function wrapMasterApi(){
+  const api=window.YardivoMasterDataV583;
+  if(!api||api.__bugfixWrapped)return;
+  ['addLocation','renameLocation','deleteLocation','addWarehouse','renameWarehouse','deleteWarehouse','addSupplier'].forEach(name=>{
+    const orig=api[name];
+    if(typeof orig!=='function')return;
+    api[name]=function(...args){
+      const r=orig.apply(api,args);
+      setTimeout(()=>{
+        try{window.YardivoSupabase?.syncNow?.()}catch(_){}
+        refreshAll();
+      },30);
+      return r;
+    };
+  });
+  api.__bugfixWrapped=true;
+}
+function afterRender(){
+  wrapMasterApi();
+  refreshAll();
+}
+
+let timer=0;
+new MutationObserver(()=>{
+  clearTimeout(timer);
+  timer=setTimeout(afterRender,60);
+}).observe(document.documentElement,{childList:true,subtree:true});
+
+window.addEventListener('yardivo:master-data-changed',()=>setTimeout(afterRender,30));
+window.addEventListener('yardivo:data-synced',()=>setTimeout(afterRender,80));
+window.addEventListener('yardivo:login',()=>setTimeout(afterRender,180));
+document.addEventListener('DOMContentLoaded',()=>setTimeout(afterRender,140));
+window.addEventListener('load',()=>setTimeout(afterRender,350));
+
+/* When user opens Home or Settings, refresh from the current authoritative registry immediately. */
+document.addEventListener('click',e=>{
+  if(e.target.closest('[data-view="homeMenu"],[data-home-target="homeMenu"],[data-view="settings"],[data-home-target="settings"]')){
+    setTimeout(afterRender,30);
+  }
+},true);
+
+afterRender();
+
+window.YardivoMasterDataBugfixV583={
+  refresh:afterRender,
+  addWarehouse:addWarehouseFixed,
+  locations:()=>clone(load().locations),
+  warehouses:()=>clone(load().warehouses)
+};
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-home-masterdata-warehouse-bugfix';
+})();
+</script>
+
+
+<script id="yardivo-masterdata-live-labels-supplier-account-fix-v583">
+(function(){
+'use strict';
+if(window.__YARDIVO_MASTERDATA_LIVE_LABELS_SUPPLIER_ACCOUNT_FIX_V583__)return;
+window.__YARDIVO_MASTERDATA_LIVE_LABELS_SUPPLIER_ACCOUNT_FIX_V583__=true;
+
+const KEY='yardivo_master_data_registry_v583';
+function load(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    const d=raw?JSON.parse(raw):null;
+    if(d&&Array.isArray(d.suppliers)&&Array.isArray(d.locations)&&Array.isArray(d.warehouses))return d;
+  }catch(_){}
+  try{return window.YardivoMasterDataV583?.all?.()||{suppliers:[],locations:[],warehouses:[]}}catch(_){}
+  return {suppliers:[],locations:[],warehouses:[]};
+}
+function norm(s){return String(s||'').trim()}
+function locById(id,d=load()){return d.locations.find(x=>x.id===id)}
+function whById(id,d=load()){return d.warehouses.find(x=>x.id===id)}
+function supplierByAny(v,d=load()){
+  const s=norm(v);
+  return d.suppliers.find(x=>x.id===s||x.name===s);
+}
+function supplierName(v){return supplierByAny(v)?.name||norm(v)}
+function locationName(v){
+  const d=load(),s=norm(v);
+  return d.locations.find(x=>x.id===s||x.name===s)?.name||s;
+}
+function warehouseLabel(v){
+  const d=load(),w=whById(norm(v),d);
+  if(!w)return norm(v);
+  const l=locById(w.location_id,d);
+  return l?`${w.name} · ${l.name}`:w.name;
+}
+
+/* Supplier-account creation:
+   Supplier accounts are not tied to legacy DP/VG codes.
+   They get the neutral scope "SVE LOKACIJE". */
+function fixSupplierAccountLocationDropdown(){
+  const candidates=[...document.querySelectorAll('select')].filter(sel=>{
+    const context=(sel.closest('#masterUserAdmin,.master-settings-body,.panel-body,form')?.textContent||'').toUpperCase();
+    const idName=(String(sel.id||'')+' '+String(sel.name||'')).toLowerCase();
+    return /DOBAVLJAČ|DOBAVLJAC|SUPPLIER/.test(context) && /loc|location|lokacij/.test(idName);
+  });
+
+  candidates.forEach(sel=>{
+    const roleSel=sel.closest('form,.master-settings-body,.panel-body,#masterUserAdmin')?.querySelector('select[id*="role" i],select[name*="role" i]');
+    const role=String(roleSel?.value||'').toLowerCase();
+    const supplierContext=/supplier|dobavlja/i.test(role) || /DOBAVLJAČ|DOBAVLJAC|SUPPLIER/.test((sel.closest('form,.master-settings-body,.panel-body,#masterUserAdmin')?.textContent||'').toUpperCase());
+    if(!supplierContext)return;
+
+    sel.innerHTML='<option value="ALL">SVE LOKACIJE</option>';
+    sel.value='ALL';
+    sel.disabled=false;
+    sel.dataset.yardivoSupplierAllLocations='1';
+  });
+
+  /* Also normalize any visible text generated by legacy account UI. */
+  document.querySelectorAll('#masterUserAdmin option, #masterUserAdmin label, #masterUserAdmin small, #masterUserAdmin span').forEach(el=>{
+    const t=String(el.textContent||'').trim();
+    if(/^(DP|VG)$/i.test(t))el.textContent='SVE LOKACIJE';
+  });
+}
+
+/* Refresh all known visible dropdowns/labels immediately after master-data rename. */
+function refreshDynamicDropdowns(){
+  const d=load();
+
+  // Home location selector
+  const home=document.getElementById('homeLocationSelect');
+  if(home){
+    const current=home.value;
+    home.innerHTML='<option value="">Odaberi lokaciju...</option>'+
+      d.locations.filter(x=>x.active!==false).map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+    if([...home.options].some(o=>o.value===current))home.value=current;
+  }
+
+  // Master-data warehouse-location selector
+  const whLoc=document.getElementById('ymdWarehouseLocation');
+  if(whLoc){
+    const current=whLoc.value;
+    whLoc.innerHTML=d.locations.filter(x=>x.active!==false).map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+    if([...whLoc.options].some(o=>o.value===current))whLoc.value=current;
+    else if(whLoc.options.length)whLoc.selectedIndex=0;
+  }
+
+  // Warehouse selectors throughout app
+  document.querySelectorAll('select').forEach(sel=>{
+    if(sel.id==='ymdWarehouseLocation')return;
+    const idName=(String(sel.id||'')+' '+String(sel.name||'')).toLowerCase();
+    if(!/warehouse|sklad/.test(idName))return;
+    const current=sel.value;
+    const leading=[...sel.options].filter(o=>!/^W\d+$/i.test(o.value))
+      .map(o=>`<option value="${o.value}">${o.textContent}</option>`).join('');
+    sel.innerHTML=leading+d.warehouses.filter(x=>x.active!==false).map(w=>{
+      const l=locById(w.location_id,d);
+      return `<option value="${w.id}">${w.name}${l?.name?' · '+l.name:''}</option>`;
+    }).join('');
+    if([...sel.options].some(o=>o.value===current))sel.value=current;
+  });
+
+  // Supplier selectors throughout app
+  document.querySelectorAll('select').forEach(sel=>{
+    const idName=(String(sel.id||'')+' '+String(sel.name||'')).toLowerCase();
+    if(!/supplier|dobavlj/.test(idName))return;
+    if(sel.closest('#masterUserAdmin') && /role|location|lokacij/.test(idName))return;
+    const current=sel.value;
+    const first=[...sel.options].find(o=>!o.value)?.textContent||'Odaberi dobavljača...';
+    sel.innerHTML=`<option value="">${first}</option>`+
+      d.suppliers.filter(x=>x.active!==false).map(x=>`<option value="${x.name}">${x.name}</option>`).join('');
+    if([...sel.options].some(o=>o.value===current))sel.value=current;
+  });
+
+  // Best-effort live text relabel for elements carrying stable ids in data attributes.
+  document.querySelectorAll('[data-warehouse],[data-warehouse-id]').forEach(el=>{
+    const id=el.dataset.warehouse||el.dataset.warehouseId;
+    if(id && whById(id,d)){
+      if(el.matches('option'))el.textContent=warehouseLabel(id);
+      else if(el.childElementCount===0)el.textContent=warehouseLabel(id);
+    }
+  });
+  document.querySelectorAll('[data-location],[data-location-id]').forEach(el=>{
+    const id=el.dataset.location||el.dataset.locationId;
+    if(id && locById(id,d) && el.childElementCount===0)el.textContent=locationName(id);
+  });
+  document.querySelectorAll('[data-supplier],[data-supplier-id]').forEach(el=>{
+    const id=el.dataset.supplier||el.dataset.supplierId;
+    if(id && supplierByAny(id,d) && el.childElementCount===0)el.textContent=supplierName(id);
+  });
+
+  fixSupplierAccountLocationDropdown();
+
+  // Trigger existing module renderers to pick up new names immediately.
+  const fns=[
+    'renderAnnouncements','renderSupplierPortal','renderSupplierInbox','renderSupplierHistory',
+    'renderDailyMap','renderWeeklyMap','renderRampe','renderYard','renderAnnouncementSchedule',
+    'renderPlannerPro','renderRampQueue','renderDashboard','renderHomeMenu'
+  ];
+  fns.forEach(name=>{try{if(typeof window[name]==='function')window[name]()}catch(_){}});
+
+  try{window.YardivoSupplierRightDailyMapV583?.refresh?.()}catch(_){}
+  try{window.YardivoUnifiedRampsV583?.refresh?.()}catch(_){}
+  try{window.YardivoSettingsHardFixV583?.refresh?.()}catch(_){}
+}
+
+/* Override common label helpers with master-data aware versions. */
+try{window.locationLabel=locationName}catch(_){}
+try{window.locLabel=locationName}catch(_){}
+try{window.warehouseLabel=warehouseLabel}catch(_){}
+try{window.whLabel=warehouseLabel}catch(_){}
+try{window.supplierLabel=supplierName}catch(_){}
+
+/* When role changes to supplier while creating/editing account, immediately show only SVE LOKACIJE. */
+document.addEventListener('change',e=>{
+  const sel=e.target.closest('select[id*="role" i],select[name*="role" i]');
+  if(!sel)return;
+  setTimeout(fixSupplierAccountLocationDropdown,0);
+},true);
+
+window.addEventListener('yardivo:master-data-changed',()=>setTimeout(refreshDynamicDropdowns,20));
+window.addEventListener('yardivo:data-synced',()=>setTimeout(refreshDynamicDropdowns,80));
+window.addEventListener('yardivo:login',()=>setTimeout(refreshDynamicDropdowns,150));
+document.addEventListener('DOMContentLoaded',()=>setTimeout(refreshDynamicDropdowns,120));
+window.addEventListener('load',()=>setTimeout(refreshDynamicDropdowns,300));
+
+let timer=0;
+new MutationObserver(()=>{
+  clearTimeout(timer);
+  timer=setTimeout(refreshDynamicDropdowns,70);
+}).observe(document.documentElement,{childList:true,subtree:true});
+
+refreshDynamicDropdowns();
+
+window.YardivoLiveMasterLabelsV583={
+  refresh:refreshDynamicDropdowns,
+  supplierName,locationName,warehouseLabel
+};
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-masterdata-live-labels-supplier-account-fix';
+})();
+</script>
+
+
+<style id="yardivo-supplier-location-warehouse-binding-v583-style">
+#muWarehousePicker .ysab-select-wrap{
+  display:grid;
+  gap:6px;
+}
+#muWarehousePicker .ysab-select-wrap select{
+  width:100%;
+  min-height:38px;
+  border:1px solid #31536a;
+  border-radius:8px;
+  background:#071722;
+  color:#fff;
+  padding:0 9px;
+  font-size:9px;
+  font-weight:850;
+}
+#muWarehousePicker .ysab-empty{
+  padding:12px;
+  border:1px dashed #36586b;
+  border-radius:8px;
+  color:#8faabd;
+  background:#071722;
+  font-size:9px;
+  font-weight:850;
+  line-height:1.5;
+}
+</style>
+
+<script id="yardivo-supplier-location-warehouse-binding-v583">
+(function(){
+'use strict';
+if(window.__YARDIVO_SUPPLIER_LOCATION_WAREHOUSE_BINDING_V583__)return;
+window.__YARDIVO_SUPPLIER_LOCATION_WAREHOUSE_BINDING_V583__=true;
+
+const KEY='yardivo_master_data_registry_v583';
+let applying=false;
+let originalServerCreate=null;
+
+function normRole(v){
+  v=String(v||'').trim().toLowerCase();
+  if(v==='management'||v==='voditelj')return'manager';
+  if(v==='porta'||v==='portir')return'gate';
+  if(v==='prijam')return'reception';
+  if(v==='zalihe'||v==='upravljanje zalihama')return'inventory';
+  return v;
+}
+function master(){
+  try{
+    const raw=localStorage.getItem(KEY),d=raw?JSON.parse(raw):null;
+    if(d&&Array.isArray(d.locations)&&Array.isArray(d.warehouses))return d;
+  }catch(_){}
+  try{return window.YardivoMasterDataV583?.all?.()||{locations:[],warehouses:[]}}catch(_){}
+  return {locations:[],warehouses:[]};
+}
+function esc(v){
+  return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function role(){
+  return normRole(document.getElementById('muRole')?.value||'');
+}
+function location(){
+  return String(document.getElementById('muLocation')?.value||'ALL');
+}
+function locationsForAccount(){
+  return master().locations.filter(x=>x.active!==false);
+}
+function warehousesFor(loc){
+  const d=master();
+  return d.warehouses.filter(w=>w.active!==false && (loc==='ALL'||w.location_id===loc));
+}
+function locationLabel(id){
+  if(id==='ALL')return'SVE LOKACIJE';
+  const d=master();
+  return d.locations.find(x=>x.id===id)?.name||id;
+}
+function warehouseLabel(w){
+  const d=master(),l=d.locations.find(x=>x.id===w.location_id);
+  return `${w.name}${l?.name?' · '+l.name:''}`;
+}
+
+/* Supplier must exist as a creatable application role. */
+function ensureSupplierRole(){
+  const sel=document.getElementById('muRole');if(!sel)return;
+  const current=normRole(sel.value);
+  if(![...sel.options].some(o=>normRole(o.value)==='supplier')){
+    sel.add(new Option('Dobavljač','supplier'));
+  }
+  if(current==='supplier')sel.value='supplier';
+}
+
+/* Dynamic account-location selector:
+   no DP/VG; names come directly from Master Data. */
+function renderLocations(){
+  const sel=document.getElementById('muLocation');if(!sel)return;
+  const current=sel.value;
+  const list=locationsForAccount();
+  sel.innerHTML=
+    '<option value="ALL">SVE LOKACIJE</option>'+
+    list.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+
+  if([...sel.options].some(o=>o.value===current))sel.value=current;
+  else if(list.length)sel.value=list[0].id;
+  else sel.value='ALL';
+}
+
+/* Supplier = exactly one warehouse context.
+   Other roles keep the existing multi-warehouse model, but it is rebuilt from dynamic Master Data. */
+function renderWarehouses(selectedValue){
+  const host=document.getElementById('muWarehousePicker');if(!host)return;
+  const loc=location(),rows=warehousesFor(loc),r=role();
+
+  if(r==='supplier'){
+    if(!rows.length){
+      host.innerHTML='<div class="ysab-empty">Za odabranu lokaciju nema skladišta. Prvo dodaj skladište u MASTER PODACI YARDIVO.</div>';
+      return;
+    }
+    const current=selectedValue||host.querySelector('#muSupplierWarehouse')?.value||'';
+    host.innerHTML=
+      '<div class="ysab-select-wrap">'+
+       '<small style="color:#8faabd;font-weight:900">ODABERI SKLADIŠTE ZA OVOG DOBAVLJAČA</small>'+
+       '<select id="muSupplierWarehouse">'+
+        '<option value="">Odaberi skladište...</option>'+
+        rows.map(w=>`<option value="${esc(w.id)}">${esc(warehouseLabel(w))}</option>`).join('')+
+       '</select>'+
+      '</div>';
+    const sel=host.querySelector('#muSupplierWarehouse');
+    if([...sel.options].some(o=>o.value===current))sel.value=current;
+    return;
+  }
+
+  const previous=new Set(
+    [...host.querySelectorAll('input[name="muWarehouse"]:checked')].map(x=>x.value)
+  );
+  host.innerHTML=
+    `<label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-weight:900;cursor:pointer">
+      <input id="muAllWarehouses" type="checkbox" style="width:auto">
+      ${loc==='ALL'?'SVA SKLADIŠTA':'SVA SKLADIŠTA LOKACIJE'}
+    </label>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:6px">
+      ${rows.map(w=>`
+        <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #294252;border-radius:7px;cursor:pointer">
+          <input type="checkbox" name="muWarehouse" value="${esc(w.id)}" style="width:auto" ${previous.has(w.id)?'checked':''}>
+          <span><strong>${esc(w.name)}</strong><br><small>${esc(locationLabel(w.location_id))}</small></span>
+        </label>
+      `).join('')}
+    </div>`;
+  const all=host.querySelector('#muAllWarehouses');
+  const boxes=[...host.querySelectorAll('input[name="muWarehouse"]')];
+  if(all){
+    all.checked=boxes.length>0&&boxes.every(b=>b.checked);
+    all.onchange=()=>boxes.forEach(b=>b.checked=all.checked);
+  }
+  boxes.forEach(b=>b.onchange=()=>{
+    if(all)all.checked=boxes.length>0&&boxes.every(x=>x.checked);
+  });
+}
+function selectedWarehouses(){
+  if(role()==='supplier'){
+    const v=document.getElementById('muSupplierWarehouse')?.value||'';
+    return v?[v]:[];
+  }
+  return [...document.querySelectorAll('#muWarehousePicker input[name="muWarehouse"]:checked')].map(x=>x.value);
+}
+
+function refresh(){
+  if(applying)return;
+  applying=true;
+  try{
+    ensureSupplierRole();
+    const locBefore=document.getElementById('muLocation')?.value||'';
+    renderLocations();
+    const locAfter=document.getElementById('muLocation')?.value||'';
+    renderWarehouses(locBefore===locAfter?undefined:'');
+  }finally{
+    applying=false;
+  }
+}
+
+/* Supplier server-create owner.
+   Existing non-supplier create behavior remains untouched. */
+function installCreateOwner(){
+  const api=window.YardivoServerProfiles;
+  if(!api||typeof api.create!=='function')return;
+  if(api.create.__supplierBindingV583)return;
+  originalServerCreate=api.create;
+
+  const replacement=async function(){
+    if(role()!=='supplier')return originalServerCreate.apply(api,arguments);
+
+    let currentRole='';
+    try{currentRole=normRole(window.currentSession?.role||currentSession?.role)}catch(_){}
+    if(currentRole!=='admin'){
+      alert('Samo Admin može kreirati Supplier account.');
+      return;
+    }
+
+    const username=(document.getElementById('muUser')?.value||'').trim().toLowerCase();
+    const password=document.getElementById('muPass')?.value||'';
+    const loc=location();
+    const warehouses=selectedWarehouses();
+
+    if(!/^[a-z0-9._-]{3,40}$/.test(username)){
+      alert('Username mora imati najmanje 3 znaka.');
+      return;
+    }
+    if(password.length<6){
+      alert('Password mora imati najmanje 6 znakova.');
+      return;
+    }
+    if(!warehouses.length){
+      alert('Odaberi skladište za ovog dobavljača.');
+      return;
+    }
+
+    const w=master().warehouses.find(x=>x.id===warehouses[0]);
+    if(!w){
+      alert('Odabrano skladište više ne postoji u Master podacima.');
+      refresh();
+      return;
+    }
+    if(loc!=='ALL'&&w.location_id!==loc){
+      alert('Odabrano skladište ne pripada odabranoj lokaciji.');
+      refresh();
+      return;
+    }
+
+    const btn=document.getElementById('muSave');
+    try{
+      if(btn){btn.disabled=true;btn.textContent='KREIRAM SUPPLIER ACCOUNT...'}
+      const invoke=window.YardivoAdminUsersServerV583?.invoke;
+      if(typeof invoke!=='function')throw new Error('Server user API nije dostupan.');
+
+      await invoke('create',{
+        username,
+        password,
+        role:'supplier',
+        location:loc,
+        warehouses:[w.id]
+      });
+
+      const u=document.getElementById('muUser');
+      const p=document.getElementById('muPass');
+      const n=document.getElementById('muName');
+      if(u)u.value='';if(p)p.value='';if(n)n.value='';
+
+      try{await window.YardivoServerProfiles?.render?.()}catch(_){}
+      try{showYmsToast?.('success','SUPPLIER ACCOUNT KREIRAN',`${username} · ${locationLabel(loc)} · ${w.name}`)}catch(_){}
+    }catch(e){
+      alert('Kreiranje Supplier accounta nije uspjelo: '+(e?.message||e));
+    }finally{
+      if(btn){btn.disabled=false;btn.removeAttribute('disabled');btn.textContent='KREIRAJ KORISNIČKI PROFIL'}
+    }
+  };
+  replacement.__supplierBindingV583=true;
+  api.create=replacement;
+}
+
+/* Native local creator also reads these controls in older/offline flows. */
+try{window.yardivoSelectedInternalUserWarehouses=selectedWarehouses}catch(_){}
+
+document.addEventListener('change',e=>{
+  if(e.target?.id==='muRole'){
+    setTimeout(()=>{refresh();installCreateOwner()},0);
+  }else if(e.target?.id==='muLocation'){
+    setTimeout(()=>renderWarehouses(''),0);
+  }
+},true);
+
+window.addEventListener('yardivo:master-data-changed',()=>setTimeout(refresh,20));
+window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>{refresh();installCreateOwner()},80));
+window.addEventListener('yardivo:login',()=>setTimeout(()=>{refresh();installCreateOwner()},150));
+document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{refresh();installCreateOwner()},160));
+window.addEventListener('load',()=>setTimeout(()=>{refresh();installCreateOwner()},350));
+
+let timer=0;
+new MutationObserver(()=>{
+  clearTimeout(timer);
+  timer=setTimeout(()=>{
+    if(document.getElementById('masterUserAdmin')){
+      refresh();
+      installCreateOwner();
+    }
+  },70);
+}).observe(document.documentElement,{childList:true,subtree:true});
+
+refresh();
+installCreateOwner();
+
+window.YardivoSupplierAccountBindingV583={
+  refresh,
+  selectedWarehouses,
+  warehousesFor,
+  location:()=>location()
+};
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-supplier-location-warehouse-binding-fix';
 })();
 </script>
 
