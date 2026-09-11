@@ -37870,7 +37870,7 @@ window.YardivoSettingsHardFixV583={
  deleteAllSuppliers,
  category:()=>selectedCategory
 };
-window.YARDIVO_DEV_BUILD='20260910-dev-v5.8.3-supplier-fullscreen-day-map-fix';
+window.YARDIVO_DEV_BUILD='20260910-dev-v5.8.3-supplier-slot-prerequisites-ux-fix';
 })();
 </script>
 
@@ -38444,6 +38444,544 @@ let t=0;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(bind,60)}).observ
 document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,120));window.addEventListener('load',()=>setTimeout(bind,450));bind();
 window.YardivoSupplierFullscreenDayMapV583={open,close,refresh:bind};
 window.YARDIVO_DEV_BUILD='20260910-dev-v5.8.3-supplier-fullscreen-day-map-fix';
+})();
+</script>
+
+
+<style id="yardivo-supplier-native-fullscreen-map-final-v583-style">
+/* Kill the obsolete inline pseudo-map completely. */
+#yardivoSupplierPortal .yardivo-supplier-auto-slot-wrap{
+  display:none!important;
+}
+
+/* The EXISTING authoritative YARDIVO supplier planner is itself fullscreen. */
+#yspSlotMapV583{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100dvh!important;
+  max-width:none!important;
+  max-height:none!important;
+  z-index:2147483646!important;
+  padding:0!important;
+  margin:0!important;
+  align-items:stretch!important;
+  justify-content:stretch!important;
+  background:rgba(1,8,13,.97)!important;
+}
+#yspSlotMapV583.open{
+  display:flex!important;
+}
+#yspSlotMapV583 .ysm-shell{
+  width:100vw!important;
+  height:100dvh!important;
+  max-width:none!important;
+  max-height:none!important;
+  border-radius:0!important;
+  border:0!important;
+  margin:0!important;
+  padding:18px!important;
+  overflow:auto!important;
+  box-sizing:border-box!important;
+  background:#061923!important;
+}
+#yspSlotMapV583 .ysm-head{
+  position:sticky!important;
+  top:0!important;
+  z-index:5!important;
+  background:#061923!important;
+  padding-bottom:12px!important;
+  border-bottom:1px solid #23495d!important;
+}
+#yspSlotMapV583 .ysm-title{
+  font-size:18px!important;
+  letter-spacing:.2px!important;
+}
+#yspSlotMapV583 .ysm-sub{
+  font-size:10px!important;
+}
+#yspSlotMapV583 .ysm-days{
+  position:sticky!important;
+  top:72px!important;
+  z-index:4!important;
+  padding:10px 0!important;
+  background:#061923!important;
+}
+#yspSlotMapV583 .ysm-day,
+#yspSlotMapV583 .ysm-close,
+#yspSlotMapV583 .ysm-use{
+  min-height:40px!important;
+  font-size:10px!important;
+}
+#yspSlotMapV583 .ysm-info{
+  font-size:10px!important;
+  padding:11px!important;
+}
+#yspSlotMapV583 .ysm-grid{
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr))!important;
+  gap:10px!important;
+}
+#yspSlotMapV583 .ysm-slot{
+  min-height:72px!important;
+  padding:12px!important;
+}
+#yspSlotMapV583 .ysm-slot strong{
+  font-size:13px!important;
+}
+#yspSlotMapV583 .ysm-slot small{
+  font-size:9px!important;
+}
+#yspSlotMapV583 .ysm-foot{
+  position:sticky!important;
+  bottom:0!important;
+  z-index:4!important;
+  padding:12px 0 2px!important;
+  background:#061923!important;
+}
+body.yardivo-native-slot-map-open{
+  overflow:hidden!important;
+}
+
+/* In the form keep only a compact action/status; never a fake map. */
+#yardivoSupplierPortal .ysp-slot-planner-v583{
+  margin:10px 0!important;
+}
+</style>
+
+<script id="yardivo-supplier-native-fullscreen-map-final-v583">
+(function(){
+'use strict';
+if(window.__YARDIVO_SUPPLIER_NATIVE_FULLSCREEN_MAP_FINAL_V583__)return;
+window.__YARDIVO_SUPPLIER_NATIVE_FULLSCREEN_MAP_FINAL_V583__=true;
+
+let lastDate='', autoTimer=0, pollingTimer=0;
+const $=id=>document.getElementById(id);
+
+function root(){return $('yardivoSupplierPortal')}
+function dateValue(){return String($('yspDate')?.value||'').trim()}
+function portalVisible(){
+ const r=root();if(!r)return false;
+ const cs=getComputedStyle(r);
+ return cs.display!=='none' && cs.visibility!=='hidden';
+}
+function removeObsoleteInline(){
+ root()?.querySelectorAll('.yardivo-supplier-auto-slot-wrap').forEach(x=>x.remove());
+}
+function enhanceNativeModal(){
+ const m=$('yspSlotMapV583');
+ if(!m)return;
+ const on=()=>document.body.classList.add('yardivo-native-slot-map-open');
+ const off=()=>document.body.classList.remove('yardivo-native-slot-map-open');
+ new MutationObserver(()=>m.classList.contains('open')?on():off()).observe(m,{attributes:true,attributeFilter:['class']});
+ if(m.classList.contains('open'))on();
+}
+
+function openNativeMap(){
+ removeObsoleteInline();
+ if(!portalVisible())return;
+ const d=dateValue();
+ if(!d)return;
+ const api=window.YardivoSupplierSlotMapV583;
+ if(!api?.open)return;
+
+ /* Existing planner requires pallet count. Supplier UX should still open on date.
+    If pallets are not entered yet, use 1 only for this preview and restore blank
+    immediately after planner has rendered. */
+ const p=$('yspPallets');
+ const had=String(p?.value||'').trim();
+ let preview=false;
+ if(p && (!had || Number(had)<1)){
+   p.value='1';
+   preview=true;
+ }
+ try{
+   api.open();
+   document.body.classList.add('yardivo-native-slot-map-open');
+   const sub=$('ysmSub');
+   if(preview && sub){
+     sub.textContent += ' · PREVIEW (upiši broj paleta za točno trajanje termina)';
+   }
+ }catch(e){
+   console.error('[YARDIVO] supplier native slot map open',e);
+ }finally{
+   if(preview && p)p.value=had;
+ }
+}
+
+/* Hidden #yspDate is changed by the custom mini calendar.
+   Watch BOTH events and value changes, because legacy calendar code does not
+   consistently emit the same DOM event in every path. */
+function onDatePotentialChange(){
+ clearTimeout(autoTimer);
+ autoTimer=setTimeout(()=>{
+   removeObsoleteInline();
+   const d=dateValue();
+   if(!d || d===lastDate)return;
+   lastDate=d;
+   openNativeMap();
+ },60);
+}
+function bind(){
+ removeObsoleteInline();
+ enhanceNativeModal();
+
+ const d=$('yspDate');
+ if(d && !d.dataset.nativeFullscreenFinalBound){
+   d.dataset.nativeFullscreenFinalBound='1';
+   d.addEventListener('change',onDatePotentialChange,true);
+   d.addEventListener('input',onDatePotentialChange,true);
+ }
+
+ const cal=$('yspMiniCal');
+ if(cal && !cal.dataset.nativeFullscreenFinalBound){
+   cal.dataset.nativeFullscreenFinalBound='1';
+   cal.addEventListener('click',()=>setTimeout(onDatePotentialChange,20),true);
+   cal.addEventListener('pointerup',()=>setTimeout(onDatePotentialChange,20),true);
+ }
+
+ const display=$('yspDateDisplay');
+ if(display && !display.dataset.nativeFullscreenFinalBound){
+   display.dataset.nativeFullscreenFinalBound='1';
+   display.addEventListener('change',()=>setTimeout(onDatePotentialChange,20),true);
+ }
+
+ /* Existing manual open button must always use the native authoritative map. */
+ ['yspChooseSlotV583','yardivoOpenRealDayMap'].forEach(id=>{
+   const b=$(id);
+   if(b && !b.dataset.nativeFullscreenFinalBound){
+     b.dataset.nativeFullscreenFinalBound='1';
+     b.onclick=e=>{e?.preventDefault?.();openNativeMap()};
+   }
+ });
+
+ /* Old custom fullscreen wrapper is no longer needed. */
+ const old=$('yardivoSupplierFullscreenMapV583');
+ if(old)old.remove();
+}
+
+/* Poll only while Supplier portal exists to catch hidden input value mutation
+   that doesn't emit any event. */
+function startPolling(){
+ if(pollingTimer)return;
+ pollingTimer=setInterval(()=>{
+   if(!root())return;
+   removeObsoleteInline();
+   const d=dateValue();
+   if(d && d!==lastDate && portalVisible()){
+     lastDate=d;
+     openNativeMap();
+   }
+ },250);
+}
+
+let moTimer=0;
+new MutationObserver(()=>{
+ clearTimeout(moTimer);
+ moTimer=setTimeout(bind,40);
+}).observe(document.documentElement,{childList:true,subtree:true});
+
+document.addEventListener('DOMContentLoaded',()=>{setTimeout(bind,80);startPolling()});
+window.addEventListener('load',()=>{setTimeout(bind,250);startPolling()});
+window.addEventListener('yardivo:login',()=>setTimeout(bind,120));
+bind();startPolling();
+
+window.YardivoSupplierNativeFullscreenMapV583={
+ open:openNativeMap,
+ refresh:bind
+};
+window.YARDIVO_DEV_BUILD='20260910-dev-v5.8.3-supplier-native-fullscreen-map-final-fix';
+})();
+</script>
+
+
+<style id="yardivo-supplier-status-dark-contrast-final-v583">
+/* Supplier -> STANJE NAJAVE I ISPORUKE
+   Force the whole delivery/status cards into YARDIVO dark mode so no
+   white-on-white text survives legacy/light-theme inline styles. */
+#yardivoSupplierPortal #yspStatusList > *,
+#yardivoSupplierPortal #yspStatusList .card,
+#yardivoSupplierPortal #yspStatusList [class*="card"],
+#yardivoSupplierPortal #yspStatusList [class*="item"],
+#yardivoSupplierPortal #yspStatusList [class*="row"]{
+  background:#0b2230!important;
+  background-color:#0b2230!important;
+  color:#eaf7ff!important;
+  border-color:#29485d!important;
+  box-shadow:none!important;
+}
+#yardivoSupplierPortal #yspStatusList p,
+#yardivoSupplierPortal #yspStatusList span:not(.badge):not([class*="badge"]),
+#yardivoSupplierPortal #yspStatusList div:not(.badge):not([class*="badge"]),
+#yardivoSupplierPortal #yspStatusList small,
+#yardivoSupplierPortal #yspStatusList strong,
+#yardivoSupplierPortal #yspStatusList b,
+#yardivoSupplierPortal #yspStatusList label{
+  color:#eaf7ff!important;
+}
+#yardivoSupplierPortal #yspStatusList .muted,
+#yardivoSupplierPortal #yspStatusList [class*="muted"],
+#yardivoSupplierPortal #yspStatusList small{
+  color:#9db8c8!important;
+}
+#yardivoSupplierPortal #yspStatusList button{
+  background:#102b3a!important;
+  color:#f4fbff!important;
+  border-color:#42647a!important;
+}
+#yardivoSupplierPortal #yspStatusList button:hover{
+  background:#16394b!important;
+  border-color:#5b87a0!important;
+}
+#yardivoSupplierPortal #yspStatusList .badge,
+#yardivoSupplierPortal #yspStatusList [class*="badge"]{
+  color:#17202a!important;
+}
+/* Timeline: active = YARDIVO blue, inactive still readable. */
+#yardivoSupplierPortal #yspStatusList [class*="timeline"],
+#yardivoSupplierPortal #yspStatusList [class*="step"]{
+  color:#b9d0dd!important;
+}
+#yardivoSupplierPortal #yspStatusList [class*="active"]{
+  color:#67b5ff!important;
+}
+/* Same hard contrast for history list/cards. */
+#yardivoSupplierPortal #yspHistoryList > *,
+#yardivoSupplierPortal #yspHistoryList .card,
+#yardivoSupplierPortal #yspHistoryList [class*="card"],
+#yardivoSupplierPortal #yspHistoryList [class*="item"],
+#yardivoSupplierPortal #yspHistoryList [class*="row"]{
+  background:#0b2230!important;
+  background-color:#0b2230!important;
+  color:#eaf7ff!important;
+  border-color:#29485d!important;
+}
+#yardivoSupplierPortal #yspHistoryList p,
+#yardivoSupplierPortal #yspHistoryList span,
+#yardivoSupplierPortal #yspHistoryList div,
+#yardivoSupplierPortal #yspHistoryList small,
+#yardivoSupplierPortal #yspHistoryList strong,
+#yardivoSupplierPortal #yspHistoryList b{
+  color:#eaf7ff!important;
+}
+</style>
+<script id="yardivo-supplier-status-dark-contrast-final-v583-js">
+(function(){
+'use strict';
+if(window.__YARDIVO_SUPPLIER_STATUS_DARK_CONTRAST_FINAL_V583__)return;
+window.__YARDIVO_SUPPLIER_STATUS_DARK_CONTRAST_FINAL_V583__=true;
+
+function force(root){
+ if(!root)return;
+ const cards=[...root.children];
+ cards.forEach(card=>{
+   card.style.setProperty('background','#0b2230','important');
+   card.style.setProperty('background-color','#0b2230','important');
+   card.style.setProperty('color','#eaf7ff','important');
+   card.style.setProperty('border-color','#29485d','important');
+   card.querySelectorAll('*').forEach(el=>{
+     const cs=getComputedStyle(el);
+     const bg=cs.backgroundColor;
+     const c=cs.color;
+     /* Only replace near-white/transparent text areas; keep semantic status badges. */
+     if(!/badge|pill|status/i.test(String(el.className||''))){
+       if(c==='rgb(255, 255, 255)' || c==='rgba(255, 255, 255, 1)' ||
+          /rgb\(24[0-9], 24[0-9], 24[0-9]\)/.test(c)){
+         el.style.setProperty('color','#eaf7ff','important');
+       }
+     }
+     if(bg==='rgb(255, 255, 255)' || bg==='rgba(255, 255, 255, 1)'){
+       el.style.setProperty('background-color','#0b2230','important');
+     }
+   });
+ });
+}
+function apply(){
+ const p=document.getElementById('yardivoSupplierPortal');if(!p)return;
+ force(document.getElementById('yspStatusList'));
+ force(document.getElementById('yspHistoryList'));
+ /* Fallback: identify the two sections by heading if legacy renderer uses another ID. */
+ [...p.querySelectorAll('section,div')].forEach(x=>{
+   const h=x.querySelector(':scope > h2,:scope > h3,:scope > .section-title');
+   const t=String(h?.textContent||'').toUpperCase();
+   if(/STANJE NAJAVE I ISPORUKE|POVIJEST NAJAVA/.test(t)){
+     const body=x.querySelector('[class*="list"],[class*="body"]');
+     if(body)force(body);
+   }
+ });
+}
+let t=0;
+new MutationObserver(()=>{clearTimeout(t);t=setTimeout(apply,40)}).observe(document.documentElement,{childList:true,subtree:true});
+document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,100));
+window.addEventListener('load',()=>setTimeout(apply,300));
+window.addEventListener('yardivo:data-synced',()=>setTimeout(apply,60));
+apply();
+window.YardivoSupplierContrastV583={refresh:apply};
+window.YARDIVO_DEV_BUILD='20260910-dev-v5.8.3-supplier-status-dark-contrast-fix';
+})();
+</script>
+
+
+<style id="yardivo-supplier-slot-prerequisites-v583-style">
+#yardivoSupplierPortal #yardivoSupplierSlotPrereqV583{
+  margin:10px 0 12px;
+  padding:11px 12px;
+  border:1px solid #29485d;
+  border-radius:10px;
+  background:#0b2230;
+  color:#b9d0dd;
+  font-size:10px;
+  font-weight:900;
+}
+#yardivoSupplierPortal #yardivoSupplierSlotPrereqV583.ready{
+  border-color:#2f7d72;
+  color:#7ff3dc;
+  background:#0b2c2b;
+}
+#yardivoSupplierPortal #yardivoSupplierSlotPrereqV583 .missing{
+  color:#ffbf7a;
+}
+#yardivoSupplierPortal #yspChooseSlotV583[disabled],
+#yardivoSupplierPortal #yardivoOpenRealDayMap[disabled]{
+  opacity:.45!important;
+  cursor:not-allowed!important;
+  filter:saturate(.6);
+}
+</style>
+
+<script id="yardivo-supplier-slot-prerequisites-v583">
+(function(){
+'use strict';
+if(window.__YARDIVO_SUPPLIER_SLOT_PREREQUISITES_V583__)return;
+window.__YARDIVO_SUPPLIER_SLOT_PREREQUISITES_V583__=true;
+
+let lastReadySignature='', autoOpenTimer=0;
+const $=id=>document.getElementById(id);
+function root(){return $('yardivoSupplierPortal')}
+function warehouse(){
+ const r=root();
+ const e=$('yspWarehouse')||r?.querySelector('select[name*="warehouse" i]');
+ return String(e?.value||'').trim();
+}
+function date(){
+ const r=root();
+ const e=$('yspDate')||r?.querySelector('input[type="date"]');
+ return String(e?.value||'').trim();
+}
+function pallets(){
+ const r=root();
+ const e=$('yspPallets')||r?.querySelector('input[name*="pallet" i]');
+ const n=Number(e?.value||0);
+ return Number.isFinite(n)&&n>0?n:0;
+}
+function validity(){
+ const w=warehouse(),d=date(),p=pallets();
+ return {w,d,p,ok:!!w&&!!d&&p>0};
+}
+function ensureHint(){
+ const r=root();if(!r)return null;
+ let h=$('yardivoSupplierSlotPrereqV583');
+ if(h)return h;
+ h=document.createElement('div');
+ h.id='yardivoSupplierSlotPrereqV583';
+ const anchor=$('yspChooseSlotV583')?.parentElement
+   || $('yardivoOpenRealDayMap')?.parentElement
+   || $('yspPallets')?.parentElement;
+ if(anchor)anchor.insertAdjacentElement('afterend',h);
+ else r.appendChild(h);
+ return h;
+}
+function renderHint(){
+ const h=ensureHint(),v=validity();if(!h)return;
+ const missing=[];
+ if(!v.w)missing.push('skladište');
+ if(!v.d)missing.push('datum');
+ if(!v.p)missing.push('broj paleta');
+ h.classList.toggle('ready',v.ok);
+ h.innerHTML=v.ok
+   ? `SPREMNO ZA ODABIR TERMINA · ${v.w} · ${v.d.split('-').reverse().join('.')} · ${v.p} paleta`
+   : `ZA PRIKAZ SLOBODNIH TERMINA UNESI: <span class="missing">${missing.join(' + ')}</span>`;
+ ['yspChooseSlotV583','yardivoOpenRealDayMap'].forEach(id=>{
+   const b=$(id);
+   if(b){
+     b.disabled=!v.ok;
+     b.setAttribute('aria-disabled',v.ok?'false':'true');
+     b.title=v.ok?'Prikaži slobodne termine i rampe':'Prvo odaberi skladište, datum i unesi broj paleta.';
+   }
+ });
+ return v;
+}
+function closeMapIfOpen(){
+ const m=$('yspSlotMapV583');
+ if(m?.classList.contains('open')){
+   try{
+     if(window.YardivoSupplierSlotMapV583?.close)window.YardivoSupplierSlotMapV583.close();
+     else m.classList.remove('open');
+   }catch(_){m.classList.remove('open')}
+   document.body.classList.remove('yardivo-native-slot-map-open');
+ }
+}
+function openWhenReady(){
+ clearTimeout(autoOpenTimer);
+ autoOpenTimer=setTimeout(()=>{
+   const v=renderHint();if(!v?.ok)return;
+   const sig=`${v.w}|${v.d}|${v.p}`;
+   if(sig===lastReadySignature)return;
+   lastReadySignature=sig;
+   try{
+     window.YardivoSupplierNativeFullscreenMapV583?.open?.();
+   }catch(e){console.error('[YARDIVO] supplier prerequisite auto-open',e)}
+ },120);
+}
+function onChange(){
+ const v=renderHint();
+ if(!v?.ok){
+   lastReadySignature='';
+   closeMapIfOpen();
+   return;
+ }
+ openWhenReady();
+}
+function guardButton(id){
+ const b=$(id);if(!b||b.dataset.prereqGuardBound)return;
+ b.dataset.prereqGuardBound='1';
+ b.addEventListener('click',e=>{
+   const v=validity();
+   if(v.ok)return;
+   e.preventDefault();e.stopImmediatePropagation();
+   renderHint();
+   alert('Za odabir termina prvo odaberi skladište, datum i unesi broj paleta.');
+ },true);
+}
+function bind(){
+ const r=root();if(!r)return;
+ const els=[
+   $('yspWarehouse')||r.querySelector('select[name*="warehouse" i]'),
+   $('yspDate')||r.querySelector('input[type="date"]'),
+   $('yspPallets')||r.querySelector('input[name*="pallet" i]')
+ ].filter(Boolean);
+ els.forEach(el=>{
+   if(el.dataset.slotPrereqBound)return;
+   el.dataset.slotPrereqBound='1';
+   el.addEventListener('change',onChange,true);
+   el.addEventListener('input',onChange,true);
+ });
+ const cal=$('yspMiniCal');
+ if(cal&&!cal.dataset.slotPrereqBound){
+   cal.dataset.slotPrereqBound='1';
+   cal.addEventListener('click',()=>setTimeout(onChange,30),true);
+ }
+ guardButton('yspChooseSlotV583');
+ guardButton('yardivoOpenRealDayMap');
+ renderHint();
+}
+let t=0;
+new MutationObserver(()=>{clearTimeout(t);t=setTimeout(bind,50)}).observe(document.documentElement,{childList:true,subtree:true});
+document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,100));
+window.addEventListener('load',()=>setTimeout(bind,300));
+bind();
+
+window.YardivoSupplierSlotPrerequisitesV583={refresh:bind,validity};
+window.YARDIVO_DEV_BUILD='20260910-dev-v5.8.3-supplier-slot-prerequisites-ux-fix';
 })();
 </script>
 
