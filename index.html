@@ -2665,6 +2665,16 @@ body:not(.home-menu-mode)>section.view.active{
 .dash-clean-kpi small{display:block;font-size:6px;color:#7895a8;font-weight:1000}
 .dash-clean-kpi strong{display:block;margin-top:4px;font-size:22px;color:#fff}
 .dash-clean-kpi span{display:block;margin-top:2px;font-size:6px;color:#7892a3}
+.dash-kpi-value-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:4px}
+.dash-kpi-value-row strong{margin-top:0!important}
+.dash-vs-yesterday{display:inline-flex!important;align-items:center;gap:3px;margin:0 0 3px!important;padding:3px 5px;border-radius:999px;border:1px solid #355064;font-size:6px!important;font-weight:1000;white-space:nowrap}
+.dash-vs-yesterday.up{color:#7ce39b!important;border-color:#2f7650;background:#0c2a1b}
+.dash-vs-yesterday.down{color:#ff939b!important;border-color:#7f3540;background:#301219}
+.dash-vs-yesterday.same{color:#a9bdca!important;border-color:#405b6d;background:#0c1c27}
+.dash-vs-yesterday.new{color:#77bfff!important;border-color:#2d6590;background:#0b2235}
+.dash-vs-yesterday.closed{color:#ff818b!important;border-color:#943743;background:#351118}
+.dash-vs-yesterday .x{font-size:8px;line-height:1}
+.dash-kpi-yesterday-note{margin-top:4px!important;font-size:6px!important;color:#6f899b!important}
 .dash-clean-grid{
   display:grid;
   grid-template-columns:1.1fr 1.45fr .9fr;
@@ -5447,6 +5457,7 @@ html[data-theme="light"] .lytm-field strong{color:#1f4054}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style id="yardivo-ann-map-availability-v3-style">
 /* Stable context menu */
 #announcementContextMenu{
@@ -7878,7 +7889,7 @@ AUTOMATSKA PREPORUKA</small>
 <div class="qr-mobile-setting-row">
 <div class="qr-mobile-setting-copy">
 <strong>MOBILNO QR SKENIRANJE</strong>
-<small>Kada je uključeno, statusi NA RAMPI, ZAPRIMLJENO i ODBIJENO evidentiraju se preko mobilnog YARDIVO QR Scannera. Kada je isključeno, Prijam/Admin ih unose ručno u Prijam robe.</small>
+<small>Kada je uključeno, koristi se JEDAN YARDIVO QR za cijeli dolazak. Porta istim QR-om evidentira ULAZ, a Prijam istim QR-om evidentira NA RAMPI. Kada je isključeno, Prijam/Admin ih unose ručno u Prijam robe.</small>
 </div>
 <label class="qr-mobile-toggle">
 <input id="qrMobileEnabledToggle" type="checkbox"/>
@@ -8427,15 +8438,73 @@ function dashboardTodayData(){
 function dashStatusOf(a){
   return typeof operationalPlanStatus==='function'?operationalPlanStatus(a):(a.status||'U dolasku');
 }
+function dashboardDataForDate(date,wh=dashboardWarehouse()){
+  try{
+    return announcements
+      .filter(a=>(a.warehouse||'W101')===wh&&a.date===date)
+      .sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+  }catch(_){return []}
+}
+function dashboardPreviousDate(date){
+  const d=new Date(date+'T12:00:00');
+  d.setDate(d.getDate()-1);
+  return d.toISOString().slice(0,10);
+}
+function dashboardDayInfo(date){
+  try{
+    if(typeof dayInfo==='function')return dayInfo(date)||{closed:false};
+  }catch(_){}
+  const d=new Date(date+'T12:00:00'),dow=d.getDay();
+  return {closed:dow===0||dow===6,name:dow===0?'Nedjelja':dow===6?'Subota':'',kind:dow===0||dow===6?'weekend':''};
+}
+function dashboardMetrics(data){
+  const counts={};
+  data.forEach(a=>{const st=dashStatusOf(a);counts[st]=(counts[st]||0)+1});
+  const cnt=st=>counts[st]||0;
+  const attention=data.filter(a=>['Kašnjenje','NO-SHOW','Odbijen','Nije došao','NIJE DOŠAO'].includes(dashStatusOf(a))).length;
+  return {
+    trucks:data.reduce((sum,a)=>sum+truckCountForPallets(a.pallets),0),
+    announcements:data.length,
+    pallets:data.reduce((sum,a)=>sum+Number(a.pallets||0),0),
+    waiting:cnt('U dolasku')+cnt('U dvorištu'),
+    dock:cnt('Na rampi'),
+    completed:cnt('Zaprimljeno'),
+    attention
+  };
+}
+function dashboardVsYesterday(todayValue,yesterdayValue,yesterdayInfo){
+  if(yesterdayInfo?.closed){
+    return {
+      cls:'closed',
+      html:`<span class="x">✕</span> NERADNI DAN`,
+      note:yesterdayInfo.name?`Jučer · ${yesterdayInfo.name}`:'Jučer · neradni dan'
+    };
+  }
+  const now=Number(todayValue)||0,prev=Number(yesterdayValue)||0;
+  if(prev===0){
+    if(now===0)return {cls:'same',html:'0%',note:'Jučer · 0'};
+    return {cls:'new',html:'NOVO',note:'Jučer · 0'};
+  }
+  const pct=Math.round(((now-prev)/prev)*100);
+  if(pct>0)return {cls:'up',html:`▲ ${Math.abs(pct)}%`,note:`Jučer · ${prev}`};
+  if(pct<0)return {cls:'down',html:`▼ ${Math.abs(pct)}%`,note:`Jučer · ${prev}`};
+  return {cls:'same',html:'0%',note:`Jučer · ${prev}`};
+}
 function renderDashboardSimple(){
   try{renderAfter14NoShowAlerts()}catch(e){}
   const root=document.getElementById('dashboard');if(!root)return;
   const wh=dashboardWarehouse();
   const data=dashboardTodayData();
   const today=new Date().toISOString().slice(0,10);
+  const yesterday=dashboardPreviousDate(today);
+  const yesterdayInfo=dashboardDayInfo(yesterday);
+  const yesterdayData=dashboardDataForDate(yesterday,wh);
   const now=new Date();
-  const totalPal=data.reduce((s,a)=>s+Number(a.pallets||0),0);
-  const totalTrucks=data.reduce((s,a)=>s+truckCountForPallets(a.pallets),0);
+
+  const metrics=dashboardMetrics(data);
+  const yMetrics=dashboardMetrics(yesterdayData);
+  const totalPal=metrics.pallets;
+  const totalTrucks=metrics.trucks;
 
   const subtitle=document.getElementById('dashWarehouseSubtitle');
   if(subtitle)subtitle.textContent=`${whLabel(wh)} · današnji operativni pregled prijama`;
@@ -8443,22 +8512,30 @@ function renderDashboardSimple(){
   if(badge)badge.textContent=new Date(today+'T12:00:00').toLocaleDateString('hr-HR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}).toUpperCase();
 
   const counts={};
-  data.forEach(a=>{const s=dashStatusOf(a);counts[s]=(counts[s]||0)+1});
-  const cnt=s=>counts[s]||0;
-  const attention=data.filter(a=>['Kašnjenje','NO-SHOW','Odbijen','Nije došao'].includes(dashStatusOf(a)));
-  const completed=cnt('Zaprimljeno');
-  const waiting=cnt('U dolasku')+cnt('U dvorištu');
+  data.forEach(a=>{const st=dashStatusOf(a);counts[st]=(counts[st]||0)+1});
+  const cnt=st=>counts[st]||0;
+  const attention=data.filter(a=>['Kašnjenje','NO-SHOW','Odbijen','Nije došao','NIJE DOŠAO'].includes(dashStatusOf(a)));
+  const completed=metrics.completed;
+  const waiting=metrics.waiting;
 
   const kpis=[
-    ['NAJAVE',data.length,'Ukupno danas','blue'],
-    ['PALETE',totalPal,'Najavljeno danas',''],
-    ['U ČEKANJU',waiting,'Dolazak / dvorište','yellow'],
-    ['NA RAMPI',cnt('Na rampi'),'Aktivan prijam','blue'],
-    ['ZAPRIMLJENO',completed,'Završeno danas','green'],
-    ['TRAŽI PAŽNJU',attention.length,'Kašnjenje / no-show / odbijeno',attention.length?'red':'green']
+    ['NAJAVLJENO KAMIONA',metrics.trucks,yMetrics.trucks,'Planirani kamioni','blue'],
+    ['PALETE',metrics.pallets,yMetrics.pallets,'Najavljeno danas',''],
+    ['U ČEKANJU',metrics.waiting,yMetrics.waiting,'Dolazak / dvorište','yellow'],
+    ['NA RAMPI',metrics.dock,yMetrics.dock,'Aktivan prijam','blue'],
+    ['ZAPRIMLJENO',metrics.completed,yMetrics.completed,'Završeno danas','green'],
+    ['TRAŽI PAŽNJU',metrics.attention,yMetrics.attention,'Kašnjenje / no-show / odbijeno',metrics.attention?'red':'green']
   ];
   const kpiHost=document.getElementById('dashPrimaryKpis');
-  if(kpiHost)kpiHost.innerHTML=kpis.map(k=>`<div class="dash-clean-kpi ${k[3]}"><small>${k[0]}</small><strong>${k[1]}</strong><span>${k[2]}</span></div>`).join('');
+  if(kpiHost)kpiHost.innerHTML=kpis.map(k=>{
+    const vs=dashboardVsYesterday(k[1],k[2],yesterdayInfo);
+    return `<div class="dash-clean-kpi ${k[4]}">
+      <small>${k[0]}</small>
+      <div class="dash-kpi-value-row"><strong>${k[1]}</strong><span class="dash-vs-yesterday ${vs.cls}">${vs.html}</span></div>
+      <span>${k[3]}</span>
+      <span class="dash-kpi-yesterday-note">${vs.note}</span>
+    </div>`;
+  }).join('');
 
   const statusSpec=[
     ['U dolasku','#3c8dd8'],
@@ -9611,7 +9688,7 @@ function renderQrMobileAdminSetting(){
   const badge=document.getElementById('qrMobileSettingsBadge');
   if(toggle)toggle.checked=on;
   if(label)label.textContent=on?'UKLJUČENO':'ISKLJUČENO';
-  if(badge){badge.textContent=on?'QR / MOBILE ON':'RUČNI NAČIN';badge.className='master-sync-state '+(on?'ok':'')}
+  if(badge){badge.textContent=on?'ONE QR / MOBILE ON':'RUČNI NAČIN';badge.className='master-sync-state '+(on?'ok':'')}
   if(info){
     info.className='qr-mobile-mode '+(on?'on':'off');
     info.innerHTML=on
@@ -31570,7 +31647,7 @@ function renderHistory(){
       <td>${escapeHtml(x.order||'—')}</td>
       <td><span class="status ${String(x.status).toLowerCase()==='completed'?'done':'wait'}">${escapeHtml(labelStatus(x.status))}</span></td>
       <td>${escapeHtml(x.dock||t('dockUnknown'))}</td>
-      <td><button type="button" class="btn-secondary" data-ysp-edit-vehicle="${escapeHtml(x.id)}">${escapeHtml(x.plate||x.driver?'UREDI':'NAKNADNO DODAJ')}</button></td>
+      <td><button type="button" class="btn-secondary" data-ysp-edit-vehicle="${escapeHtml(x.id)}">${escapeHtml(x.plate||x.driver?'UREDI':'NAKNADNO DODAJ')}</button>${window.YardivoGateQrV583?.supplierButtons?.(x)||''}</td>
     </tr>`).join('');
 }
 function progressIndex(x){
@@ -31602,7 +31679,7 @@ function renderStatus(){
       <div>
         <span class="status ${idx===5?'done':'wait'}">${escapeHtml(labelStatus(x.status))}</span>
         <div style="margin-top:8px"><button type="button" class="btn-secondary" data-ysp-edit-vehicle="${escapeHtml(x.id)}">${escapeHtml((x.plate||x.trailerPlate||x.driver||x.driverContact)?'UREDI TRANSPORT':'DODAJ TRANSPORT')}</button></div>
-        ${String(x.status||'').toLowerCase()==='confirmed'?`<div style="margin-top:7px"><button type="button" class="btn-secondary" data-ysp-request-reschedule="${escapeHtml(x.id)}">ZATRAŽI PROMJENU TERMINA</button></div>`:''}
+        ${String(x.status||'').toLowerCase()==='confirmed'?`<div style="margin-top:7px"><button type="button" class="btn-secondary" data-ysp-request-reschedule="${escapeHtml(x.id)}">ZATRAŽI PROMJENU TERMINA</button></div>${window.YardivoGateQrV583?.supplierButtons?.(x)||''}`:''}
         ${String(x.status||'').toLowerCase()==='revision_requested'?`<div style="margin-top:7px"><button type="button" class="btn-secondary" data-ysp-revise="${escapeHtml(x.id)}">ISPRAVI I PONOVNO POŠALJI</button></div>`:''}
         <div class="ysp-progress">
           ${steps.map((k,i)=>`<div class="ysp-step ${i<=idx?'done':''}"><i></i>${escapeHtml(t(k))}</div>`).join('')}
@@ -31981,12 +32058,15 @@ async function pullSupplier(){
     const map=new Map((Array.isArray(local)?local:[]).map(x=>[String(x.id),x]));
     rows.forEach(x=>{
       const old=map.get(String(x.client_id))||{};
+      const qrMeta=window.YardivoGateQrV583?.parseReviewNote?.(x.review_note||'')||null;
+      const cleanReview=window.YardivoGateQrV583?.cleanReviewNote?.(x.review_note||'')??(x.review_note||'');
       map.set(String(x.client_id),{
         ...old,id:x.client_id,warehouse:x.warehouse,date:x.delivery_date,time:x.requested_time,
         order:x.order_number||'',pallets:x.pallets,skuCount:x.sku_count||0,
         plate:x.vehicle_plate||'',trailerPlate:x.trailer_plate||'',driver:x.driver_name||'',
         driverContact:x.driver_contact||'',reference:x.delivery_note||'',note:x.note||'',dock:x.dock||'',
-        reviewNote:x.review_note||'',status:x.status||'pending',createdAt:x.created_at,updatedAt:x.updated_at
+        reviewNote:cleanReview,status:x.status||'pending',createdAt:x.created_at,updatedAt:x.updated_at,
+        gateQrToken:qrMeta?.token||'',gateQrUrl:qrMeta?.qrUrl||'',gateQrIssuedAt:qrMeta?.issuedAt||''
       });
     });
     localStorage.setItem(key,JSON.stringify([...map.values()]));
@@ -33050,7 +33130,7 @@ function renderStable(rows,force=false){
    if(q&&!`${x.supplier_name||''} ${x.supplier_username||''} ${x.order_number||''} ${x.id||''}`.toLowerCase().includes(q))return false;
    return true
  });
-  const html=!filtered.length?'<tr><td colspan="9"><div class="ysr-empty">Nema Supplier najava za trenutno odabrano skladište / filter.</div></td></tr>':filtered.map(x=>`<tr data-ysr-detail="${esc(x.id)}"><td><strong>${esc(x.supplier_name||x.supplier_username||'—')}</strong><br><small>${esc(x.client_id||'')}</small></td><td><strong>${esc(x.warehouse||'—')}</strong></td><td>${human(x.delivery_date)}<br><strong>${x.requested_time?'Termin: '+esc(normalizeTime(x.requested_time)):'Termin nije dodijeljen'}</strong>${x.dock?'<br>Rampa: <strong>R'+esc(dockNumber(x.dock))+'</strong>':''}</td><td>${Number(x.pallets||0)} pal.<br>${Number(x.sku_count||0)} SKU</td><td>${esc(x.order_number||'—')}</td><td>${[x.vehicle_plate,x.trailer_plate,x.driver_name,x.driver_contact].filter(Boolean).map(esc).join('<br>')||'—'}</td><td><span class="ysr-status ${esc(x.status)}">${esc(statusLabel(x.status))}</span></td><td><div class="ysr-note">${esc(x.review_note||x.note||'—')}</div></td><td><div class="ysr-actions">${['pending','revision_requested','proposal_sent'].includes(x.status)?`<button class="primary" data-v580-plan="${esc(x.id)}">${x.status==='proposal_sent'?'IZMIJENI PRIJEDLOG':'OTVORI PLANER'}</button>`:''}${x.status==='pending'?`<button class="warn" data-a="revision" data-id="${esc(x.id)}">VRATI NA DORADU</button>`:''}${x.status==='confirmed'?(()=>{const rr=supplierRescheduleRequest(x);return `${rr?.status==='pending'?`<button class="primary" data-v583-reschedule-review="${esc(x.id)}">ZAHTJEV ZA PROMJENU TERMINA</button>`:'<span style="color:#79e3a4;font-weight:950;font-size:8px">✓ NAJAVA JE U DNEVNOJ / TJEDNOJ / PRIJAMU</span>'}<button class="secondary" data-v583-edit-confirmed="${esc(x.id)}">UREDI PODATKE</button><button class="secondary" data-v580-plan="${esc(x.id)}">PROMIJENI TERMIN</button>`})():''}${!['completed','rejected'].includes(x.status)?`<button class="danger" data-v580-reject="${esc(x.id)}">ODBIJ</button>`:''}</div></td></tr>`).join('');
+  const html=!filtered.length?'<tr><td colspan="9"><div class="ysr-empty">Nema Supplier najava za trenutno odabrano skladište / filter.</div></td></tr>':filtered.map(x=>`<tr data-ysr-detail="${esc(x.id)}"><td><strong>${esc(x.supplier_name||x.supplier_username||'—')}</strong><br><small>${esc(x.client_id||'')}</small></td><td><strong>${esc(x.warehouse||'—')}</strong></td><td>${human(x.delivery_date)}<br><strong>${x.requested_time?'Termin: '+esc(normalizeTime(x.requested_time)):'Termin nije dodijeljen'}</strong>${x.dock?'<br>Rampa: <strong>R'+esc(dockNumber(x.dock))+'</strong>':''}</td><td>${Number(x.pallets||0)} pal.<br>${Number(x.sku_count||0)} SKU</td><td>${esc(x.order_number||'—')}</td><td>${[x.vehicle_plate,x.trailer_plate,x.driver_name,x.driver_contact].filter(Boolean).map(esc).join('<br>')||'—'}</td><td><span class="ysr-status ${esc(x.status)}">${esc(statusLabel(x.status))}</span></td><td><div class="ysr-note">${esc(window.YardivoGateQrV583?.cleanReviewNote?.(x.review_note||'')||x.note||'—')}</div></td><td><div class="ysr-actions">${['pending','revision_requested','proposal_sent'].includes(x.status)?`<button class="primary" data-v580-plan="${esc(x.id)}">${x.status==='proposal_sent'?'IZMIJENI PRIJEDLOG':'OTVORI PLANER'}</button>`:''}${x.status==='pending'?`<button class="warn" data-a="revision" data-id="${esc(x.id)}">VRATI NA DORADU</button>`:''}${x.status==='confirmed'?(()=>{const rr=supplierRescheduleRequest(x);return `${rr?.status==='pending'?`<button class="primary" data-v583-reschedule-review="${esc(x.id)}">ZAHTJEV ZA PROMJENU TERMINA</button>`:'<span style="color:#79e3a4;font-weight:950;font-size:8px">✓ NAJAVA JE U DNEVNOJ / TJEDNOJ / PRIJAMU</span>'}${window.YardivoGateQrV583?.inventoryButton?.(x)||''}<button class="secondary" data-v583-edit-confirmed="${esc(x.id)}">UREDI PODATKE</button><button class="secondary" data-v580-plan="${esc(x.id)}">PROMIJENI TERMIN</button>`})():''}${!['completed','rejected'].includes(x.status)?`<button class="danger" data-v580-reject="${esc(x.id)}">ODBIJ</button>`:''}</div></td></tr>`).join('');
   if(force||body.dataset.v582Html!==html){
     body.innerHTML=html;
     body.dataset.v582Html=html;
@@ -35526,7 +35606,7 @@ const mo=new MutationObserver(()=>{
 mo.observe(document.documentElement,{subtree:true,childList:true});
 /* Low-frequency safety refresh only; normal updates are mutation-driven. */
 setInterval(()=>{decorateHistory();decorateReader()},10000);
-function ensureScannerButton(){const p=document.getElementById('qrMobileSettingsPanel');if(!p||document.getElementById('yardivoScannerOpenV583'))return;const b=document.createElement('button');b.id='yardivoScannerOpenV583';b.type='button';b.textContent='OTVORI YARDIVO SCANNER';b.onclick=()=>{window.open('YARDIVO_SCANNER_V5.8.3_GATE_DOCK_FINAL.html','_blank','noopener')};(p.querySelector('.qr-mobile-setting-body')||p).appendChild(b)}
+function ensureScannerButton(){const p=document.getElementById('qrMobileSettingsPanel');if(!p||document.getElementById('yardivoScannerOpenV583'))return;const b=document.createElement('button');b.id='yardivoScannerOpenV583';b.type='button';b.textContent='OTVORI YARDIVO SCANNER';b.onclick=()=>{window.open('YARDIVO_SCANNER_V5.8.3_ONE_QR.html','_blank','noopener')};(p.querySelector('.qr-mobile-setting-body')||p).appendChild(b)}
 function glow(){
   if(matchMedia('(pointer:coarse)').matches)return;
   let g=document.getElementById('yardivoCursorGlowV583');
@@ -36136,7 +36216,7 @@ window.YardivoSettingsHardFixV583={
  deleteAllSuppliers,
  category:()=>selectedCategory
 };
-window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-home-saved-count-fix';
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-dashboard-vs-yesterday';
 })();
 </script>
 
@@ -41249,6 +41329,149 @@ window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-home-saved-count-fix';
 })();
 </script>
 
+
+<script id="yardivo-dashboard-vs-yesterday-diagnostic-v583">
+(function(){
+'use strict';
+window.YardivoDashboardVsYesterdayV583={
+  previousDate:function(date){
+    try{return dashboardPreviousDate(date||new Date().toISOString().slice(0,10))}catch(_){return null}
+  },
+  refresh:function(){try{renderDashboardSimple()}catch(_){}}
+};
+})();
+</script>
+
+<style id="yardivo-gate-qr-supplier-v583-style">
+.yardivo-gate-qr-send{border-color:#2b9158!important;background:#123c25!important;color:#c5f4d4!important}
+.yardivo-supplier-qr-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.yardivo-supplier-qr-actions button{min-height:34px}
+#yardivoGateQrModalV583{position:fixed;inset:0;z-index:10000320;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(2,8,13,.91)}
+#yardivoGateQrModalV583.open{display:flex}
+#yardivoGateQrModalV583 .ygq-card{width:min(560px,96vw);max-height:94vh;overflow:auto;background:#fff;color:#101820;border-radius:18px;padding:24px;box-shadow:0 30px 100px rgba(0,0,0,.7);text-align:center}
+#yardivoGateQrModalV583 .ygq-logo{display:block;width:min(230px,68%);height:auto;margin:0 auto 10px}
+#yardivoGateQrModalV583 h2{margin:8px 0 5px;color:#101820!important;font-size:19px;letter-spacing:.035em}
+#yardivoGateQrModalV583 .ygq-sub{color:#60717d!important;font-size:10px;margin-bottom:15px}
+#yardivoGateQrModalV583 .ygq-qr{width:65mm;height:65mm;max-width:72vw;max-height:72vw;margin:0 auto;padding:8px;background:#fff;display:flex;align-items:center;justify-content:center}
+#yardivoGateQrModalV583 .ygq-qr canvas,#yardivoGateQrModalV583 .ygq-qr img{width:100%!important;height:100%!important;image-rendering:pixelated}
+#yardivoGateQrModalV583 .ygq-meta{margin:12px auto 0;max-width:430px;border-top:1px solid #dfe6ea;padding-top:10px;color:#33434d!important;font-size:10px;line-height:1.6}
+#yardivoGateQrModalV583 .ygq-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+#yardivoGateQrModalV583 .ygq-actions button{border:1px solid #c9d6dd;background:#f5f8fa;color:#17232b;border-radius:10px;padding:10px 14px;font-weight:900;cursor:pointer}
+#yardivoGateQrModalV583 .ygq-actions .primary{background:#21c66b;border-color:#21c66b;color:#04130a}
+</style>
+<script id="yardivo-gate-qr-supplier-v583">
+(function(){'use strict';
+const BASE='https://rskticdbiovvgyocpzoc.supabase.co';
+const ANON='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
+const EDGE=BASE+'/functions/v1/yardivo-gate-pass';
+const MARK_RE=/\[\[YARDIVO_GATE_QR_V583:([A-Za-z0-9_-]+)\]\]/g;
+let modalRow=null;
+function role(){try{return String(window.currentSession?.role||currentSession?.role||'').toLowerCase()}catch(_){return''}}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function b64urlText(v){const bytes=new TextEncoder().encode(v);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function unb64urlText(v){v=String(v||'').replace(/-/g,'+').replace(/_/g,'/');v+='='.repeat((4-v.length%4)%4);const bin=atob(v),bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes)}
+function cleanReviewNote(v){return String(v||'').replace(MARK_RE,'').replace(/\n{3,}/g,'\n\n').trim()}
+function parseReviewNote(v){let found=null;String(v||'').replace(MARK_RE,(_,p)=>{try{found=JSON.parse(unb64urlText(p))}catch(e){};return _});return found}
+function marker(meta){return '[[YARDIVO_GATE_QR_V583:'+b64urlText(JSON.stringify(meta))+']]'}
+function qrMetaFromRow(x){return x?.gateQrUrl?{token:x.gateQrToken||'',qrUrl:x.gateQrUrl,issuedAt:x.gateQrIssuedAt||'',supplierDeliveryId:String(x.id||'')}:parseReviewNote(x?.review_note||x?.reviewNote||'')}
+function inventoryButton(x){
+  if(!['inventory','admin'].includes(role())||String(x?.status||'').toLowerCase()!=='confirmed')return'';
+  const has=!!qrMetaFromRow(x)?.qrUrl;
+  return `<button class="primary yardivo-gate-qr-send" data-yardivo-send-gate-qr="${esc(x.id)}">${has?'POŠALJI NOVI QR GATE CHECK-IN':'POŠALJI QR GATE CHECK-IN'}</button>`;
+}
+function supplierButtons(x){
+  const m=qrMetaFromRow(x);if(!m?.qrUrl)return'';
+  return `<div class="yardivo-supplier-qr-actions"><button type="button" class="btn-primary" data-yardivo-open-gate-qr="${esc(x.id)}">OPEN QR</button><button type="button" class="btn-secondary" data-yardivo-print-gate-qr="${esc(x.id)}">ISPRINTAJ QR · PDF</button></div>`;
+}
+async function accessToken(){
+  const c=await window.YardivoAuth?.client?.();if(!c)throw new Error('YARDIVO Auth nije dostupan.');
+  let s=(await c.auth.getSession())?.data?.session||null;
+  if(!s?.access_token)s=(await c.auth.refreshSession())?.data?.session||null;
+  if(!s?.access_token)throw new Error('ONLINE PRIJAVA NIJE AKTIVNA. Ponovno se prijavi.');
+  return s.access_token;
+}
+async function edge(action,payload={}){
+  const token=await accessToken();
+  const r=await fetch(EDGE,{method:'POST',headers:{apikey:ANON,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({action,...payload})});
+  const d=await r.json().catch(()=>({}));if(!r.ok||d?.ok===false)throw new Error(d?.error||('Gate QR HTTP '+r.status));return d;
+}
+function canonicalForSupplier(id){try{return (Array.isArray(announcements)?announcements:[]).find(a=>String(a.supplierDeliveryId||'')===String(id))||null}catch(_){return null}}
+async function issue(id){
+  if(!['inventory','admin'].includes(role()))return alert('QR Gate Check-In može poslati Upravljanje zalihama ili Admin.');
+  const rows=window.YardivoSupplierPlannerV580?.getRows?.()||[];
+  let row=rows.find(x=>String(x.id)===String(id));
+  if(!row){try{const a=await window.YardivoSupplierLiveSync.call('list_internal');row=(a||[]).find(x=>String(x.id)===String(id))}catch(_){}}
+  if(!row||String(row.status||'').toLowerCase()!=='confirmed')return alert('QR se može poslati tek nakon što je termin potvrđen s obje strane.');
+  let ann=canonicalForSupplier(id);
+  if(!ann){try{await window.YardivoSupplierLiveSync?.pullInternal?.(true)}catch(_){}ann=canonicalForSupplier(id)}
+  if(!ann)return alert('Potvrđena najava još nije sinkronizirana u operativni YARDIVO. Osvježi podatke i pokušaj ponovno.');
+  const st=String(ann.status||'').toLowerCase();
+  if(!['najavljen','u dolasku','confirmed',''].includes(st))return alert('Vozilo je već u operativnom procesu. Novi Gate QR se više ne izdaje.');
+  if(!confirm((qrMetaFromRow(row)?'Izdati NOVI QR? Prethodni QR će odmah prestati vrijediti.':'Generirati i poslati jedinstveni QR Gate Check-In dobavljaču?')))return;
+  const btn=document.querySelector(`[data-yardivo-send-gate-qr="${CSS.escape(String(id))}"]`);if(btn){btn.disabled=true;btn.textContent='GENERIRAM QR…'}
+  try{
+    try{if(typeof saveAnnouncements==='function')saveAnnouncements()}catch(_){}
+    try{await window.YardivoSupabase?.syncNow?.()}catch(_){}
+    const res=await edge('issue',{announcementId:String(ann.id)});
+    if(!res?.token||!res?.qrUrl)throw new Error('Backend nije vratio QR token. Deployaj ONE QR yardivo-gate-pass funkciju.');
+    const meta={token:res.token,qrUrl:res.qrUrl,issuedAt:new Date().toISOString(),announcementId:String(ann.id),supplierDeliveryId:String(id)};
+    const human=cleanReviewNote(row.review_note||'');
+    await window.YardivoSupplierLiveSync.call('internal_update',{id:row.id,review_note:(human?human+'\n':'')+marker(meta)});
+    try{await window.YardivoSupplierRequests?.load?.()}catch(_){}
+    try{window.dispatchEvent(new CustomEvent('yardivo:gate-qr-issued',{detail:{id:String(id),announcementId:String(ann.id)}}))}catch(_){}
+    try{if(typeof showYmsToast==='function')showYmsToast('success','QR POSLAN DOBAVLJAČU','Jedinstveni Gate Check-In QR je izdan. Prethodni kod, ako je postojao, više ne vrijedi.',4200);else alert('QR Gate Check-In je generiran i poslan dobavljaču.')}catch(_){}
+  }catch(e){alert('QR nije moguće generirati / poslati:\n'+(e?.message||e))}
+  finally{if(btn){btn.disabled=false}}
+}
+function supplierRows(){
+  try{const s=window.currentSession||currentSession||{};const key='yardivo_supplier_portal_v549_'+String(s.authUserId||s.username||s.user||'supplier');const a=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(a)?a:[]}catch(_){return[]}
+}
+function supplierRow(id){return supplierRows().find(x=>String(x.id)===String(id))||null}
+function logoSrc(){return document.querySelector('img[alt="YARDIVO Yard Management System"]')?.src||''}
+function ensureModal(){let m=document.getElementById('yardivoGateQrModalV583');if(m)return m;m=document.createElement('div');m.id='yardivoGateQrModalV583';m.innerHTML=`<div class="ygq-card"><img class="ygq-logo" alt="YARDIVO"><h2>YARDIVO GATE CHECK IN QR CODE</h2><div class="ygq-sub">Jedinstveni QR za Gate ulaz i potvrdu dolaska na rampu</div><div class="ygq-qr" id="yardivoGateQrCanvasV583"></div><div class="ygq-meta" id="yardivoGateQrMetaV583"></div><div class="ygq-actions"><button type="button" data-ygq-close>ZATVORI</button><button type="button" class="primary" data-ygq-pdf>OTVORI PDF / ISPRINTAJ</button></div></div>`;document.body.appendChild(m);m.querySelector('[data-ygq-close]').onclick=()=>m.classList.remove('open');m.onclick=e=>{if(e.target===m)m.classList.remove('open')};m.querySelector('[data-ygq-pdf]').onclick=()=>modalRow&&openPdf(modalRow);return m}
+function renderQr(el,text,size=500){if(!window.QRCode)throw new Error('QR biblioteka nije učitana. Provjeri internet vezu.');el.innerHTML='';new QRCode(el,{text,width:size,height:size,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});return el.querySelector('canvas,img')}
+function openQr(row){const meta=qrMetaFromRow(row);if(!meta?.qrUrl)return alert('QR još nije poslan.');const m=ensureModal();modalRow=row;const logo=m.querySelector('.ygq-logo');logo.src=logoSrc();const el=document.getElementById('yardivoGateQrCanvasV583');renderQr(el,meta.qrUrl,500);document.getElementById('yardivoGateQrMetaV583').innerHTML=`<strong>${esc(row.id||'')}</strong><br>${esc(row.date||'')} · ${esc(row.time||'')} · ${esc(row.warehouse||'')}${row.dock?' · '+esc(row.dock):''}<br>${esc(row.order||'')}`;m.classList.add('open')}
+function qrPngData(meta){const holder=document.createElement('div');holder.style.cssText='position:fixed;left:-9999px;top:-9999px;width:700px;height:700px;background:#fff';document.body.appendChild(holder);const node=renderQr(holder,meta.qrUrl,700);let data='';if(node?.tagName==='CANVAS')data=node.toDataURL('image/png');else data=node?.src||'';holder.remove();return data}
+function openPdf(row){
+  const meta=qrMetaFromRow(row);if(!meta?.qrUrl)return alert('QR još nije poslan.');
+  if(!window.jspdf?.jsPDF)return alert('PDF biblioteka nije učitana.');
+  try{
+    const {jsPDF}=window.jspdf,pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'}),W=210;
+    pdf.setFillColor(255,255,255);pdf.rect(0,0,210,297,'F');
+    const logo=logoSrc();if(logo){try{pdf.addImage(logo,'PNG',72,14,66,38,undefined,'FAST')}catch(_){}}
+    pdf.setTextColor(20,31,39);pdf.setFont('helvetica','bold');pdf.setFontSize(16);pdf.text('YARDIVO GATE CHECK IN QR CODE',W/2,62,{align:'center'});
+    pdf.setFont('helvetica','normal');pdf.setFontSize(8.5);pdf.setTextColor(92,108,118);pdf.text('ONE DELIVERY QR - Gate Check-In / Dock confirmation',W/2,68,{align:'center'});
+    const png=qrPngData(meta);const qrMm=65,x=(W-qrMm)/2,y=78;pdf.addImage(png,'PNG',x,y,qrMm,qrMm,undefined,'FAST');
+    pdf.setDrawColor(220,228,233);pdf.line(42,151,168,151);
+    pdf.setTextColor(35,49,58);pdf.setFont('helvetica','bold');pdf.setFontSize(10);pdf.text(String(row.id||'YARDIVO DELIVERY'),W/2,160,{align:'center'});
+    pdf.setFont('helvetica','normal');pdf.setFontSize(9);const lines=[`${row.date||''} ${row.time||''}`.trim(),`${row.warehouse||''}${row.dock?' - '+row.dock:''}`.trim(),row.order?`Order: ${row.order}`:''].filter(Boolean);let yy=167;for(const line of lines){pdf.text(String(line),W/2,yy,{align:'center'});yy+=6}
+    pdf.setFontSize(7.5);pdf.setTextColor(115,128,136);pdf.text('Show this QR at YARDIVO Gate and later at Reception/Dock.',W/2,194,{align:'center'});pdf.text('QR size: 65 mm',W/2,199,{align:'center'});
+    const url=pdf.output('bloburl');window.open(url,'_blank','noopener');
+  }catch(e){alert('PDF nije moguće otvoriti:\n'+(e?.message||e))}
+}
+async function openSupplierQrById(id,pdf=false){let row=supplierRow(id);if(!row){try{await window.YardivoSupplierLiveSync?.pullSupplier?.()}catch(_){}row=supplierRow(id)}if(!row)return alert('Najava nije pronađena.');return pdf?openPdf(row):openQr(row)}
+document.addEventListener('click',e=>{
+  const send=e.target.closest?.('[data-yardivo-send-gate-qr]');if(send){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();issue(send.dataset.yardivoSendGateQr);return}
+  const open=e.target.closest?.('[data-yardivo-open-gate-qr]');if(open){e.preventDefault();e.stopPropagation();openSupplierQrById(open.dataset.yardivoOpenGateQr,false);return}
+  const print=e.target.closest?.('[data-yardivo-print-gate-qr]');if(print){e.preventDefault();e.stopPropagation();openSupplierQrById(print.dataset.yardivoPrintGateQr,true);return}
+},true);
+window.addEventListener('yardivo:login',()=>{if(role()==='supplier')setTimeout(()=>window.YardivoSupplierLiveSync?.pullSupplier?.(),500)});
+window.YardivoGateQrV583={cleanReviewNote,parseReviewNote,inventoryButton,supplierButtons,issue,openQr,openPdf,openSupplierQrById,qrMetaFromRow};
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-supplier-gate-qr';
+})();
+</script>
+
+<script id="yardivo-one-delivery-qr-v583">
+(function(){'use strict';
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-one-delivery-qr';
+window.YardivoOneQrV583={
+  enabled:true,
+  version:'20260911-dev-v5.8.3-one-delivery-qr',
+  scannerFile:'YARDIVO_SCANNER_V5.8.3_ONE_QR.html',
+  workflow:{gate:'U dvorištu',reception:'Na rampi'}
+};
+})();
+</script>
 </body>
 </html>
 
@@ -41613,7 +41836,7 @@ function renderDetail(x){
     item('POSLANO',submitted==='—'?'—':fmtDate(submitted)),
     item('ZADNJA PROMJENA',updated==='—'?'—':fmtDate(updated)),
     item('NAPOMENA DOBAVLJAČA',value(x,'note','supplier_note','supplierNote'),true),
-    item('ODGOVOR / NAPOMENA YARDIVO',value(x,'review_note','reviewNote'),true)
+    item('ODGOVOR / NAPOMENA YARDIVO',(window.YardivoGateQrV583?.cleanReviewNote?.(value(x,'review_note','reviewNote'))||'—'),true)
   ].join('');
   const doc=a?`<div class="ysrfd-doc"><h3>📁 DOKUMENT</h3><div class="ysrfd-docrow"><div class="ysrfd-docmeta"><strong style="color:#eaf3f8">${esc(a.name)}</strong><br>${esc(fmtSize(a.size))}${a.uploadedAt?' · priloženo '+esc(fmtDate(a.uploadedAt)):''}</div>${a.dataUrl?'<button type="button" data-ysrfd-open>OTVORI PDF</button>':''}</div></div>`:`<div class="ysrfd-doc"><h3>📁 DOKUMENT</h3><div class="ysrfd-docmeta">Dokument nije priložen uz ovu najavu.</div></div>`;
   b.innerHTML=`<div class="ysrfd-status">${esc(statusLabel(x.status))}</div><div class="ysrfd-grid">${rows}</div>${doc}`;
