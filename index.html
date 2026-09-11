@@ -13247,7 +13247,7 @@ window.YardivoLocationLock={
   });
 })();
 </script>
-<script id="yardivo-role-settings-dynamic-ramps">
+<script id="yardivo-role-settings-dynamic-ramps" type="application/yardivo-legacy-disabled">
 (function(){
   const RAMP_CFG_KEY='yardivo_ramp_config_v1';
 
@@ -37974,7 +37974,7 @@ window.YardivoSettingsHardFixV583={
  deleteAllSuppliers,
  category:()=>selectedCategory
 };
-window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-home-location-selector-final-fix';
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-saas-cleanup-pass-1';
 })();
 </script>
 
@@ -41419,6 +41419,1055 @@ window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-home-location-selector-final-fix';
 })();
 </script>
 
+
+<style id="yardivo-no-flicker-masterdata-v583-style">
+/* Remove visual flashes while dropdown content is refreshed. */
+#homeLocationSelect,
+#ymdWarehouseLocation,
+#ymdWarehouseList select,
+#yardivoMasterDataRegistryV583 select,
+#yardivoMasterDataRegistryV583 input,
+#dashboard select{
+  transition:none!important;
+  animation:none!important;
+}
+#yardivoMasterDataRegistryV583.yardivo-md-refreshing,
+#homeMenu.yardivo-home-refreshing{
+  opacity:1!important;
+  filter:none!important;
+}
+</style>
+
+<script id="yardivo-location-state-single-source-v583">
+(function(){
+'use strict';
+if(window.__YARDIVO_LOCATION_STATE_SINGLE_SOURCE_V583__)return;
+window.__YARDIVO_LOCATION_STATE_SINGLE_SOURCE_V583__=true;
+
+const MASTER_KEY='yardivo_master_data_registry_v583';
+let refreshTimer=0;
+let mdTimer=0;
+let lastHomeSignature='';
+let lastWarehouseSignature='';
+
+function master(){
+  try{
+    const raw=localStorage.getItem(MASTER_KEY);
+    const d=raw?JSON.parse(raw):null;
+    if(d&&Array.isArray(d.locations)&&Array.isArray(d.warehouses))return d;
+  }catch(_){}
+  try{
+    const d=window.YardivoMasterDataV583?.all?.();
+    if(d&&Array.isArray(d.locations)&&Array.isArray(d.warehouses))return d;
+  }catch(_){}
+  return {locations:[],warehouses:[]};
+}
+function session(){
+  try{return (typeof currentSession!=='undefined'?currentSession:window.currentSession)||null}
+  catch(_){return window.currentSession||null}
+}
+function locObj(id,d=master()){
+  id=String(id||'');
+  return d.locations.find(x=>x&&x.active!==false&&String(x.id)===id)||null;
+}
+function locationId(){
+  const s=session();
+  const id=String(s?.location||'').trim();
+  return locObj(id)?id:'';
+}
+function locationName(id=locationId()){
+  return locObj(id)?.name||'';
+}
+function selectedLocationValid(){
+  return !!locationId();
+}
+function persistSessionLocation(id){
+  const s=session(); if(!s)return;
+  s.location=id||null;
+  try{
+    if(typeof currentSession!=='undefined')currentSession=s;
+    window.currentSession=s;
+  }catch(_){}
+  try{
+    if(s.rememberMe){
+      localStorage.setItem('yardivo_remembered_session',JSON.stringify(s));
+    }else{
+      sessionStorage.setItem('studenac_demo_session',JSON.stringify(s));
+    }
+  }catch(_){}
+}
+function homeSig(d=master()){
+  return JSON.stringify(d.locations.filter(x=>x.active!==false).map(x=>[x.id,x.name]));
+}
+function whSig(d=master()){
+  return JSON.stringify({
+    l:d.locations.filter(x=>x.active!==false).map(x=>[x.id,x.name]),
+    w:d.warehouses.filter(x=>x.active!==false).map(x=>[x.id,x.name,x.location_id])
+  });
+}
+
+/* HOME selector: rebuild only if master data actually changed.
+   This prevents visible flicker from repeated MutationObserver refreshes. */
+function refreshHomeSelector(force=false){
+  const sel=document.getElementById('homeLocationSelect');
+  if(!sel)return;
+  const d=master(),sig=homeSig(d),id=locationId();
+
+  if(force||sig!==lastHomeSignature){
+    const before=id||String(sel.value||'');
+    const html='<option value="">Odaberi lokaciju...</option>'+
+      d.locations.filter(x=>x.active!==false).map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+    if(sel.innerHTML!==html)sel.innerHTML=html;
+    if(before&&locObj(before,d))sel.value=before;
+    else sel.value='';
+    lastHomeSignature=sig;
+  }else if(id && sel.value!==id){
+    sel.value=id;
+  }
+
+  const chosen=!!id,name=locationName(id);
+  const big=document.getElementById('homeSelectedLocation');
+  if(big){
+    const txt=chosen?name.toUpperCase():'ODABERI LOKACIJU';
+    if(big.textContent!==txt)big.textContent=txt;
+    big.classList.toggle('selected',chosen);
+  }
+  const status=document.getElementById('homeLocationStatus');
+  if(status){
+    const txt=chosen?`Odabrano: ${name}`:'Lokacija nije odabrana';
+    if(status.textContent!==txt)status.textContent=txt;
+    status.classList.toggle('ready',chosen);
+  }
+}
+
+/* MASTER DATA warehouse-location dropdown: rebuild only on actual master changes. */
+function refreshWarehouseLocationDropdown(force=false){
+  const sel=document.getElementById('ymdWarehouseLocation');
+  if(!sel)return;
+  const d=master(),sig=whSig(d);
+  if(!force&&sig===lastWarehouseSignature)return;
+
+  const current=String(sel.value||'');
+  const html=d.locations.filter(x=>x.active!==false)
+    .map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+  if(sel.innerHTML!==html)sel.innerHTML=html;
+
+  if(current&&locObj(current,d))sel.value=current;
+  else if(locationId()&&locObj(locationId(),d))sel.value=locationId();
+  else if(sel.options.length)sel.selectedIndex=0;
+
+  lastWarehouseSignature=sig;
+}
+
+/* Dashboard and other visible location labels use one state source. */
+function refreshVisibleLocationLabels(){
+  const id=locationId(),name=locationName(id);
+
+  const knownIds=[
+    'dashboardLocation','dashLocation','currentLocation','selectedLocation',
+    'activeLocation','dashboardLocationLabel','homeSelectedLocation'
+  ];
+  knownIds.forEach(x=>{
+    const el=document.getElementById(x);
+    if(!el)return;
+    if(x==='homeSelectedLocation')return;
+    const txt=id?name:'Lokacija nije odabrana';
+    if(el.textContent!==txt)el.textContent=txt;
+  });
+
+  /* Generic dashboard fields that are clearly location-status labels. */
+  document.querySelectorAll('#dashboard [data-location-label], #dashboard .location-label, #dashboard .dashboard-location').forEach(el=>{
+    if(el.children.length)return;
+    const txt=id?name:'Lokacija nije odabrana';
+    if(el.textContent!==txt)el.textContent=txt;
+  });
+
+  /* Replace stale exact placeholder text only inside dashboard view. */
+  document.querySelectorAll('#dashboard *').forEach(el=>{
+    if(el.children.length)return;
+    const t=String(el.textContent||'').trim();
+    if(/^lokacija nije odabrana$/i.test(t)){
+      const txt=id?name:'Lokacija nije odabrana';
+      if(el.textContent!==txt)el.textContent=txt;
+    }
+  });
+}
+
+/* Authoritative helper overrides for every module that asks for current location. */
+try{
+  window.homeLocationChosen=selectedLocationValid;
+  window.validLocation=function(v){return !!locObj(v)};
+  window.locationLabel=function(v){return locObj(v)?.name||String(v||'')};
+  window.locLabel=window.locationLabel;
+}catch(_){}
+
+/* Own selection capture: persist once, then refresh once. */
+document.addEventListener('change',function(e){
+  if(e.target?.id!=='homeLocationSelect')return;
+  const chosen=String(e.target.value||'').trim();
+  if(chosen && !locObj(chosen))return;
+  persistSessionLocation(chosen);
+  refreshHomeSelector(false);
+  refreshVisibleLocationLabels();
+},true);
+
+/* Debounced global refresh; no continuous full-app redraw. */
+function refreshAll(force=false){
+  clearTimeout(refreshTimer);
+  refreshTimer=setTimeout(()=>{
+    refreshHomeSelector(force);
+    refreshWarehouseLocationDropdown(force);
+    refreshVisibleLocationLabels();
+  },20);
+}
+
+window.addEventListener('yardivo:master-data-changed',()=>refreshAll(true));
+window.addEventListener('yardivo:data-synced',()=>refreshAll(false));
+window.addEventListener('yardivo:login',()=>refreshAll(true));
+document.addEventListener('DOMContentLoaded',()=>refreshAll(true));
+window.addEventListener('load',()=>refreshAll(true));
+
+/* Very narrow observer: only Master Data subtree, debounced.
+   No document.documentElement observer, which caused dropdown flicker. */
+function installMasterObserver(){
+  const root=document.getElementById('yardivoMasterDataRegistryV583');
+  if(!root||root.__yardivoStableObserver)return;
+  root.__yardivoStableObserver=true;
+  new MutationObserver(()=>{
+    clearTimeout(mdTimer);
+    mdTimer=setTimeout(()=>{
+      refreshWarehouseLocationDropdown(false);
+      refreshVisibleLocationLabels();
+    },120);
+  }).observe(root,{childList:true,subtree:true});
+}
+document.addEventListener('click',e=>{
+  if(e.target.closest?.('[data-home-target="dashboard"],[data-view="dashboard"],#dashboard')){
+    setTimeout(refreshVisibleLocationLabels,30);
+  }
+  if(e.target.closest?.('#yardivoMasterDataRegistryV583,[data-view="settings"],[data-home-target="settings"]')){
+    setTimeout(()=>{installMasterObserver();refreshWarehouseLocationDropdown(false)},40);
+  }
+},true);
+
+setTimeout(installMasterObserver,250);
+refreshAll(true);
+
+window.YardivoLocationStateV583={
+  id:locationId,
+  name:locationName,
+  valid:selectedLocationValid,
+  refresh:()=>refreshAll(true)
+};
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-location-state-flicker-fix';
+})();
+</script>
+
+<script id="yardivo-disable-legacy-flicker-observers-v583">
+(function(){
+'use strict';
+/* Legacy patches installed broad document-wide MutationObservers.
+   We cannot detach anonymous observers retroactively, so this guard makes their
+   target refresh functions no-op when no master-data signature change occurred. */
+let last='';
+function sig(){
+  try{
+    const raw=localStorage.getItem('yardivo_master_data_registry_v583')||'';
+    return raw;
+  }catch(_){return''}
+}
+function stable(){
+  const now=sig();
+  if(now===last)return true;
+  last=now;
+  return false;
+}
+
+/* Wrap known refresh APIs so repeated legacy observer calls do not rebuild dropdowns. */
+['YardivoMasterDataBugfixV583','YardivoLiveMasterLabelsV583'].forEach(apiName=>{
+  const api=window[apiName];
+  if(!api||typeof api.refresh!=='function'||api.refresh.__stableWrapped)return;
+  const orig=api.refresh;
+  const fn=function(){
+    if(stable())return;
+    return orig.apply(api,arguments);
+  };
+  fn.__stableWrapped=true;
+  api.refresh=fn;
+});
+})();
+</script>
+
+
+<style id="yardivo-master-warehouse-rampcount-v583-style">
+#yardivoMasterDataRegistryV583 .ymd-wh-ramp-count{
+  width:88px!important;
+  min-width:88px!important;
+}
+#yardivoMasterDataRegistryV583 .ymd-wh-row{
+  display:grid!important;
+  grid-template-columns:minmax(160px,1fr) minmax(140px,.8fr) 100px auto!important;
+  gap:8px!important;
+  align-items:end!important;
+}
+#yardivoMasterDataRegistryV583 .ymd-wh-row label{
+  display:grid!important;
+  gap:4px!important;
+  color:#8faabd!important;
+  font-size:8px!important;
+  font-weight:900!important;
+}
+#yardivoMasterDataRegistryV583 .ymd-wh-row input,
+#yardivoMasterDataRegistryV583 .ymd-wh-row select{
+  min-height:36px!important;
+  border:1px solid #31536a!important;
+  border-radius:8px!important;
+  background:#071722!important;
+  color:#fff!important;
+  padding:0 9px!important;
+}
+#yardivoMasterDataRegistryV583 .ymd-wh-actions{
+  display:flex!important;
+  gap:6px!important;
+  flex-wrap:wrap!important;
+}
+</style>
+
+<script id="yardivo-master-warehouse-rampcount-no-legacy-v583">
+(function(){
+'use strict';
+if(window.__YARDIVO_MASTER_WAREHOUSE_RAMPCOUNT_NO_LEGACY_V583__)return;
+window.__YARDIVO_MASTER_WAREHOUSE_RAMPCOUNT_NO_LEGACY_V583__=true;
+
+const KEY='yardivo_master_data_registry_v583';
+const RAMP_KEY='yardivo_ramp_config_v1';
+
+function load(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    const d=raw?JSON.parse(raw):null;
+    if(d&&Array.isArray(d.locations)&&Array.isArray(d.warehouses))return d;
+  }catch(_){}
+  try{return window.YardivoMasterDataV583?.all?.()||{locations:[],warehouses:[]}}catch(_){}
+  return {locations:[],warehouses:[]};
+}
+function save(d){
+  try{localStorage.setItem(KEY,JSON.stringify(d))}catch(_){}
+  try{window.YardivoMasterDataV583?.save?.(d)}catch(_){}
+  try{window.YardivoSupabase?.syncNow?.()}catch(_){}
+  window.dispatchEvent(new CustomEvent('yardivo:master-data-changed'));
+}
+function rampCfg(){
+  try{return JSON.parse(localStorage.getItem(RAMP_KEY)||'{}')||{}}catch(_){return{}}
+}
+function saveRampCfg(d){
+  try{localStorage.setItem(RAMP_KEY,JSON.stringify(d))}catch(_){}
+}
+function setWarehouseRampCount(id,n){
+  const d=load();
+  const w=d.warehouses.find(x=>x.id===id);
+  if(!w)throw new Error('Skladište ne postoji.');
+  n=Math.max(0,Math.min(50,Number(n)||0));
+  w.ramps=n;
+  save(d);
+
+  const rc=rampCfg();
+  rc[id]=rc[id]||{count:0,locked:[]};
+  rc[id].count=n;
+  rc[id].locked=Array.isArray(rc[id].locked)?rc[id].locked.map(Number).filter(x=>x>=1&&x<=n):[];
+  saveRampCfg(rc);
+
+  try{window.YardivoUnifiedRampsV583?.refresh?.()}catch(_){}
+  try{window.YardivoLocationStateV583?.refresh?.()}catch(_){}
+  return n;
+}
+function renameWarehouse(id,name){
+  const d=load(),w=d.warehouses.find(x=>x.id===id);
+  if(!w)return;
+  const n=String(name||'').trim();
+  if(!n)throw new Error('Upiši naziv skladišta.');
+  w.name=n;
+  save(d);
+}
+function moveWarehouse(id,locationId){
+  const d=load(),w=d.warehouses.find(x=>x.id===id);
+  if(!w)return;
+  if(!d.locations.some(x=>x.id===locationId))throw new Error('Lokacija ne postoji.');
+  w.location_id=locationId;
+  save(d);
+}
+function deleteWarehouse(id){
+  const d=load();
+  d.warehouses=d.warehouses.filter(x=>x.id!==id);
+  save(d);
+  const rc=rampCfg(); delete rc[id]; saveRampCfg(rc);
+  try{window.YardivoUnifiedRampsV583?.refresh?.()}catch(_){}
+}
+function locName(id,d=load()){return d.locations.find(x=>x.id===id)?.name||id}
+
+/* Rebuild ONLY the warehouse section inside Master Data.
+   The warehouse ID is technical and intentionally not shown to the user. */
+function renderMasterWarehouses(){
+  const root=document.getElementById('yardivoMasterDataRegistryV583');
+  if(!root)return;
+  const d=load();
+
+  let host=document.getElementById('ymdWarehouseList');
+  if(!host)return;
+
+  if(!d.warehouses.length){
+    host.innerHTML='<div class="yur-empty">NEMA SKLADIŠTA. Dodaj skladište kada budeš spreman za test.</div>';
+    return;
+  }
+
+  host.innerHTML=d.warehouses.map(w=>`
+    <div class="ymd-wh-row" data-wh-id="${w.id}">
+      <label>Naziv skladišta
+        <input type="text" class="ymd-wh-name" value="${String(w.name||'').replace(/"/g,'&quot;')}">
+      </label>
+      <label>Lokacija
+        <select class="ymd-wh-location">
+          ${d.locations.filter(x=>x.active!==false).map(l=>`<option value="${l.id}" ${l.id===w.location_id?'selected':''}>${l.name}</option>`).join('')}
+        </select>
+      </label>
+      <label>Broj rampi
+        <input type="number" class="ymd-wh-ramp-count" min="0" max="50" step="1" value="${Math.max(0,Number(w.ramps)||0)}">
+      </label>
+      <div class="ymd-wh-actions">
+        <button type="button" class="mini-btn ymd-wh-save">SPREMI</button>
+        <button type="button" class="mini-btn danger ymd-wh-delete">OBRIŠI</button>
+      </div>
+    </div>
+  `).join('');
+
+  host.querySelectorAll('.ymd-wh-row').forEach(row=>{
+    const id=row.dataset.whId;
+    row.querySelector('.ymd-wh-save')?.addEventListener('click',()=>{
+      try{
+        renameWarehouse(id,row.querySelector('.ymd-wh-name')?.value);
+        moveWarehouse(id,row.querySelector('.ymd-wh-location')?.value);
+        setWarehouseRampCount(id,row.querySelector('.ymd-wh-ramp-count')?.value);
+        renderMasterWarehouses();
+        try{showYmsToast?.('success','SKLADIŠTE AŽURIRANO','Naziv, lokacija i broj rampi su spremljeni.')}catch(_){}
+      }catch(e){alert(e?.message||e)}
+    });
+    row.querySelector('.ymd-wh-delete')?.addEventListener('click',()=>{
+      if(!confirm('Obrisati ovo skladište?'))return;
+      deleteWarehouse(id);
+      renderMasterWarehouses();
+    });
+  });
+}
+
+/* Ramp settings:
+   Count is MASTER DATA owned. Hide add/remove-ramp buttons, but keep per-ramp ON/OFF and details. */
+function enforceRampSettingsOwnership(){
+  const add=document.getElementById('addRampBtn');
+  const rem=document.getElementById('removeRampBtn');
+  if(add){add.style.display='none';add.disabled=true}
+  if(rem){rem.style.display='none';rem.disabled=true}
+
+  const panel=document.getElementById('receptionRampSettings');
+  if(panel){
+    const note=panel.querySelector('.yur-note');
+    if(note){
+      note.textContent='Broj rampi određuje se u MASTER PODACI → SKLADIŠTA. Ovdje upravljaš samo statusom rampe (UKLJUČENA / ISKLJUČENA), kapacitetom i radnim vremenom.';
+    }
+  }
+}
+
+/* Never expose technical warehouse codes W001/W101/W201 in visible Settings labels.
+   Show only custom master-data names. */
+function hideLegacyWarehouseCodes(){
+  const d=load();
+  const byId=new Map(d.warehouses.map(w=>[String(w.id),w.name]));
+
+  document.querySelectorAll('#settings option, #settings label, #settings span, #settings small, #settings div, #settings button').forEach(el=>{
+    if(el.children.length && !el.matches('option'))return;
+    let t=String(el.textContent||'');
+    if(!t)return;
+
+    // Replace current dynamic IDs with custom names.
+    for(const [id,name] of byId){
+      if(t===id)t=name;
+      else if(t.startsWith(id+' '))t=t.replace(id,name);
+      else if(t.includes('('+id+')'))t=t.replace('('+id+')','');
+    }
+
+    // Remove legacy-only codes if they survived old static settings HTML.
+    t=t.replace(/\bW(?:101|103|104|201|202|203|204)\b/g,'').replace(/\s{2,}/g,' ').trim();
+    if(el.textContent!==t)el.textContent=t;
+  });
+
+  document.querySelectorAll('#settings select').forEach(sel=>{
+    [...sel.options].forEach(o=>{
+      const id=String(o.value||'');
+      if(byId.has(id))o.textContent=byId.get(id);
+      if(/^(W101|W103|W104|W201|W202|W203|W204)$/i.test(id) && !byId.has(id)){
+        o.remove();
+      }
+    });
+  });
+}
+
+/* Neutralize old hard-coded warehouse objects when settings are rendered.
+   No visible fallback W101/W201. */
+function syncRuntimeWarehouseMap(){
+  const d=load();
+  try{
+    if(typeof WAREHOUSES==='object'&&WAREHOUSES){
+      Object.keys(WAREHOUSES).forEach(k=>delete WAREHOUSES[k]);
+      d.warehouses.filter(x=>x.active!==false).forEach(w=>{
+        WAREHOUSES[w.id]={
+          code:w.id,
+          name:w.name,
+          location:locName(w.location_id,d),
+          location_id:w.location_id,
+          ramps:Math.max(0,Number(w.ramps)||0),
+          receptionStart:'06:00',
+          receptionEnd:'13:00'
+        };
+      });
+    }
+  }catch(_){}
+  try{
+    if(typeof WH_NAMES==='object'&&WH_NAMES){
+      Object.keys(WH_NAMES).forEach(k=>delete WH_NAMES[k]);
+      d.warehouses.filter(x=>x.active!==false).forEach(w=>WH_NAMES[w.id]=w.name);
+    }
+  }catch(_){}
+}
+
+function refresh(){
+  syncRuntimeWarehouseMap();
+  renderMasterWarehouses();
+  enforceRampSettingsOwnership();
+  hideLegacyWarehouseCodes();
+}
+window.addEventListener('yardivo:master-data-changed',()=>setTimeout(refresh,30));
+window.addEventListener('yardivo:data-synced',()=>setTimeout(refresh,100));
+window.addEventListener('yardivo:login',()=>setTimeout(refresh,150));
+document.addEventListener('DOMContentLoaded',()=>setTimeout(refresh,160));
+window.addEventListener('load',()=>setTimeout(refresh,350));
+
+document.addEventListener('click',e=>{
+  if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"],#settings')){
+    setTimeout(refresh,50);
+  }
+},true);
+
+let timer=0;
+new MutationObserver(()=>{
+  clearTimeout(timer);
+  timer=setTimeout(()=>{
+    if(document.getElementById('settings')?.offsetParent!==null)refresh();
+  },120);
+}).observe(document.documentElement,{childList:true,subtree:true});
+
+refresh();
+
+window.YardivoMasterWarehouseRampsV583={
+  refresh,
+  setRampCount:setWarehouseRampCount
+};
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-master-warehouse-ramps-no-legacy-codes';
+})();
+</script>
+
+
+<style id="yardivo-notification-badge-flicker-fix-v583-style">
+/* Notification counters stay hidden until a real positive count is confirmed. */
+.yardivo-notification-badge[data-yardivo-count-ready="0"],
+.notification-badge[data-yardivo-count-ready="0"],
+[id*="notification" i][class*="badge" i][data-yardivo-count-ready="0"],
+[class*="notification" i][class*="badge" i][data-yardivo-count-ready="0"]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+}
+</style>
+
+<script id="yardivo-notification-badge-flicker-fix-v583">
+(function(){
+'use strict';
+if(window.__YARDIVO_NOTIFICATION_BADGE_FLICKER_FIX_V583__)return;
+window.__YARDIVO_NOTIFICATION_BADGE_FLICKER_FIX_V583__=true;
+
+const KNOWN_KEYS=[
+ 'yardivo_notifications_v1',
+ 'yardivo_notifications_v2',
+ 'yardivo_notifications_v583',
+ 'yardivo_notification_history_v1',
+ 'yardivo_notification_history_v583',
+ 'yardivo_notifications',
+ 'studenac_notifications',
+ 'yms_notifications'
+];
+
+function readArray(k){
+  try{
+    const v=JSON.parse(localStorage.getItem(k)||'[]');
+    return Array.isArray(v)?v:[];
+  }catch(_){return[]}
+}
+function realCount(){
+  let n=0;
+  for(const k of KNOWN_KEYS)n=Math.max(n,readArray(k).length);
+  try{
+    if(Array.isArray(window.notifications))n=Math.max(n,window.notifications.length);
+  }catch(_){}
+  try{
+    if(Array.isArray(window.NOTIFICATIONS))n=Math.max(n,window.NOTIFICATIONS.length);
+  }catch(_){}
+  return Math.max(0,n);
+}
+function isBadge(el){
+  if(!el||el.nodeType!==1)return false;
+  const id=String(el.id||'').toLowerCase();
+  const cls=String(el.className||'').toLowerCase();
+  const txt=(id+' '+cls);
+  return /notif/.test(txt)&&(/badge|count|counter|bubble/.test(txt));
+}
+function candidateBadges(){
+  return [...document.querySelectorAll(
+    '[id*="notif" i][class*="badge" i],'+
+    '[class*="notif" i][class*="badge" i],'+
+    '[id*="notif" i][class*="count" i],'+
+    '[class*="notif" i][class*="count" i]'
+  )].filter(isBadge);
+}
+function paint(){
+  const n=realCount();
+  candidateBadges().forEach(el=>{
+    el.dataset.yardivoCountReady='1';
+    if(n>0){
+      el.textContent=String(n);
+      el.style.removeProperty('display');
+      el.style.removeProperty('visibility');
+      el.style.removeProperty('opacity');
+    }else{
+      el.textContent='';
+      el.style.setProperty('display','none','important');
+      el.style.setProperty('visibility','hidden','important');
+      el.style.setProperty('opacity','0','important');
+    }
+  });
+}
+function preHide(root=document){
+  const nodes=root.querySelectorAll?root.querySelectorAll(
+    '[id*="notif" i][class*="badge" i],'+
+    '[class*="notif" i][class*="badge" i],'+
+    '[id*="notif" i][class*="count" i],'+
+    '[class*="notif" i][class*="count" i]'
+  ):[];
+  nodes.forEach(el=>{
+    if(!isBadge(el))return;
+    el.dataset.yardivoCountReady='0';
+    el.style.setProperty('display','none','important');
+    el.style.setProperty('visibility','hidden','important');
+    el.style.setProperty('opacity','0','important');
+  });
+}
+
+/* Hide immediately, before legacy renderers can flash stale/default "4". */
+preHide(document);
+paint();
+
+let timer=0;
+new MutationObserver(muts=>{
+  for(const m of muts){
+    m.addedNodes?.forEach(n=>{
+      if(n.nodeType===1){
+        if(isBadge(n)){
+          n.dataset.yardivoCountReady='0';
+          n.style.setProperty('display','none','important');
+          n.style.setProperty('visibility','hidden','important');
+          n.style.setProperty('opacity','0','important');
+        }
+        preHide(n);
+      }
+    });
+  }
+  clearTimeout(timer);
+  timer=setTimeout(paint,30);
+}).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+
+['yardivo:data-synced','yardivo:login','yardivo:master-data-changed'].forEach(ev=>
+  window.addEventListener(ev,()=>setTimeout(paint,40))
+);
+document.addEventListener('DOMContentLoaded',()=>{preHide(document);setTimeout(paint,20)});
+window.addEventListener('load',()=>setTimeout(paint,50));
+
+/* Final public refresh hook for notification renderers. */
+window.YardivoNotificationBadgeV583={refresh:paint,count:realCount};
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-notification-badge-flicker-fix';
+})();
+</script>
+
+
+<style id="yardivo-settings-consolidation-v583-style">
+/* One authoritative Settings surface per concern. */
+#settings .yardivo-legacy-ramp-count-controls,
+#settings [data-yardivo-legacy-ramp-count="1"],
+#settings .yardivo-legacy-warehouse-config,
+#settings [data-yardivo-legacy-warehouse-config="1"]{
+  display:none!important;
+}
+
+/* Notification clear button must not shift layout while running. */
+#settings [data-yardivo-clear-notifications],
+#settings #clearNotificationsBtn,
+#settings #deleteAllNotificationsBtn,
+#settings button[id*="notif" i][id*="clear" i],
+#settings button[id*="notif" i][id*="delete" i]{
+  min-width:180px;
+}
+#settings .yardivo-notification-clearing{
+  pointer-events:none!important;
+  opacity:.72!important;
+}
+</style>
+
+<script id="yardivo-settings-consolidation-notifications-v583">
+(function(){
+'use strict';
+if(window.__YARDIVO_SETTINGS_CONSOLIDATION_NOTIFICATIONS_V583__)return;
+window.__YARDIVO_SETTINGS_CONSOLIDATION_NOTIFICATIONS_V583__=true;
+
+const MASTER_KEY='yardivo_master_data_registry_v583';
+const RAMP_KEY='yardivo_ramp_config_v1';
+const NOTIF_KEYS=[
+  'yardivo_notifications_v1',
+  'yardivo_notifications_v2',
+  'yardivo_notifications_v583',
+  'yardivo_notification_history_v1',
+  'yardivo_notification_history_v583',
+  'yardivo_notifications',
+  'studenac_notifications',
+  'yms_notifications'
+];
+
+function master(){
+  try{
+    const raw=localStorage.getItem(MASTER_KEY);
+    const d=raw?JSON.parse(raw):null;
+    if(d&&Array.isArray(d.locations)&&Array.isArray(d.warehouses))return d;
+  }catch(_){}
+  try{return window.YardivoMasterDataV583?.all?.()||{locations:[],warehouses:[]}}catch(_){}
+  return {locations:[],warehouses:[]};
+}
+function saveMaster(d){
+  try{localStorage.setItem(MASTER_KEY,JSON.stringify(d))}catch(_){}
+  try{window.YardivoMasterDataV583?.save?.(d)}catch(_){}
+  try{window.YardivoSupabase?.syncNow?.()}catch(_){}
+  window.dispatchEvent(new CustomEvent('yardivo:master-data-changed'));
+}
+function rampCfg(){
+  try{return JSON.parse(localStorage.getItem(RAMP_KEY)||'{}')||{}}catch(_){return{}}
+}
+function saveRampCfg(d){
+  try{localStorage.setItem(RAMP_KEY,JSON.stringify(d))}catch(_){}
+}
+
+/* -----------------------------
+   SETTINGS CONSOLIDATION
+   MASTER DATA owns:
+   - supplier master objects
+   - locations
+   - warehouses
+   - warehouse ramp count
+
+   PRIJAM & RAMPE owns:
+   - per-ramp enabled/disabled
+   - capacity
+   - working hours
+   ----------------------------- */
+function consolidateRampSettings(){
+  const panel=document.getElementById('receptionRampSettings');
+  if(!panel)return;
+
+  /* Hide/remove old add/remove-ramp UI. */
+  panel.querySelectorAll(
+    '#addRampBtn,#removeRampBtn,'+
+    'button[data-action="add-ramp"],button[data-action="remove-ramp"],'+
+    '.add-ramp-btn,.remove-ramp-btn'
+  ).forEach(el=>{
+    el.style.display='none';
+    el.disabled=true;
+    el.setAttribute('aria-hidden','true');
+    el.dataset.yardivoLegacyRampCount='1';
+  });
+
+  /* Remove stale explanatory blocks that claim ramp count is managed here. */
+  panel.querySelectorAll('p,small,div,span').forEach(el=>{
+    if(el.children.length)return;
+    const t=String(el.textContent||'').trim();
+    if(/dodaj rampu|obriši zadnju rampu|broj rampi.*ovdje|ramp count/i.test(t)){
+      el.style.display='none';
+      el.dataset.yardivoLegacyRampCount='1';
+    }
+  });
+
+  let note=panel.querySelector('#yardivoRampOwnershipNoteV583');
+  if(!note){
+    note=document.createElement('div');
+    note.id='yardivoRampOwnershipNoteV583';
+    note.style.cssText='margin:0 0 10px;padding:10px 12px;border:1px solid #28465a;border-radius:8px;background:#081722;color:#8faabd;font-size:9px;font-weight:850;line-height:1.5';
+    panel.prepend(note);
+  }
+  note.textContent='Broj rampi određuje se u MASTER PODACI → SKLADIŠTA. Ovdje se uređuju samo status rampe, kapacitet i radno vrijeme.';
+}
+
+function stripLegacyWarehouseCodesFromSettings(){
+  const d=master();
+  const validIds=new Set(d.warehouses.map(w=>String(w.id)));
+  const nameById=new Map(d.warehouses.map(w=>[String(w.id),String(w.name||w.id)]));
+
+  document.querySelectorAll('#settings select').forEach(sel=>{
+    [...sel.options].forEach(o=>{
+      const v=String(o.value||'').trim();
+      if(nameById.has(v)){
+        o.textContent=nameById.get(v);
+        return;
+      }
+      if(/^W(?:101|103|104|201|202|203|204)$/i.test(v) && !validIds.has(v)){
+        o.remove();
+      }
+    });
+  });
+
+  document.querySelectorAll('#settings [data-warehouse],#settings [data-warehouse-id]').forEach(el=>{
+    const id=String(el.dataset.warehouse||el.dataset.warehouseId||'');
+    if(nameById.has(id) && el.children.length===0)el.textContent=nameById.get(id);
+    if(/^W(?:101|103|104|201|202|203|204)$/i.test(id) && !validIds.has(id)){
+      el.style.display='none';
+      el.dataset.yardivoLegacyWarehouseConfig='1';
+    }
+  });
+
+  document.querySelectorAll('#settings label,#settings span,#settings small,#settings button,#settings div').forEach(el=>{
+    if(el.children.length)return;
+    let t=String(el.textContent||'');
+    if(!t)return;
+    for(const [id,name] of nameById){
+      if(t===id)t=name;
+      else if(t.includes('('+id+')'))t=t.replace('('+id+')','');
+    }
+    t=t.replace(/\bW(?:101|103|104|201|202|203|204)\b/g,'').replace(/\s{2,}/g,' ').trim();
+    if(el.textContent!==t)el.textContent=t;
+  });
+}
+
+function syncRampCountFromMaster(){
+  const d=master();
+  const rc=rampCfg();
+  let changed=false;
+  d.warehouses.forEach(w=>{
+    const n=Math.max(0,Number(w.ramps)||0);
+    if(!rc[w.id]){rc[w.id]={count:n,locked:[]};changed=true}
+    if(Number(rc[w.id].count)!==n){rc[w.id].count=n;changed=true}
+    rc[w.id].locked=Array.isArray(rc[w.id].locked)
+      ? rc[w.id].locked.map(Number).filter(x=>x>=1&&x<=n)
+      : [];
+  });
+  Object.keys(rc).forEach(id=>{
+    if(!d.warehouses.some(w=>w.id===id)){delete rc[id];changed=true}
+  });
+  if(changed)saveRampCfg(rc);
+}
+
+function consolidateSettings(){
+  consolidateRampSettings();
+  stripLegacyWarehouseCodesFromSettings();
+  syncRampCountFromMaster();
+}
+
+/* -----------------------------
+   NOTIFICATIONS: one owner
+   ----------------------------- */
+function clearArrayInPlace(name){
+  try{
+    const a=window[name];
+    if(Array.isArray(a))a.splice(0,a.length);
+  }catch(_){}
+}
+function clearStorage(){
+  NOTIF_KEYS.forEach(k=>{
+    try{localStorage.setItem(k,'[]')}catch(_){}
+    try{sessionStorage.setItem(k,'[]')}catch(_){}
+  });
+}
+async function clearServerBestEffort(){
+  for(const k of NOTIF_KEYS){
+    try{await window.YardivoSupabase?.setState?.(k,[])}catch(_){}
+  }
+  try{await window.YardivoSupabase?.syncNow?.()}catch(_){}
+}
+function stableNotificationUI(){
+  /* Only update local notification containers; do not redraw whole Settings. */
+  document.querySelectorAll(
+    '#settings [data-notification-list],'+
+    '#settings #notificationList,'+
+    '#settings .notification-list,'+
+    '#settings .notifications-list'
+  ).forEach(host=>{
+    if(host.children.length){
+      [...host.children].forEach(ch=>{
+        if(ch.matches?.('[data-empty],.empty,.notification-empty'))return;
+        ch.remove();
+      });
+    }
+  });
+
+  document.querySelectorAll(
+    '#settings [class*="notif" i][class*="badge" i],'+
+    '#settings [id*="notif" i][class*="badge" i],'+
+    '[class*="notif" i][class*="badge" i],'+
+    '[id*="notif" i][class*="badge" i]'
+  ).forEach(el=>{
+    el.textContent='';
+    el.style.setProperty('display','none','important');
+    el.style.setProperty('visibility','hidden','important');
+    el.style.setProperty('opacity','0','important');
+  });
+
+  try{window.YardivoNotificationBadgeV583?.refresh?.()}catch(_){}
+}
+function isClearNotifButton(btn){
+  if(!btn||btn.tagName!=='BUTTON')return false;
+  const id=String(btn.id||'').toLowerCase();
+  const txt=String(btn.textContent||'').trim().toLowerCase();
+  return (
+    /notif/.test(id)&&/(clear|delete|remove|erase|obrisi|izbrisi)/.test(id)
+  ) || (
+    /notifik/.test(txt)&&/(izbriši|obrisi|obriši|izbrisi|delete|clear)/.test(txt)
+  );
+}
+async function clearAllNotifications(btn){
+  if(btn?.dataset.yardivoClearing==='1')return;
+  if(btn)btn.dataset.yardivoClearing='1';
+
+  const original=btn?.textContent||'IZBRIŠI SVE NOTIFIKACIJE';
+  if(btn){
+    btn.classList.add('yardivo-notification-clearing');
+    btn.disabled=true;
+    btn.textContent='BRIŠEM...';
+  }
+
+  try{
+    clearArrayInPlace('notifications');
+    clearArrayInPlace('NOTIFICATIONS');
+    clearArrayInPlace('notificationHistory');
+
+    clearStorage();
+
+    /* Stable immediate paint before any async sync. */
+    stableNotificationUI();
+
+    try{window.saveNotifications?.()}catch(_){}
+    try{window.renderNotifications?.()}catch(_){}
+    try{window.renderNotificationCenter?.()}catch(_){}
+
+    /* Re-assert zero after legacy renderers. */
+    clearStorage();
+    stableNotificationUI();
+
+    await clearServerBestEffort();
+
+    clearStorage();
+    stableNotificationUI();
+
+    try{showYmsToast?.('success','NOTIFIKACIJE IZBRISANE','Sve notifikacije su obrisane.')}catch(_){}
+  }catch(e){
+    alert('Brisanje notifikacija nije uspjelo: '+(e?.message||e));
+  }finally{
+    if(btn){
+      btn.disabled=false;
+      btn.classList.remove('yardivo-notification-clearing');
+      btn.textContent=original;
+      delete btn.dataset.yardivoClearing;
+    }
+  }
+}
+
+/* Capture phase owns clear-all notifications and blocks duplicate old handlers. */
+document.addEventListener('click',function(e){
+  const btn=e.target.closest?.('button');
+  if(!isClearNotifButton(btn))return;
+
+  e.preventDefault();
+  e.stopPropagation();
+  e.stopImmediatePropagation();
+
+  clearAllNotifications(btn);
+},true);
+
+/* Consolidate only when Settings is entered or master data changes. */
+window.addEventListener('yardivo:master-data-changed',()=>setTimeout(consolidateSettings,40));
+window.addEventListener('yardivo:data-synced',()=>setTimeout(consolidateSettings,120));
+window.addEventListener('yardivo:login',()=>setTimeout(consolidateSettings,160));
+document.addEventListener('DOMContentLoaded',()=>setTimeout(consolidateSettings,180));
+window.addEventListener('load',()=>setTimeout(consolidateSettings,350));
+document.addEventListener('click',e=>{
+  if(e.target.closest?.('[data-home-target="settings"],[data-view="settings"],#settings')){
+    setTimeout(consolidateSettings,50);
+  }
+},true);
+
+consolidateSettings();
+
+window.YardivoSettingsConsolidationV583={
+  refresh:consolidateSettings,
+  clearNotifications:clearAllNotifications
+};
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-settings-consolidation-notifications-fix';
+})();
+</script>
+
+
+<script id="yardivo-saas-cleanup-pass1-guard-v583">
+(function(){
+'use strict';
+if(window.__YARDIVO_SAAS_CLEANUP_PASS1_V583__)return;
+window.__YARDIVO_SAAS_CLEANUP_PASS1_V583__=true;
+
+const LEGACY_SETTINGS_SCRIPT_IDS=[
+  'yardivo-role-settings-dynamic-ramps',
+  'yardivo-v583-settings-tabs-warehouse-count-fix',
+  'yardivo-v583-settings-redesign-script'
+];
+
+/* Safety marker: those scripts are intentionally non-executable in SaaS Cleanup Pass 1. */
+window.YardivoSaasCleanupV583={
+  pass:1,
+  authoritative:{
+    masterData:'yardivo_master_data_registry_v583',
+    warehouseRampCount:'MASTER PODACI → SKLADIŠTA',
+    rampDetailSettings:'PRIJAM & RAMPE',
+    settingsController:'YardivoSettingsConsolidationV583',
+    locationState:'YardivoLocationStateV583'
+  },
+  disabledLegacySettingsScripts:LEGACY_SETTINGS_SCRIPT_IDS.slice(),
+  status:()=>({
+    masterData:!!window.YardivoMasterWarehouseRampsV583,
+    settings:!!window.YardivoSettingsConsolidationV583,
+    location:!!window.YardivoLocationStateV583
+  })
+};
+
+/* No legacy add/remove-ramp event should be emitted from Settings. */
+document.addEventListener('click',function(e){
+  const btn=e.target.closest?.('#addRampBtn,#removeRampBtn,.add-ramp-btn,.remove-ramp-btn,[data-action="add-ramp"],[data-action="remove-ramp"]');
+  if(!btn)return;
+  if(!btn.closest?.('#settings'))return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+},true);
+
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-saas-cleanup-pass-1';
+})();
+</script>
+
 </body>
 </html>
 
@@ -42321,7 +43370,7 @@ window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-supplier-inbox-scope-edit-fix';
 }
 </style>
 
-<script id="yardivo-v583-settings-redesign-script" type="application/x-yardivo-disabled">
+<script id="yardivo-v583-settings-redesign-script" type="application/yardivo-legacy-disabled">
 (function(){
 'use strict';
 
@@ -42598,7 +43647,7 @@ body[data-yardivo-role="gate"] #settings.yardivo-settings-tabs-ready .settings-g
 }
 </style>
 
-<script id="yardivo-v583-settings-tabs-warehouse-count-fix" type="application/x-yardivo-disabled">
+<script id="yardivo-v583-settings-tabs-warehouse-count-fix" type="application/yardivo-legacy-disabled">
 (function(){
 'use strict';
 
