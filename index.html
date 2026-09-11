@@ -12990,7 +12990,20 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (function(){
 'use strict';
 
-function validLocation(v){return v==='VG'||v==='DU'}
+const MASTER_KEY='yardivo_master_data_registry_v583';
+
+function master(){
+  try{
+    const raw=localStorage.getItem(MASTER_KEY);
+    const d=raw?JSON.parse(raw):null;
+    if(d&&Array.isArray(d.locations)&&Array.isArray(d.warehouses))return d;
+  }catch(e){}
+  try{
+    const d=window.YardivoMasterDataV583?.all?.();
+    if(d&&Array.isArray(d.locations)&&Array.isArray(d.warehouses))return d;
+  }catch(e){}
+  return {locations:[],warehouses:[]};
+}
 
 function session(){
   try{return (typeof currentSession!=='undefined'?currentSession:window.currentSession)||null}
@@ -13001,6 +13014,9 @@ function role(){
   const s=session();
   let r=String(s?.role||'').trim().toLowerCase();
   if(r==='management'||r==='voditelj')r='manager';
+  if(r==='zalihe')r='inventory';
+  if(r==='prijam')r='reception';
+  if(r==='porta')r='gate';
   return r;
 }
 
@@ -13008,63 +13024,105 @@ function canSwitchLocation(){
   return ['admin','inventory'].includes(role());
 }
 
+function validLocation(v){
+  const id=String(v||'').trim();
+  if(!id)return false;
+  return master().locations.some(x=>x&&x.active!==false&&String(x.id)===id);
+}
+
 function locationLabel(loc){
-  return loc==='DU'?'Lokacija 2':loc==='VG'?'Lokacija 1':loc;
+  const id=String(loc||'').trim();
+  return master().locations.find(x=>x&&x.active!==false&&String(x.id)===id)?.name||id;
+}
+
+function persistSession(s){
+  if(!s)return;
+  try{
+    if(typeof currentSession!=='undefined')currentSession=s;
+    window.currentSession=s;
+  }catch(e){}
+  try{
+    if(s.rememberMe){
+      if(typeof safeStorage!=='undefined'&&safeStorage?.setItem)safeStorage.setItem('yardivo_remembered_session',JSON.stringify(s));
+      else localStorage.setItem('yardivo_remembered_session',JSON.stringify(s));
+    }else{
+      if(typeof safeSessionStorage!=='undefined'&&safeSessionStorage?.setItem)safeSessionStorage.setItem('studenac_demo_session',JSON.stringify(s));
+      else sessionStorage.setItem('studenac_demo_session',JSON.stringify(s));
+    }
+  }catch(e){}
 }
 
 function setActiveWarehouse(next){
-  if(!next)return;
+  const v=String(next||'ALL');
   try{
-    activeWarehouse=next;
+    activeWarehouse=v;
+    window.activeWarehouse=v;
     if(typeof safeStorage!=='undefined'&&safeStorage?.setItem){
-      safeStorage.setItem('studenac_active_warehouse',next);
+      safeStorage.setItem('studenac_active_warehouse',v);
+      safeStorage.setItem('yardivo_active_warehouse',v);
     }else{
-      localStorage.setItem('studenac_active_warehouse',next);
+      localStorage.setItem('studenac_active_warehouse',v);
+      localStorage.setItem('yardivo_active_warehouse',v);
     }
   }catch(e){}
 }
 
 function warehousesForActiveRole(loc){
-  try{
-    if(['admin','inventory'].includes(role()) && typeof allWarehousesForLocation==='function'){
-      return allWarehousesForLocation(loc);
-    }
-    if(typeof warehousesForLocation==='function')return warehousesForLocation(loc);
-  }catch(e){}
-  return [];
+  const id=String(loc||'').trim();
+  const d=master();
+  return d.warehouses
+    .filter(x=>x&&x.active!==false&&String(x.location_id)===id)
+    .map(x=>x.id);
+}
+
+function rebuildSelect(sel,current,locked){
+  const d=master();
+  const rows=d.locations.filter(x=>x&&x.active!==false);
+
+  if(locked && validLocation(current)){
+    sel.innerHTML=`<option value="${current}">${locationLabel(current)}</option>`;
+    sel.value=current;
+    sel.disabled=true;
+    sel.setAttribute('aria-disabled','true');
+    sel.title='Lokacija je dodijeljena korisničkom računu od strane Admina.';
+    return;
+  }
+
+  sel.innerHTML='<option value="">Odaberi lokaciju...</option>'+
+    rows.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+  sel.disabled=false;
+  sel.removeAttribute('aria-disabled');
+  sel.title='Odaberi lokaciju.';
+  if(validLocation(current))sel.value=current;
+  else sel.value='';
 }
 
 function configureHomeLocation(){
   const s=session();
-  if(!s)return false;
   const sel=document.getElementById('homeLocationSelect');
-  if(!sel)return false;
+  if(!s||!sel)return false;
+
+  const current=String(s.location||'').trim();
 
   if(canSwitchLocation()){
-    const current=validLocation(String(s.location||'').toUpperCase())
-      ? String(s.location).toUpperCase()
-      : 'DU';
+    rebuildSelect(sel,current,false);
 
-    sel.innerHTML=[
-      '<option value="DU">Lokacija 2</option>',
-      '<option value="VG">Lokacija 1</option>'
-    ].join('');
-    sel.disabled=false;
-    sel.removeAttribute('aria-disabled');
-    sel.title=role()==='inventory'
-      ? 'Upravljanje zalihama može birati Lokacija 2 ili Veliku Goricu.'
-      : 'Rola ima pristup objema lokacijama.';
-    sel.value=current;
-    s.location=current;
-
-    try{
-      if(typeof currentSession!=='undefined')currentSession=s;
-      window.currentSession=s;
-    }catch(e){}
+    /* IMPORTANT: do not auto-replace an unselected/invalid location with LOC001/LOC002.
+       The user's explicit choice is the only source of truth. */
+    if(!validLocation(current)){
+      if(current){
+        s.location=null;
+        persistSession(s);
+      }
+      setActiveWarehouse('ALL');
+      try{window.updateHomeLocationUI?.()}catch(e){}
+      return false;
+    }
 
     const allowed=warehousesForActiveRole(current);
-    const currentWh=String(typeof activeWarehouse!=='undefined'?activeWarehouse:'');
-    setActiveWarehouse(allowed.includes(currentWh)?currentWh:(allowed[0]||''));
+    let aw='';
+    try{aw=String(typeof activeWarehouse!=='undefined'?activeWarehouse:window.activeWarehouse||'')}catch(e){}
+    setActiveWarehouse(allowed.includes(aw)?aw:(allowed[0]||'ALL'));
 
     try{window.yardivoRefreshAllWarehouseUi?.()}catch(e){}
     try{window.syncWarehouseSelectorsToLoginLocation?.()}catch(e){}
@@ -13072,24 +13130,19 @@ function configureHomeLocation(){
     return true;
   }
 
-  const assigned=String(s.location||'').toUpperCase();
-  if(!validLocation(assigned))return false;
+  /* Assigned-location roles keep their account location, but it must exist in Master Data. */
+  if(!validLocation(current)){
+    rebuildSelect(sel,'',true);
+    setActiveWarehouse('ALL');
+    try{window.updateHomeLocationUI?.()}catch(e){}
+    return false;
+  }
 
-  sel.innerHTML=`<option value="${assigned}">${locationLabel(assigned)}</option>`;
-  sel.value=assigned;
-  sel.disabled=true;
-  sel.setAttribute('aria-disabled','true');
-  sel.title='Lokacija je dodijeljena korisničkom računu od strane Admina.';
-
-  s.location=assigned;
-  try{
-    if(typeof currentSession!=='undefined')currentSession=s;
-    window.currentSession=s;
-  }catch(e){}
-
-  const allowed=warehousesForActiveRole(assigned);
-  const currentWh=String(typeof activeWarehouse!=='undefined'?activeWarehouse:'');
-  setActiveWarehouse(allowed.includes(currentWh)?currentWh:(allowed[0]||''));
+  rebuildSelect(sel,current,true);
+  const allowed=warehousesForActiveRole(current);
+  let aw='';
+  try{aw=String(typeof activeWarehouse!=='undefined'?activeWarehouse:window.activeWarehouse||'')}catch(e){}
+  setActiveWarehouse(allowed.includes(aw)?aw:(allowed[0]||'ALL'));
 
   try{window.yardivoRefreshAllWarehouseUi?.()}catch(e){}
   try{window.syncWarehouseSelectorsToLoginLocation?.()}catch(e){}
@@ -13101,39 +13154,62 @@ function configureHomeLocation(){
 document.addEventListener('change',function(e){
   const sel=e.target;
   if(sel?.id!=='homeLocationSelect')return;
+
   const s=session();
   if(!s)return;
 
-  if(canSwitchLocation()){
-    const chosen=String(sel.value||'').toUpperCase();
-    if(!validLocation(chosen))return;
-    s.location=chosen;
-    try{
-      if(typeof currentSession!=='undefined')currentSession=s;
-      window.currentSession=s;
-    }catch(e){}
+  if(!canSwitchLocation()){
+    const assigned=String(s.location||'').trim();
+    if(validLocation(assigned))sel.value=assigned;
+    return;
+  }
 
-    const all=warehousesForActiveRole(chosen);
-    setActiveWarehouse(all[0]||'');
-    try{window.yardivoRefreshAllWarehouseUi?.()}catch(e){}
-    try{window.syncWarehouseSelectorsToLoginLocation?.()}catch(e){}
+  const chosen=String(sel.value||'').trim();
+
+  if(!chosen){
+    s.location=null;
+    persistSession(s);
+    setActiveWarehouse('ALL');
     try{window.updateHomeLocationUI?.()}catch(e){}
     return;
   }
 
-  const assigned=String(s.location||'').toUpperCase();
-  if(validLocation(assigned))sel.value=assigned;
+  if(!validLocation(chosen)){
+    /* Never clear a valid previous selection because another stale renderer changed the DOM. */
+    const previous=String(s.location||'').trim();
+    if(validLocation(previous))sel.value=previous;
+    return;
+  }
+
+  s.location=chosen;
+  persistSession(s);
+
+  try{
+    if(typeof safeStorage!=='undefined'&&safeStorage?.setItem)safeStorage.setItem('yardivo_last_location',chosen);
+    else localStorage.setItem('yardivo_last_location',chosen);
+  }catch(e){}
+
+  const allowed=warehousesForActiveRole(chosen);
+  setActiveWarehouse(allowed[0]||'ALL');
+
+  try{window.yardivoRefreshAllWarehouseUi?.()}catch(e){}
+  try{window.syncWarehouseSelectorsToLoginLocation?.()}catch(e){}
+  try{window.updateHomeLocationUI?.()}catch(e){}
+
+  document.getElementById('homeLocationWarning')?.classList.remove('show');
 },true);
 
 document.addEventListener('input',function(e){
   const sel=e.target;
   if(sel?.id!=='homeLocationSelect'||canSwitchLocation())return;
-  const s=session(); if(!s)return;
-  const assigned=String(s.location||'').toUpperCase();
+  const s=session();if(!s)return;
+  const assigned=String(s.location||'').trim();
   if(validLocation(assigned))sel.value=assigned;
 },true);
 
-window.addEventListener('yardivo:login',()=>setTimeout(configureHomeLocation,60));
+window.addEventListener('yardivo:master-data-changed',()=>setTimeout(configureHomeLocation,20));
+window.addEventListener('yardivo:data-synced',()=>setTimeout(configureHomeLocation,80));
+window.addEventListener('yardivo:login',()=>setTimeout(configureHomeLocation,80));
 window.addEventListener('load',()=>setTimeout(configureHomeLocation,300));
 document.addEventListener('click',e=>{
   if(e.target.closest?.('[data-home-target],#homeMenu,[data-view]')){
@@ -13141,7 +13217,12 @@ document.addEventListener('click',e=>{
   }
 },true);
 
-window.YardivoLocationLock={apply:configureHomeLocation};
+window.YardivoLocationLock={
+  apply:configureHomeLocation,
+  validLocation,
+  locationLabel,
+  warehousesForLocation:warehousesForActiveRole
+};
 })();
 </script>
 <script id="yardivo-admin-create-user-case-fix">
@@ -37893,7 +37974,7 @@ window.YardivoSettingsHardFixV583={
  deleteAllSuppliers,
  category:()=>selectedCategory
 };
-window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-home-location-theme-stability-fix';
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-home-location-selector-final-fix';
 })();
 </script>
 
@@ -41325,146 +41406,16 @@ body.home-menu-mode #homeLocationStatus:not(.ready){color:#ffba66!important}
 if(window.__YARDIVO_HOME_LOCATION_STABILITY_FINAL_V583__)return;
 window.__YARDIVO_HOME_LOCATION_STABILITY_FINAL_V583__=true;
 
-const KEY='yardivo_master_data_registry_v583';
-let lastSignature='';
-let syncing=false;
-
-function data(){
-  try{
-    const raw=localStorage.getItem(KEY);
-    const d=raw?JSON.parse(raw):null;
-    if(d&&Array.isArray(d.locations)&&Array.isArray(d.warehouses))return d;
-  }catch(_){}
-  try{
-    const d=window.YardivoMasterDataV583?.all?.();
-    if(d&&Array.isArray(d.locations)&&Array.isArray(d.warehouses))return d;
-  }catch(_){}
-  return {locations:[],warehouses:[]};
+function refresh(){
+  try{window.YardivoLocationLock?.apply?.()}catch(_){}
 }
-function session(){
-  try{return currentSession||window.currentSession||null}catch(_){return window.currentSession||null}
-}
-function setSessionLocation(id){
-  const s=session();if(!s)return;
-  s.location=id||null;
-  try{window.currentSession=s}catch(_){}
-  try{
-    if(s.rememberMe)localStorage.setItem('yardivo_remembered_session',JSON.stringify(s));
-    else sessionStorage.setItem('studenac_demo_session',JSON.stringify(s));
-  }catch(_){}
-}
-function locationObject(id,d=data()){
-  return d.locations.find(x=>x&&x.active!==false&&String(x.id)===String(id||''));
-}
-function locationChosen(){
-  return !!locationObject(session()?.location);
-}
-function name(id){
-  return locationObject(id)?.name||'';
-}
-function signature(d=data()){
-  return JSON.stringify({
-    l:d.locations.map(x=>[x.id,x.name,x.active]),
-    w:d.warehouses.map(x=>[x.id,x.name,x.location_id,x.active])
-  });
-}
-function defaultWarehouse(loc,d=data()){
-  return d.warehouses.find(x=>x&&x.active!==false&&String(x.location_id)===String(loc||''))?.id||'ALL';
-}
-function paint(force=false){
-  if(syncing)return;
-  syncing=true;
-  const menu=document.getElementById('homeMenu');
-  try{
-    const d=data(),sig=signature(d);
-    const sel=document.getElementById('homeLocationSelect');
-    if(sel && (force||sig!==lastSignature)){
-      const current=String(session()?.location||sel.value||'');
-      sel.innerHTML='<option value="">Odaberi lokaciju...</option>'+
-        d.locations.filter(x=>x.active!==false).map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
-      if([...sel.options].some(o=>o.value===current))sel.value=current;
-      else{
-        sel.value='';
-        if(session()?.location)setSessionLocation('');
-      }
-      lastSignature=sig;
-    }else if(sel){
-      const current=String(session()?.location||'');
-      if(sel.value!==current && [...sel.options].some(o=>o.value===current))sel.value=current;
-    }
-
-    const chosen=locationChosen(),id=String(session()?.location||''),label=name(id);
-    const big=document.getElementById('homeSelectedLocation');
-    if(big){
-      big.textContent=chosen?label.toUpperCase():'ODABERI LOKACIJU';
-      big.classList.toggle('selected',chosen);
-    }
-    const status=document.getElementById('homeLocationStatus');
-    if(status){
-      status.textContent=chosen?`Odabrano: ${label}`:'Lokacija nije odabrana';
-      status.classList.toggle('ready',chosen);
-    }
-    const warning=document.getElementById('homeLocationWarning');
-    if(warning && chosen)warning.classList.remove('show');
-
-    document.querySelectorAll('#homeMenuGrid .home-menu-card').forEach(card=>{
-      card.classList.toggle('locked',!chosen);
-      /* no stale focus/highlight from previous Settings click */
-      if(document.activeElement===card && card.dataset.homeTarget==='settings' && document.body.classList.contains('home-menu-mode')){
-        try{card.blur()}catch(_){}
-      }
-    });
-  }finally{
-    menu?.classList.remove('yardivo-home-syncing');
-    syncing=false;
-  }
-}
-function onChange(e){
-  const sel=e.target.closest('#homeLocationSelect');if(!sel)return;
-  e.stopImmediatePropagation();
-  const id=String(sel.value||'');
-  const d=data();
-  if(id && !locationObject(id,d)){
-    setSessionLocation('');
-    paint(true);
-    return;
-  }
-  setSessionLocation(id);
-  try{
-    activeWarehouse=id?defaultWarehouse(id,d):'ALL';
-    window.activeWarehouse=activeWarehouse;
-    localStorage.setItem('studenac_active_warehouse',activeWarehouse);
-    localStorage.setItem('yardivo_active_warehouse',activeWarehouse);
-    if(id)localStorage.setItem('yardivo_last_location',id);
-  }catch(_){}
-  try{syncWarehouseSelectorsToLoginLocation?.()}catch(_){}
-  paint(false);
-}
-
-/* Capture phase owns the home selector before the old hard-coded handler. */
-document.addEventListener('change',onChange,true);
-
-window.addEventListener('yardivo:master-data-changed',()=>paint(true));
-window.addEventListener('yardivo:data-synced',()=>paint(true));
-window.addEventListener('yardivo:login',()=>setTimeout(()=>paint(true),20));
-document.addEventListener('DOMContentLoaded',()=>paint(true));
-window.addEventListener('load',()=>paint(true));
-
-/* Only observe actual master-data/settings changes, not the entire app continuously. */
-document.addEventListener('click',e=>{
-  if(e.target.closest('[data-home-target="homeMenu"],[data-view="homeMenu"],#masterUserAdmin,#yardivoMasterDataRegistryV583')){
-    setTimeout(()=>paint(true),0);
-  }
-},true);
-
-try{
-  window.homeLocationChosen=locationChosen;
-  window.updateHomeLocationUI=()=>paint(false);
-}catch(_){}
-
-paint(true);
-window.YardivoHomeLocationFinalV583={refresh:()=>paint(true),chosen:locationChosen,name};
-window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-home-location-theme-stability-fix';
+window.addEventListener('yardivo:master-data-changed',()=>setTimeout(refresh,30));
+window.addEventListener('yardivo:data-synced',()=>setTimeout(refresh,100));
+window.addEventListener('yardivo:login',()=>setTimeout(refresh,120));
+document.addEventListener('DOMContentLoaded',()=>setTimeout(refresh,120));
+window.addEventListener('load',()=>setTimeout(refresh,350));
+window.YardivoHomeLocationFinalV583={refresh};
+window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-home-location-selector-final-fix';
 })();
 </script>
 
