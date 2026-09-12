@@ -24356,22 +24356,34 @@ function bootstrapSignature(d){
 }
 let lastBootstrapSignature='';
 function applyBootstrap(d){
-  const A=Array.isArray(d?.announcements)?d.announcements:[];
-  const I=Array.isArray(d?.incidents)?d.incidents:[];
-  applying=true;
-  try{
-    const aj=JSON.stringify(A),ij=JSON.stringify(I);
-    Storage.prototype.setItem.call(localStorage,'yardivo_yms_announcements_v1',aj);
-    Storage.prototype.setItem.call(localStorage,'yardivo_yms_incidents_v1',ij);
-    for(const r of (Array.isArray(d?.state)?d.state:[])){
-      if(!r?.key||!stateKey(String(r.key)))continue;
-      if(r.deleted)Storage.prototype.removeItem.call(localStorage,String(r.key));
-      else Storage.prototype.setItem.call(localStorage,String(r.key),String(r.value_json??''));
-    }
-  }finally{applying=false}
-  annSnapshot=mapData(A);incSnapshot=mapData(I);
-  dirtyAnn=false;dirtyInc=false;dirtyState.clear();
-  lastBootstrapSignature=bootstrapSignature(d);
+ const epoch=Date.parse(localStorage.getItem('yardivo_clean_epoch_v583')||'')||0;
+ const rowTs=x=>{
+   const direct=x?.created_at||x?.createdAt||x?.updated_at||x?.updatedAt||'';
+   let payload=null;try{payload=typeof x?.payload==='string'?JSON.parse(x.payload):x?.payload}catch(_){}
+   const nested=payload?.createdAt||payload?.created_at||payload?.updatedAt||payload?.updated_at||'';
+   return Date.parse(direct||nested||'')||0;
+ };
+ const A0=Array.isArray(d?.announcements)?d.announcements:[];
+ const I0=Array.isArray(d?.incidents)?d.incidents:[];
+ const A=epoch?A0.filter(x=>rowTs(x)>=epoch):A0;
+ const I=epoch?I0.filter(x=>rowTs(x)>=epoch):I0;
+ const S=(Array.isArray(d?.state)?d.state:[]).filter(r=>{
+   if(!r?.key||!stateKey(String(r.key)))return false;
+   if(!epoch)return true;
+   return (Date.parse(r?.updated_at||r?.created_at||'')||0)>=epoch;
+ });
+ applying=true;
+ try{
+  Storage.prototype.setItem.call(localStorage,'yardivo_yms_announcements_v1',JSON.stringify(A));
+  Storage.prototype.setItem.call(localStorage,'yardivo_yms_incidents_v1',JSON.stringify(I));
+  for(const r of S){
+   if(r.deleted)Storage.prototype.removeItem.call(localStorage,String(r.key));
+   else Storage.prototype.setItem.call(localStorage,String(r.key),String(r.value_json??''));
+  }
+ }finally{applying=false}
+ annSnapshot=mapData(A);incSnapshot=mapData(I);
+ dirtyAnn=false;dirtyInc=false;dirtyState.clear();
+ lastBootstrapSignature=bootstrapSignature({announcements:A,incidents:I,state:S});
 }
 async function broadcastChange(reason='data-changed'){
   try{
@@ -45215,8 +45227,12 @@ function rampMax(code,r){
 
 function addLocation(name){
  const n=String(name||'').trim();if(!n)return;
- const d=master();d.locations.push({id:next('LOC',d.locations),name:n,active:true});
+ const d=master(),id=next('LOC',d.locations);d.locations.push({id,name:n,active:true});
  commitMaster(d,'location.add');
+ try{window.YardivoAppStateV583?.setLocation?.(id)}catch(_){
+   try{if(window.currentSession)window.currentSession.location=id}catch(__){}
+ }
+ setTimeout(()=>{paintHeader();renderContextSelectors()},0);
 }
 function renameLocation(id,name){
  const d=master(),x=d.locations.find(v=>v.id===id),n=String(name||'').trim();if(!x||!n)return;
@@ -45229,8 +45245,13 @@ function deleteLocation(id){
 }
 function addWarehouse(name,loc){
  const n=String(name||'').trim(),d=master();if(!n||!d.locations.some(x=>x.id===loc))return;
- d.warehouses.push({id:nextWh(d.warehouses),name:n,location_id:loc,ramps:0,active:true});
+ const id=nextWh(d.warehouses);d.warehouses.push({id,name:n,location_id:loc,ramps:0,active:true});
  commitMaster(d,'warehouse.add');
+ try{
+   if(!window.YardivoAppStateV583?.location?.())window.YardivoAppStateV583?.setLocation?.(loc);
+   window.YardivoAppStateV583?.setWarehouse?.(id);
+ }catch(_){window.activeWarehouse=id}
+ setTimeout(()=>{paintHeader();renderContextSelectors()},0);
 }
 function renameWarehouse(id,name,loc){
  const d=master(),w=d.warehouses.find(x=>x.id===id),n=String(name||'').trim();
@@ -45380,20 +45401,44 @@ function ensureStableHeader(){
  let x=document.getElementById('yardivoStableContextV583');
  if(!x){
    x=document.createElement('div');x.id='yardivoStableContextV583';
-   x.innerHTML='<div><small>AKTIVNA LOKACIJA</small><strong id="yscLocation">LOKACIJA NIJE ODABRANA</strong></div><div><small>AKTIVNO SKLADIŠTE</small><strong id="yscWarehouse">SKLADIŠTE NIJE ODABRANO</strong></div><span class="ysc-live">● LIVE</span>';
+   x.innerHTML='<div class="ysc-field"><small>AKTIVNA LOKACIJA</small><select id="yscLocationSelect" aria-label="Aktivna lokacija"></select></div><div class="ysc-field"><small>AKTIVNO SKLADIŠTE</small><select id="yscWarehouseSelect" aria-label="Aktivno skladište"></select></div><span class="ysc-live">● LIVE</span>';
+   x.querySelector('#yscLocationSelect')?.addEventListener('change',e=>{
+     try{window.YardivoAppStateV583?.setLocation?.(e.target.value)}catch(_){}
+     renderContextSelectors();paintHeader();
+   });
+   x.querySelector('#yscWarehouseSelect')?.addEventListener('change',e=>{
+     try{window.YardivoAppStateV583?.setWarehouse?.(e.target.value)}catch(_){}
+     renderContextSelectors();paintHeader();
+   });
    const first=top.firstElementChild;first?.insertAdjacentElement('afterend',x);
  }
  paintHeader();
 }
 function currentLoc(){try{return String(window.YardivoAppStateV583?.location?.()||'')}catch(_){return''}}
 function currentWh(){try{return String(window.YardivoAppStateV583?.warehouse?.()||window.activeWarehouse||'')}catch(_){return''}}
-function paintHeader(){
+function renderContextSelectors(){
  const d=master(),lid=currentLoc(),wid=currentWh();
- const ln=d.locations.find(x=>String(x.id)===lid)?.name||'LOKACIJA NIJE ODABRANA';
- const wn=d.warehouses.find(x=>String(x.id)===wid)?.name||'SKLADIŠTE NIJE ODABRANO';
- const l=document.getElementById('yscLocation'),w=document.getElementById('yscWarehouse');
- if(l&&l.textContent!==ln)l.textContent=ln;if(w&&w.textContent!==wn)w.textContent=wn;
+ const ls=document.getElementById('yscLocationSelect'),ws=document.getElementById('yscWarehouseSelect');
+ if(ls){
+   const sig=d.locations.filter(x=>x.active!==false).map(x=>x.id+'|'+x.name).join('¦');
+   if(ls.dataset.sig!==sig){
+     ls.dataset.sig=sig;
+     ls.innerHTML='<option value="">ODABERI LOKACIJU</option>'+d.locations.filter(x=>x.active!==false).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+   }
+   if([...ls.options].some(o=>o.value===lid))ls.value=lid;else ls.value='';
+ }
+ if(ws){
+   const rows=d.warehouses.filter(x=>x.active!==false&&(!lid||String(x.location_id)===lid));
+   const sig=rows.map(x=>x.id+'|'+x.name).join('¦');
+   if(ws.dataset.sig!==sig){
+     ws.dataset.sig=sig;
+     ws.innerHTML='<option value="">ODABERI SKLADIŠTE</option>'+rows.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+   }
+   if([...ws.options].some(o=>o.value===wid))ws.value=wid;else ws.value='';
+   ws.disabled=!rows.length;
+ }
 }
+function paintHeader(){renderContextSelectors()}
 
 /* ---------- CAPACITY UNKNOWN AUTHORITY ---------- */
 window.getWarehouseCapacity=function(code){return capacity(String(code||''))};
@@ -45437,13 +45482,18 @@ function killStaleToasts(){
 }
 
 /* ---------- BOOT/EVENTS ---------- */
-['yardivo:master-data-changed','yardivo:context-changed'].forEach(ev=>window.addEventListener(ev,()=>{queueRender();setTimeout(()=>{paintHeader();paintCapacityUi()},20)}));
+['yardivo:master-data-changed','yardivo:context-changed'].forEach(ev=>window.addEventListener(ev,()=>{
+ const editing=!!document.activeElement?.closest?.('#yardivoMasterFoundationV583');
+ if(!editing)queueRender();
+ setTimeout(()=>{paintHeader();paintCapacityUi()},20);
+}));
 window.addEventListener('yardivo:data-synced',()=>{
  let pending=false;try{pending=localStorage.getItem(SERVER_PENDING)==='1'}catch(_){}
  const wasCleaning=cleanupActive||pending;
  cleanupDone=true;cleanupActive=false;
  if(wasCleaning)clearRuntime();
- queueRender();paintHeader();paintCapacityUi();paintSupplierBadge();paintSaved();
+ if(!document.activeElement?.closest?.('#yardivoMasterFoundationV583'))queueRender();
+ paintHeader();paintCapacityUi();paintSupplierBadge();paintSaved();
 });
 window.addEventListener('yardivo:factory-zero-server-cleared',()=>{cleanupDone=true;cleanupActive=false;clearRuntime();queueRender()});
 window.addEventListener('yardivo:login',()=>{ensureStableHeader();waitForServerCleanup();setTimeout(()=>{queueRender();paintSaved();killStaleToasts()},40)});
@@ -45455,6 +45505,476 @@ window.YardivoMasterFoundationV583={
  build:BUILD,master,render,capacity,detention:det,
  addLocation,addWarehouse,setRampCount,saveRamp,
  cleanState:()=>({cleanupActive,cleanupDone})
+};
+window.YARDIVO_DEV_BUILD=BUILD;
+})();
+</script>
+
+
+<style id="yardivo-v583-production-empty-final-style">
+/* Settings: one continuous page, no Master/Admin category buttons. */
+#yardivoMasterAdminSettingsV583{display:none!important}
+#yardivoSettingsMasterPaneV583,
+#yardivoSettingsAdminPaneV583{display:block!important}
+#yardivoSettingsAdminPaneV583{margin-top:22px;padding-top:18px;border-top:1px solid #29465b}
+#yardivoSettingsAdminPaneV583:before{
+ content:"ADMINISTRACIJA";display:block;margin:0 0 12px;font-size:13px;font-weight:950;letter-spacing:.8px
+}
+/* Stable context dropdowns */
+#yardivoStableContextV583 .ysc-field{display:grid;gap:3px;min-width:150px}
+#yardivoStableContextV583 select{
+ min-width:150px;background:#07131e;color:#edf5fb;border:1px solid #29485e;border-radius:6px;
+ padding:5px 24px 5px 7px;font-size:9px;font-weight:900
+}
+body.light-mode #yardivoStableContextV583 select{background:#fff!important;color:#0f1f35!important;border-color:#cbd7e4!important}
+/* Production-empty: no stale badge can show before a current-baseline supplier row exists. */
+body.yardivo-production-empty #supplierRequestsBadge{display:none!important}
+</style>
+
+<script id="yardivo-v583-production-empty-guard-final">
+(function(){
+'use strict';
+const EPOCH_KEY='yardivo_clean_epoch_v583';
+const MASTER='yardivo_master_data_registry_v583';
+const LEGACY_WH=/^(W101|W103|W104|W201|W202|W203|W204)$/i;
+function epoch(){return Date.parse(localStorage.getItem(EPOCH_KEY)||'')||0}
+function master(){try{const d=JSON.parse(localStorage.getItem(MASTER)||'{}');return d&&Array.isArray(d.locations)&&Array.isArray(d.warehouses)?d:{locations:[],warehouses:[]}}catch(_){return{locations:[],warehouses:[]}}}
+function emptyOperationalStores(){
+ const keys=[
+  'yardivo_live_notifications_v1','yardivo_master_notifications_v1','yardivo_notifications','yardivo_notifications_v1',
+  'yardivo_notifications_v2','yardivo_notifications_v583','yardivo_notification_history_v1','yardivo_notification_history_v583',
+  'studenac_notifications','yms_notifications','yardivo_epal_transactions_v1','yardivo_epal_initial_stock_v1','yms_trucks_v2'
+ ];
+ keys.forEach(k=>{try{localStorage.setItem(k,'[]')}catch(_){}});
+ try{window.YardivoNotificationsV583?.clear?.()}catch(_){}
+ document.querySelectorAll('#yardivoLiveToasts>*').forEach(x=>x.remove());
+}
+function sanitizeLegacyWarehouseUi(){
+ const d=master(),ids=new Set(d.warehouses.map(w=>String(w.id)));
+ document.querySelectorAll('select').forEach(sel=>{
+   [...sel.options].forEach(o=>{
+     if(LEGACY_WH.test(String(o.value||''))&&!ids.has(String(o.value)))o.remove();
+   });
+ });
+ /* Static pallet/warehouse cards from old factories must not survive when Master is empty. */
+ if(!d.warehouses.length){
+   document.querySelectorAll('[data-warehouse-id],[data-warehouse]').forEach(el=>{
+     const v=String(el.dataset.warehouseId||el.dataset.warehouse||'');
+     if(LEGACY_WH.test(v))el.remove();
+   });
+ }
+}
+function refreshEmptyClass(){
+ let a=[];try{a=typeof announcements!=='undefined'&&Array.isArray(announcements)?announcements:[]}catch(_){}
+ const isEmpty=!a.length;
+ document.body.classList.toggle('yardivo-production-empty',isEmpty);
+ const el=document.getElementById('homeStorageStatus');
+ if(el&&isEmpty)el.textContent='SPREMLJENO: 0 NAJAVA';
+ if(isEmpty){
+   const b=document.getElementById('supplierRequestsBadge');
+   if(b){b.textContent='';b.style.setProperty('display','none','important')}
+ }
+}
+function protectMasterFocus(){
+ const editing=!!document.activeElement?.closest?.('#yardivoMasterFoundationV583');
+ if(editing)return true;
+ return false;
+}
+function boot(){
+ emptyOperationalStores();sanitizeLegacyWarehouseUi();refreshEmptyClass();
+ try{window.YardivoMasterFoundationV583?.render?.()}catch(_){}
+}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,60));
+window.addEventListener('load',()=>setTimeout(boot,180),{once:true});
+['yardivo:data-synced','yardivo:master-data-changed','yardivo:context-changed','yardivo:supplier-inbox-changed','yardivo:supplier-request-updated']
+.forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{sanitizeLegacyWarehouseUi();refreshEmptyClass()},25)));
+window.YardivoProductionEmptyV583={epoch,master,refresh:boot,editing:protectMasterFocus};
+window.YARDIVO_DEV_BUILD='20260912-dev-v5.8.3-production-empty-final';
+})();
+</script>
+
+<style id="yardivo-v583-dev-total-reset-final-style">
+/* DEV-only total reset — one authoritative destructive control at bottom of Settings */
+#deleteAllDataBtn,
+#yardivoDeleteAllNonAdminUsers,
+#yardivoBulkUsersMirror,
+#yardivoDeleteAllSuppliers{display:none!important}
+
+#yardivoDevTotalResetV583{
+ margin-top:28px!important;
+ padding:20px!important;
+ border:2px solid #9e313c!important;
+ border-radius:14px!important;
+ background:linear-gradient(180deg,#2d1116,#17090c)!important;
+ box-shadow:0 18px 42px rgba(0,0,0,.18)!important;
+}
+#yardivoDevTotalResetV583 .ydr-head{
+ display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:12px
+}
+#yardivoDevTotalResetV583 h2{
+ margin:0 0 6px!important;color:#ff949c!important;font-size:17px!important;letter-spacing:.4px
+}
+#yardivoDevTotalResetV583 p{
+ margin:0;color:#d6a8ac!important;font-size:10px!important;line-height:1.6!important;max-width:860px
+}
+#yardivoDevTotalResetV583 .ydr-dev{
+ padding:7px 10px;border:1px solid #c55a64;border-radius:999px;background:#46141b;
+ color:#ffc2c7;font-size:9px;font-weight:1000;white-space:nowrap
+}
+#yardivoDevTotalResetV583 .ydr-checks{
+ display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:7px;margin:14px 0
+}
+#yardivoDevTotalResetV583 .ydr-checks span{
+ padding:8px 10px;border:1px solid #632a31;border-radius:8px;background:#210c10;
+ color:#d9b2b6;font-size:9px;font-weight:850
+}
+#yardivoDevTotalResetV583 .ydr-keep{
+ padding:10px 12px;margin:12px 0;border:1px solid #315f84;border-radius:8px;
+ background:#0c2131;color:#9dcef5;font-size:9px;font-weight:900
+}
+#yardivoResetYardivoBtn{
+ width:100%!important;min-height:54px!important;
+ border:1px solid #e0525f!important;border-radius:9px!important;
+ background:#a4202d!important;color:#fff!important;
+ font-size:14px!important;font-weight:1000!important;letter-spacing:.8px!important;
+ cursor:pointer!important
+}
+#yardivoResetYardivoBtn:hover{background:#bd2735!important}
+#yardivoResetYardivoBtn:disabled{opacity:.62!important;cursor:wait!important}
+#yardivoResetYardivoStatus{
+ margin-top:10px;min-height:16px;color:#ffc2c7;font-size:9px;font-weight:900;line-height:1.5
+}
+body.light-mode #yardivoDevTotalResetV583{
+ background:#fff7f8!important;border-color:#d78e95!important;box-shadow:none!important
+}
+body.light-mode #yardivoDevTotalResetV583 h2{color:#a92836!important}
+body.light-mode #yardivoDevTotalResetV583 p{color:#754b51!important}
+body.light-mode #yardivoDevTotalResetV583 .ydr-checks span{
+ background:#fff!important;color:#5f4145!important;border-color:#e1b8bc!important
+}
+body.light-mode #yardivoDevTotalResetV583 .ydr-keep{
+ background:#eef7ff!important;color:#265b84!important;border-color:#add1ed!important
+}
+@media(max-width:900px){
+ #yardivoDevTotalResetV583 .ydr-checks{grid-template-columns:1fr}
+}
+</style>
+
+
+<script id="yardivo-v583-dev-total-reset-final">
+(function(){
+'use strict';
+const BUILD='20260912-dev-v5.8.3-dev-total-reset-final';
+const KEEP_USER='dujemales';
+const MASTER='yardivo_master_data_registry_v583';
+const CLEAN_EPOCH='yardivo_clean_epoch_v583';
+const FACTORY_PENDING='yardivo_factory_zero_server_pending_v583_20260911_r2';
+
+let busy=false;
+
+const EMPTY_ARRAY_KEYS=[
+ 'yardivo_yms_announcements_v1','studenac_announcements','yardivo_announcements','yms_announcements',
+ 'yardivo_yms_incidents_v1','yardivo_incidents',
+ 'yardivo_live_notifications_v1','yardivo_master_notifications_v1',
+ 'yardivo_notifications','yardivo_notifications_v1','yardivo_notifications_v2','yardivo_notifications_v583',
+ 'yardivo_notification_history_v1','yardivo_notification_history_v583',
+ 'studenac_notifications','yms_notifications',
+ 'yardivo_epal_transactions_v1','yardivo_epal_initial_stock_v1','yms_trucks_v2',
+ 'yardivo_auto_replan_log_v1','yardivo_supplier_scores_v1',
+ 'yardivo_supabase_offline_queue_v1','yardivo_supabase_offline_queue_v2',
+ 'yardivo_supplier_deliveries_v1','yardivo_supplier_requests_v1'
+];
+
+const REMOVE_KEYS=[
+ 'yardivo_dynamic_warehouses_v1',
+ 'yardivo_ramp_config_v1','yardivo_ramp_capacity_v1',
+ 'yardivo_ramp_hours_v1','yardivo_ramp_hours_v583',
+ 'yardivo_reception_master_hours_v1',
+ 'yardivo_capacity_config_v1','yardivo_detention_settings_v1',
+ 'yardivo_ramp_master_v583','studenac_ramp_blocks',
+ 'studenac_custom_holidays','studenac_holiday_overrides',
+ 'yardivo_master_report_v1','yardivo_master_sheets_v1',
+ 'yardivo_data_last_saved_at',
+ 'studenac_active_warehouse','yardivo_active_warehouse',
+ 'yardivo_last_location','yardivo_selected_location',
+ 'yardivo_notification_seen_v5','yardivo_last_incident_notice',
+ 'yardivo_supplier_scores_v1','yardivo_overview_qa_seed_v1'
+];
+
+function norm(v){return String(v||'').trim().toLowerCase()}
+function role(){return norm(window.currentSession?.role)}
+function username(){return norm(window.currentSession?.username||window.currentSession?.user)}
+
+function status(msg,kind=''){
+ const el=document.getElementById('yardivoResetYardivoStatus');
+ if(!el)return;
+ el.textContent=String(msg||'');
+ el.dataset.kind=kind;
+}
+
+function mount(){
+ const settings=document.getElementById('settings');if(!settings)return;
+ let card=document.getElementById('yardivoDevTotalResetV583');
+ if(!card){
+  card=document.createElement('section');
+  card.id='yardivoDevTotalResetV583';
+  card.innerHTML=`
+   <div class="ydr-head">
+    <div>
+     <h2>RESET YARDIVO</h2>
+     <p>Potpuni DEV reset za pripremu novog kupca. Briše poslovne podatke, Master Data, operativni state, notifikacije, Supplier podatke i sve korisnike osim jednog glavnog Admin računa.</p>
+    </div>
+    <span class="ydr-dev">YARDIVO DEV</span>
+   </div>
+   <div class="ydr-checks">
+    <span>0 LOKACIJA / SKLADIŠTA / RAMPI</span>
+    <span>0 NAJAVA / SUPPLIER NAJAVA / INCIDENATA</span>
+    <span>0 PALETA / KAPACITETA / DETENTION / STATEA</span>
+    <span>0 NOTIFIKACIJA / POVIJESTI / CACHEA</span>
+    <span>BRIŠE SVE DRUGE KORISNIKE</span>
+    <span>NOVI MASTER POČINJE OD NULE</span>
+   </div>
+   <div class="ydr-keep">OSTAJE SAMO: <strong>dujemales · ADMIN</strong> + njegova aktivna autentikacijska sesija.</div>
+   <button type="button" id="yardivoResetYardivoBtn">RESET YARDIVO — VRATI SVE NA 0</button>
+   <div id="yardivoResetYardivoStatus" aria-live="polite"></div>`;
+  settings.appendChild(card);
+ }else if(settings.lastElementChild!==card){
+  settings.appendChild(card);
+ }
+ const btn=document.getElementById('yardivoResetYardivoBtn');
+ if(btn&&!btn.dataset.bound){
+  btn.dataset.bound='1';
+  btn.addEventListener('click',resetYardivo);
+ }
+}
+function preserveAuthStorage(){
+ const out={local:{},session:{}};
+ for(const [name,st] of [['local',localStorage],['session',sessionStorage]]){
+  try{
+   for(let i=0;i<st.length;i++){
+    const k=st.key(i);if(!k)continue;
+    if(/^sb-[a-z0-9_-]+-auth-token$/i.test(k)||/^supabase\.auth\./i.test(k)){
+      out[name][k]=st.getItem(k);
+    }
+   }
+  }catch(_){}
+ }
+ return out;
+}
+function restoreAuthStorage(saved){
+ for(const [name,vals] of Object.entries(saved||{})){
+  const st=name==='session'?sessionStorage:localStorage;
+  for(const [k,v] of Object.entries(vals||{})){
+   try{if(v!=null)st.setItem(k,v)}catch(_){}
+  }
+ }
+}
+function emptyMaster(){
+ return {
+  suppliers:[],locations:[],warehouses:[],
+  __emptySupplierSeedMigrationV583:true,
+  __emptyWarehouseMigrationV583:true,
+  __factoryZeroV583:true,
+  __cleanMasterFoundationV583:true,
+  __resetYardivoV583:true,
+  __masterUpdatedAtV583:new Date().toISOString()
+ };
+}
+function resetRuntimeArrays(){
+ const names=['announcements','incidents','notifications','notificationHistory','trucks','unannounced'];
+ for(const n of names){
+  try{
+   const x=window[n];
+   if(Array.isArray(x))x.length=0;
+  }catch(_){}
+ }
+ try{
+  if(typeof announcements!=='undefined'&&Array.isArray(announcements))announcements.length=0;
+  if(typeof incidents!=='undefined'&&Array.isArray(incidents))incidents.length=0;
+  if(typeof notifications!=='undefined'&&Array.isArray(notifications))notifications.length=0;
+ }catch(_){}
+}
+function localHardReset(){
+ const auth=preserveAuthStorage();
+ const session={
+  ...(window.currentSession||{}),
+  user:KEEP_USER,username:KEEP_USER,role:'admin',
+  location:null,warehouses:[],serverAuthorized:true
+ };
+ /* Business/config data: explicit clean first. */
+ EMPTY_ARRAY_KEYS.forEach(k=>{try{localStorage.setItem(k,'[]')}catch(_){}});
+ REMOVE_KEYS.forEach(k=>{try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(_){}});
+ try{localStorage.setItem(MASTER,JSON.stringify(emptyMaster()))}catch(_){}
+ try{localStorage.setItem(CLEAN_EPOCH,new Date().toISOString())}catch(_){}
+ try{localStorage.removeItem(FACTORY_PENDING)}catch(_){}
+
+ /* Remove old local user registries; authoritative account is server auth/profile. */
+ ['yardivo_master_users_v1','yardivo_users','yardivo_yms_users','yardivo_custom_session','yardivo_remembered_session','yardivo_session','studenac_demo_session']
+ .forEach(k=>{try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(_){}});
+
+ restoreAuthStorage(auth);
+ window.currentSession=session;
+ try{if(typeof currentSession!=='undefined')currentSession=session}catch(_){}
+ try{window.activeWarehouse='ALL';if(typeof activeWarehouse!=='undefined')activeWarehouse='ALL'}catch(_){}
+ try{
+  sessionStorage.setItem('studenac_demo_session',JSON.stringify(session));
+ }catch(_){}
+ resetRuntimeArrays();
+
+ try{window.YardivoNotificationsV583?.clear?.()}catch(_){}
+ try{document.querySelectorAll('#yardivoLiveToasts>*').forEach(x=>x.remove())}catch(_){}
+ try{document.querySelectorAll('.nav-badge').forEach(x=>{x.textContent='';x.style.setProperty('display','none','important')})}catch(_){}
+}
+async function adminInvoke(action,payload={}){
+ if(window.YardivoAdminUsersServerV583?.invoke){
+  return await window.YardivoAdminUsersServerV583.invoke(action,payload);
+ }
+ const c=await window.YardivoAuth?.client?.();
+ if(!c)throw new Error('Admin API nije dostupan.');
+ const {data,error}=await c.functions.invoke('yardivo-admin-users',{body:{action,...payload}});
+ if(error)throw error;
+ if(data?.error)throw new Error(data.error);
+ return data?.data??data;
+}
+async function deleteOtherUsers(){
+ const res=await adminInvoke('list',{});
+ const users=Array.isArray(res)?res:(Array.isArray(res?.users)?res.users:[]);
+ const keeper=users.find(u=>norm(u?.username)===KEEP_USER&&norm(u?.app_role)==='admin');
+ if(!keeper)throw new Error('Sigurnosna provjera: server nema dujemales Admin profil. RESET je zaustavljen.');
+ const removable=users.filter(u=>{
+  const same=norm(u?.username)===KEEP_USER&&norm(u?.app_role)==='admin';
+  return !same&&u?.auth_user_id;
+ });
+ let deleted=0,failed=[];
+ for(const u of removable){
+  try{await adminInvoke('delete',{auth_user_id:u.auth_user_id});deleted++}
+  catch(e){failed.push(`${u.username||u.auth_user_id}: ${e?.message||e}`)}
+ }
+ if(failed.length)throw new Error(`Nisu obrisani svi korisnici (${failed.length}): ${failed.join(' | ')}`);
+ return {deleted,keeper};
+}
+async function clearServerBusinessData(){
+ if(!window.YardivoSupabase?.online?.()){
+  throw new Error('ONLINE BAZA NIJE SPREMNA. RESET nije dopušten bez server veze.');
+ }
+ if(!window.YardivoSupabase?.resetAllExceptUsers){
+  throw new Error('Server reset API nije dostupan.');
+ }
+ return await window.YardivoSupabase.resetAllExceptUsers();
+}
+function rerenderEmpty(){
+ const fns=[
+  'render','renderAnnouncements','renderAnnouncementSchedule','renderDailyMap','renderWeeklyMap',
+  'renderReceiving','renderOverview','renderDashboard','renderRampe','renderDockOverview',
+  'renderCheckinPro','renderPlannerPro','renderSupplierProfiles'
+ ];
+ fns.forEach(n=>{try{if(typeof window[n]==='function')window[n]()}catch(_){}});
+ try{window.YardivoMasterFoundationV583?.render?.()}catch(_){}
+ try{window.YardivoProductionEmptyV583?.refresh?.()}catch(_){}
+ try{window.YardivoMyYard?.render?.()}catch(_){}
+ try{window.YardivoMyYardWebGL?.refresh?.()}catch(_){}
+ try{window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{source:'reset-yardivo'}}))}catch(_){}
+ try{window.dispatchEvent(new CustomEvent('yardivo:context-changed',{detail:{location:'',warehouse:''}}))}catch(_){}
+}
+async function verifyEmpty(){
+ const checks={
+  localAnnouncements:0,
+  localIncidents:0,
+  locations:0,
+  warehouses:0,
+  suppliers:0,
+  users:null
+ };
+ try{checks.localAnnouncements=JSON.parse(localStorage.getItem('yardivo_yms_announcements_v1')||'[]').length}catch(_){checks.localAnnouncements=-1}
+ try{checks.localIncidents=JSON.parse(localStorage.getItem('yardivo_yms_incidents_v1')||'[]').length}catch(_){checks.localIncidents=-1}
+ try{
+  const m=JSON.parse(localStorage.getItem(MASTER)||'{}');
+  checks.locations=Array.isArray(m.locations)?m.locations.length:-1;
+  checks.warehouses=Array.isArray(m.warehouses)?m.warehouses.length:-1;
+  checks.suppliers=Array.isArray(m.suppliers)?m.suppliers.length:-1;
+ }catch(_){checks.locations=checks.warehouses=checks.suppliers=-1}
+ try{
+  const r=await adminInvoke('list',{});
+  const users=Array.isArray(r)?r:(Array.isArray(r?.users)?r.users:[]);
+  checks.users=users.map(u=>({username:norm(u.username),role:norm(u.app_role)}));
+ }catch(_){}
+ const userOk=Array.isArray(checks.users)&&checks.users.length===1&&checks.users[0].username===KEEP_USER&&checks.users[0].role==='admin';
+ const dataOk=checks.localAnnouncements===0&&checks.localIncidents===0&&checks.locations===0&&checks.warehouses===0&&checks.suppliers===0;
+ return {ok:dataOk&&userOk,dataOk,userOk,checks};
+}
+async function resetYardivo(){
+ if(busy)return;
+ if(role()!=='admin'||username()!==KEEP_USER){
+  alert('RESET YARDIVO može pokrenuti samo dujemales Admin.');
+  return;
+ }
+ const ok=confirm(
+  'RESET YARDIVO — POTPUNI DEV RESET\n\n'+
+  'Ovo briše SVE poslovne podatke i SVE korisnike osim dujemales Admina.\n'+
+  'Lokacije, skladišta, rampe, najave, Supplier najave, incidenti, palete, kapaciteti, SLA i notifikacije vraćaju se na 0.\n\n'+
+  'Nastaviti?'
+ );
+ if(!ok)return;
+ const typed=prompt('Za konačnu potvrdu upiši točno:\nRESET YARDIVO');
+ if(String(typed||'').trim().toUpperCase()!=='RESET YARDIVO'){
+  alert('RESET nije izvršen.');
+  return;
+ }
+
+ const btn=document.getElementById('yardivoResetYardivoBtn');
+ busy=true;if(btn){btn.disabled=true;btn.textContent='RESETIRAM YARDIVO…'}
+ try{
+  status('1/5 · Provjera servera i glavnog Admin računa…');
+  const pre=await adminInvoke('list',{});
+  const preUsers=Array.isArray(pre)?pre:(Array.isArray(pre?.users)?pre.users:[]);
+  if(!preUsers.some(u=>norm(u.username)===KEEP_USER&&norm(u.app_role)==='admin')){
+   throw new Error('dujemales Admin nije pronađen na serveru. Ništa nije obrisano.');
+  }
+
+  status('2/5 · Brišem sve YARDIVO poslovne podatke sa servera…');
+  await clearServerBusinessData();
+
+  status('3/5 · Brišem sve korisnike osim dujemales Admina…');
+  await deleteOtherUsers();
+
+  status('4/5 · Čistim Master Data, lokacije, skladišta, rampe, kapacitete, Supplier cache i notifikacije…');
+  localHardReset();
+  rerenderEmpty();
+
+  status('5/5 · Završna provjera praznog sustava…');
+  const v=await verifyEmpty();
+  if(!v.ok){
+   console.error('[YARDIVO RESET VERIFY]',v);
+   throw new Error('Reset je izvršen, ali završna verifikacija nije 100% čista. Pogledaj konzolu / QA.');
+  }
+
+  status('✓ YARDIVO JE RESETIRAN NA 0 · OSTAO JE SAMO dujemales ADMIN','ok');
+  try{showYmsToast?.('success','YARDIVO RESETIRAN','Sustav je prazan. Ostao je samo dujemales Admin.')}catch(_){}
+  alert('YARDIVO DEV je potpuno resetiran.\n\nOstao je samo dujemales Admin.\nSada prvo napravi lokaciju u Master Podacima.');
+ }catch(e){
+  console.error('[RESET YARDIVO]',e);
+  status('RESET NIJE ZAVRŠIO 100%: '+String(e?.message||e),'error');
+  alert('RESET YARDIVO nije završio 100%:\n\n'+String(e?.message||e));
+ }finally{
+  busy=false;if(btn){btn.disabled=false;btn.textContent='RESET YARDIVO — VRATI SVE NA 0'}
+ }
+}
+
+function ensureBottom(){
+ mount();
+ const s=document.getElementById('settings'),c=document.getElementById('yardivoDevTotalResetV583');
+ if(s&&c&&s.lastElementChild!==c)s.appendChild(c);
+}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(ensureBottom,100));
+window.addEventListener('load',()=>setTimeout(ensureBottom,300),{once:true});
+['yardivo:login','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(ensureBottom,80)));
+document.addEventListener('click',e=>{
+ if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(ensureBottom,40);
+},true);
+
+window.YardivoDevTotalResetV583={
+ reset:resetYardivo,verify:verifyEmpty,mount:ensureBottom,
+ keeper:KEEP_USER,build:BUILD
 };
 window.YARDIVO_DEV_BUILD=BUILD;
 })();
