@@ -76,8 +76,20 @@ try{localStorage.setItem(MARK,'1')}catch(_){}
 window.__YARDIVO_ZERO_STATE_BOOTSTRAP_V583__=true;
 })();
 </script>
+<script id="yardivo-canonical-warehouse-helper-v583">
+function yardivoCanonicalWarehouseV583(){
+ try{
+  const d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');
+  const rows=Array.isArray(d.warehouses)?d.warehouses.filter(w=>w&&w.active!==false):[];
+  const active=String(window.activeWarehouse||'');
+  if(rows.some(w=>String(w.id)===active))return active;
+  const loc=String(window.currentSession?.location||'');
+  return rows.find(w=>!loc||String(w.location_id)===loc)?.id||rows[0]?.id||'';
+ }catch(_){return''}
+}
+</script>
 
-<meta name="yardivo-build" content="20260908-dev-v5.8.3-stability-login-theme-fix">
+<meta name="yardivo-build" content="20260912-dev-v5.8.3-master-runtime-sync-final">
 
   <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=3">
 <script id="yardivo-production-bootstrap-guard-v4-20260902">
@@ -8288,8 +8300,14 @@ function renderStats(){
   document.getElementById('stats').innerHTML=data.map(([l,v,n,c])=>`<div class="stat"><div class="stat-icon ${c}">${icons[c]}</div><div><div class="label">${l}</div><div class="value">${v}</div><div class="note ${n.includes('Priority')?'danger':n.includes('Zauzeta')?'success':''}">${n}</div></div></div>`).join('');
 }
 function renderDockOverview(){
-  const d=document.getElementById('dockOverview');
-  d.innerHTML=Array.from({length:6},(_,i)=>{const dock=`Rampa ${i+1}`,t=trucks.find(x=>x.dock===dock&&x.status==='Na rampi');return `<div class="dock-card ${t?'busy':'free'}"><h3>RAMPA ${i+1}</h3><div class="dock-status">${t?'ZAUZETA':'SLOBODNA'}</div><div class="truckline">${t?`▱ &nbsp;<strong>${t.plate}</strong><span>${t.carrier}</span><span>${t.arrival||'--:--'}</span>`:'▥<span style="margin-top:9px">Slobodna</span>'}</div><div class="mode">${t?'ISTOVAR':'DOSTUPNA'}</div></div>`}).join('');
+  const d=document.getElementById('dockOverview');if(!d)return;
+  let wh='';try{wh=String(window.YardivoAppStateV583?.warehouse?.()||window.activeWarehouse||'')}catch(_){}
+  let master={warehouses:[]};try{master=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){}
+  const w=(master.warehouses||[]).find(x=>x&&x.active!==false&&String(x.id)===wh);
+  const n=Math.max(0,Number(w?.ramps)||0);
+  if(!w){d.innerHTML='<div class="overview-empty">Odaberi skladište.</div>';return}
+  if(!n){d.innerHTML='<div class="overview-empty">Za ovo skladište nema konfiguriranih rampi.</div>';return}
+  d.innerHTML=Array.from({length:n},(_,i)=>{const rn=i+1,dock=`Rampa ${rn}`;const t=(Array.isArray(trucks)?trucks:[]).find(x=>String(x.warehouse||wh)===wh&&String(x.dock||'')===dock&&x.status==='Na rampi');return `<div class="dock-card ${t?'busy':'free'}"><h3>RAMPA ${rn}</h3><div class="dock-status">${t?'ZAUZETA':'SLOBODNA'}</div><div class="truckline">${t?`▱ &nbsp;<strong>${t.plate||'—'}</strong><span>${t.carrier||t.supplier||'—'}</span><span>${t.arrival||'--:--'}</span>`:'▥<span style="margin-top:9px">Slobodna</span>'}</div><div class="mode">${t?'ISTOVAR':'DOSTUPNA'}</div></div>`}).join('');
 }
 function renderTable(){
   const q=(document.getElementById('searchInput')?.value||'').toLowerCase();
@@ -8458,10 +8476,10 @@ function yardivoTruckModelHtml(){
 function renderYard(){
   const host=document.getElementById('yardGrid');if(!host)return;
   const today=window.yardivoLocalDateV583();
-  const wh=(typeof activeWarehouse!=='undefined'&&activeWarehouse&&activeWarehouse!=='ALL')?activeWarehouse:(currentSession?.location==='DU'?'W201':'W101');
+  const wh=(typeof activeWarehouse!=='undefined'&&activeWarehouse&&activeWarehouse!=='ALL')?activeWarehouse:yardivoCanonicalWarehouseV583();
   const inYard=announcements.filter(a=>String(a.warehouse||'')===String(wh)&&a.date===today&&normalizedPlanStatus(a)==='U dvorištu')
     .sort((a,b)=>String(a.yardArrivalAt||a.actualTime||a.time).localeCompare(String(b.yardArrivalAt||b.actualTime||b.time)));
-  const onDock=announcements.filter(a=>(a.warehouse||'W101')===wh&&a.date===today&&normalizedPlanStatus(a)==='Na rampi');
+  const onDock=announcements.filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===wh&&a.date===today&&normalizedPlanStatus(a)==='Na rampi');
   const occupied=new Set(onDock.map(a=>Number(a.dock)));
   const slots=Array.from({length:16},(_,i)=>`P${String(i+1).padStart(2,'0')}`);
   const used=new Set(inYard.map(a=>a.yardPosition).filter(Boolean));
@@ -8481,7 +8499,7 @@ function renderYard(){
     </div>`;
   }).join('');
 
-  const dockCount=WAREHOUSES?.[wh]?.ramps||6;
+  const dockCount=WAREHOUSES?.[wh]?.ramps||0;
   const dockHost=document.getElementById('yardDockPreview');
   if(dockHost)dockHost.innerHTML=Array.from({length:dockCount},(_,i)=>{
     const n=i+1;
@@ -8587,11 +8605,11 @@ function renderRampe(){
   const today=window.yardivoLocalDateV583();
   const wh=(typeof activeWarehouse!=='undefined'&&activeWarehouse&&activeWarehouse!=='ALL')
     ? activeWarehouse
-    : (currentSession?.location==='DU'?'W201':'W101');
+    : yardivoCanonicalWarehouseV583();
 
-  const dockCount=WAREHOUSES?.[wh]?.ramps||6;
+  const dockCount=WAREHOUSES?.[wh]?.ramps||0;
   const active=announcements
-    .filter(a=>(a.warehouse||'W101')===wh)
+    .filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===wh)
     .filter(a=>a.date===today)
     .filter(a=>normalizedPlanStatus(a)==='Na rampi');
 
@@ -8664,13 +8682,13 @@ const DASH_STATUS_META={
 
 function dashboardWarehouse(){
   if(typeof activeWarehouse!=='undefined'&&activeWarehouse&&activeWarehouse!=='ALL')return activeWarehouse;
-  return (typeof currentSession!=='undefined'&&currentSession?.location==='DU')?'W201':'W101';
+  return yardivoCanonicalWarehouseV583();
 }
 function dashboardTodayData(){
   const wh=dashboardWarehouse();
   const today=window.yardivoLocalDateV583();
   return announcements
-    .filter(a=>(a.warehouse||'W101')===wh&&a.date===today)
+    .filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===wh&&a.date===today)
     .sort((a,b)=>String(a.time).localeCompare(String(b.time)));
 }
 function dashStatusOf(a){
@@ -8679,7 +8697,7 @@ function dashStatusOf(a){
 function dashboardDataForDate(date,wh=dashboardWarehouse()){
   try{
     return announcements
-      .filter(a=>(a.warehouse||'W101')===wh&&a.date===date)
+      .filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===wh&&a.date===date)
       .sort((a,b)=>String(a.time).localeCompare(String(b.time)));
   }catch(_){return []}
 }
@@ -8808,17 +8826,19 @@ function renderDashboardSimple(){
     <div class="dash-hour-label">${String(h).padStart(2,'0')}</div>
   </div>`).join('');
 
-  const cap=(typeof getWarehouseCapacity==='function'?getWarehouseCapacity(wh):null),pct=Math.min(100,Math.round(totalPal/cap*100)),free=Math.max(0,cap-totalPal);
-  const capColor=pct>=90?'#df4a57':pct>=75?'#d67c2e':pct>=50?'#d2aa3d':'#36b76a';
+  const cap=(typeof getWarehouseCapacity==='function'?getWarehouseCapacity(wh):null);
+  const capKnown=Number.isFinite(Number(cap))&&Number(cap)>0;
+  const pct=capKnown?Math.min(100,Math.round(totalPal/Number(cap)*100)):0,free=capKnown?Math.max(0,Number(cap)-totalPal):null;
+  const capColor=!capKnown?'#71879a':pct>=90?'#df4a57':pct>=75?'#d67c2e':pct>=50?'#d2aa3d':'#36b76a';
   const capHost=document.getElementById('dashCapacitySimple');
   if(capHost)capHost.innerHTML=`<div class="dash-cap-ring" style="background:conic-gradient(${capColor} ${pct*3.6}deg,#142733 0deg)">
-      <div class="inner"><strong>${pct}%</strong><small>OPTEREĆENJE</small></div>
+      <div class="inner"><strong>${capKnown?pct+'%':'—'}</strong><small>${capKnown?'OPTEREĆENJE':'KAPACITET NEPOZNAT'}</small></div>
     </div>
     <div class="dash-cap-metrics">
       <div><small>NAJAVLJENO</small><strong>${totalPal} pal.</strong></div>
-      <div><small>SLOBODNO</small><strong>${free} pal.</strong></div>
+      <div><small>SLOBODNO</small><strong>${capKnown?free+' pal.':'—'}</strong></div>
       <div><small>KAMIONA</small><strong>${totalTrucks}</strong></div>
-      <div><small>KAPACITET</small><strong>${cap} pal.</strong></div>
+      <div><small>KAPACITET</small><strong>${capKnown?Number(cap)+' pal.':'NEPOZNAT'}</strong></div>
     </div>`;
 
   const attHost=document.getElementById('dashAttentionList');
@@ -8884,7 +8904,7 @@ document.getElementById('searchInput')?.addEventListener('input',renderTable);
 const WAREHOUSES={};
 let activeWarehouse=safeStorage.getItem('studenac_active_warehouse')||'ALL';
 function whLabel(code){if(!code||code==='ALL')return'Sva skladišta';const w=WAREHOUSES[code];return w?`${w.code} · ${w.location} · ${w.name}`:code}
-function whMatch(a){return activeWarehouse==='ALL'||(a.warehouse||'W101')===activeWarehouse}
+function whMatch(a){return activeWarehouse==='ALL'||(a.warehouse||yardivoCanonicalWarehouseV583())===activeWarehouse}
 function whRamps(code){return WAREHOUSES[code]?.ramps||0}
 function whStart(code){return WAREHOUSES[code]?.receptionStart}
 function whEnd(code){return WAREHOUSES[code]?.receptionEnd}
@@ -8892,7 +8912,7 @@ function whEnd(code){return WAREHOUSES[code]?.receptionEnd}
 function renderWarehouseCards(){
  const host=document.getElementById('warehouseCards');if(!host)return;
  host.innerHTML=Object.values(WAREHOUSES).map(w=>{
-   const c=announcements.filter(a=>(a.warehouse||'W101')===w.code).length;
+   const c=announcements.filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===w.code).length;
    return `<div class="warehouse-card ${activeWarehouse===w.code?'active':''}" onclick="setGlobalWarehouse('${w.code}')">
      <h3>${w.code} · ${w.name}</h3><small>${w.location}</small>
      <strong>${w.ramps?`${w.ramps} rampi`:'Broj rampi nije definiran'} · ${(()=>{const c=typeof getWarehouseCapacity==='function'?getWarehouseCapacity(w.code):null;return Number.isFinite(Number(c))&&Number(c)>0?Number(c)+' pal. kapacitet':'KAPACITET NEPOZNAT'})()}</strong>
@@ -9025,7 +9045,7 @@ function moveSelectedWeek(delta){
 }
 function weeklyWarehouseFilter(a){
   const wh=activeWarehouse||'ALL';
-  return wh==='ALL'||(a.warehouse||'W101')===wh;
+  return wh==='ALL'||(a.warehouse||yardivoCanonicalWarehouseV583())===wh;
 }
 
 // ===== DNEVNA MAPA =====
@@ -9055,7 +9075,7 @@ function setDailyMapZoom(next){
 }
 function dailyMapWarehouseCode(){
   const sel=document.getElementById('dailyMapWarehouseSelect');
-  return sel?.value || (activeWarehouse==='ALL'?'W101':activeWarehouse);
+  return sel?.value || ((activeWarehouse&&activeWarehouse!=='ALL'?activeWarehouse:yardivoCanonicalWarehouseV583()));
 }
 
 
@@ -9071,7 +9091,7 @@ function capacityBand(pct){
 function renderDailyTotalCapacity(){
   const date=dailyMapDateValue();
   const wh=dailyMapWarehouseCode();
-  const data=announcements.filter(a=>(a.warehouse||'W101')===wh&&a.date===date);
+  const data=announcements.filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===wh&&a.date===date);
   const used=data.reduce((s,a)=>s+Number(a.pallets||0),0);
   const free=Math.max(0,DAILY_RECEIVING_CAPACITY_PALLETS-used);
   const pct=Math.min(100,Math.round(used/DAILY_RECEIVING_CAPACITY_PALLETS*100));
@@ -9088,7 +9108,7 @@ function openDailyRampDetail(dock){
   selectedDailyRamp=Number(dock);
   renderDailyRampCapacity();
   const date=dailyMapDateValue(),wh=dailyMapWarehouseCode();
-  const items=announcements.filter(a=>(a.warehouse||'W101')===wh&&a.date===date&&Number(a.dock)===selectedDailyRamp)
+  const items=announcements.filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===wh&&a.date===date&&Number(a.dock)===selectedDailyRamp)
     .sort((a,b)=>String(a.time).localeCompare(String(b.time)));
   const panel=document.getElementById('dailyRampDetailPanel');
   const list=document.getElementById('dailyRampDetailList');
@@ -9116,11 +9136,12 @@ function renderDailyRampCapacity(){
   const date=dailyMapDateValue();
   const wh=dailyMapWarehouseCode();
   const sourceW=WAREHOUSES[wh]||{};
-  const ramps=Number(sourceW.ramps)||6;
-  const receptionStart=sourceW.receptionStart||'06:00';
-  const receptionEnd=sourceW.receptionEnd||'13:00';
-  const totalMinutes=Math.max(1,toMin(receptionEnd)-toMin(receptionStart));
-  const data=announcements.filter(a=>(a.warehouse||'W101')===wh&&a.date===date);
+  const ramps=Math.max(0,Number(sourceW.ramps)||0);
+  const receptionStart=sourceW.receptionStart||sourceW.reception_from||'';
+  const receptionEnd=sourceW.receptionEnd||sourceW.reception_to||'';
+  if(!ramps){host.innerHTML='<div class="ramp-supplier-empty">Nema konfiguriranih rampi za odabrano skladište.</div>';return}
+  const totalMinutes=(receptionStart&&receptionEnd)?Math.max(1,toMin(receptionEnd)-toMin(receptionStart)):null;
+  const data=announcements.filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===wh&&a.date===date);
 
   host.innerHTML=Array.from({length:ramps},(_,idx)=>{
     const dock=idx+1;
@@ -9174,7 +9195,7 @@ function renderDailyMap(){
   const whBadge=document.getElementById('dailyMapWarehouse');
   if(whBadge)whBadge.textContent=whLabel(wh).toUpperCase();
 
-  const all=announcements.filter(a=>(a.warehouse||'W101')===wh&&a.date===date);
+  const all=announcements.filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===wh&&a.date===date);
   const totalPal=all.reduce((s,a)=>s+Number(a.pallets||0),0);
   const totalTrucks=all.reduce((s,a)=>s+truckCountForPallets(a.pallets),0);
   const late=all.filter(a=>operationalPlanStatus(a)==='Kašnjenje').length;
@@ -9297,7 +9318,7 @@ function renderWeeklyMap(){
 
   const weekData=announcements.filter(a=>{
     const d=new Date((a.date||'')+'T12:00:00');
-    return (a.warehouse||'W101')===wh && d>=monday && d<=friday;
+    return (a.warehouse||yardivoCanonicalWarehouseV583())===wh && d>=monday && d<=friday;
   });
 
   const totalPal=weekData.reduce((s,a)=>s+Number(a.pallets||0),0);
@@ -9434,7 +9455,7 @@ function renderWeeklyDeliveries(){
             dayData.length
               ? dayData.map(a=>`<div class="week-delivery">
                   <strong>${a.time} · ${a.supplier}</strong>
-                  <div class="meta">${a.warehouse||'W101'} · Rampa ${a.dock} · ${a.pallets} pal. · ${a.sku} SKU</div>
+                  <div class="meta">${a.warehouse||yardivoCanonicalWarehouseV583()} · Rampa ${a.dock} · ${a.pallets} pal. · ${a.sku} SKU</div>
                   <div style="margin-top:5px"><span class="truck-badge">${truckCountForPallets(a.pallets)} ${truckCountForPallets(a.pallets)===1?'kamion':'kamiona'}</span></div>
                 </div>`).join('')
               : '<div class="week-empty">Nema najavljenih isporuka</div>'
@@ -9494,7 +9515,7 @@ function renderAnnouncementDetail(){
     <div class="announcement-detail-head">
       <div>
         <h2>#${no} · ${a.supplier}</h2>
-        <small>${a.warehouse||'W101'} · ${WAREHOUSES?.[a.warehouse||'W101']?.location||''}</small>
+        <small>${a.warehouse||yardivoCanonicalWarehouseV583()} · ${WAREHOUSES?.[a.warehouse||yardivoCanonicalWarehouseV583()]?.location||''}</small>
       </div>
       <span class="announcement-detail-status" style="background:${announcementStatusColor(a)}">${status.toUpperCase()}${delay?' · '+delay:''}</span>
     </div>
@@ -9550,7 +9571,7 @@ function renderAnnouncementDetail(){
   document.getElementById('announcementPreviousDeliveries').innerHTML=previous.length
     ? `<table class="announcement-detail-table"><thead><tr><th>DATUM</th><th>SKLADIŠTE</th><th>VRIJEME</th><th>RAMPA</th><th>PALETE</th><th>KAMIONA</th><th>STATUS</th><th>KAŠNJENJE</th></tr></thead><tbody>${
         previous.map(x=>`<tr>
-          <td>${x.date}</td><td>${x.warehouse||'W101'}</td><td>${x.time||'—'}</td><td>R${x.dock||'—'}</td>
+          <td>${x.date}</td><td>${x.warehouse||yardivoCanonicalWarehouseV583()}</td><td>${x.time||'—'}</td><td>R${x.dock||'—'}</td>
           <td>${x.pallets||0}</td><td>${truckCountForPallets(x.pallets)}</td>
           <td>${operationalPlanStatus(x)}</td><td>${operationalDelayText(x)||'—'}</td>
         </tr>`).join('')
@@ -9646,7 +9667,7 @@ function renderSupplierProfileContent(){
   if(currentSupplierProfileTab==='deliveries'){
     const data=announcements.filter(a=>a.supplier===name).sort((a,b)=>(String(b.date)+String(b.time)).localeCompare(String(a.date)+String(a.time)));
     host.innerHTML=data.length?`<table class="supplier-profile-table"><thead><tr><th>DATUM</th><th>SKLADIŠTE</th><th>PLANIRANO</th><th>STVARNI DOLAZAK</th><th>RAMPA</th><th>PALETE</th><th>KAMIONA</th><th>KAŠNJENJE</th><th>STATUS</th></tr></thead><tbody>${
-      data.map(a=>{const d=delayMinutes(a);return `<tr><td>${a.date}</td><td>${a.warehouse||'W101'}</td><td>${a.time||'—'}</td><td>${a.actualDate&&a.actualTime?`${a.actualDate} ${a.actualTime}`:'—'}</td><td>R${a.dock||'—'}</td><td><strong>${a.pallets||0}</strong></td><td>${truckCountForPallets(a.pallets)}</td><td>${d!==null?delayLabel(d):'—'}</td><td>${typeof normalizedPlanStatus==='function'?normalizedPlanStatus(a):(a.status||'—')}</td></tr>`}).join('')
+      data.map(a=>{const d=delayMinutes(a);return `<tr><td>${a.date}</td><td>${a.warehouse||yardivoCanonicalWarehouseV583()}</td><td>${a.time||'—'}</td><td>${a.actualDate&&a.actualTime?`${a.actualDate} ${a.actualTime}`:'—'}</td><td>R${a.dock||'—'}</td><td><strong>${a.pallets||0}</strong></td><td>${truckCountForPallets(a.pallets)}</td><td>${d!==null?delayLabel(d):'—'}</td><td>${typeof normalizedPlanStatus==='function'?normalizedPlanStatus(a):(a.status||'—')}</td></tr>`}).join('')
     }</tbody></table>`:'<div class="overview-empty">Nema evidentiranih najava za ovog dobavljača.</div>';
   }else if(currentSupplierProfileTab==='incidents'){
     const data=incidents.filter(i=>i.supplier===name).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
@@ -9954,7 +9975,7 @@ function receivingFilteredData(){
   const q=(document.getElementById('receivingSearch')?.value||'').toLowerCase().trim();
   const status=document.getElementById('receivingStatusFilter')?.value||'ALL';
   return announcements
-    .filter(a=>a.date===date&&(a.warehouse||'W101')===wh)
+    .filter(a=>a.date===date&&(a.warehouse||yardivoCanonicalWarehouseV583())===wh)
     .filter(a=>{
       const hay=[a.supplier,a.plannedPlate,a.plannedDriver,a.arrivalPlate,a.arrivalDriver,a.time].map(v=>String(v||'').toLowerCase()).join(' ');
       return !q||hay.includes(q);
@@ -9966,7 +9987,7 @@ function renderReceiving(){
   syncAllAnnouncementIdentities();
   const host=document.getElementById('receivingList');if(!host)return;
   const data=receivingFilteredData();
-  const allForDay=announcements.filter(a=>a.date===receivingDateValue()&&(a.warehouse||'W101')===receivingWarehouseValue());
+  const allForDay=announcements.filter(a=>a.date===receivingDateValue()&&(a.warehouse||yardivoCanonicalWarehouseV583())===receivingWarehouseValue());
   const counts={'U dolasku':0,'U dvorištu':0,'Na rampi':0,'Zaprimljeno':0,'Odbijen':0};
   allForDay.forEach(a=>counts[receivingStatus(a)]++);
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
@@ -10107,26 +10128,26 @@ function unloadDuration(pallets){
 }
 function overlaps(aStart,aDur,bStart,bDur){return aStart < bStart+bDur && bStart < aStart+aDur}
 function isSlobodna(date,dock,start,duration,ignoreId=null,warehouse=null){
-  const wh=warehouse||document.getElementById('annWarehouse')?.value||'W101';
+  const wh=warehouse||document.getElementById('annWarehouse')?.value||yardivoCanonicalWarehouseV583();
   const w=WAREHOUSES[wh];
   if(!date||!dock||start==null||!w?.ramps||!w.receptionStart||!w.receptionEnd)return false;
   const ws=toMin(w.receptionStart),we=toMin(w.receptionEnd);
   if(start<ws || start+duration>we)return false;
   if(typeof isRampBlocked==='function' && isRampBlocked(wh,date,dock,start,duration))return false;
-  return !announcements.some(a=>a.id!==ignoreId && (a.warehouse||'W101')===wh && a.date===date && Number(a.dock)===Number(dock) && overlaps(start,duration,toMin(a.time),Number(a.duration)));
+  return !announcements.some(a=>a.id!==ignoreId && (a.warehouse||yardivoCanonicalWarehouseV583())===wh && a.date===date && Number(a.dock)===Number(dock) && overlaps(start,duration,toMin(a.time),Number(a.duration)));
 }
 let currentAnnouncementRecommendation=null;
 let editingAnnouncementId=null;
 function slotWarehouseLoad(date,warehouse,start,duration){
   // Procjena gužve: prosječan broj paleta koje se preklapaju s kandidatom.
-  const overlapsList=announcements.filter(a=>(a.warehouse||'W101')===warehouse&&a.date===date&&overlaps(start,duration,toMin(a.time),Number(a.duration)));
+  const overlapsList=announcements.filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===warehouse&&a.date===date&&overlaps(start,duration,toMin(a.time),Number(a.duration)));
   return overlapsList.reduce((s,a)=>s+Number(a.pallets||0),0);
 }
 function rampDayLoad(date,warehouse,dock){
-  return announcements.filter(a=>(a.warehouse||'W101')===warehouse&&a.date===date&&Number(a.dock)===Number(dock)).reduce((s,a)=>s+Number(a.duration||0),0);
+  return announcements.filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===warehouse&&a.date===date&&Number(a.dock)===Number(dock)).reduce((s,a)=>s+Number(a.duration||0),0);
 }
 function recommendSlot(date,duration,warehouse=null,ignoreId=null){
-  const wh=warehouse||document.getElementById('annWarehouse')?.value||'W101',w=WAREHOUSES[wh];
+  const wh=warehouse||document.getElementById('annWarehouse')?.value||yardivoCanonicalWarehouseV583(),w=WAREHOUSES[wh];
   if(!w||!w.ramps||!w.receptionStart||!w.receptionEnd)return null;
   const ws=toMin(w.receptionStart),we=toMin(w.receptionEnd),candidates=[];
   for(let start=ws;start+duration<=we;start+=slotMinutes){
@@ -10153,7 +10174,7 @@ function populateAnnouncementControls(){
   const s=document.getElementById('annSupplier');
   if(s) s.innerHTML='<option value="">Odaberi dobavljača...</option>'+suppliers.map(x=>`<option>${x}</option>`).join('');
   const d=document.getElementById('annDock');
-  if(d){const wh=document.getElementById('annWarehouse')?.value||activeWarehouse||'W101';const n=WAREHOUSES?.[wh]?.ramps||6;d.innerHTML='<option value="">Automatski / preporuka</option>'+Array.from({length:n},(_,i)=>i+1).filter(x=>!(window.YardivoRampConfig?.isLocked?.(wh,x))).map(x=>`<option value="${x}">Rampa ${x}</option>`).join('');}
+  if(d){const wh=document.getElementById('annWarehouse')?.value||activeWarehouse||yardivoCanonicalWarehouseV583();const n=WAREHOUSES?.[wh]?.ramps||0;d.innerHTML='<option value="">Automatski / preporuka</option>'+Array.from({length:n},(_,i)=>i+1).filter(x=>!(window.YardivoRampConfig?.isLocked?.(wh,x))).map(x=>`<option value="${x}">Rampa ${x}</option>`).join('');}
   const t=document.getElementById('annTime');
   if(t) t.innerHTML='<option value="">Automatski / preporuka</option>'+Array.from({length:28},(_,i)=>{const m=workStart+i*15;return `<option value="${hhmm(m)}">${hhmm(m)}</option>`}).join('');
   const date=document.getElementById('annDate');
@@ -10371,7 +10392,7 @@ function startEditAnnouncement(id){
   const a=announcements.find(x=>x.id===id);if(!a)return;
   editingAnnouncementId=id;
   document.getElementById('annDate').value=a.date;
-  document.getElementById('annWarehouse').value=a.warehouse||'W101';
+  document.getElementById('annWarehouse').value=a.warehouse||yardivoCanonicalWarehouseV583();
   document.getElementById('annSupplier').value=a.supplier;
   document.getElementById('annPallets').value=a.pallets;
   document.getElementById('annSku').value=a.sku;
@@ -10473,14 +10494,14 @@ function applyAnnouncementSlot(mode='auto'){
     const a=announcements.find(x=>x.id===editingAnnouncementId);if(!a)return false;
     const reason=document.getElementById('changeReason')?.value||'';
     const note=document.getElementById('changeNote')?.value||'';
-    const changedDate=(a.date!==date),changedTime=(a.time!==time),changedDock=Number(a.dock)!==Number(dock),changedWarehouse=(a.warehouse||'W101')!==warehouse;
+    const changedDate=(a.date!==date),changedTime=(a.time!==time),changedDock=Number(a.dock)!==Number(dock),changedWarehouse=(a.warehouse||yardivoCanonicalWarehouseV583())!==warehouse;
     if((changedDate||changedTime||changedDock||changedWarehouse) && !reason){
       setAnnMessage('bad','Nedostaje razlog promjene','Odaberi razlog promjene postojeće najave.');
       return false;
     }
     if(changedDate||changedTime||changedDock||changedWarehouse){
       const changedAt=new Date().toISOString();
-      const old={date:a.date,time:a.time,dock:a.dock,warehouse:a.warehouse||'W101'};
+      const old={date:a.date,time:a.time,dock:a.dock,warehouse:a.warehouse||yardivoCanonicalWarehouseV583()};
       const countsAsLate=!changeIsAdvance(old.date,old.time,changedAt);
       ensureChangeHistory(a).push({
         changedAt,
@@ -10701,7 +10722,7 @@ function showYmsToast(type,title,message,timeout=3600){
 }
 
 function yardivoGenerateAnnouncementRef(warehouse){
-  const wh=String(warehouse||'W101').toUpperCase();
+  const wh=String(warehouse||yardivoCanonicalWarehouseV583()).toUpperCase();
   const used=new Set((Array.isArray(announcements)?announcements:[]).map(a=>String(a.announcementRef||'')));
   let ref='';
   do{ref=wh+String(Math.floor(Math.random()*99999)+1).padStart(5,'0')}while(used.has(ref));
@@ -10709,7 +10730,7 @@ function yardivoGenerateAnnouncementRef(warehouse){
 }
 function announcementNumber(a){
   if(!a)return '—';
-  if(!a.announcementRef)a.announcementRef=yardivoGenerateAnnouncementRef(a.warehouse||'W101');
+  if(!a.announcementRef)a.announcementRef=yardivoGenerateAnnouncementRef(a.warehouse||yardivoCanonicalWarehouseV583());
   return a.announcementRef;
 }
 
@@ -10729,7 +10750,7 @@ function findDuplicateAnnouncement({date,warehouse,supplier,pallets,sku,ignoreId
   return announcements.find(a=>
     a.id!==ignoreId &&
     String(a.date)===String(date) &&
-    String(a.warehouse||'W101')===String(warehouse) &&
+    String(a.warehouse||yardivoCanonicalWarehouseV583())===String(warehouse) &&
     String(a.supplier||'').trim().toLowerCase()===String(supplier||'').trim().toLowerCase() &&
     Number(a.pallets||0)===Number(pallets||0) &&
     Number(a.sku||0)===Number(sku||0)
@@ -10768,7 +10789,7 @@ function savedAnnouncementsFilterData(){
         ? String(a.date)<today
         : String(a.date)>=today;
 
-      const byWarehouse=wh==='ALL'||(a.warehouse||'W101')===wh;
+      const byWarehouse=wh==='ALL'||(a.warehouse||yardivoCanonicalWarehouseV583())===wh;
 
       const hay=[
         a.supplier,a.plannedPlate,a.plannedDriver,a.plannedTrailer,a.plannedPhone,
@@ -10843,7 +10864,7 @@ function renderAnnouncements(){
 
   body.innerHTML=data.map(a=>{
     const m=typeof delayMinutes==='function'?delayMinutes(a):null;
-    const warehouse=a.warehouse||'W101';
+    const warehouse=a.warehouse||yardivoCanonicalWarehouseV583();
     const actual=(a.actualDate&&a.actualTime)?`${a.actualDate} ${a.actualTime}`:'—';
     const lateHtml=m!==null?`<span class="delay-chip ${delayClass(m)}">${delayLabel(m)}</span>`:'—';
     const noShow=(typeof isNoShow==='function'&&isNoShow(a));
@@ -11174,7 +11195,7 @@ function renderAnnouncementSchedule(){
     for(let i=0;i<slots;i++){
       const m=ws+i*15;
       const block=(typeof rampBlocks!=='undefined')?rampBlocks.find(b=>b.warehouse===warehouse&&b.date===date&&Number(b.dock)===dock&&m>=toMin(b.from)&&m<toMin(b.to)):null;
-      const a=announcements.find(x=>(x.warehouse||'W101')===warehouse&&x.date===date&&Number(x.dock)===dock&&toMin(x.time)===m);
+      const a=announcements.find(x=>(x.warehouse||yardivoCanonicalWarehouseV583())===warehouse&&x.date===date&&Number(x.dock)===dock&&toMin(x.time)===m);
       const isPreview=previewDock===dock&&previewStart===m&&isSlobodna(date,dock,m,previewDuration,editingAnnouncementId,warehouse);
       if(isPreview){
         const span=Math.max(1,Math.ceil(previewDuration/15));
@@ -11354,7 +11375,7 @@ window.ymsNextStage=function(id){
 function renderOperationsPro(){
   const body=document.getElementById('operationsTable');if(!body)return;
   const data=[...announcements].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  body.innerHTML=data.map(a=>`<tr><td><strong>${a.warehouse||'W101'}</strong></td><td><strong>${a.supplier}</strong></td><td>${fmtPlan(a.date,a.time)}</td><td>${a.arrivalPlate||a.plannedPlate||'—'}</td><td>Rampa ${a.dock}</td><td><span class="notice-pill ${['Završeno','Izašao'].includes(a.status)?'ok':'warn'}">${a.status||'Najavljen'}</span></td><td>${ymsStageTime(a)}</td><td>${ymsWorkflow(a)}</td><td>${canChangeReceptionStatus()?`<button class="action" onclick="ymsNextStage(${a.id})">${ymsStageIndex(a)<YMS_STAGES.length-1?'SLJEDEĆI STATUS':'GOTOVO'}</button>`:'<span class="muted">Samo Prijam</span>'}</td></tr>`).join('');
+  body.innerHTML=data.map(a=>`<tr><td><strong>${a.warehouse||yardivoCanonicalWarehouseV583()}</strong></td><td><strong>${a.supplier}</strong></td><td>${fmtPlan(a.date,a.time)}</td><td>${a.arrivalPlate||a.plannedPlate||'—'}</td><td>Rampa ${a.dock}</td><td><span class="notice-pill ${['Završeno','Izašao'].includes(a.status)?'ok':'warn'}">${a.status||'Najavljen'}</span></td><td>${ymsStageTime(a)}</td><td>${ymsWorkflow(a)}</td><td>${canChangeReceptionStatus()?`<button class="action" onclick="ymsNextStage(${a.id})">${ymsStageIndex(a)<YMS_STAGES.length-1?'SLJEDEĆI STATUS':'GOTOVO'}</button>`:'<span class="muted">Samo Prijam</span>'}</td></tr>`).join('');
   renderYmsAlerts();
 }
 
@@ -11411,11 +11432,11 @@ function renderCheckinPro(){
   });
   if(migrated)saveAnnouncements();
   const today=window.yardivoLocalDateV583();
-  const wh=activeWarehouse==='ALL'?(currentSession?.location==='DU'?'W201':'W101'):activeWarehouse;
+  const wh=activeWarehouse==='ALL'?yardivoCanonicalWarehouseV583():activeWarehouse;
   const q=(document.getElementById('checkinSearch')?.value||'').toLowerCase().trim();
   const f=document.getElementById('checkinFilter')?.value||'';
   const data=announcements
-    .filter(a=>a.date===today&&(a.warehouse||'W101')===wh)
+    .filter(a=>a.date===today&&(a.warehouse||yardivoCanonicalWarehouseV583())===wh)
     .filter(a=>!q||[a.supplier,effectivePlate(a),effectiveDriver(a)].join(' ').toLowerCase().includes(q))
     .filter(a=>!f||(f==='arrived'?hasPhysicallyArrived(a):!hasPhysicallyArrived(a)))
     .sort((a,b)=>String(a.time).localeCompare(String(b.time)));
@@ -11424,7 +11445,7 @@ function renderCheckinPro(){
     const plate=effectivePlate(a);
     const driver=effectiveDriver(a);
     return `<tr class="saved-${yardivoUnifiedStatusClass(a)}">
-      <td>${a.warehouse||'W101'}</td>
+      <td>${a.warehouse||yardivoCanonicalWarehouseV583()}</td>
       <td><strong>${a.supplier}</strong></td>
       <td>${a.date} ${a.time}</td>
       <td>Rampa ${a.dock}</td>
@@ -11439,14 +11460,14 @@ function renderCheckinPro(){
 function renderPlannerPro(){
   const host=document.getElementById('plannerProBoard');if(!host)return;
   const date=document.getElementById('plannerProDate')?.value||ymsToday();
-  const wh=activeWarehouse==='ALL'?'W101':activeWarehouse,w=WAREHOUSES[wh];
+  const wh=(activeWarehouse&&activeWarehouse!=='ALL'?activeWarehouse:yardivoCanonicalWarehouseV583()),w=WAREHOUSES[wh];
   if(!w?.ramps||!w.receptionStart||!w.receptionEnd){host.innerHTML=`<div class="smart-note warn">${whLabel(wh)} još nema definirane rampe i vrijeme prijama.</div>`;return}
   const ws=toMin(w.receptionStart),we=toMin(w.receptionEnd),count=Math.ceil((we-ws)/15),heads=Array.from({length:count},(_,i)=>hhmm(ws+i*15));
   let h=`<div class="smart-note" style="margin:12px"><strong>${whLabel(wh)}</strong> · ${w.ramps} rampi · ${w.receptionStart}–${w.receptionEnd}</div><div class="pro-schedule" style="grid-template-columns:66px repeat(${count},minmax(30px,1fr))"><div class="head">RAMPA</div>`+heads.map((t,i)=>`<div class="head">${i%2===0?t:''}</div>`).join('');
   for(let dock=1;dock<=w.ramps;dock++){
     h+=`<div class="ramp">R${dock}</div>`;
     for(let i=0;i<count;i++){
-      const m=ws+i*15,a=announcements.find(x=>(x.warehouse||'W101')===wh&&x.date===date&&Number(x.dock)===dock&&toMin(x.time)===m);
+      const m=ws+i*15,a=announcements.find(x=>(x.warehouse||yardivoCanonicalWarehouseV583())===wh&&x.date===date&&Number(x.dock)===dock&&toMin(x.time)===m);
       if(a){const span=Math.max(1,Math.ceil(a.duration/15)),d=delayMinutes(a),cl=d>15?'late':a.status==='Čeka'?'waiting':['Na rampi','Istovar u tijeku'].includes(a.status)?'active':'';h+=`<div class="booked ${cl}" style="grid-column:span ${span}" title="${a.supplier}">${a.supplier}</div>`;i+=span-1}else h+='<div class="freecell"></div>';
     }
   }
@@ -11475,7 +11496,7 @@ function renderOverview(){
   const tbody=document.getElementById('supplierPerformance');
   if(tbody)tbody.innerHTML=rows.length?rows.map(r=>`<tr><td><strong>${r.s}</strong></td><td>${r.arrived}</td><td>${r.on}</td><td>${r.late}</td><td>${r.avgLate?formatDelay(r.avgLate):'—'}</td><td>${r.inc}</td><td><span class="score ${r.score>=90?'good':r.score>=70?'mid':'bad'}">${r.score}%</span><br><small style="color:#748ba0">Istovar: ${r.avgUnload?r.avgUnload+' min':'—'}</small></td></tr>`).join(''):'<tr><td colspan="7"><div class="overview-empty">Još nema dovoljno podataka.</div></td></tr>';
   const bars=document.getElementById('supplierBars');if(bars)bars.innerHTML=rows.length?rows.slice(0,10).map(r=>`<div class="supplier-bar"><div class="name">${r.s}</div><div class="bar-track"><div class="bar-fill" style="width:${r.score}%"></div></div><div class="bar-score">${r.score}%</div></div>`).join(''):'<div class="overview-empty">Nema podataka.</div>';
-  const dh=document.getElementById('delayHistory');if(dh)dh.innerHTML=arrived.map(a=>{const m=delayMinutes(a);return`<tr><td><strong>${a.warehouse||'W101'}</strong></td><td><strong>${a.supplier}</strong></td><td>${fmtPlan(a.date,a.time)}</td><td>${fmtPlan(a.actualDate,a.actualTime)}</td><td><span class="delay-chip ${delayClass(m)}">${delayLabel(m)}</span></td><td>Rampa ${a.dock}</td><td>${a.pallets}</td><td>${a.sku}</td></tr>`}).join('');
+  const dh=document.getElementById('delayHistory');if(dh)dh.innerHTML=arrived.map(a=>{const m=delayMinutes(a);return`<tr><td><strong>${a.warehouse||yardivoCanonicalWarehouseV583()}</strong></td><td><strong>${a.supplier}</strong></td><td>${fmtPlan(a.date,a.time)}</td><td>${fmtPlan(a.actualDate,a.actualTime)}</td><td><span class="delay-chip ${delayClass(m)}">${delayLabel(m)}</span></td><td>Rampa ${a.dock}</td><td>${a.pallets}</td><td>${a.sku}</td></tr>`}).join('');
 }
 
 function renderIncidents(){
@@ -11574,12 +11595,12 @@ function normalizePerson(v){
   return String(v||'').trim().toLocaleLowerCase('hr-HR').replace(/\s+/g,' ');
 }
 function gateCurrentWarehouse(){
-  return activeWarehouse==='ALL'?(currentSession?.location==='DU'?'W201':'W101'):activeWarehouse;
+  return activeWarehouse==='ALL'?yardivoCanonicalWarehouseV583():activeWarehouse;
 }
 function findGateAppointment(plate,driver){
   const today=window.yardivoLocalDateV583(),wh=gateCurrentWarehouse();
   const np=normalizePlate(plate),nd=normalizePerson(driver);
-  const todays=announcements.filter(a=>a.date===today&&(a.warehouse||'W101')===wh&&!['Zaprimljeno','Odbijen'].includes(normalizedPlanStatus(a)));
+  const todays=announcements.filter(a=>a.date===today&&(a.warehouse||yardivoCanonicalWarehouseV583())===wh&&!['Zaprimljeno','Odbijen'].includes(normalizedPlanStatus(a)));
   // First try exact plate + exact driver.
   let match=todays.find(a=>normalizePlate(effectivePlate(a))===np&&normalizePerson(effectiveDriver(a))===nd);
   if(match)return {a:match,plateMatch:true,driverMatch:true,exact:true};
@@ -11792,13 +11813,13 @@ function isRampBlocked(warehouse,date,dock,start,duration){
 }
 
 window.addRampBlock=function(){
- const wh=activeWarehouse==='ALL'?'W101':activeWarehouse,date=document.getElementById('blockDate')?.value,dock=Number(document.getElementById('blockRamp')?.value),from=document.getElementById('blockFrom')?.value,to=document.getElementById('blockTo')?.value,reason=document.getElementById('blockReason')?.value||'Nedostupna';
+ const wh=(activeWarehouse&&activeWarehouse!=='ALL'?activeWarehouse:yardivoCanonicalWarehouseV583()),date=document.getElementById('blockDate')?.value,dock=Number(document.getElementById('blockRamp')?.value),from=document.getElementById('blockFrom')?.value,to=document.getElementById('blockTo')?.value,reason=document.getElementById('blockReason')?.value||'Nedostupna';
  if(!date||!dock||!from||!to){alert('Odaberi datum, rampu i vrijeme.');return}
  rampBlocks.push({id:Date.now(),warehouse:wh,date,dock,from,to,reason});saveRampBlocks();render();
 }
 window.removeRampBlock=function(id){rampBlocks=rampBlocks.filter(x=>x.id!==id);saveRampBlocks();render()}
 function renderRampBlocks(){
- const wh=activeWarehouse==='ALL'?'W101':activeWarehouse,w=WAREHOUSES[wh],sel=document.getElementById('blockRamp');
+ const wh=(activeWarehouse&&activeWarehouse!=='ALL'?activeWarehouse:yardivoCanonicalWarehouseV583()),w=WAREHOUSES[wh],sel=document.getElementById('blockRamp');
  if(sel)sel.innerHTML=w?.ramps?Array.from({length:w.ramps},(_,i)=>`<option value="${i+1}">Rampa ${i+1}</option>`).join(''):'';
  const bd=document.getElementById('blockDate');if(bd&&!bd.value)bd.value=ymsToday();
  const host=document.getElementById('rampBlocks');if(host)host.innerHTML=rampBlocks.filter(x=>x.warehouse===wh).map(x=>`<div class="smart-note warn"><strong>R${x.dock}</strong> · ${x.date} ${x.from}–${x.to} · ${x.reason} <button class="mini-btn" onclick="removeRampBlock(${x.id})">Ukloni</button></div>`).join('')||'<div class="smart-note">Nema blokiranih rampi.</div>';
@@ -11807,8 +11828,8 @@ function renderControlTower(){
  const host=document.getElementById('controlKpis');if(!host)return;
  const a=whAnnouncements(),today=ymsToday(),td=a.filter(x=>x.date===today),arr=td.filter(actualDateTime),nos=td.filter(isNoShow),waiting=td.filter(x=>x.status==='Čeka'),dock=td.filter(x=>['Na rampi','Istovar u tijeku'].includes(x.status));
  host.innerHTML=[['DANAŠNJE NAJAVE',td.length],['STIGLI',arr.length],['ČEKAJU',waiting.length],['NA RAMPI',dock.length],['NO-SHOW',nos.length],['PALETE',td.reduce((s,x)=>s+Number(x.pallets||0),0)],['INCIDENTI',incidents.filter(x=>x.date===today).length],['BLOKIRANE RAMPE',rampBlocks.filter(x=>x.date===today&&(activeWarehouse==='ALL'||x.warehouse===activeWarehouse)).length]].map(x=>`<div class="control-card"><small>${x[0]}</small><strong>${x[1]}</strong></div>`).join('');
- const cap=document.getElementById('capacityBoard'),wh=activeWarehouse==='ALL'?'W101':activeWarehouse,w=WAREHOUSES[wh];if(cap&&w?.receptionStart){let h='';for(let m=toMin(w.receptionStart);m<toMin(w.receptionEnd);m+=60){let p=td.filter(x=>toMin(x.time)>=m&&toMin(x.time)<m+60).reduce((s,x)=>s+Number(x.pallets||0),0),pct=Math.min(100,Math.round(p/(Math.max(1,w.ramps)*33)*100));h+=`<div style="margin-bottom:10px"><b>${hhmm(m)}–${hhmm(m+60)}</b> · ${p} paleta<div class="capacitybar"><i style="width:${pct}%"></i></div></div>`}cap.innerHTML=h}
- const nxt=document.getElementById('nextArrivals');if(nxt)nxt.innerHTML=[...a].filter(x=>new Date(`${x.date}T${x.time}:00`)>=new Date()).sort((x,y)=>(x.date+x.time).localeCompare(y.date+y.time)).slice(0,8).map(x=>`<div class="smart-note"><strong>${x.date} ${x.time}</strong> · ${x.warehouse||'W101'} · ${x.supplier} · ${x.pallets} pal.</div>`).join('')||'<div class="smart-note">Nema budućih najava.</div>';
+ const cap=document.getElementById('capacityBoard'),wh=(activeWarehouse&&activeWarehouse!=='ALL'?activeWarehouse:yardivoCanonicalWarehouseV583()),w=WAREHOUSES[wh];if(cap&&w?.receptionStart){let h='';for(let m=toMin(w.receptionStart);m<toMin(w.receptionEnd);m+=60){let p=td.filter(x=>toMin(x.time)>=m&&toMin(x.time)<m+60).reduce((s,x)=>s+Number(x.pallets||0),0),pct=Math.min(100,Math.round(p/(Math.max(1,w.ramps)*33)*100));h+=`<div style="margin-bottom:10px"><b>${hhmm(m)}–${hhmm(m+60)}</b> · ${p} paleta<div class="capacitybar"><i style="width:${pct}%"></i></div></div>`}cap.innerHTML=h}
+ const nxt=document.getElementById('nextArrivals');if(nxt)nxt.innerHTML=[...a].filter(x=>new Date(`${x.date}T${x.time}:00`)>=new Date()).sort((x,y)=>(x.date+x.time).localeCompare(y.date+y.time)).slice(0,8).map(x=>`<div class="smart-note"><strong>${x.date} ${x.time}</strong> · ${x.warehouse||yardivoCanonicalWarehouseV583()} · ${x.supplier} · ${x.pallets} pal.</div>`).join('')||'<div class="smart-note">Nema budućih najava.</div>';
 }
 
 function easterDate(year){
@@ -11863,7 +11884,7 @@ function renderCalendar(){
     h+=`<div class="calday ${cls}">
       <div class="daymeta"><b>${d.toLocaleDateString('hr-HR',{weekday:'short',day:'2-digit',month:'2-digit'})}</b><small>${iso}</small></div>
       ${holiday?`<span class="holiday-name">${holiday}</span>`:weekend?'<span class="weekend-name">VIKEND · NEMA PRIJAMA</span>':''}
-      ${a.map(x=>`<div class="calitem">${x.time} · ${x.warehouse||'W101'} · ${x.supplier}<br>R${x.dock} · ${x.pallets} pal.</div>`).join('')}
+      ${a.map(x=>`<div class="calitem">${x.time} · ${x.warehouse||yardivoCanonicalWarehouseV583()} · ${x.supplier}<br>R${x.dock} · ${x.pallets} pal.</div>`).join('')}
     </div>`;
   }
   host.innerHTML=h;
@@ -11880,7 +11901,7 @@ function renderTruckHistory(){
   const a=announcements
     .filter(x=>normalizePlate(x.arrivalPlate||x.plannedPlate)===np)
     .sort((x,y)=>String(y.actualDate||y.date).localeCompare(String(x.actualDate||x.date)));
-  host.innerHTML=a.length?a.slice(0,10).map(x=>`<div class="smart-note"><strong>${x.actualDate||x.date}</strong> · ${x.supplier} · ${x.warehouse||'W101'} · ${operationalPlanStatus(x)} ${operationalDelayText(x)?`· ${operationalDelayText(x)}`:''}</div>`).join(''):'Nema prethodnih dolazaka za ovu registraciju.';
+  host.innerHTML=a.length?a.slice(0,10).map(x=>`<div class="smart-note"><strong>${x.actualDate||x.date}</strong> · ${x.supplier} · ${x.warehouse||yardivoCanonicalWarehouseV583()} · ${operationalPlanStatus(x)} ${operationalDelayText(x)?`· ${operationalDelayText(x)}`:''}</div>`).join(''):'Nema prethodnih dolazaka za ovu registraciju.';
 }
 
 
@@ -12167,30 +12188,21 @@ function locationLabel(code){
 }
 function yardivoLoadDynamicWarehousesIntoSystem(){
   try{
-    const rows=JSON.parse(localStorage.getItem('yardivo_dynamic_warehouses_v1')||'[]');
-    if(!Array.isArray(rows))return;
-    rows.forEach(x=>{
-      const code=String(x?.code||'').trim().toUpperCase();
-      const loc=x?.location==='DU'?'Lokacija 2':'Lokacija 1';
-      if(!code)return;
-      if(typeof WAREHOUSES!=='undefined'){
-        if(!WAREHOUSES[code]){
-          WAREHOUSES[code]={
-            code,
-            location:loc,
-            name:String(x?.name||code),
-            ramps:Number(x?.ramps)||null,
-            receptionStart:null,
-            receptionEnd:null
-          };
-        }else{
-          WAREHOUSES[code].location=loc;
-          WAREHOUSES[code].name=String(x?.name||WAREHOUSES[code].name||code);
-          if(x?.ramps!==undefined)WAREHOUSES[code].ramps=Number(x.ramps)||null;
-        }
-      }
-    });
-  }catch(e){console.warn('YARDIVO dynamic warehouse load',e)}
+    const d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');
+    if(!Array.isArray(d?.warehouses))return;
+    if(typeof WAREHOUSES!=='undefined'&&WAREHOUSES){
+      Object.keys(WAREHOUSES).forEach(k=>delete WAREHOUSES[k]);
+      d.warehouses.filter(x=>x&&x.active!==false).forEach(w=>{
+        const l=(d.locations||[]).find(x=>String(x.id)===String(w.location_id));
+        WAREHOUSES[w.id]={
+          code:w.id,location_id:w.location_id,location:l?.name||w.location_id,
+          name:String(w.name||w.id),ramps:Math.max(0,Number(w.ramps)||0),
+          receptionStart:String(w.reception_from||w.receptionStart||''),
+          receptionEnd:String(w.reception_to||w.receptionEnd||'')
+        };
+      });
+    }
+  }catch(e){console.warn('YARDIVO master warehouse load',e)}
 }
 function allWarehousesForLocation(code){
   const id=String(code||'').trim();
@@ -12246,67 +12258,45 @@ function warehouseOptionLabel(code){
 
 function yardivoRefreshAllWarehouseUi(){
   yardivoLoadDynamicWarehousesIntoSystem();
-
-  const currentLoc=(typeof currentSession!=='undefined'&&currentSession?.location)||'VG';
-  const allCodes=[...new Set([...warehousesForLocation('VG'),...warehousesForLocation('DU')])];
-
+  let d={locations:[],warehouses:[]};
+  try{d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){}
+  const activeLocRaw=String(window.YardivoAppStateV583?.location?.()||window.currentSession?.location||'');
+  const activeLoc=activeLocRaw==='ALL'?'':activeLocRaw;
+  const currentWh=String(window.YardivoAppStateV583?.warehouse?.()||window.activeWarehouse||'');
+  const activeRows=(d.warehouses||[]).filter(w=>w&&w.active!==false);
+  const rowsFor=loc=>activeRows.filter(w=>!loc||String(w.location_id)===String(loc));
+  const esc=v=>String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
+  const label=w=>`${w.name||w.id}`;
   function refill(sel,{location=null,includeAll=null,includePlaceholder=null}={}){
     if(!sel)return;
     const old=sel.value;
     const hadAll=[...sel.options].some(o=>o.value==='ALL');
     const hadPlaceholder=[...sel.options].some(o=>o.value==='');
-    const loc=location||(
-      sel.dataset?.warehouseLocation ||
-      (sel.id==='globalWarehouse' ? null : currentLoc)
-    );
-    const codes=loc?warehousesForLocation(loc):allCodes;
-    let out='';
-    if(includePlaceholder===true || (includePlaceholder===null && hadPlaceholder)) out+='<option value="">Odaberi skladište...</option>';
-    if(includeAll===true || (includeAll===null && hadAll)) out+='<option value="ALL">Sva skladišta</option>';
-
-    if(loc){
-      out+=codes.map(c=>`<option value="${c}">${warehouseOptionLabel(c)}</option>`).join('');
-    }else{
-      out+='<optgroup label="Lokacija 1">'+warehousesForLocation('VG').map(c=>`<option value="${c}">${warehouseOptionLabel(c)}</option>`).join('')+'</optgroup>';
-      out+='<optgroup label="Lokacija 2">'+warehousesForLocation('DU').map(c=>`<option value="${c}">${warehouseOptionLabel(c)}</option>`).join('')+'</optgroup>';
-    }
-    sel.innerHTML=out;
+    const loc=location===null?activeLoc:location;
+    const rows=rowsFor(loc);
+    let html='';
+    if(includePlaceholder===true||(includePlaceholder===null&&hadPlaceholder))html+='<option value="">Odaberi skladište...</option>';
+    if(includeAll===true||(includeAll===null&&hadAll))html+='<option value="ALL">Sva skladišta</option>';
+    html+=rows.map(w=>`<option value="${esc(w.id)}">${esc(label(w))}</option>`).join('');
+    sel.innerHTML=html;
     if([...sel.options].some(o=>o.value===old))sel.value=old;
+    else if([...sel.options].some(o=>o.value===currentWh))sel.value=currentWh;
+    else if(rows.length===1)sel.value=rows[0].id;
   }
-
-  // Main/global selector follows logged user's location + assigned warehouses.
-  refill(document.getElementById('globalWarehouse'),{location:currentLoc});
-
-  // Known location-bound selectors used across YARDIVO.
-  [
-    'warehouseFilter','annWarehouse','announcementWarehouse','savedWarehouseFilter',
-    'dailyMapWarehouseSelect','weeklyMapWarehouse','uaWarehouse'
-  ].forEach(id=>refill(document.getElementById(id),{location:currentLoc}));
-
-  // Generic safety net: any other select that already contains warehouse codes
-  // is refreshed too, preserving whether it had ALL/placeholder.
+  refill(document.getElementById('globalWarehouse'),{location:activeLoc,includePlaceholder:true,includeAll:false});
+  ['warehouseFilter','annWarehouse','announcementWarehouse','savedWarehouseFilter','dailyMapWarehouseSelect','weeklyMapWarehouse','uaWarehouse']
+    .forEach(id=>refill(document.getElementById(id),{location:activeLoc}));
   document.querySelectorAll('select').forEach(sel=>{
-    if([
-      'loginRole','globalWarehouse','warehouseFilter','annWarehouse','announcementWarehouse',
-      'savedWarehouseFilter','dailyMapWarehouseSelect','weeklyMapWarehouse','uaWarehouse',
-      'ysaLocation','ywaLocation'
-    ].includes(sel.id))return;
-    const vals=[...sel.options].map(o=>String(o.value||''));
-    const looksWarehouse=vals.some(v=>/^W\d{3,4}$/.test(v)) || /warehouse|sklad/i.test(sel.id||'');
-    if(looksWarehouse)refill(sel,{location:currentLoc});
+    if(['loginRole','globalWarehouse','warehouseFilter','annWarehouse','announcementWarehouse','savedWarehouseFilter','dailyMapWarehouseSelect','weeklyMapWarehouse','uaWarehouse','ysaLocation','ywaLocation','yufLocation','muLocation'].includes(sel.id))return;
+    if(/warehouse|sklad/i.test(String(sel.id||'')+' '+String(sel.name||'')))refill(sel,{location:activeLoc});
   });
-
-  try{renderWarehouseCards?.()}catch(e){}
-  try{renderRampe?.()}catch(e){}
-  try{renderDockOverview?.()}catch(e){}
-  try{renderDailyMap?.()}catch(e){}
-  try{renderWeeklyMap?.()}catch(e){}
-  try{renderOverview?.()}catch(e){}
-  try{render?.()}catch(e){}
-
-  if(typeof yardivoRenderSupplierWarehousePicker==='function'){
-    try{yardivoRenderSupplierWarehousePicker()}catch(e){}
+  if(!currentWh&&rowsFor(activeLoc).length){
+    const next=rowsFor(activeLoc)[0].id;
+    try{window.YardivoAppStateV583?.setWarehouse?.(next)}catch(_){window.activeWarehouse=next}
   }
+  try{renderWarehouseCards?.()}catch(_){};try{renderRampe?.()}catch(_){};try{renderDockOverview?.()}catch(_){};
+  try{renderDailyMap?.()}catch(_){};try{renderWeeklyMap?.()}catch(_){};try{renderOverview?.()}catch(_){};
+  try{yardivoRenderSupplierWarehousePicker?.()}catch(_){}
 }
 window.yardivoRefreshAllWarehouseUi=yardivoRefreshAllWarehouseUi;
 
@@ -12667,8 +12657,8 @@ window.addEventListener('resize',()=>{
   yard3DResizeTimer=setTimeout(()=>{
     try{
       const today=window.yardivoLocalDateV583();
-      const wh=(activeWarehouse&&activeWarehouse!=='ALL')?activeWarehouse:(currentSession?.location==='DU'?'W201':'W101');
-      const inYard=announcements.filter(a=>(a.warehouse||'W101')===wh&&a.date===today&&normalizedPlanStatus(a)==='U dvorištu');
+      const wh=(activeWarehouse&&activeWarehouse!=='ALL')?activeWarehouse:yardivoCanonicalWarehouseV583();
+      const inYard=announcements.filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===wh&&a.date===today&&normalizedPlanStatus(a)==='U dvorištu');
       renderLive3DRoutes(inYard);
     }catch(e){}
   },120);
@@ -12698,8 +12688,8 @@ window.addEventListener('resize',()=>{
       const today=window.yardivoLocalDateV583();
       const wh=(typeof activeWarehouse!=='undefined'&&activeWarehouse&&activeWarehouse!=='ALL')
         ? activeWarehouse
-        : (currentSession?.location==='DU'?'W201':'W101');
-      const inYard=announcements.filter(a=>(a.warehouse||'W101')===wh&&a.date===today&&normalizedPlanStatus(a)==='U dvorištu');
+        : yardivoCanonicalWarehouseV583();
+      const inYard=announcements.filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===wh&&a.date===today&&normalizedPlanStatus(a)==='U dvorištu');
       requestAnimationFrame(()=>renderLive3DRoutes(inYard));
     }catch(e){}
   }
@@ -12823,7 +12813,7 @@ window.addEventListener('resize',()=>{
  function notifications(){
    const arr=(typeof announcements!=='undefined'&&Array.isArray(announcements)?announcements:[]),today=window.yardivoLocalDateV583(),role=roleName().toLowerCase();
    const wh=typeof dashboardWarehouse==='function'?dashboardWarehouse():null;
-   const data=arr.filter(a=>a.date===today&&(!wh||wh==='ALL'||(a.warehouse||'W101')===wh));
+   const data=arr.filter(a=>a.date===today&&(!wh||wh==='ALL'||(a.warehouse||yardivoCanonicalWarehouseV583())===wh));
    const n=[];
    data.forEach(a=>{
      const s=typeof operationalPlanStatus==='function'?operationalPlanStatus(a):(a.status||'U dolasku');
@@ -12903,13 +12893,13 @@ window.addEventListener('resize',()=>{
     return Math.max(45,Math.min(150,Math.round(35+p*1.15)));
   }
   function whOfForm(){
-    return document.getElementById('warehouse')?.value||document.getElementById('announcementWarehouse')?.value||window.activeWarehouse||'W101';
+    return document.getElementById('warehouse')?.value||document.getElementById('announcementWarehouse')?.value||window.activeWarehouse||yardivoCanonicalWarehouseV583();
   }
   function dateOfForm(){return document.querySelector('input[type="date"]')?.value||window.yardivoLocalDateV583()}
   function timeOfForm(){return document.querySelector('input[type="time"]')?.value||'08:00'}
-  function dockCount(wh){try{return WAREHOUSES?.[wh]?.ramps||6}catch(e){return 6}}
+  function dockCount(wh){try{return Math.max(0,Number(WAREHOUSES?.[wh]?.ramps)||0)}catch(e){return 0}}
   function intervalsForRamp(wh,date,ramp,ignoreId){
-    return anns().filter(a=>(a.warehouse||'W101')===wh&&a.date===date&&Number(a.dock)===Number(ramp)&&Number(a.id)!==Number(ignoreId)).map(a=>{
+    return anns().filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===wh&&a.date===date&&Number(a.dock)===Number(ramp)&&Number(a.id)!==Number(ignoreId)).map(a=>{
       const st=mins(a.time),dur=Number(a.duration||durationFor(a));return {a,start:st,end:st+dur}
     }).sort((x,y)=>x.start-y.start)
   }
@@ -12986,8 +12976,8 @@ window.addEventListener('resize',()=>{
   }
 
   function queueData(){
-    const today=window.yardivoLocalDateV583(),wh=typeof dashboardWarehouse==='function'?dashboardWarehouse():(window.activeWarehouse||'W101');
-    const data=anns().filter(a=>a.date===today&&(a.warehouse||'W101')===wh);
+    const today=window.yardivoLocalDateV583(),wh=typeof dashboardWarehouse==='function'?dashboardWarehouse():(window.activeWarehouse||yardivoCanonicalWarehouseV583());
+    const data=anns().filter(a=>a.date===today&&(a.warehouse||yardivoCanonicalWarehouseV583())===wh);
     const n=dockCount(wh),out=[];
     for(let r=1;r<=n;r++){
       const current=data.find(a=>Number(a.dock)===r && (typeof operationalPlanStatus==='function'?operationalPlanStatus(a):a.status)==='Na rampi');
@@ -13180,8 +13170,8 @@ window.addEventListener('resize',()=>{
       setTimeout(()=>{
         try{
           const today=window.yardivoLocalDateV583();
-          const wh=(typeof activeWarehouse!=='undefined'&&activeWarehouse&&activeWarehouse!=='ALL')?activeWarehouse:(currentSession?.location==='DU'?'W201':'W101');
-          const inYard=(Array.isArray(announcements)?announcements:[]).filter(a=>(a.warehouse||'W101')===wh&&a.date===today&&normalizedPlanStatus(a)==='U dvorištu');
+          const wh=(typeof activeWarehouse!=='undefined'&&activeWarehouse&&activeWarehouse!=='ALL')?activeWarehouse:yardivoCanonicalWarehouseV583();
+          const inYard=(Array.isArray(announcements)?announcements:[]).filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===wh&&a.date===today&&normalizedPlanStatus(a)==='U dvorištu');
           if(typeof renderLive3DRoutes==='function')renderLive3DRoutes(inYard);
         }catch(e){}
       },80);
@@ -13253,7 +13243,7 @@ function addNavAndView(){
 }
 function renderArchive(){const host=document.getElementById('incidentGallery');if(!host)return;let a=(typeof incidents!=='undefined'&&Array.isArray(incidents)?incidents:[]);const d=document.getElementById('iaDate')?.value,s=document.getElementById('iaSupplier')?.value,w=document.getElementById('iaWarehouse')?.value,v=document.getElementById('iaSeverity')?.value;a=a.filter(x=>x.photo&&(!d||x.date===d)&&(!s||x.supplier===s)&&(!w||x.warehouse===w)&&(!v||x.severity===v));const sup=document.getElementById('iaSupplier');if(sup&&sup.options.length<=1)[...new Set((typeof incidents!=='undefined'&&Array.isArray(incidents)?incidents:[]).map(x=>x.supplier).filter(Boolean))].sort().forEach(x=>sup.add(new Option(x,x)));document.getElementById('incidentArchiveCount').textContent=`${a.length} fotografija`;host.innerHTML=a.length?a.map(i=>`<article class="incident-photo-card" data-iid="${i.id}"><img src="${i.photo}" alt="Fotografija incidenta"><div class="body"><strong>${i.supplier||'—'}</strong>${i.date||'—'} · ${i.warehouse||'—'}<br>${i.type||'Incident'} · ${i.severity||'—'}<br>Status: ${i.status||'Otvoren'} · ${Number(i.value||0).toFixed(2)} €</div></article>`).join(''):'<div class="overview-empty">Nema fotografija za odabrane filtre.</div>';host.querySelectorAll('[data-iid]').forEach(c=>c.onclick=()=>{const i=(typeof incidents!=='undefined'&&Array.isArray(incidents)?incidents:[]).find(x=>String(x.id)===c.dataset.iid);if(i)alert(`${i.supplier}\n${i.date} · ${i.warehouse||'—'}\n${i.type} · ${i.severity}\nStatus: ${i.status||'Otvoren'}\nOdgovoran: ${i.owner||'—'}\nŠteta: ${Number(i.value||0).toFixed(2)} €\n\n${i.note||''}`)});}
 
-function addSettings(){const grid=document.querySelector('#settings .settings-grid');if(!grid||document.getElementById('masterUserAdmin'))return;grid.insertAdjacentHTML('afterbegin',`<section class="panel" id="masterUserAdmin"><div class="panel-head"><div><h2>KORISNICI, ROLE I PERMISSIONS</h2><small>Admin kreira račune i dodjeljuje pristup</small></div></div><div class="master-settings-body"><div class="master-admin-grid"><div><div class="form-grid"><label>Ime i prezime<input id="muName"></label><label>Username<input id="muUser" autocomplete="off"></label><label>Privremena lozinka<input id="muPass" type="password" autocomplete="new-password"></label><label>Rola<select id="muRole"><option value="inventory">Upravljanje zalihama</option><option value="reception">Prijam</option><option value="gate">Porta</option><option value="manager">Voditelj</option><option value="admin">Admin</option></select></label><label>Lokacija<select id="muLocation"><option value="DU">Lokacija 2</option><option value="VG">Lokacija 1</option><option value="ALL">Sve lokacije</option></select></label>
+function addSettings(){const grid=document.querySelector('#settings .settings-grid');if(!grid||document.getElementById('masterUserAdmin'))return;grid.insertAdjacentHTML('afterbegin',`<section class="panel" id="masterUserAdmin"><div class="panel-head"><div><h2>KORISNICI, ROLE I PERMISSIONS</h2><small>Admin kreira račune i dodjeljuje pristup</small></div></div><div class="master-settings-body"><div class="master-admin-grid"><div><div class="form-grid"><label>Ime i prezime<input id="muName"></label><label>Username<input id="muUser" autocomplete="off"></label><label>Privremena lozinka<input id="muPass" type="password" autocomplete="new-password"></label><label>Rola<select id="muRole"><option value="inventory">Upravljanje zalihama</option><option value="reception">Prijam</option><option value="gate">Porta</option><option value="manager">Voditelj</option><option value="admin">Admin</option></select></label><label>Lokacija<select id="muLocation"><option value="">Odaberi lokaciju...</option></select></label>
 <label>SKLADIŠTA
   <div style="font-size:10px;color:#91a6b2;margin:0 0 6px">Odaberi lokaciju, zatim pojedina skladišta ili <b>SVA SKLADIŠTA</b>. Za Admina ili Voditelja možeš odabrati <b>Sve lokacije</b>.</div><div id="muWarehousePicker" style="margin-top:6px;padding:9px;border:1px solid #304958;border-radius:8px;background:#09131a;min-height:44px"></div>
 </label>
@@ -13945,7 +13935,7 @@ document.addEventListener('contextmenu',e=>{
  menu.classList.add('open');menu.style.display='block';menu.style.left=Math.min(e.clientX,innerWidth-250)+'px';menu.style.top=Math.min(e.clientY,innerHeight-210)+'px';
 },true);
 
-function gateFind(p,d){const wh=allowedWarehouses(),td=localDate();return load().find(a=>String(a.date||'')===td&&(!wh.length||wh.includes(a.warehouse||'W101'))&&NP(P(a))===NP(p)&&ND(D(a))===ND(d)&&!['Zaprimljeno','Odbijen'].includes(a.status))}
+function gateFind(p,d){const wh=allowedWarehouses(),td=localDate();return load().find(a=>String(a.date||'')===td&&(!wh.length||wh.includes(a.warehouse||yardivoCanonicalWarehouseV583()))&&NP(P(a))===NP(p)&&ND(D(a))===ND(d)&&!['Zaprimljeno','Odbijen'].includes(a.status))}
 window.checkGateArrival=function(){
  const p=document.getElementById('gatePlate')?.value||'',d=document.getElementById('gateDriver')?.value||'',res=document.getElementById('gateMatchResult');
  gateId=null;ready(false);const a=gateFind(p,d);
@@ -14336,7 +14326,7 @@ window.YardivoCleanCore={load,save,role,applyHome,driverOpen,driverSave,gateFind
     <div class="yai-head"><div><h2>${a.supplier||'NAJAVA'}</h2><span class="yai-status">${a.status||'U dolasku'}</span></div><button id="yaiClose">ZATVORI ×</button></div>
     <div class="yai-grid">
       ${field('DATUM',a.date)}${field('TERMIN',a.time)}
-      ${field('SKLADIŠTE',a.warehouse||'W101')}${field('RAMPA',a.dock?`Rampa ${a.dock}`:'—')}
+      ${field('SKLADIŠTE',a.warehouse||yardivoCanonicalWarehouseV583())}${field('RAMPA',a.dock?`Rampa ${a.dock}`:'—')}
       ${field('TABLICE',plate(a))}${field('VOZAČ',driver(a))}
       ${field('PALETE',a.pallets||0)}${field('SKU',a.sku||0)}
       ${field('STVARNI DOLAZAK',a.actualTime||'—')}${field('STATUS',a.status||'U dolasku')}
@@ -14805,7 +14795,7 @@ body[data-yms-role="gate"] [data-home-target="operations"]{display:none!importan
       // Temporarily present only the selected warehouse to the legacy analytics renderer.
       const allAnnouncements=announcements;
       const allIncidents=incidents;
-      const filteredA=allAnnouncements.filter(a=>(a.warehouse||'W101')===wh);
+      const filteredA=allAnnouncements.filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===wh);
       const filteredI=allIncidents.filter(i=>(i.warehouse||'')===wh);
       try{
         announcements=filteredA;
@@ -14942,14 +14932,14 @@ body[data-yms-role="gate"] [data-home-target="operations"]{display:none!importan
           <div class="capacity-wh-head">
             <div><strong>${code} · ${wh.name||''}</strong><br><small>${wh.location||''}</small></div>
             <label>KAPACITET SKLADIŠTA · PALETE
-              <input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-wh-total="${code}" value="${cfg[code]?.warehousePallets||800}">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-wh-total="${code}" value="${cfg[code]?.warehousePallets??''}">
             </label>
           </div>
           <div class="capacity-ramps">
             ${ramps?Array.from({length:ramps},(_,x)=>x+1).map(r=>`
               <div class="capacity-ramp">
                 <label>RAMPA ${r} · PALETE
-                  <input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-ramp-cap="${code}:${r}" value="${cfg[code]?.ramps?.[r]||120}">
+                  <input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-ramp-cap="${code}:${r}" value="${cfg[code]?.ramps?.[r]??''}">
                 </label>
               </div>`).join(''):'<small>Rampe za ovo skladište još nisu definirane.</small>'}
           </div>
@@ -15390,8 +15380,8 @@ function nowUser(){try{return currentSession?.username||currentSession?.user||cu
 function localDate(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function load(){try{const x=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(x)?x:[]}catch(e){return []}}
 function save(rows){localStorage.setItem(KEY,JSON.stringify(rows))}
-function locationForWarehouse(wh){return String(wh||'').startsWith('W2')?'DU':'VG'}
-function locName(loc){return loc==='DU'?'Lokacija 2':loc==='VG'?'Lokacija 1':'Sve lokacije'}
+function locationForWarehouse(wh){try{const m=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');const w=(m.warehouses||[]).find(x=>x&&x.active!==false&&String(x.id)===String(wh));return w?String(w.location_id||''):''}catch(_){return ''}}
+function locName(loc){try{const m=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');return String((m.locations||[]).find(x=>String(x.id)===String(loc))?.name||loc||'Sve lokacije')}catch(_){return String(loc||'Sve lokacije')}}
 function warehouseName(code){try{return `${code} · ${WAREHOUSES?.[code]?.name||''}`}catch(e){return code}}
 function allAnnouncements(){try{return Array.isArray(announcements)?announcements:[]}catch(e){return []}}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -15680,9 +15670,9 @@ function admin(){return role()==='admin'}
 function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function anns(){try{return Array.isArray(announcements)?announcements:[]}catch(e){return []}}
 function incs(){try{return Array.isArray(incidents)?incidents:[]}catch(e){return []}}
-function whLoc(w){return String(w||'').startsWith('W2')?'DU':'VG'}
-function activeLoc(){try{return currentSession?.location||'VG'}catch(e){return 'VG'}}
-function scopeA(){const loc=activeLoc();return anns().filter(a=>!a.warehouse||whLoc(a.warehouse)===loc)}
+function whLoc(w){try{const m=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');return String((m.warehouses||[]).find(x=>x&&x.active!==false&&String(x.id)===String(w))?.location_id||'')}catch(_){return ''}}
+function activeLoc(){try{return String(currentSession?.location||'')}catch(e){return ''}}
+function scopeA(){const loc=activeLoc();const rows=anns();if(!loc||loc==='ALL'||String(currentSession?.role||'').toLowerCase()==='admin')return rows;return rows.filter(a=>!a.warehouse||whLoc(a.warehouse)===loc)}
 function parseTs(v){if(!v)return null;const d=new Date(v);return isNaN(d)?null:d}
 function scheduledTs(a){if(!a?.date)return null;const d=new Date(`${a.date}T${a.time||'00:00'}:00`);return isNaN(d)?null:d}
 function mins(a,b){if(!a||!b)return null;return Math.max(0,Math.round((b-a)/60000))}
@@ -17500,7 +17490,7 @@ function openRamp(dock){
   dock=Number(dock);if(!dock)return;
   const date=typeof dailyMapDateValue==='function'?dailyMapDateValue():document.getElementById('dailyMapDate')?.value;
   const wh=typeof dailyMapWarehouseCode==='function'?dailyMapWarehouseCode():document.getElementById('dailyMapWarehouseSelect')?.value;
-  const items=anns().filter(a=>a.date===date&&(a.warehouse||'W101')===wh&&Number(a.dock)===dock)
+  const items=anns().filter(a=>a.date===date&&(a.warehouse||yardivoCanonicalWarehouseV583())===wh&&Number(a.dock)===dock)
     .sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')));
   const m=makeModal('yardivoRampModal','Detalji rampe'),h=m.querySelector('.yod-head'),b=m.querySelector('.yod-body');
   h.innerHTML=`<div><h3>RAMPA ${dock} · ${items.length} NAJAVA</h3><small>${esc(date||'')} · ${esc(typeof whLabel==='function'?whLabel(wh):wh||'')}</small></div><button type="button" class="yod-close">×</button>`;
@@ -17609,7 +17599,7 @@ function canMove(){return ['inventory','admin'].includes(currentRole())}
 function data(){try{return Array.isArray(announcements)?announcements:[]}catch(e){return[]}}
 function ann(id){return data().find(a=>String(a.id)===String(id))}
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function wh(a){return a?.warehouse||'W101'}
+function wh(a){return a?.warehouse||yardivoCanonicalWarehouseV583()}
 function fmtSlot(x){return `${x.date} · ${x.time} · Rampa ${x.dock}`}
 function immutable(a){
   return !!(a?.yardArrivalAt||a?.receivedAt||a?.rejectedAt||['Zaprimljeno','Odbijen','Završeno','Izašao','Na rampi','U dvorištu'].includes(String(a?.status||'')));
@@ -17869,7 +17859,7 @@ function selectedDate(){
 function selectedWarehouse(){
   return document.getElementById('annWarehouse')?.value||
          window.YardivoOperationalSync?.warehouse?.()||
-         'W101';
+         '';
 }
 function cfg(w){try{return WAREHOUSES?.[w]||null}catch(e){return null}}
 function tmin(t){try{return toMin(t)}catch(e){const [h,m]=String(t).split(':').map(Number);return h*60+m}}
@@ -17881,7 +17871,7 @@ function statusClass(a){
 }
 function delayText(a){try{return operationalDelayText(a)||''}catch(e){return''}}
 function scoped(date,w){
-  return anns().filter(a=>String(a?.date||'')===String(date)&&(a?.warehouse||'W101')===w);
+  return anns().filter(a=>String(a?.date||'')===String(date)&&(a?.warehouse||yardivoCanonicalWarehouseV583())===w);
 }
 function exactAt(rows,dock,time){
   const m=tmin(time);
@@ -18131,7 +18121,7 @@ function canPlan(){return ['admin','inventory'].includes(role())}
 function A(){try{return Array.isArray(announcements)?announcements:[]}catch(e){return[]}}
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-function wh(){return document.getElementById('lyWarehouse')?.value||((typeof activeWarehouse!=='undefined'&&activeWarehouse!=='ALL')?activeWarehouse:(currentSession?.location==='DU'?'W201':'W101'))}
+function wh(){return document.getElementById('lyWarehouse')?.value||((typeof activeWarehouse!=='undefined'&&activeWarehouse!=='ALL')?activeWarehouse:yardivoCanonicalWarehouseV583())}
 function cfg(w){try{return WAREHOUSES?.[w]||{ramps:6,label:w}}catch(e){return {ramps:6,label:w}}}
 function date(){return document.getElementById('lyDate')?.value||today()}
 function plate(a){try{return effectivePlate(a)||'—'}catch(e){return a.plannedPlate||a.arrivalPlate||'—'}}
@@ -18149,10 +18139,10 @@ function phase(a){
 }
 function relevant(){
  const d=date(),w=wh();
- return A().filter(a=>(a.warehouse||'W101')===w && a.date===d);
+ return A().filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===w && a.date===d);
 }
 function pos(a,i,total){
- const p=phase(a),ramps=Math.max(1,Number(cfg(wh()).ramps||6)),dock=Math.max(1,Math.min(ramps,Number(a.dock||1)));
+ const p=phase(a),ramps=Math.max(1,Number(cfg(wh()).ramps||0)),dock=Math.max(1,Math.min(ramps,Number(a.dock||1)));
  if(lyMode==='plan'){
    const frac=(dock-.5)/ramps;
    return {left:10+frac*80-7,top:29};
@@ -18207,7 +18197,7 @@ function inject(){
    try{Object.keys(WAREHOUSES||{}).forEach(k=>sel.insertAdjacentHTML('beforeend',`<option value="${esc(k)}">${esc(WAREHOUSES[k].label||k)}</option>`))}catch(e){sel.innerHTML='<option>W101</option>'}
  }
  const dt=document.getElementById('lyDate');if(dt&&!dt.value)dt.value=today();
- if(sel){const def=(typeof activeWarehouse!=='undefined'&&activeWarehouse!=='ALL')?activeWarehouse:(currentSession?.location==='DU'?'W201':'W101');if([...sel.options].some(o=>o.value===def))sel.value=def}
+ if(sel){const def=(typeof activeWarehouse!=='undefined'&&activeWarehouse!=='ALL')?activeWarehouse:yardivoCanonicalWarehouseV583();if([...sel.options].some(o=>o.value===def))sel.value=def}
  bind();
 }
 let bound=false;
@@ -18235,7 +18225,7 @@ function bind(){if(bound)return;bound=true;
 }
 function render(){
  inject();
- const list=relevant(),c=cfg(wh()),ramps=Math.max(1,Number(c.ramps||6));
+ const list=relevant(),c=cfg(wh()),ramps=Math.max(1,Number(c.ramps||0));
  document.querySelectorAll('.ly-mode').forEach(b=>b.classList.toggle('active',b.dataset.lyMode===lyMode));
  document.querySelectorAll('.ly-view').forEach(b=>b.classList.toggle('active',b.dataset.lyView===lyView));
  document.querySelectorAll('.ly-kpi').forEach(b=>b.classList.toggle('active',lyFilter!=='all'&&b.dataset.lyFilter===lyFilter));
@@ -18342,10 +18332,10 @@ function lateMinutes(a){if(immutable(a))return 0;const p=plannedMs(a);if(!Number
 function isLocked(w,d){try{return !!window.YardivoRampConfig?.isLocked?.(w,d)}catch(e){return false}}
 function isBlocked(w,date,dock,start,dur){try{return !!isRampBlocked(w,date,dock,start,dur)}catch(e){return false}}
 function hasConflict(a){
- const w=a.warehouse||'W101',start=min(a.time),dur=Math.max(15,Number(a.duration||15));
+ const w=a.warehouse||yardivoCanonicalWarehouseV583(),start=min(a.time),dur=Math.max(15,Number(a.duration||15));
  if(isLocked(w,Number(a.dock)))return {type:'RAMP_CLOSED',reason:`Rampa R${a.dock} je zatvorena / nedostupna.`};
  if(isBlocked(w,a.date,Number(a.dock),start,dur))return {type:'RAMP_BLOCKED',reason:`Rampa R${a.dock} je blokirana u terminu ${a.time}.`};
- const conflict=A().find(b=>b.id!==a.id&&(b.warehouse||'W101')===w&&b.date===a.date&&Number(b.dock)===Number(a.dock)&&typeof overlaps==='function'&&overlaps(start,dur,min(b.time),Number(b.duration||15)));
+ const conflict=A().find(b=>b.id!==a.id&&(b.warehouse||yardivoCanonicalWarehouseV583())===w&&b.date===a.date&&Number(b.dock)===Number(a.dock)&&typeof overlaps==='function'&&overlaps(start,dur,min(b.time),Number(b.duration||15)));
  if(conflict)return {type:'SLOT_CONFLICT',reason:`Termin se preklapa s ${conflict.supplier||'drugom najavom'} na R${a.dock}.`};
  return null;
 }
@@ -18362,14 +18352,14 @@ function rampLoad(date,w,dock){
  try{return typeof rampDayLoad==='function'?rampDayLoad(date,w,dock):0}catch(e){return 0}
 }
 function gapPenalty(date,w,dock,start,dur,aId){
- const same=A().filter(b=>String(b.id)!==String(aId)&&(b.warehouse||'W101')===w&&b.date===date&&Number(b.dock)===Number(dock)&&!immutable(b));
+ const same=A().filter(b=>String(b.id)!==String(aId)&&(b.warehouse||yardivoCanonicalWarehouseV583())===w&&b.date===date&&Number(b.dock)===Number(dock)&&!immutable(b));
  let prevEnd=null,nextStart=null;
  for(const b of same){const bs=min(b.time),bd=Math.max(15,Number(b.duration||15)),be=bs+bd;if(be<=start&&(prevEnd===null||be>prevEnd))prevEnd=be;if(bs>=start+dur&&(nextStart===null||bs<nextStart))nextStart=bs}
  const before=prevEnd===null?60:Math.max(0,start-prevEnd),after=nextStart===null?60:Math.max(0,nextStart-(start+dur));
  return Math.min(120,before+after);
 }
 function candidateList(a,problem){
- const w=a.warehouse||'W101',wc=cfgWh(w);if(!wc)return[];
+ const w=a.warehouse||yardivoCanonicalWarehouseV583(),wc=cfgWh(w);if(!wc)return[];
  const rate=Math.max(1,Number(loadCfg().palletsPerHour||33));
  const modelDur=Math.max(15,Math.ceil(((Number(a.pallets||0)/rate)*60)/15)*15||15);
  const dur=Math.max(15,Number(a.duration||modelDur)),now=nowParts(),base=min(a.time),out=[];
@@ -18450,7 +18440,7 @@ function applyReplan(a,problem,c){
    announcementId:a.id,
    supplierDeliveryId:a.supplierDeliveryId||'',
    supplier:a.supplier||'',
-   warehouse:a.warehouse||'W101',
+   warehouse:a.warehouse||yardivoCanonicalWarehouseV583(),
    old,
    newSlot:{date:c.date,time:c.time,dock:c.dock},
    problemType:problem.type,
@@ -18504,7 +18494,7 @@ function scan(force=false){
      const opts=candidateList(a,problem);if(!opts.length){
        const already=logs().some(l=>String(l.announcementId)===String(a.id)&&l.status==='NO_SAFE_SLOT'&&Date.now()-new Date(l.at).getTime()<60*60*1000);
        if(!already){
-         const l={id:Date.now()+'-NO-'+a.id,at:new Date().toISOString(),announcementId:a.id,supplier:a.supplier||'',warehouse:a.warehouse||'W101',old:{date:a.date,time:a.time,dock:Number(a.dock)},newSlot:null,problemType:problem.type,reason:problem.reason,status:'NO_SAFE_SLOT',confidence:0,acknowledgedBy:[]};
+         const l={id:Date.now()+'-NO-'+a.id,at:new Date().toISOString(),announcementId:a.id,supplier:a.supplier||'',warehouse:a.warehouse||yardivoCanonicalWarehouseV583(),old:{date:a.date,time:a.time,dock:Number(a.dock)},newSlot:null,problemType:problem.type,reason:problem.reason,status:'NO_SAFE_SLOT',confidence:0,acknowledgedBy:[]};
          const ls=logs();ls.push(l);saveLogs(ls);
          notification(['admin','manager','inventory','reception'],'YARDIVO · NEMA SIGURNOG TERMINA',`${a.supplier||'Dobavljač'} · ${problem.reason} Nije pronađen siguran slobodan termin.`,a,l);
        }
@@ -18603,7 +18593,7 @@ let selectedId=null,lastState=new Map();
 
 function data(){try{return Array.isArray(announcements)?announcements:[]}catch(e){return[]}}
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function warehouse(){return document.getElementById('lyWarehouse')?.value||'W101'}
+function warehouse(){return document.getElementById('lyWarehouse')?.value||yardivoCanonicalWarehouseV583()}
 function date(){return document.getElementById('lyDate')?.value||window.yardivoLocalDateV583()}
 function cfg(w){try{return WAREHOUSES?.[w]||{ramps:6,label:w}}catch(e){return{ramps:6,label:w}}}
 function isLocked(w,d){try{return !!YardivoRampConfig?.isLocked?.(w,d)}catch(e){return false}}
@@ -18648,8 +18638,8 @@ function render(){
  const stage=document.getElementById('liveYardStage');
  if(!stage||stage.dataset.viewmode!=='3d')return;
  const canvas=document.getElementById('lyCanvas');if(!canvas)return;
- const w=warehouse(),d=date(),c=cfg(w),ramps=Math.max(1,Number(c.ramps||6));
- const list=data().filter(a=>(a.warehouse||'W101')===w&&a.date===d);
+ const w=warehouse(),d=date(),c=cfg(w),ramps=Math.max(1,Number(c.ramps||0));
+ const list=data().filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===w&&a.date===d);
  const counts={outside:0,gate:0,yard:0,dock:0,exit:0};list.forEach(a=>counts[state(a)]++);
  if(selectedId&&!list.some(a=>String(a.id)===String(selectedId)&&['gate','yard','dock'].includes(state(a))))selectedId=null;
 
@@ -18776,7 +18766,7 @@ window.YardivoLiveTruckModal={open,close};
 'use strict';
 
 function A(){try{return Array.isArray(announcements)?announcements:[]}catch(e){return[]}}
-function warehouse(){return document.getElementById('lyWarehouse')?.value||'W101'}
+function warehouse(){return document.getElementById('lyWarehouse')?.value||yardivoCanonicalWarehouseV583()}
 function date(){return document.getElementById('lyDate')?.value||window.yardivoLocalDateV583()}
 function rampsFor(w){try{return Math.max(1,Number(WAREHOUSES?.[w]?.ramps||1))}catch(e){return 1}}
 function dockState(a){
@@ -18791,7 +18781,7 @@ function correctDockedTruckPositions(){
   if(!stage || stage.dataset.viewmode!=='3d')return;
 
   const w=warehouse(),d=date(),ramps=rampsFor(w);
-  const list=A().filter(a=>(a.warehouse||'W101')===w && a.date===d && dockState(a));
+  const list=A().filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===w && a.date===d && dockState(a));
 
   list.forEach(a=>{
     const el=stage.querySelector(`[data-ly5-id="${CSS.escape(String(a.id))}"]`);
@@ -18844,7 +18834,7 @@ function role(){
 function canUse(){return ['admin','inventory'].includes(role())}
 function wcfg(w){try{return WAREHOUSES?.[w]||null}catch(e){return null}}
 function date(){return document.getElementById('annDate')?.value||window.yardivoLocalDateV583()}
-function wh(){return document.getElementById('annWarehouse')?.value||'W101'}
+function wh(){return document.getElementById('annWarehouse')?.value||yardivoCanonicalWarehouseV583()}
 function mins(t){try{return toMin(t)}catch(e){const p=String(t||'0:0').split(':').map(Number);return (p[0]||0)*60+(p[1]||0)}}
 function hh(m){try{return hhmm(m)}catch(e){return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`}}
 function duration(){
@@ -18863,7 +18853,7 @@ function locked(w,dock){
 function booking(w,d,dock,start,dur){
   try{
     return announcements.find(a=>
-      (a.warehouse||'W101')===w&&a.date===d&&Number(a.dock)===Number(dock)&&
+      (a.warehouse||yardivoCanonicalWarehouseV583())===w&&a.date===d&&Number(a.dock)===Number(dock)&&
       overlaps(start,dur,toMin(a.time),Number(a.duration||15))
     )||null;
   }catch(e){return null}
@@ -19044,7 +19034,7 @@ function anns(){try{return Array.isArray(announcements)?announcements:[]}catch(e
 function cfg(w){try{return WAREHOUSES?.[w]||{ramps:6,label:w}}catch(e){return{ramps:6,label:w}}}
 function liveWarehouse(){
  return document.getElementById('lyWarehouse')?.value
-   || (currentSession?.location==='DU'?'W201':'W101');
+   || yardivoCanonicalWarehouseV583();
 }
 function liveDate(){return document.getElementById('lyDate')?.value||today()}
 function phase(a){
@@ -19227,7 +19217,7 @@ function targetFor(a,i,ramps){
 }
 
 function syncEngine(inst,list,w){
- const c=cfg(w),ramps=Math.max(1,Number(c.ramps||6));
+ const c=cfg(w),ramps=Math.max(1,Number(c.ramps||0));
  // ramps recreated when warehouse changes
  if(inst.lastWh!==w){
   inst.ramps.forEach(x=>inst.scene.remove(x));inst.ramps=[];
@@ -19266,7 +19256,7 @@ function ensureLiveHost(){
 function updateLive(){
  if(!canLive3D())return;
  const inst=ensureLiveHost();if(!inst)return;
- const w=liveWarehouse(),d=liveDate(),list=anns().filter(a=>(a.warehouse||'W101')===w&&a.date===d);
+ const w=liveWarehouse(),d=liveDate(),list=anns().filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===w&&a.date===d);
  syncEngine(inst,list,w);
 }
 function forceLive3D(){
@@ -19291,7 +19281,7 @@ function ensureWar3D(){
   inst=createEngine(h,'war');if(inst)instances.set('war',inst);
  }
  let w='';try{w=(document.getElementById('wrSubtitle')?.textContent.match(/W\d+/)||[])[0]||liveWarehouse()}catch(e){w=liveWarehouse()}
- const list=anns().filter(a=>(a.warehouse||'W101')===w&&a.date===today());
+ const list=anns().filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===w&&a.date===today());
  syncEngine(inst,list,w);
 }
 
@@ -19362,8 +19352,8 @@ const states=new WeakMap();
 function role(){let r='';try{r=String(currentSession?.role||'').toLowerCase()}catch(e){};if(r==='zalihe'||r.includes('zalih'))r='inventory';if(r==='prijam')r='reception';return r}
 function A(){try{return Array.isArray(announcements)?announcements:[]}catch(e){return[]}}
 function date(){return document.getElementById('lyDate')?.value||window.yardivoLocalDateV583()}
-function wh(){return document.getElementById('lyWarehouse')?.value||(currentSession?.location==='DU'?'W201':'W101')}
-function ramps(w){try{return Math.max(1,Number(WAREHOUSES?.[w]?.ramps||6))}catch(e){return 6}}
+function wh(){return document.getElementById('lyWarehouse')?.value||yardivoCanonicalWarehouseV583()}
+function ramps(w){try{return Math.max(0,Number(WAREHOUSES?.[w]?.ramps)||0)}catch(e){return 0}}
 function phase(a){let s='';try{s=String(normalizedPlanStatus?.(a)||operationalPlanStatus?.(a)||a.status||'').toLowerCase()}catch(e){s=String(a.status||'').toLowerCase()}
  if(a.receivedAt||a.rejectedAt||/zaprim|odbij|zavr/.test(s))return'done';
  if(a.dockArrivalAt||/rampi/.test(s))return'dock';if(a.yardArrivalAt||/dvori/.test(s))return'yard';
@@ -19409,13 +19399,13 @@ function live(){
  stage.dataset.viewmode='3d';
  const old=document.getElementById('yardivoReal3DHost');if(old)old.style.display='none';
  const h=makeHost(stage,'yardivoNative3D',false),w=wh(),d=date();
- render(h,w,A().filter(a=>(a.warehouse||'W101')===w&&a.date===d))
+ render(h,w,A().filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===w&&a.date===d))
 }
 function war(){
  const c=document.getElementById('wrYardCanvas'),room=document.getElementById('yardivoWarRoom');if(!c||!room?.classList.contains('active'))return;
  const old=document.getElementById('yardivoWar3DHost');if(old)old.style.display='none';
  const h=makeHost(c,'yardivoNativeWar3D',true),w=wh(),d=date();
- render(h,w,A().filter(a=>(a.warehouse||'W101')===w&&a.date===d))
+ render(h,w,A().filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===w&&a.date===d))
 }
 document.addEventListener('click',e=>{if(e.target.closest('[data-view="liveYard"],[data-home-target="liveYard"],.ly-view'))setTimeout(live,60);if(e.target.closest('[data-view="yardivoWarRoom"],[data-home-target="yardivoWarRoom"]'))setTimeout(war,80)},true);
 window.addEventListener('load',()=>setTimeout(()=>{live();war()},900));
@@ -19431,8 +19421,8 @@ function role(){let r='';try{r=String(currentSession?.role||'').toLowerCase().tr
 function canLive(){return ['admin','inventory','reception'].includes(role())}
 function A(){try{return Array.isArray(announcements)?announcements:[]}catch(e){return[]}}
 function date(){return document.getElementById('lyDate')?.value||window.yardivoLocalDateV583()}
-function wh(){return document.getElementById('lyWarehouse')?.value||((typeof activeWarehouse!=='undefined'&&activeWarehouse&&activeWarehouse!=='ALL')?activeWarehouse:(currentSession?.location==='DU'?'W201':'W101'))}
-function ramps(w){try{return Math.max(1,Number(WAREHOUSES?.[w]?.ramps||6))}catch(e){return 6}}
+function wh(){return document.getElementById('lyWarehouse')?.value||((typeof activeWarehouse!=='undefined'&&activeWarehouse&&activeWarehouse!=='ALL')?activeWarehouse:yardivoCanonicalWarehouseV583())}
+function ramps(w){try{return Math.max(0,Number(WAREHOUSES?.[w]?.ramps)||0)}catch(e){return 0}}
 function phase(a){let s='';try{s=String(normalizedPlanStatus?.(a)||operationalPlanStatus?.(a)||a.status||'').toLowerCase()}catch(e){s=String(a.status||'').toLowerCase()};if(a.receivedAt||a.rejectedAt||/zaprim|odbij|zavr|izašao|izasao/.test(s))return'done';if(a.dockArrivalAt||/rampi/.test(s))return'dock';if(a.yardArrivalAt||/dvori/.test(s))return'yard';if(a.gateCheckedAt||a.gateInAt||a.actualDate||a.actualTime||/porta|gate|ulaz/.test(s))return'gate';return'incoming'}
 function late(a){try{return Number(delayMinutes?.(a)||a.lateMinutes||0)>15}catch(e){return Number(a.lateMinutes||0)>15}}
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -19444,8 +19434,8 @@ function hideLegacyWar(){['yardivoWar3DHost','yardivoNativeWar3D','yardivoV25War
 function truckHtml(a){return `<span class="yf-label">${esc(a.supplier||'DOBAVLJAČ')}</span><div class="yf-trailer"></div><div class="yf-cab"></div><i class="yf-wheel w1"></i><i class="yf-wheel w2"></i><i class="yf-wheel w3"></i>`}
 function update(host,w,d,list){if(!host)return;const dyn=host.querySelector('.yf-dynamic'),n=ramps(w);if(!dyn)return;let busy=new Set(list.filter(a=>phase(a)==='dock').map(a=>Number(a.dock)));let existing=new Map([...dyn.querySelectorAll('.yf-truck')].map(x=>[x.dataset.id,x]));dyn.querySelectorAll('.yf-ramp').forEach(x=>x.remove());for(let r=1;r<=n;r++){let x=248+(r-1)*(520/Math.max(1,n-1));dyn.insertAdjacentHTML('beforeend',`<div class="yf-ramp ${busy.has(r)?'busy':''}" style="left:${x}px">R${r}</div>`)}let alive=new Set();list.forEach((a,i)=>{let id=String(a.id),el=existing.get(id);alive.add(id);if(!el){el=document.createElement('div');el.className='yf-truck';el.dataset.id=id;el.innerHTML=truckHtml(a);dyn.appendChild(el);let [tx,ty,tr]=pos(a,i,n);el.style.left=(tx-145)+'px';el.style.top=(ty+80)+'px';requestAnimationFrame(()=>requestAnimationFrame(()=>position(el,a,i,n)))}else position(el,a,i,n);el.querySelector('.yf-label').textContent=a.supplier||'DOBAVLJAČ';el.onclick=e=>{e.stopPropagation();try{openAnnouncementDetail?.(a.id,'yard')}catch(_){}}});existing.forEach((el,id)=>{if(!alive.has(id)){el.style.opacity='0';setTimeout(()=>el.remove(),1100)}});host.querySelector('.yf-meta').textContent=`${w} · ${d} · ${list.length} najava`;host.querySelector('.yf-zero')?.remove();if(!list.length){let z=document.createElement('div');z.className='yf-zero';z.textContent=`${w} · ${d} · nema aktivnih kamiona`;host.querySelector('.yf-stage').appendChild(z)}}
 function position(el,a,i,n){let [x,y,r]=pos(a,i,n),p=phase(a);el.className=`yf-truck ${p} ${late(a)?'late':''}`;el.style.left=x+'px';el.style.top=y+'px';el.style.setProperty('--truck-r',r+'deg');el.style.opacity=p==='done'?'.08':'1'}
-function live(){if(!canLive())return;const view=document.getElementById('liveYard'),stage=document.getElementById('liveYardStage');if(!view||!stage)return;hideLegacyLive();const h=makeHost(stage,'yardivoFinalLiveYard','live',false);h.style.display='block';const w=wh(),d=date(),list=A().filter(a=>(a.warehouse||'W101')===w&&a.date===d);update(h,w,d,list)}
-function war(){const room=document.getElementById('yardivoWarRoom'),canvas=document.getElementById('wrYardCanvas');if(!room?.classList.contains('active')||!canvas)return;hideLegacyWar();const h=makeHost(canvas,'yardivoFinalWarYard','war',true);h.style.display='block';const w=wh(),d=date(),list=A().filter(a=>(a.warehouse||'W101')===w&&a.date===d);update(h,w,d,list)}
+function live(){if(!canLive())return;const view=document.getElementById('liveYard'),stage=document.getElementById('liveYardStage');if(!view||!stage)return;hideLegacyLive();const h=makeHost(stage,'yardivoFinalLiveYard','live',false);h.style.display='block';const w=wh(),d=date(),list=A().filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===w&&a.date===d);update(h,w,d,list)}
+function war(){const room=document.getElementById('yardivoWarRoom'),canvas=document.getElementById('wrYardCanvas');if(!room?.classList.contains('active')||!canvas)return;hideLegacyWar();const h=makeHost(canvas,'yardivoFinalWarYard','war',true);h.style.display='block';const w=wh(),d=date(),list=A().filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===w&&a.date===d);update(h,w,d,list)}
 function enforce(){const r=role(),yardOk=r==='gate',liveOk=['admin','inventory','reception'].includes(r);document.querySelectorAll('[data-view="yard"],[data-home-target="yard"]').forEach(x=>x.style.setProperty('display',yardOk?'':'none',yardOk?'':'important'));document.querySelectorAll('[data-view="liveYard"],[data-home-target="liveYard"]').forEach(x=>x.style.setProperty('display',liveOk?'':'none',liveOk?'':'important'))}
 document.addEventListener('click',e=>{if(e.target.closest('[data-view="liveYard"],[data-home-target="liveYard"],.ly-view'))setTimeout(live,90);if(e.target.closest('#yardivoWarButton'))setTimeout(war,120)},true);window.addEventListener('load',()=>setTimeout(()=>{enforce();live();war()},1200));setInterval(()=>{enforce();if(document.getElementById('liveYard')?.classList.contains('active'))live();if(document.getElementById('yardivoWarRoom')?.classList.contains('active'))war()},1800);window.YardivoFinalYard={live,war};
 })();
@@ -19822,7 +19812,7 @@ function ensureRefs(){
   let changed=false;
   (Array.isArray(window.announcements)?window.announcements:(typeof announcements!=='undefined'&&Array.isArray(announcements)?announcements:[])).forEach(a=>{
     if(!a.announcementRef && typeof yardivoGenerateAnnouncementRef==='function'){
-      a.announcementRef=yardivoGenerateAnnouncementRef(a.warehouse||'W101');
+      a.announcementRef=yardivoGenerateAnnouncementRef(a.warehouse||yardivoCanonicalWarehouseV583());
       changed=true;
     }
   });
@@ -19876,7 +19866,7 @@ function render(){
   body.innerHTML=a.length
     ? a.map(x=>`<tr>
         <td class="yma-ref">NAJAVA ${esc(typeof announcementNumber==='function'?announcementNumber(x):(x.announcementRef||x.id||'—'))}</td>
-        <td>${esc(x.date||'—')}</td><td>${esc(x.warehouse||'W101')}</td>
+        <td>${esc(x.date||'—')}</td><td>${esc(x.warehouse||yardivoCanonicalWarehouseV583())}</td>
         <td><strong>${esc(x.supplier||'—')}</strong></td>
         <td>${x.dock?'Rampa '+esc(x.dock):'—'}</td><td>${esc(x.time||'—')}</td>
         <td>${esc(x.status||'U dolasku')}</td><td>${esc(x.createdBy||'—')}</td>
@@ -19965,11 +19955,11 @@ window.YardivoMyAnnouncements={render,apply,open,isMine};
 const st={mode:'3d',rz:-10,sc:.78,drag:false,x:0,date:''};
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function data(){try{return Array.isArray(announcements)?announcements:[]}catch(e){return[]}}
-function wh(){try{return activeWarehouse&&activeWarehouse!=='ALL'?activeWarehouse:(currentSession?.location==='DU'?'W201':'W101')}catch(e){return'W101'}}
+function wh(){try{return activeWarehouse&&activeWarehouse!=='ALL'?activeWarehouse:yardivoCanonicalWarehouseV583()}catch(e){return'W101'}}
 function isoToday(){const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}
 function addDays(s,n){const [y,m,d]=String(s).split('-').map(Number),x=new Date(y,m-1,d);x.setDate(x.getDate()+n);return [x.getFullYear(),String(x.getMonth()+1).padStart(2,'0'),String(x.getDate()).padStart(2,'0')].join('-')}
 function prettyDate(s){const [y,m,d]=String(s).split('-').map(Number);const x=new Date(y,m-1,d);return x.toLocaleDateString('hr-HR',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}).toUpperCase()}
-function ramps(w){try{return Math.max(1,Number(YardivoRampConfig?.count?.(w)||WAREHOUSES?.[w]?.ramps||6))}catch(e){return 6}}
+function ramps(w){try{return Math.max(0,Number(YardivoRampConfig?.count?.(w)??WAREHOUSES?.[w]?.ramps??0))}catch(e){return 0}}
 function ensure(){
  if(document.getElementById('myYard'))return;
  if(!st.date)st.date=isoToday();
@@ -20054,7 +20044,7 @@ function render(){
  const isToday=d===today;
  s.querySelector('.myy-date').value=d;
  s.querySelector('.myy-date-title').textContent=d===today?'DANAS · '+prettyDate(d):(d===addDays(today,1)?'SUTRA · ':'')+prettyDate(d);
- const dayData=data().filter(a=>(a.warehouse||'W101')===w&&a.date===d);
+ const dayData=data().filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===w&&a.date===d);
  s.querySelector('.myy-meta').textContent=`${w} · ${dayData.length} NAJAVA · ${isToday?'LIVE':'PLAN DANA'}`;
  const docks=s.querySelector('.myy-docks');
  docks.innerHTML=Array.from({length:n},(_,i)=>{
@@ -22335,9 +22325,9 @@ const CDN='https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
 function today(){const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}
 function data(){try{return Array.isArray(announcements)?announcements:[]}catch(_){return[]}}
-function warehouse(){try{return activeWarehouse&&activeWarehouse!=='ALL'?activeWarehouse:(currentSession?.location==='DU'?'W201':'W101')}catch(_){return'W101'}}
+function warehouse(){try{return activeWarehouse&&activeWarehouse!=='ALL'?activeWarehouse:yardivoCanonicalWarehouseV583()}catch(_){return'W101'}}
 function selectedDate(){return document.querySelector('#myYard .myy-date')?.value||today()}
-function rampCount(w){try{return Math.max(1,Number(YardivoRampConfig?.count?.(w)||WAREHOUSES?.[w]?.ramps||6))}catch(_){return 6}}
+function rampCount(w){try{return Math.max(0,Number(YardivoRampConfig?.count?.(w)??WAREHOUSES?.[w]?.ramps??0))}catch(_){return 0}}
 function phase(a,d){
  const s=String(a?.status||'').toLowerCase();
  /* Status is authoritative for the selected appointment date.
@@ -22496,7 +22486,7 @@ function buildEngine(T,host){
  function sync(){
    const w=warehouse(),d=selectedDate(),n=rampCount(w);
    if(w!==currentWh||n!==currentRamps){rebuildRamps(n);currentWh=w;currentRamps=n}
-   const list=data().filter(a=>(a.warehouse||'W101')===w&&a.date===d).slice(-80),alive=new Set();
+   const list=data().filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===w&&a.date===d).slice(-80),alive=new Set();
    list.forEach((a,i)=>{const id=String(a.id);alive.add(id);let g=trucks.get(id);const t=target(a,i,n,d);
      if(!g){g=truck(a);g.position.copy(t.q==='incoming'?t.p:t.p.clone().add(new T.Vector3(-15,0,12)));g.rotation.y=t.r;scene.add(g);trucks.set(id,g)}
      g.userData.a=a;g.userData.target=t.p;g.userData.targetRot=t.r;g.userData.targetOpacity=t.op;g.userData.phase=t.q;
@@ -29759,7 +29749,7 @@ window.YardivoAdminUsersServerV583.invoke=invokeUsers;
 
 function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function roleLabel(r){return ({admin:'Admin',manager:'Voditelj',inventory:'Upravljanje zalihama',reception:'Prijam',gate:'Porta',supplier:'Dobavljač'})[normRole(r)]||r||'—'}
-function locLabel(l){return l==='DU'?'Lokacija 2':l==='VG'?'Lokacija 1':l==='ALL'?'Sve lokacije':l||'—'}
+function locLabel(l){if(l==='ALL')return 'Sve lokacije';try{const d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');const row=(d.locations||[]).find(x=>String(x.id)===String(l));if(row)return row.name||row.id}catch(_){}return l||'—'}
 
 async function renderProfiles(){
   const host=document.getElementById('masterUserList');
@@ -29794,9 +29784,9 @@ async function renderProfiles(){
     host.querySelectorAll('[data-profile-password]').forEach(btn=>{
       btn.onclick=async()=>{
         const username=btn.dataset.profileUser||'korisnik';
-        const next=window.prompt(`NOVA ŠIFRA · ${username}\nUpiši novu šifru (najmanje 6 znakova).`);
+        const next=window.prompt(`NOVA ŠIFRA · ${username}\nUpiši novu šifru (najmanje 8 znakova).`);
         if(next===null)return;
-        if(String(next).length<6){alert('Šifra mora imati najmanje 6 znakova.');return}
+        if(String(next).length<6){alert('Šifra mora imati najmanje 8 znakova.');return}
         const again=window.prompt(`POTVRDA ŠIFRE · ${username}\nPonovno upiši novu šifru.`);
         if(again===null)return;
         if(next!==again){alert('Šifre se ne podudaraju.');return}
@@ -29865,7 +29855,7 @@ async function createProfile(){
   const warehouses=yardivoSelectedInternalUserWarehouses();
 
   if(!/^[a-z0-9._-]{3,40}$/.test(username)){alert('Username mora imati najmanje 3 znaka.');return}
-  if(password.length<6){alert('Password mora imati najmanje 6 znakova.');return}
+  if(password.length<8){alert('Password mora imati najmanje 8 znakova.');return}
   if(!['admin','manager','inventory','reception','gate'].includes(assignedRole)){alert('Odaberi valjanu rolu.');return}
   if(assignedRole!=='admin'&&!warehouses.length){alert('Odaberi barem jedno skladište za korisnika.');return}
 
@@ -30331,9 +30321,9 @@ async function change(){
    show('Za promjenu passworda upiši korisničko ime i trenutni password.');
    return;
  }
- const next=window.prompt('NOVI PASSWORD\nUpiši novi password (najmanje 6 znakova).');
+ const next=window.prompt('NOVI PASSWORD\nUpiši novi password (najmanje 8 znakova).');
  if(next===null)return;
- if(String(next).length<6){show('Novi password mora imati najmanje 6 znakova.');return}
+ if(String(next).length<6){show('Novi password mora imati najmanje 8 znakova.');return}
  const again=window.prompt('POTVRDI NOVI PASSWORD\nPonovno upiši novi password.');
  if(again===null)return;
  if(next!==again){show('Novi passwordi se ne podudaraju.');return}
@@ -30641,7 +30631,7 @@ function ensure(){
     (save?.parentElement||panel).appendChild(btn);
     btn.onclick=open;
   }
-  btn.style.display=isAdmin()?'':'none';
+  btn.style.display='none'; // legacy supplier modal disabled; unified V5.8.3 user creator is authoritative
   if(!document.getElementById('yardivoSupplierAccountModal')){
     document.body.insertAdjacentHTML('beforeend',`
     <div id="yardivoSupplierAccountModal" aria-hidden="true">
@@ -30655,7 +30645,7 @@ function ensure(){
             <label>KONTAKT OSOBA<input id="ysaContactName" autocomplete="off"></label>
             <label>KONTAKT E-MAIL<input id="ysaContactEmail" type="email" autocomplete="off"></label>
             <label>TELEFON · OPCIONALNO<input id="ysaContactPhone" type="tel" autocomplete="off"></label>
-            <label>LOKACIJA<select id="ysaLocation"><option value="DU">Lokacija 2</option><option value="VG">Lokacija 1</option><option value="ALL">SVA SKLADIŠTA · DU + VG</option></select></label>
+            <label>LOKACIJA<select id="ysaLocation"><option value="">— Master Data —</option></select></label>
             <div style="grid-column:1/-1">
               <label>SKLADIŠTA DOSTUPNA DOBAVLJAČU</label>
               <div id="ysaWarehousePicker" style="margin-top:7px;padding:10px;border:1px solid #304958;border-radius:8px;background:#09131a"></div>
@@ -30758,7 +30748,7 @@ async function save(){
   if(!supplier_name)return alert('Odaberi dobavljača.');
   if(!warehouses.length)return alert('Odaberi barem jedno skladište za korisnika.');
   if(!username)return alert('Upiši korisničko ime.');
-  if(password.length<6)return alert('Privremena lozinka mora imati najmanje 6 znakova.');
+  if(password.length<8)return alert('Privremena lozinka mora imati najmanje 8 znakova.');
   if(!warehouses.length)return alert('Odaberi barem jedno skladište za dobavljača.');
   if(!contact_name)return alert('Upiši kontakt osobu.');
   if(!contact_email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact_email))return alert('Upiši ispravan kontakt e-mail.');
@@ -31739,7 +31729,7 @@ async function list(){
 async function changePassword(id,username){
   const pass=prompt(`Nova šifra za Supplier account "${username}":`);
   if(pass===null)return;
-  if(String(pass).length<6){alert('Šifra mora imati najmanje 6 znakova.');return}
+  if(String(pass).length<6){alert('Šifra mora imati najmanje 8 znakova.');return}
   try{
     await invoke('password',{auth_user_id:id,password:pass});
     alert('Šifra je uspješno promijenjena.');
@@ -33242,12 +33232,12 @@ function computePlannerDuration(){
   return 60;
 }
 function rebuildPlannerOccupancy(){
-  const wh=String(plannerRow?.warehouse||'W101');
+  const wh=String(plannerRow?.warehouse||yardivoCanonicalWarehouseV583());
   const date=String(plannerDate||'');
   const rows=[];
   try{
     for(const a of (Array.isArray(announcements)?announcements:[])){
-      if((a.warehouse||'W101')!==wh||a.date!==date)continue;
+      if((a.warehouse||yardivoCanonicalWarehouseV583())!==wh||a.date!==date)continue;
       const start=typeof toMin==='function'?toMin(a.time):0;
       const dur=Math.max(15,Number(a.duration)||60);
       rows.push({dock:Number(a.dock)||0,start:Number(start)||0,duration:dur,pallets:Number(a.pallets)||0});
@@ -33257,7 +33247,7 @@ function rebuildPlannerOccupancy(){
   return plannerOccupancyCache;
 }
 function plannerCache(){
-  if(!plannerOccupancyCache||plannerOccupancyCache.wh!==String(plannerRow?.warehouse||'W101')||plannerOccupancyCache.date!==String(plannerDate||'')){
+  if(!plannerOccupancyCache||plannerOccupancyCache.wh!==String(plannerRow?.warehouse||yardivoCanonicalWarehouseV583())||plannerOccupancyCache.date!==String(plannerDate||'')){
     return rebuildPlannerOccupancy();
   }
   return plannerOccupancyCache;
@@ -33661,10 +33651,9 @@ async function invoke(action,payload={}){
 }
 function allWh(loc){
   try{
-    if(typeof window.allWarehousesForLocation==='function')return window.allWarehousesForLocation(loc)||[];
-    if(typeof allWarehousesForLocation==='function')return allWarehousesForLocation(loc)||[];
-  }catch(_){}
-  return loc==='DU'?['W201','W203','W204']:['W101','W103','W104'];
+    const d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');
+    return (d.warehouses||[]).filter(w=>w&&w.active!==false&&(!loc||loc==='ALL'||String(w.location_id)===String(loc))).map(w=>w.id);
+  }catch(_){return[]}
 }
 function locationName(loc){
   return loc==='DU'?'Lokacija 2':loc==='VG'?'Lokacija 1':'Sve lokacije';
@@ -33848,9 +33837,11 @@ async function createManager(){
 
   if(!name)return alert('Upiši ime i prezime Voditelja.');
   if(!/^[a-z0-9._-]{3,40}$/.test(username))return alert('Username mora imati najmanje 3 znaka.');
-  if(password.length<6)return alert('Lozinka mora imati najmanje 6 znakova.');
+  if(password.length<8)return alert('Lozinka mora imati najmanje 8 znakova.');
   if(password!==password2)return alert('Lozinke se ne podudaraju.');
   if(fixedRole!=='admin'&&!warehouses.length)return alert('Odaberi barem jedno skladište.');
+  if(fixedRole==='supplier'&&!contact_name)return alert('Upiši kontakt osobu dobavljača.');
+  if(fixedRole==='supplier'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact_email))return alert('Upiši ispravan kontakt e-mail dobavljača.');
   if(!sections.length)return alert('Odaberi barem jednu sekciju.');
 
   const btn=document.getElementById('ymCreate');
@@ -34088,19 +34079,21 @@ function allWh(loc){
     if(typeof window.allWarehousesForLocation==='function')return window.allWarehousesForLocation(loc)||[];
     if(typeof allWarehousesForLocation==='function')return allWarehousesForLocation(loc)||[];
   }catch(_){}
-  return loc==='DU'?['W201','W203','W204']:['W101','W103','W104'];
+  try{
+    const d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');
+    return (d.warehouses||[]).filter(w=>w&&w.active!==false&&(loc==='ALL'||String(w.location_id)===String(loc))).map(w=>w.id);
+  }catch(_){}
+  return [];
 }
 function selectedWh(){
   return [...document.querySelectorAll('#yufWarehouseGrid input[name="yufWarehouse"]:checked')].map(x=>x.value);
 }
 function renderWh(){
-  const loc=document.getElementById('yufLocation')?.value||'VG';
+  const loc=document.getElementById('yufLocation')?.value||'';
   const host=document.getElementById('yufWarehouseGrid');if(!host)return;
-  const rows=loc==='ALL'?[...new Set([...allWh('VG'),...allWh('DU')])]:allWh(loc);
-  host.innerHTML=rows.map(w=>{
-    const place=String(w).startsWith('W2')?'Lokacija 2':'Lokacija 1';
-    return `<label><input type="checkbox" name="yufWarehouse" value="${esc(w)}"><span><strong>${esc(w)}</strong>${loc==='ALL'?`<br><small>${place}</small>`:''}</span></label>`;
-  }).join('');
+  let d={locations:[],warehouses:[]};try{d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){}
+  const rows=(d.warehouses||[]).filter(w=>w&&w.active!==false&&(loc==='ALL'||String(w.location_id)===String(loc)));
+  host.innerHTML=rows.length?rows.map(w=>{const place=(d.locations||[]).find(x=>String(x.id)===String(w.location_id))?.name||'';return `<label><input type="checkbox" name="yufWarehouse" value="${esc(w.id)}"><span><strong>${esc(w.name||w.id)}</strong>${place?`<br><small>${esc(place)}</small>`:''}</span></label>`}).join(''):'<div style="padding:10px;color:#879daf">Nema skladišta za odabranu lokaciju.</div>';
   const all=document.getElementById('yufAllWarehouses');if(all)all.checked=false;
 }
 async function invokeCreate(payload){
@@ -34171,18 +34164,19 @@ function ensure(){
             <div class="yucr-grid" style="margin-top:10px">
               <label>Ime i prezime<input id="yufName" autocomplete="off"></label>
               <label>Username<input id="yufUsername" autocomplete="off"></label>
-              <label>Lozinka<input id="yufPassword" type="password" autocomplete="new-password"></label>
-              <label>Potvrda lozinke<input id="yufPassword2" type="password" autocomplete="new-password"></label>
+              <label>Lozinka<input id="yufPassword" type="password" minlength="8" autocomplete="new-password"></label>
+              <label>Potvrda lozinke<input id="yufPassword2" type="password" minlength="8" autocomplete="new-password"></label>
+            </div>
+            <div class="yucr-grid" id="yufSupplierContactFields" style="margin-top:10px;display:none">
+              <label>Kontakt osoba<input id="yufContactName" autocomplete="off"></label>
+              <label>Kontakt e-mail<input id="yufContactEmail" type="email" autocomplete="off"></label>
+              <label>Kontakt telefon<input id="yufContactPhone" autocomplete="off"></label>
             </div>
           </section>
 
           <section class="yucr-section" id="yufScopeSection"> <strong>2 · LOKACIJA I SKLADIŠTA</strong>
             <label style="margin-top:10px">Lokacija
-              <select id="yufLocation">
-                <option value="VG">Lokacija 1</option>
-                <option value="DU">Lokacija 2</option>
-                <option value="ALL">Sve lokacije</option>
-              </select>
+              <select id="yufLocation"><option value="">Odaberi lokaciju...</option></select>
             </label>
             <label style="display:flex;flex-direction:row;align-items:center;gap:8px;margin-top:10px">
               <input id="yufAllWarehouses" type="checkbox" style="width:auto">
@@ -34237,21 +34231,6 @@ let fixedRole='';
 
 function openRole(role){
   closeRolePicker();
-  if(role==='supplier'){
-    // Existing specialized Supplier dialog remains the authority for Supplier accounts.
-    const btn=document.getElementById('yardivoSupplierAccountBtn');
-    if(btn){btn.click();return}
-    alert('Supplier prozor još nije spreman. Ponovno otvori Postavke.');
-    return;
-  }
-  if(role==='manager'){
-    if(window.YardivoManagerAssignmentV583?.open){
-      window.YardivoManagerAssignmentV583.open();
-      return;
-    }
-    alert('Voditelj prozor još nije spreman. Ponovno otvori Postavke.');
-    return;
-  }
   openFixed(role);
 }
 function openFixed(role){
@@ -34259,21 +34238,23 @@ function openFixed(role){
   fixedRole=role;
   document.getElementById('yufTitle').textContent='NOVI KORISNIK · '+info.label.toUpperCase();
   document.getElementById('yufSubtitle').textContent=info.desc;
-  document.getElementById('yufName').value='';
-  document.getElementById('yufUsername').value='';
-  document.getElementById('yufPassword').value='';
-  document.getElementById('yufPassword2').value='';
-  const scope=document.getElementById('yufScopeSection');
- if(scope)scope.style.display=role==='admin'?'none':'';
- document.getElementById('yufLocation').value=role==='admin'?'ALL':'VG';
- const allOpt=document.querySelector('#yufLocation option[value="ALL"]');if(allOpt)allOpt.hidden=role!=='admin';
- if(role!=='admin'&&document.getElementById('yufLocation').value==='ALL')document.getElementById('yufLocation').value='VG';
- if(role==='admin'){
-   document.getElementById('yufWarehouseGrid').innerHTML='';
-   const all=document.getElementById('yufAllWarehouses');if(all)all.checked=false;
- }else renderWh();
- const m=document.getElementById('yardivoFixedUserModal');
-  m.classList.add('open');m.setAttribute('aria-hidden','false');
+  const nameLabel=document.getElementById('yufName')?.closest('label');
+  if(nameLabel)nameLabel.childNodes[0].nodeValue=role==='supplier'?'Naziv dobavljača':'Ime i prezime';
+  ['yufName','yufUsername','yufPassword','yufPassword2','yufContactName','yufContactEmail','yufContactPhone'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  const supplierFields=document.getElementById('yufSupplierContactFields');if(supplierFields)supplierFields.style.display=role==='supplier'?'grid':'none';
+  const scope=document.getElementById('yufScopeSection');if(scope)scope.style.display=role==='admin'?'none':'';
+  const locSel=document.getElementById('yufLocation');
+  if(locSel){
+    let d={locations:[]};try{d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){}
+    const rows=(d.locations||[]).filter(x=>x&&x.active!==false);
+    locSel.innerHTML=role==='admin'?'<option value="ALL">Sve lokacije</option>':('<option value="">Odaberi lokaciju...</option>'+rows.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join(''));
+    locSel.value=role==='admin'?'ALL':(rows[0]?.id||'');
+  }
+  if(role==='admin'){
+    document.getElementById('yufWarehouseGrid').innerHTML='';const all=document.getElementById('yufAllWarehouses');if(all)all.checked=false;
+  }else renderWh();
+  const note=document.getElementById('yufFixedNote');if(note)note.textContent=role==='supplier'?'Dobavljač dobiva pristup samo odabranoj lokaciji i skladištima iz Master podataka.':'Sekcije su fiksirane prema roli. Admin je globalan. Za ostale role odabiru se lokacija i skladišta.';
+  const m=document.getElementById('yardivoFixedUserModal');m.classList.add('open');m.setAttribute('aria-hidden','false');
   setTimeout(()=>document.getElementById('yufName')?.focus(),30);
 }
 async function createFixedUser(){
@@ -34282,25 +34263,47 @@ async function createFixedUser(){
   const username=(document.getElementById('yufUsername')?.value||'').trim().toLowerCase();
   const password=document.getElementById('yufPassword')?.value||'';
   const password2=document.getElementById('yufPassword2')?.value||'';
+  const contact_name=(document.getElementById('yufContactName')?.value||'').trim();
+  const contact_email=(document.getElementById('yufContactEmail')?.value||'').trim().toLowerCase();
+  const contact_phone=(document.getElementById('yufContactPhone')?.value||'').trim();
   const location=fixedRole==='admin'?'ALL':(document.getElementById('yufLocation')?.value||'');
   const warehouses=fixedRole==='admin'?[]:selectedWh();
 
-  if(!name)return alert('Upiši ime i prezime.');
+  if(!name)return alert(fixedRole==='supplier'?'Upiši naziv dobavljača.':'Upiši ime i prezime.');
   if(!/^[a-z0-9._-]{3,40}$/.test(username))return alert('Username mora imati najmanje 3 znaka.');
-  if(password.length<6)return alert('Lozinka mora imati najmanje 6 znakova.');
+  if(password.length<8)return alert('Lozinka mora imati najmanje 8 znakova.');
   if(password!==password2)return alert('Lozinke se ne podudaraju.');
-  if(!warehouses.length)return alert('Odaberi barem jedno skladište.');
+  if(fixedRole!=='admin'&&!location)return alert('Odaberi lokaciju.');
+  if(fixedRole!=='admin'&&!warehouses.length)return alert('Odaberi barem jedno skladište.');
+  if(fixedRole==='supplier'&&!contact_name)return alert('Upiši kontakt osobu dobavljača.');
+  if(fixedRole==='supplier'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact_email))return alert('Upiši ispravan kontakt e-mail dobavljača.');
 
   const btn=document.getElementById('yufCreate');
   btn.disabled=true;btn.textContent='KREIRAM...';
   try{
     await invokeCreate({
       username,password,role:fixedRole,location,warehouses,
-      display_name:name
+      display_name:name,
+      supplier_name:fixedRole==='supplier'?name:null,
+      contact_name:fixedRole==='supplier'?contact_name:null,
+      contact_email:fixedRole==='supplier'?contact_email:null,
+      contact_phone:fixedRole==='supplier'?contact_phone:null
     });
+    if(fixedRole==='supplier'){
+      try{
+        const d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');
+        d.suppliers=Array.isArray(d.suppliers)?d.suppliers:[];
+        let s=d.suppliers.find(x=>String(x.name||'').trim().toLowerCase()===name.toLowerCase());
+        if(!s){let n=0;d.suppliers.forEach(x=>{const m=String(x.id||'').match(/(\d+)$/);if(m)n=Math.max(n,+m[1]||0)});s={id:'SUP'+String(n+1).padStart(3,'0'),name,active:true};d.suppliers.push(s)}
+        s.username=username;s.location_id=location;s.warehouses=[...warehouses];
+        localStorage.setItem('yardivo_master_data_registry_v583',JSON.stringify(d));
+        try{window.YardivoMasterDataV583?.save?.(d)}catch(_){}
+        window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{source:'supplier-create'}}));
+      }catch(_){}
+    }
     closeFixed();
     try{await window.YardivoServerProfiles?.render?.()}catch(_){}
-    try{showYmsToast?.('success','KORISNIK KREIRAN',`${name} · ${ROLE_INFO[fixedRole].label}`)}catch(_){}
+    try{showYmsToast?.('success',fixedRole==='supplier'?'DOBAVLJAČ KREIRAN':'KORISNIK KREIRAN',`${name} · ${ROLE_INFO[fixedRole].label}`)}catch(_){}
   }catch(e){
     alert('Kreiranje korisnika nije uspjelo: '+String(e?.message||e));
   }finally{
@@ -34748,14 +34751,14 @@ function getHours(wh,r){const all=rampHoursLoad(),d=defaultHours(wh);return all?
 function setHours(wh,r,from,to){const all=rampHoursLoad();all[wh]=all[wh]||{};all[wh][String(r)]={from,to};rampHoursSave(all);renderRampTopdown()}
 window.YardivoRampHoursV583={get:getHours,set:setHours,all:rampHoursLoad};
 
-function activeWh(){try{return (activeWarehouse&&activeWarehouse!=='ALL')?activeWarehouse:(currentSession?.location==='DU'?'W201':'W101')}catch(_){return'W101'}}
+function activeWh(){try{return (activeWarehouse&&activeWarehouse!=='ALL')?activeWarehouse:yardivoCanonicalWarehouseV583()}catch(_){return''}}
 function planStatus(a){try{return typeof normalizedPlanStatus==='function'?normalizedPlanStatus(a):String(a?.status||'')}catch(_){return String(a?.status||'')}}
 function openIncidents(){try{return Array.isArray(incidents)?incidents:[]}catch(_){return[]}}
 function incidentFor(a,wh,r){return openIncidents().find(i=>{const open=!/zatvoren|closed|resolved|riješen|rijesen/i.test(String(i.status||''));if(!open)return false;if(a&&String(i.announcementId||'')===String(a.id))return true;return String(i.warehouse||'').toUpperCase()===String(wh).toUpperCase()&&Number(i.dock||i.ramp)===Number(r)})}
 function inHours(wh,r){const h=getHours(wh,r),now=new Date(),cur=now.getHours()*60+now.getMinutes(),cv=v=>{const [a,b]=String(v||'00:00').split(':').map(Number);return a*60+b};return cur>=cv(h.from)&&cur<cv(h.to)}
 function locked(wh,r){try{return window.YardivoRampConfig?.isLocked?.(wh,r)===true}catch(_){return false}}
-function count(wh){try{return Number(window.YardivoRampConfig?.count?.(wh)||(typeof WAREHOUSES!=='undefined'?WAREHOUSES?.[wh]?.ramps:0)||6)}catch(_){return 6}}
-function currentAtRamp(wh,r){const today=window.yardivoLocalDateV583();try{return (Array.isArray(announcements)?announcements:[]).find(a=>String(a.warehouse||'W101')===String(wh)&&a.date===today&&Number(a.dock)===Number(r)&&planStatus(a)==='Na rampi')||null}catch(_){return null}}
+function count(wh){try{return Math.max(0,Number(window.YardivoRampConfig?.count?.(wh)??(typeof WAREHOUSES!=='undefined'?WAREHOUSES?.[wh]?.ramps:0)??0))}catch(_){return 0}}
+function currentAtRamp(wh,r){const today=window.yardivoLocalDateV583();try{return (Array.isArray(announcements)?announcements:[]).find(a=>String(a.warehouse||yardivoCanonicalWarehouseV583())===String(wh)&&a.date===today&&Number(a.dock)===Number(r)&&planStatus(a)==='Na rampi')||null}catch(_){return null}}
 function plate(a){if(!a)return'';try{return (typeof effectivePlate==='function'?effectivePlate(a):'')||a.plannedPlate||a.vehiclePlate||a.plate||a.registration||''}catch(_){return a.plannedPlate||a.vehiclePlate||a.plate||''}}
 
 function ensureRampPanel(){
@@ -35172,14 +35175,15 @@ function renderExecutive(){
   let rampCount=m.ramps||0;
   try{rampCount=Number(window.YardivoRampConfig?.count?.(wh)||rampCount||0)}catch(_){}
   const pallets=rows.reduce((s,a)=>s+Number(a.pallets||0),0);
-  let cap=800;
-  try{if(typeof getWarehouseCapacity==='function')cap=Number(getWarehouseCapacity(wh)||800)}catch(_){}
-  const load=Math.min(100,Math.max(0,Math.round(pallets/Math.max(1,cap)*100)));
+  let cap=null;
+  try{if(typeof getWarehouseCapacity==='function')cap=getWarehouseCapacity(wh)}catch(_){}
+  const capKnown=Number.isFinite(Number(cap))&&Number(cap)>0;
+  const load=capKnown?Math.min(100,Math.max(0,Math.round(pallets/Number(cap)*100))):null;
   const att=lateN+openInc;
 
-  const vals={yexTotal:total,yexYard:yard,yexDock:dock,yexRamps:`${dock}/${rampCount||'—'}`,yexLoad:`${load}%`,yexAttention:att};
+  const vals={yexTotal:total,yexYard:yard,yexDock:dock,yexRamps:`${dock}/${rampCount||'—'}`,yexLoad:capKnown?`${load}%`:'NEPOZNAT',yexAttention:att};
   Object.entries(vals).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=String(v)});
-  const bar=document.getElementById('yexLoadBar');if(bar)bar.style.width=load+'%';
+  const bar=document.getElementById('yexLoadBar');if(bar)bar.style.width=(capKnown?load:0)+'%';
   const ctx=document.getElementById('yexContext');if(ctx)ctx.textContent=`${locLabel(locCode())} · ${wh} · ${m.name}`;
   const risk=document.getElementById('yexRisk');
   if(risk){
@@ -36062,7 +36066,7 @@ window.__YARDIVO_STABILITY_HARD_FIX__={version:'V5.8.3',build:'20260908-dev-v5.8
     const wh=warehouse||document.getElementById('weeklyMapWarehouse')?.value||'';
     const d=new Date(date+'T12:00:00');
     const items=(Array.isArray(window.announcements)?window.announcements:(typeof announcements!=='undefined'?announcements:[]))
-      .filter(a=>a.date===date&&(!wh||(a.warehouse||'W101')===wh))
+      .filter(a=>a.date===date&&(!wh||(a.warehouse||yardivoCanonicalWarehouseV583())===wh))
       .sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')));
     const pal=items.reduce((n,a)=>n+Number(a.pallets||0),0);
     const trucks=items.reduce((n,a)=>n+(typeof truckCountForPallets==='function'?truckCountForPallets(a.pallets):1),0);
@@ -39626,8 +39630,8 @@ function installCreateOwner(){
       alert('Username mora imati najmanje 3 znaka.');
       return;
     }
-    if(password.length<6){
-      alert('Password mora imati najmanje 6 znakova.');
+    if(password.length<8){
+      alert('Password mora imati najmanje 8 znakova.');
       return;
     }
     if(!warehouses.length){
@@ -43363,7 +43367,7 @@ function setCount(code,n){
   try{if(WAREHOUSES?.[code])WAREHOUSES[code].ramps=n}catch(_){}
 }
 function selected(){
-  return String(document.getElementById('rampSettingsWarehouse')?.value||'W101').toUpperCase()
+  return String(document.getElementById('rampSettingsWarehouse')?.value||yardivoCanonicalWarehouseV583()).toUpperCase()
 }
 function selectWh(code){
   const sel=document.getElementById('rampSettingsWarehouse');if(sel){sel.value=code;sel.dispatchEvent(new Event('change',{bubbles:true}))}
@@ -45181,7 +45185,8 @@ function clearRuntime(){
 /* ---------- MASTER MODEL ---------- */
 function locationName(id,d=master()){return d.locations.find(x=>String(x.id)===String(id))?.name||'Bez lokacije'}
 function capacity(code){
- const v=jget(CAP,{})?.[code]?.warehousePallets;
+ const w=master().warehouses.find(x=>String(x.id)===String(code));
+ const v=w?.daily_pallet_capacity??jget(CAP,{})?.[code]?.warehousePallets;
  return v==null||v===''||Number(v)<=0?null:Number(v);
 }
 function det(code){
@@ -45651,319 +45656,43 @@ body.light-mode #yardivoDevTotalResetV583 .ydr-keep{
 <script id="yardivo-v583-dev-total-reset-final">
 (function(){
 'use strict';
-const BUILD='20260912-dev-v5.8.3-dev-total-reset-final';
-const KEEP_USER='admin1';
+const BUILD='20260913-dev-v5.8.3-backend-runtime-hardened-final';
 const MASTER='yardivo_master_data_registry_v583';
 const CLEAN_EPOCH='yardivo_clean_epoch_v583';
-const FACTORY_PENDING='yardivo_factory_zero_server_pending_v583_20260911_r2';
-
 let busy=false;
-
-const EMPTY_ARRAY_KEYS=[
- 'yardivo_yms_announcements_v1','studenac_announcements','yardivo_announcements','yms_announcements',
- 'yardivo_yms_incidents_v1','yardivo_incidents',
- 'yardivo_live_notifications_v1','yardivo_master_notifications_v1',
- 'yardivo_notifications','yardivo_notifications_v1','yardivo_notifications_v2','yardivo_notifications_v583',
- 'yardivo_notification_history_v1','yardivo_notification_history_v583',
- 'studenac_notifications','yms_notifications',
- 'yardivo_epal_transactions_v1','yardivo_epal_initial_stock_v1','yms_trucks_v2',
- 'yardivo_auto_replan_log_v1','yardivo_supplier_scores_v1',
- 'yardivo_supabase_offline_queue_v1','yardivo_supabase_offline_queue_v2',
- 'yardivo_supplier_deliveries_v1','yardivo_supplier_requests_v1'
-];
-
-const REMOVE_KEYS=[
- 'yardivo_dynamic_warehouses_v1',
- 'yardivo_ramp_config_v1','yardivo_ramp_capacity_v1',
- 'yardivo_ramp_hours_v1','yardivo_ramp_hours_v583',
- 'yardivo_reception_master_hours_v1',
- 'yardivo_capacity_config_v1','yardivo_detention_settings_v1',
- 'yardivo_ramp_master_v583','studenac_ramp_blocks',
- 'studenac_custom_holidays','studenac_holiday_overrides',
- 'yardivo_master_report_v1','yardivo_master_sheets_v1',
- 'yardivo_data_last_saved_at',
- 'studenac_active_warehouse','yardivo_active_warehouse',
- 'yardivo_last_location','yardivo_selected_location',
- 'yardivo_notification_seen_v5','yardivo_last_incident_notice',
- 'yardivo_supplier_scores_v1','yardivo_overview_qa_seed_v1'
-];
-
+const EMPTY_ARRAY_KEYS=['yardivo_yms_announcements_v1','studenac_announcements','yardivo_announcements','yms_announcements','yardivo_yms_incidents_v1','yardivo_incidents','yardivo_live_notifications_v1','yardivo_master_notifications_v1','yardivo_notifications','yardivo_notifications_v1','yardivo_notifications_v2','yardivo_notifications_v583','yardivo_notification_history_v1','yardivo_notification_history_v583','studenac_notifications','yms_notifications','yardivo_epal_transactions_v1','yardivo_epal_initial_stock_v1','yms_trucks_v2','yardivo_auto_replan_log_v1','yardivo_supplier_scores_v1','yardivo_supabase_offline_queue_v1','yardivo_supabase_offline_queue_v2','yardivo_supplier_deliveries_v1','yardivo_supplier_requests_v1'];
+const REMOVE_KEYS=['yardivo_dynamic_warehouses_v1','yardivo_ramp_config_v1','yardivo_ramp_capacity_v1','yardivo_ramp_hours_v1','yardivo_ramp_hours_v583','yardivo_reception_master_hours_v1','yardivo_capacity_config_v1','yardivo_detention_settings_v1','yardivo_ramp_master_v583','studenac_ramp_blocks','studenac_custom_holidays','studenac_holiday_overrides','yardivo_master_report_v1','yardivo_master_sheets_v1','yardivo_data_last_saved_at','studenac_active_warehouse','yardivo_active_warehouse','yardivo_last_location','yardivo_selected_location','yardivo_notification_seen_v5','yardivo_last_incident_notice','yardivo_supplier_scores_v1','yardivo_overview_qa_seed_v1'];
 function norm(v){return String(v||'').trim().toLowerCase()}
 function role(){return norm(window.currentSession?.role)}
 function username(){return norm(window.currentSession?.username||window.currentSession?.user)}
-
-function status(msg,kind=''){
- const el=document.getElementById('yardivoResetYardivoStatus');
- if(!el)return;
- el.textContent=String(msg||'');
- el.dataset.kind=kind;
-}
-
+function status(msg,kind=''){const el=document.getElementById('yardivoResetYardivoStatus');if(el){el.textContent=String(msg||'');el.dataset.kind=kind}}
+function keeper(){const u=username();if(!u||role()!=='admin')throw new Error('RESET može pokrenuti samo prijavljeni Admin.');return u}
 function mount(){
  const settings=document.getElementById('settings');if(!settings)return;
  let card=document.getElementById('yardivoDevTotalResetV583');
- if(!card){
-  card=document.createElement('section');
-  card.id='yardivoDevTotalResetV583';
-  card.innerHTML=`
-   <div class="ydr-head">
-    <div>
-     <h2>RESET YARDIVO</h2>
-     <p>Potpuni DEV reset za pripremu novog kupca. Briše poslovne podatke, Master Data, operativni state, notifikacije, Supplier podatke i sve korisnike osim jednog glavnog Admin računa.</p>
-    </div>
-    <span class="ydr-dev">YARDIVO DEV</span>
-   </div>
-   <div class="ydr-checks">
-    <span>0 LOKACIJA / SKLADIŠTA / RAMPI</span>
-    <span>0 NAJAVA / SUPPLIER NAJAVA / INCIDENATA</span>
-    <span>0 PALETA / KAPACITETA / DETENTION / STATEA</span>
-    <span>0 NOTIFIKACIJA / POVIJESTI / CACHEA</span>
-    <span>BRIŠE SVE DRUGE KORISNIKE</span>
-    <span>NOVI MASTER POČINJE OD NULE</span>
-   </div>
-   <div class="ydr-keep">OSTAJE SAMO: <strong>admin1 · ADMIN</strong> + njegova aktivna autentikacijska sesija.</div>
-   <button type="button" id="yardivoResetYardivoBtn">RESET YARDIVO — VRATI SVE NA 0</button>
-   <div id="yardivoResetYardivoStatus" aria-live="polite"></div>`;
-  settings.appendChild(card);
- }else if(settings.lastElementChild!==card){
-  settings.appendChild(card);
- }
- const btn=document.getElementById('yardivoResetYardivoBtn');
- if(btn&&!btn.dataset.bound){
-  btn.dataset.bound='1';
-  btn.addEventListener('click',resetYardivo);
- }
+ if(!card){card=document.createElement('section');card.id='yardivoDevTotalResetV583';card.innerHTML=`
+ <div class="ydr-head"><div><h2>RESET YARDIVO</h2><p>Factory Zero briše poslovne podatke, konfiguraciju, Supplier/Gate podatke i sve druge korisnike. Ostaje samo trenutno prijavljeni Admin. Nakon reseta struktura se gradi isključivo: Lokacija → Skladište → Rampe → radno vrijeme / kapacitet / EPAL.</p></div><span class="ydr-dev">YARDIVO DEV</span></div>
+ <div class="ydr-checks"><span>0 LOKACIJA / SKLADIŠTA / RAMPI</span><span>0 NAJAVA / SUPPLIER NAJAVA / INCIDENATA</span><span>0 GATE QR / SCANOVA / PALETA</span><span>0 NOTIFIKACIJA / POVIJESTI / CACHEA</span><span>BRIŠE SVE DRUGE KORISNIKE</span><span>SMART: OFF / PAUSED</span></div>
+ <div class="ydr-keep">OSTAJE SAMO: <strong id="yardivoResetKeeperLabel">TRENUTNI ADMIN</strong> + aktivna autentikacijska sesija.</div>
+ <button type="button" id="yardivoResetYardivoBtn">RESET YARDIVO — VRATI SVE NA 0</button><div id="yardivoResetYardivoStatus" aria-live="polite"></div>`;settings.appendChild(card)}else if(settings.lastElementChild!==card)settings.appendChild(card);
+ const label=document.getElementById('yardivoResetKeeperLabel');if(label)label.textContent=(username()||'trenutni Admin')+' · ADMIN';
+ const btn=document.getElementById('yardivoResetYardivoBtn');if(btn&&!btn.dataset.bound){btn.dataset.bound='1';btn.addEventListener('click',resetYardivo)}
 }
-function preserveAuthStorage(){
- const out={local:{},session:{}};
- for(const [name,st] of [['local',localStorage],['session',sessionStorage]]){
-  try{
-   for(let i=0;i<st.length;i++){
-    const k=st.key(i);if(!k)continue;
-    if(/^sb-[a-z0-9_-]+-auth-token$/i.test(k)||/^supabase\.auth\./i.test(k)){
-      out[name][k]=st.getItem(k);
-    }
-   }
-  }catch(_){}
- }
- return out;
-}
-function restoreAuthStorage(saved){
- for(const [name,vals] of Object.entries(saved||{})){
-  const st=name==='session'?sessionStorage:localStorage;
-  for(const [k,v] of Object.entries(vals||{})){
-   try{if(v!=null)st.setItem(k,v)}catch(_){}
-  }
- }
-}
-function emptyMaster(){
- return {
-  suppliers:[],locations:[],warehouses:[],
-  __emptySupplierSeedMigrationV583:true,
-  __emptyWarehouseMigrationV583:true,
-  __factoryZeroV583:true,
-  __cleanMasterFoundationV583:true,
-  __resetYardivoV583:true,
-  __masterUpdatedAtV583:new Date().toISOString()
- };
-}
-function resetRuntimeArrays(){
- const names=['announcements','incidents','notifications','notificationHistory','trucks','unannounced'];
- for(const n of names){
-  try{
-   const x=window[n];
-   if(Array.isArray(x))x.length=0;
-  }catch(_){}
- }
- try{
-  if(typeof announcements!=='undefined'&&Array.isArray(announcements))announcements.length=0;
-  if(typeof incidents!=='undefined'&&Array.isArray(incidents))incidents.length=0;
-  if(typeof notifications!=='undefined'&&Array.isArray(notifications))notifications.length=0;
- }catch(_){}
-}
-function localHardReset(){
- const auth=preserveAuthStorage();
- const session={
-  ...(window.currentSession||{}),
-  user:KEEP_USER,username:KEEP_USER,role:'admin',
-  location:null,warehouses:[],serverAuthorized:true
- };
- /* Business/config data: explicit clean first. */
- EMPTY_ARRAY_KEYS.forEach(k=>{try{localStorage.setItem(k,'[]')}catch(_){}});
- REMOVE_KEYS.forEach(k=>{try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(_){}});
- try{localStorage.setItem(MASTER,JSON.stringify(emptyMaster()))}catch(_){}
- try{localStorage.setItem(CLEAN_EPOCH,new Date().toISOString())}catch(_){}
- try{localStorage.removeItem(FACTORY_PENDING)}catch(_){}
-
- /* Remove old local user registries; authoritative account is server auth/profile. */
- ['yardivo_master_users_v1','yardivo_users','yardivo_yms_users','yardivo_custom_session','yardivo_remembered_session','yardivo_session','studenac_demo_session']
- .forEach(k=>{try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(_){}});
-
- restoreAuthStorage(auth);
- window.currentSession=session;
- try{if(typeof currentSession!=='undefined')currentSession=session}catch(_){}
- try{window.activeWarehouse='ALL';if(typeof activeWarehouse!=='undefined')activeWarehouse='ALL'}catch(_){}
- try{
-  sessionStorage.setItem('studenac_demo_session',JSON.stringify(session));
- }catch(_){}
- resetRuntimeArrays();
-
- try{window.YardivoNotificationsV583?.clear?.()}catch(_){}
- try{document.querySelectorAll('#yardivoLiveToasts>*').forEach(x=>x.remove())}catch(_){}
- try{document.querySelectorAll('.nav-badge').forEach(x=>{x.textContent='';x.style.setProperty('display','none','important')})}catch(_){}
-}
-async function adminInvoke(action,payload={}){
- if(window.YardivoAdminUsersServerV583?.invoke){
-  return await window.YardivoAdminUsersServerV583.invoke(action,payload);
- }
- const c=await window.YardivoAuth?.client?.();
- if(!c)throw new Error('Admin API nije dostupan.');
- const {data,error}=await c.functions.invoke('yardivo-admin-users',{body:{action,...payload}});
- if(error)throw error;
- if(data?.error)throw new Error(data.error);
- return data?.data??data;
-}
-async function deleteOtherUsers(){
- const res=await adminInvoke('list',{});
- const users=Array.isArray(res)?res:(Array.isArray(res?.users)?res.users:[]);
- const keeper=users.find(u=>norm(u?.username)===KEEP_USER&&norm(u?.app_role)==='admin');
- if(!keeper)throw new Error('Sigurnosna provjera: server nema admin1 Admin profil. RESET je zaustavljen.');
- const removable=users.filter(u=>{
-  const same=norm(u?.username)===KEEP_USER&&norm(u?.app_role)==='admin';
-  return !same&&u?.auth_user_id;
- });
- let deleted=0,failed=[];
- for(const u of removable){
-  try{await adminInvoke('delete',{auth_user_id:u.auth_user_id});deleted++}
-  catch(e){failed.push(`${u.username||u.auth_user_id}: ${e?.message||e}`)}
- }
- if(failed.length)throw new Error(`Nisu obrisani svi korisnici (${failed.length}): ${failed.join(' | ')}`);
- return {deleted,keeper};
-}
-async function clearServerBusinessData(){
- if(!window.YardivoSupabase?.online?.()){
-  throw new Error('ONLINE BAZA NIJE SPREMNA. RESET nije dopušten bez server veze.');
- }
- if(!window.YardivoSupabase?.resetAllExceptUsers){
-  throw new Error('Server reset API nije dostupan.');
- }
- return await window.YardivoSupabase.resetAllExceptUsers();
-}
-function rerenderEmpty(){
- const fns=[
-  'render','renderAnnouncements','renderAnnouncementSchedule','renderDailyMap','renderWeeklyMap',
-  'renderReceiving','renderOverview','renderDashboard','renderRampe','renderDockOverview',
-  'renderCheckinPro','renderPlannerPro','renderSupplierProfiles'
- ];
- fns.forEach(n=>{try{if(typeof window[n]==='function')window[n]()}catch(_){}});
- try{window.YardivoMasterFoundationV583?.render?.()}catch(_){}
- try{window.YardivoProductionEmptyV583?.refresh?.()}catch(_){}
- try{window.YardivoMyYard?.render?.()}catch(_){}
- try{window.YardivoMyYardWebGL?.refresh?.()}catch(_){}
- try{window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{source:'reset-yardivo'}}))}catch(_){}
- try{window.dispatchEvent(new CustomEvent('yardivo:context-changed',{detail:{location:'',warehouse:''}}))}catch(_){}
-}
-async function verifyEmpty(){
- const checks={
-  localAnnouncements:0,
-  localIncidents:0,
-  locations:0,
-  warehouses:0,
-  suppliers:0,
-  users:null
- };
- try{checks.localAnnouncements=JSON.parse(localStorage.getItem('yardivo_yms_announcements_v1')||'[]').length}catch(_){checks.localAnnouncements=-1}
- try{checks.localIncidents=JSON.parse(localStorage.getItem('yardivo_yms_incidents_v1')||'[]').length}catch(_){checks.localIncidents=-1}
- try{
-  const m=JSON.parse(localStorage.getItem(MASTER)||'{}');
-  checks.locations=Array.isArray(m.locations)?m.locations.length:-1;
-  checks.warehouses=Array.isArray(m.warehouses)?m.warehouses.length:-1;
-  checks.suppliers=Array.isArray(m.suppliers)?m.suppliers.length:-1;
- }catch(_){checks.locations=checks.warehouses=checks.suppliers=-1}
- try{
-  const r=await adminInvoke('list',{});
-  const users=Array.isArray(r)?r:(Array.isArray(r?.users)?r.users:[]);
-  checks.users=users.map(u=>({username:norm(u.username),role:norm(u.app_role)}));
- }catch(_){}
- const userOk=Array.isArray(checks.users)&&checks.users.length===1&&checks.users[0].username===KEEP_USER&&checks.users[0].role==='admin';
- const dataOk=checks.localAnnouncements===0&&checks.localIncidents===0&&checks.locations===0&&checks.warehouses===0&&checks.suppliers===0;
- return {ok:dataOk&&userOk,dataOk,userOk,checks};
-}
-async function resetYardivo(){
- if(busy)return;
- if(role()!=='admin'||username()!==KEEP_USER){
-  alert('RESET YARDIVO može pokrenuti samo admin1 Admin.');
-  return;
- }
- const ok=confirm(
-  'RESET YARDIVO — POTPUNI DEV RESET\n\n'+
-  'Ovo briše SVE poslovne podatke i SVE korisnike osim admin1 Admina.\n'+
-  'Lokacije, skladišta, rampe, najave, Supplier najave, incidenti, palete, kapaciteti, SLA i notifikacije vraćaju se na 0.\n\n'+
-  'Nastaviti?'
- );
- if(!ok)return;
- const typed=prompt('Za konačnu potvrdu upiši točno:\nRESET YARDIVO');
- if(String(typed||'').trim().toUpperCase()!=='RESET YARDIVO'){
-  alert('RESET nije izvršen.');
-  return;
- }
-
- const btn=document.getElementById('yardivoResetYardivoBtn');
- busy=true;if(btn){btn.disabled=true;btn.textContent='RESETIRAM YARDIVO…'}
- try{
-  status('1/5 · Provjera servera i glavnog Admin računa…');
-  const pre=await adminInvoke('list',{});
-  const preUsers=Array.isArray(pre)?pre:(Array.isArray(pre?.users)?pre.users:[]);
-  if(!preUsers.some(u=>norm(u.username)===KEEP_USER&&norm(u.app_role)==='admin')){
-   throw new Error('admin1 Admin nije pronađen na serveru. Ništa nije obrisano.');
-  }
-
-  status('2/5 · Brišem sve YARDIVO poslovne podatke sa servera…');
-  await clearServerBusinessData();
-
-  status('3/5 · Brišem sve korisnike osim admin1 Admina…');
-  await deleteOtherUsers();
-
-  status('4/5 · Čistim Master Data, lokacije, skladišta, rampe, kapacitete, Supplier cache i notifikacije…');
-  localHardReset();
-  rerenderEmpty();
-
-  status('5/5 · Završna provjera praznog sustava…');
-  const v=await verifyEmpty();
-  if(!v.ok){
-   console.error('[YARDIVO RESET VERIFY]',v);
-   throw new Error('Reset je izvršen, ali završna verifikacija nije 100% čista. Pogledaj konzolu / QA.');
-  }
-
-  status('✓ YARDIVO JE RESETIRAN NA 0 · OSTAO JE SAMO admin1 ADMIN','ok');
-  try{showYmsToast?.('success','YARDIVO RESETIRAN','Sustav je prazan. Ostao je samo admin1 Admin.')}catch(_){}
-  alert('YARDIVO DEV je potpuno resetiran.\n\nOstao je samo admin1 Admin.\nSada prvo napravi lokaciju u Master Podacima.');
- }catch(e){
-  console.error('[RESET YARDIVO]',e);
-  status('RESET NIJE ZAVRŠIO 100%: '+String(e?.message||e),'error');
-  alert('RESET YARDIVO nije završio 100%:\n\n'+String(e?.message||e));
- }finally{
-  busy=false;if(btn){btn.disabled=false;btn.textContent='RESET YARDIVO — VRATI SVE NA 0'}
- }
-}
-
-function ensureBottom(){
- mount();
- const s=document.getElementById('settings'),c=document.getElementById('yardivoDevTotalResetV583');
- if(s&&c&&s.lastElementChild!==c)s.appendChild(c);
-}
-document.addEventListener('DOMContentLoaded',()=>setTimeout(ensureBottom,100));
-window.addEventListener('load',()=>setTimeout(ensureBottom,300),{once:true});
-['yardivo:login','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(ensureBottom,80)));
-document.addEventListener('click',e=>{
- if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(ensureBottom,40);
-},true);
-
-window.YardivoDevTotalResetV583={
- reset:resetYardivo,verify:verifyEmpty,mount:ensureBottom,
- keeper:KEEP_USER,build:BUILD
-};
-window.YARDIVO_DEV_BUILD=BUILD;
+function preserveAuthStorage(){const out={local:{},session:{}};for(const [name,st] of [['local',localStorage],['session',sessionStorage]]){try{for(let i=0;i<st.length;i++){const k=st.key(i);if(k&&(/^sb-[a-z0-9_-]+-auth-token$/i.test(k)||/^supabase\.auth\./i.test(k)))out[name][k]=st.getItem(k)}}catch(_){}}return out}
+function restoreAuthStorage(saved){for(const [name,vals] of Object.entries(saved||{})){const st=name==='session'?sessionStorage:localStorage;for(const [k,v] of Object.entries(vals||{})){try{if(v!=null)st.setItem(k,v)}catch(_){}}}}
+function emptyMaster(){return {suppliers:[],locations:[],warehouses:[],smart:{enabled:false,mode:'PAUSED'},__factoryZeroV583:true,__cleanMasterFoundationV583:true,__resetYardivoV583:true,__masterUpdatedAtV583:new Date().toISOString()}}
+function resetRuntimeArrays(){for(const n of ['announcements','incidents','notifications','notificationHistory','trucks','unannounced'])try{if(Array.isArray(window[n]))window[n].length=0}catch(_){};try{if(typeof announcements!=='undefined'&&Array.isArray(announcements))announcements.length=0;if(typeof incidents!=='undefined'&&Array.isArray(incidents))incidents.length=0;if(typeof notifications!=='undefined'&&Array.isArray(notifications))notifications.length=0}catch(_){}}
+function localHardReset(keep){const auth=preserveAuthStorage(),session={...(window.currentSession||{}),user:keep,username:keep,role:'admin',location:'ALL',warehouses:[],serverAuthorized:true};EMPTY_ARRAY_KEYS.forEach(k=>{try{localStorage.setItem(k,'[]')}catch(_){}});REMOVE_KEYS.forEach(k=>{try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(_){}});try{localStorage.setItem(MASTER,JSON.stringify(emptyMaster()));localStorage.setItem('yardivo_auto_replan_cfg_v1',JSON.stringify({enabled:false,mode:'PAUSED'}));localStorage.setItem(CLEAN_EPOCH,new Date().toISOString())}catch(_){};['yardivo_master_users_v1','yardivo_users','yardivo_yms_users','yardivo_custom_session','yardivo_remembered_session','yardivo_session','studenac_demo_session'].forEach(k=>{try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(_){}});restoreAuthStorage(auth);window.currentSession=session;try{if(typeof currentSession!=='undefined')currentSession=session}catch(_){ }try{window.activeWarehouse='';if(typeof activeWarehouse!=='undefined')activeWarehouse=''}catch(_){};resetRuntimeArrays();try{window.YardivoNotificationsV583?.clear?.()}catch(_){}}
+async function client(){const c=await window.YardivoAuth?.client?.();if(!c)throw new Error('ONLINE AUTH NIJE SPREMAN.');return c}
+async function adminInvoke(action,payload={}){if(window.YardivoAdminUsersServerV583?.invoke)return await window.YardivoAdminUsersServerV583.invoke(action,payload);const c=await client(),{data,error}=await c.functions.invoke('yardivo-admin-users',{body:{action,...payload}});if(error)throw error;if(data?.error)throw new Error(data.error);return data?.data??data}
+async function factoryResetServer(){const c=await client(),{data,error}=await c.functions.invoke('yardivo-factory-reset',{body:{confirm:'RESET YARDIVO'}});if(error)throw error;if(!data?.ok)throw new Error(data?.error||'Server Factory Zero nije uspio.');return data}
+async function deleteOtherUsers(keep){const res=await adminInvoke('list',{}),users=Array.isArray(res)?res:(Array.isArray(res?.users)?res.users:[]),k=users.find(u=>norm(u?.username)===keep&&norm(u?.app_role)==='admin'&&u?.active!==false);if(!k)throw new Error('Trenutni Admin nije pronađen na serveru.');const failed=[];let deleted=0;for(const u of users){if(!u?.auth_user_id||u.auth_user_id===k.auth_user_id)continue;try{await adminInvoke('delete',{auth_user_id:u.auth_user_id});deleted++}catch(e){failed.push(`${u.username||u.auth_user_id}: ${e?.message||e}`)}}if(failed.length)throw new Error('Nisu obrisani svi drugi korisnici: '+failed.join(' | '));return {deleted,keeper:k}}
+function rerenderEmpty(){for(const n of ['render','renderAnnouncements','renderAnnouncementSchedule','renderDailyMap','renderWeeklyMap','renderReceiving','renderOverview','renderDashboard','renderRampe','renderDockOverview','renderCheckinPro','renderPlannerPro','renderSupplierProfiles'])try{if(typeof window[n]==='function')window[n]()}catch(_){};try{window.YardivoMasterFoundationV583?.render?.();window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{source:'reset-yardivo'}}));window.dispatchEvent(new CustomEvent('yardivo:context-changed',{detail:{location:'',warehouse:''}}))}catch(_){}}
+async function verifyEmpty(keep){const checks={localAnnouncements:-1,localIncidents:-1,locations:-1,warehouses:-1,suppliers:-1,users:null};try{checks.localAnnouncements=JSON.parse(localStorage.getItem('yardivo_yms_announcements_v1')||'[]').length;checks.localIncidents=JSON.parse(localStorage.getItem('yardivo_yms_incidents_v1')||'[]').length;const m=JSON.parse(localStorage.getItem(MASTER)||'{}');checks.locations=(m.locations||[]).length;checks.warehouses=(m.warehouses||[]).length;checks.suppliers=(m.suppliers||[]).length}catch(_){};try{const r=await adminInvoke('list',{}),u=Array.isArray(r)?r:(r?.users||[]);checks.users=u.map(x=>({username:norm(x.username),role:norm(x.app_role),active:x.active!==false}))}catch(_){};const userOk=Array.isArray(checks.users)&&checks.users.length===1&&checks.users[0].username===keep&&checks.users[0].role==='admin'&&checks.users[0].active;const dataOk=checks.localAnnouncements===0&&checks.localIncidents===0&&checks.locations===0&&checks.warehouses===0&&checks.suppliers===0;return {ok:dataOk&&userOk,dataOk,userOk,checks}}
+async function resetYardivo(){if(busy)return;let keep;try{keep=keeper()}catch(e){alert(e.message);return}if(!confirm(`RESET YARDIVO — POTPUNI FACTORY ZERO\n\nBrišu se svi poslovni podaci i svi korisnici osim trenutno prijavljenog Admina (${keep}).\n\nNastaviti?`))return;const typed=prompt('Za konačnu potvrdu upiši točno:\nRESET YARDIVO');if(String(typed||'').trim().toUpperCase()!=='RESET YARDIVO')return;const btn=document.getElementById('yardivoResetYardivoBtn');busy=true;if(btn){btn.disabled=true;btn.textContent='RESETIRAM YARDIVO…'}try{status('1/6 · Provjeravam trenutno prijavljenog Admina…');const before=await adminInvoke('list',{}),users=Array.isArray(before)?before:(before?.users||[]);if(!users.some(u=>norm(u.username)===keep&&norm(u.app_role)==='admin'&&u.active!==false))throw new Error('Aktivni Admin profil nije pronađen. Ništa nije obrisano.');status('2/6 · Server Factory Zero: poslovni podaci, Supplier i Gate…');await factoryResetServer();status('3/6 · Brišem sve druge korisnike…');await deleteOtherUsers(keep);status('4/6 · Završni server scrub nakon brisanja korisnika…');await factoryResetServer();status('5/6 · Čistim lokalni runtime i Master cache…');localHardReset(keep);rerenderEmpty();status('6/6 · Verificiram prazni sustav…');const v=await verifyEmpty(keep);if(!v.ok)throw new Error('Reset je izvršen, ali završna lokalna/user verifikacija nije čista.');status(`✓ FACTORY ZERO · OSTAO JE SAMO ${keep} ADMIN`,'ok');try{showYmsToast?.('success','YARDIVO RESETIRAN','Sustav je prazan i spreman za Master Data.')}catch(_){};alert(`YARDIVO DEV je resetiran.\n\nOstao je samo ${keep} Admin.\nPrvi korak: dodaj Lokaciju u Master Data.`)}catch(e){console.error('[RESET YARDIVO]',e);status('RESET NIJE ZAVRŠIO 100%: '+String(e?.message||e),'error');alert('RESET YARDIVO nije završio 100%:\n\n'+String(e?.message||e))}finally{busy=false;if(btn){btn.disabled=false;btn.textContent='RESET YARDIVO — VRATI SVE NA 0'}}}
+function ensureBottom(){mount();const s=document.getElementById('settings'),c=document.getElementById('yardivoDevTotalResetV583');if(s&&c&&s.lastElementChild!==c)s.appendChild(c)}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(ensureBottom,100));window.addEventListener('load',()=>setTimeout(ensureBottom,300),{once:true});['yardivo:login','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(ensureBottom,80)));document.addEventListener('click',e=>{if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(ensureBottom,40)},true);
+window.YardivoDevTotalResetV583={reset:resetYardivo,verify:()=>verifyEmpty(username()),mount:ensureBottom,keeper:()=>username(),build:BUILD};window.YARDIVO_DEV_BUILD=BUILD;
 })();
 </script>
 
@@ -46076,7 +45805,7 @@ body.light-mode #yardivoStableMasterEditorV583 .ysm-location-lock{
 <script id="yardivo-v583-stable-master-supplier-zero-final">
 (function(){
 'use strict';
-const BUILD='20260912-dev-v5.8.3-stable-master-supplier-zero-final';
+const BUILD='20260912-dev-v5.8.3-factory-zero-master-authority-final';
 const MASTER='yardivo_master_data_registry_v583';
 const CAP='yardivo_capacity_config_v1';
 const HOURS='yardivo_reception_master_hours_v1';
@@ -46227,12 +45956,21 @@ function deleteLocation(id){
  try{if(activeLocation()===id)window.YardivoAppStateV583?.setLocation?.('')}catch(_){}
  render(true);
 }
-function addWarehouse(name){
- const n=String(name||'').trim(),loc=activeLocation(),d=master();
- if(!n)return;
- if(!loc||!d.locations.some(x=>x.id===loc)){alert('Prvo odaberi aktivnu lokaciju u headeru.');return}
+function addWarehouse(name,locationId){
+ const n=String(name||'').trim(),loc=String(locationId||'').trim(),d=master();
+ if(!n)return alert('Upiši naziv skladišta.');
+ if(!loc||!d.locations.some(x=>String(x.id)===loc&&x.active!==false)){
+  alert('Odaberi lokaciju kojoj skladište pripada.');
+  return;
+ }
  const id=nextWh(d.warehouses);
- d.warehouses.push({id,name:n,location_id:loc,ramps:0,active:true});commit(d,'warehouse.add');
+ d.warehouses.push({
+  id,name:n,location_id:loc,ramps:0,ramp_settings:[],active:true,
+  daily_pallet_capacity:null,reception_from:'',reception_to:'',
+  detention_wait_min:null,detention_dock_min:null,epal_initial:null
+ });
+ commit(d,'warehouse.add');
+ try{window.YardivoAppStateV583?.setLocation?.(loc)}catch(_){}
  try{window.YardivoAppStateV583?.setWarehouse?.(id)}catch(_){window.activeWarehouse=id}
  render(true);
 }
@@ -46247,48 +45985,96 @@ function deleteWarehouse(id){
  try{if(activeWarehouse()===id)window.YardivoAppStateV583?.setWarehouse?.('')}catch(_){}
  render(true);
 }
-function cap(id){const v=jget(CAP,{})?.[id]?.warehousePallets;return v==null||v===''?null:Number(v)}
+function cap(id){const w=master().warehouses.find(x=>String(x.id)===String(id));const v=w?.daily_pallet_capacity??jget(CAP,{})?.[id]?.warehousePallets;return v==null||v===''?null:Number(v)}
 function whHours(id){const x=jget(HOURS,{})?.[id]||{};return{from:x.from||'',to:x.to||''}}
 function detention(id){const x=jget(DET,{})?.[id]||{};return{wait:x.waitMin??'',dock:x.dockMin??''}}
 function epal(id){const v=jget(EPAL,{})?.[id];return v==null||v===''?'':Number(v)}
-function rampMeta(id,r){const x=jget(RMETA,{})?.[id]?.[String(r)]||{};return{name:x.name||`Rampa ${r}`,active:x.active!==false}}
-function rampHours(id,r){const x=jget(RH,{})?.[id]?.[String(r)]||{};return{from:x.from||'',to:x.to||''}}
-function rampRate(id,r){const v=jget(RATE,{})?.[id]?.[String(r)];return v==null||v===''?'':Number(v)}
-function rampMax(id,r){const v=jget(CAP,{})?.[id]?.ramps?.[String(r)];return v==null||v===''?'':Number(v)}
+function canonicalRamp(id,r){
+ const w=master().warehouses.find(x=>String(x.id)===String(id));
+ const rows=Array.isArray(w?.ramp_settings)?w.ramp_settings:[];
+ return rows.find(x=>Number(x?.number)===Number(r))||null;
+}
+function rampMeta(id,r){
+ const c=canonicalRamp(id,r),x=jget(RMETA,{})?.[id]?.[String(r)]||{};
+ return{name:c?.name||x.name||`Rampa ${r}`,active:c?c.active!==false:x.active!==false}
+}
+function rampHours(id,r){
+ const c=canonicalRamp(id,r),x=jget(RH,{})?.[id]?.[String(r)]||{};
+ return{from:c?.from??x.from??'',to:c?.to??x.to??''}
+}
+function rampRate(id,r){
+ const c=canonicalRamp(id,r),v=c?.pallets_per_hour??jget(RATE,{})?.[id]?.[String(r)];
+ return v==null||v===''?'':Number(v)
+}
+function rampMax(id,r){
+ const c=canonicalRamp(id,r),v=c?.max_pallets??jget(CAP,{})?.[id]?.ramps?.[String(r)];
+ return v==null||v===''?'':Number(v)
+}
 function saveWarehouseOps(id){
  const c=jget(CAP,{});c[id]=c[id]||{ramps:{}};
  const capTxt=String(document.querySelector(`[data-sm-cap="${id}"]`)?.value||'').trim();
- c[id].warehousePallets=capTxt===''?null:Math.max(1,Math.floor(Number(capTxt)||0));c[id].ramps=c[id].ramps||{};jset(CAP,c);
- const h=jget(HOURS,{});h[id]={from:document.querySelector(`[data-sm-wh-from="${id}"]`)?.value||'',to:document.querySelector(`[data-sm-wh-to="${id}"]`)?.value||''};jset(HOURS,h);
- const de=jget(DET,{});de[id]={
-  waitMin:String(document.querySelector(`[data-sm-det-wait="${id}"]`)?.value||'').trim()===''?null:Math.max(0,Math.floor(Number(document.querySelector(`[data-sm-det-wait="${id}"]`)?.value)||0)),
-  dockMin:String(document.querySelector(`[data-sm-det-dock="${id}"]`)?.value||'').trim()===''?null:Math.max(0,Math.floor(Number(document.querySelector(`[data-sm-det-dock="${id}"]`)?.value)||0))
- };jset(DET,de);
- const ep=jget(EPAL,{});const eTxt=String(document.querySelector(`[data-sm-epal="${id}"]`)?.value||'').trim();ep[id]=eTxt===''?null:Math.max(0,Math.floor(Number(eTxt)||0));jset(EPAL,ep);
+ const capValue=capTxt===''?null:Math.max(1,Math.floor(Number(capTxt)||0));
+ c[id].warehousePallets=capValue;c[id].ramps=c[id].ramps||{};jset(CAP,c);
+ const from=document.querySelector(`[data-sm-wh-from="${id}"]`)?.value||'',to=document.querySelector(`[data-sm-wh-to="${id}"]`)?.value||'';
+ const h=jget(HOURS,{});h[id]={from,to};jset(HOURS,h);
+ const waitValue=String(document.querySelector(`[data-sm-det-wait="${id}"]`)?.value||'').trim()===''?null:Math.max(0,Math.floor(Number(document.querySelector(`[data-sm-det-wait="${id}"]`)?.value)||0));
+ const dockValue=String(document.querySelector(`[data-sm-det-dock="${id}"]`)?.value||'').trim()===''?null:Math.max(0,Math.floor(Number(document.querySelector(`[data-sm-det-dock="${id}"]`)?.value)||0));
+ const de=jget(DET,{});de[id]={waitMin:waitValue,dockMin:dockValue};jset(DET,de);
+ const ep=jget(EPAL,{});const eTxt=String(document.querySelector(`[data-sm-epal="${id}"]`)?.value||'').trim();const epalValue=eTxt===''?null:Math.max(0,Math.floor(Number(eTxt)||0));ep[id]=epalValue;jset(EPAL,ep);
+ const md=master(),mw=md.warehouses.find(x=>String(x.id)===String(id));
+ if(mw){mw.daily_pallet_capacity=capValue;mw.reception_from=from;mw.reception_to=to;mw.detention_wait_min=waitValue;mw.detention_dock_min=dockValue;mw.epal_initial=epalValue;commit(md,'warehouse.operational');}
  try{window.YardivoSupabase?.flushQueue?.()}catch(_){}
  refreshOperational();
  try{showYmsToast?.('success','SKLADIŠTE SPREMLJENO','Kapacitet, radno vrijeme, Detention i EPAL su spremljeni.')}catch(_){}
 }
 function changeRampCount(id,delta){
  const d=master(),w=d.warehouses.find(x=>x.id===id);if(!w)return;
- w.ramps=Math.max(0,Math.min(50,(Number(w.ramps)||0)+delta));commit(d,'ramps.count');
- const cfg=jget(RCFG,{});cfg[id]=cfg[id]||{count:0,locked:[]};cfg[id].count=w.ramps;cfg[id].locked=(cfg[id].locked||[]).filter(x=>Number(x)<=w.ramps);jset(RCFG,cfg);
- try{window.YardivoRampConfig?.setCount?.(id,w.ramps)}catch(_){}
+ const oldCount=Math.max(0,Number(w.ramps)||0);
+ const newCount=Math.max(0,Math.min(50,oldCount+delta));
+ w.ramps=newCount;
+ w.ramp_settings=Array.isArray(w.ramp_settings)?w.ramp_settings.filter(x=>Number(x?.number)<=newCount):[];
+ for(let r=1;r<=newCount;r++){
+  if(!w.ramp_settings.some(x=>Number(x?.number)===r)){
+   w.ramp_settings.push({number:r,name:`Rampa ${r}`,active:true,from:'',to:'',pallets_per_hour:null,max_pallets:null});
+  }
+ }
+ commit(d,'ramps.count');
+ /* Compatibility mirrors only; Master remains authoritative. */
+ const cfg=jget(RCFG,{});cfg[id]=cfg[id]||{count:0,locked:[]};cfg[id].count=newCount;cfg[id].locked=(cfg[id].locked||[]).filter(x=>Number(x)<=newCount);jset(RCFG,cfg);
+ try{window.YardivoRampConfig?.setCount?.(id,newCount)}catch(_){}
  render(true);
 }
 function saveRamp(id,r){
  const pair=id+':'+r;
- const meta=jget(RMETA,{});meta[id]=meta[id]||{};meta[id][String(r)]={
-  name:String(document.querySelector(`[data-sm-r-name="${pair}"]`)?.value||`Rampa ${r}`).trim()||`Rampa ${r}`,
-  active:document.querySelector(`[data-sm-r-active="${pair}"]`)?.value!=='0'
- };jset(RMETA,meta);
- const hh=jget(RH,{});hh[id]=hh[id]||{};hh[id][String(r)]={from:document.querySelector(`[data-sm-r-from="${pair}"]`)?.value||'',to:document.querySelector(`[data-sm-r-to="${pair}"]`)?.value||''};jset(RH,hh);
- const rates=jget(RATE,{});rates[id]=rates[id]||{};const rt=String(document.querySelector(`[data-sm-r-rate="${pair}"]`)?.value||'').trim();rates[id][String(r)]=rt===''?null:Math.max(1,Math.floor(Number(rt)||0));jset(RATE,rates);
- const c=jget(CAP,{});c[id]=c[id]||{warehousePallets:null,ramps:{}};c[id].ramps=c[id].ramps||{};const mx=String(document.querySelector(`[data-sm-r-max="${pair}"]`)?.value||'').trim();c[id].ramps[String(r)]=mx===''?null:Math.max(1,Math.floor(Number(mx)||0));jset(CAP,c);
- try{window.YardivoRampConfig?.setLocked?.(id,r,!meta[id][String(r)].active)}catch(_){}
+ const name=String(document.querySelector(`[data-sm-r-name="${pair}"]`)?.value||`Rampa ${r}`).trim()||`Rampa ${r}`;
+ const active=document.querySelector(`[data-sm-r-active="${pair}"]`)?.value!=='0';
+ const from=document.querySelector(`[data-sm-r-from="${pair}"]`)?.value||'';
+ const to=document.querySelector(`[data-sm-r-to="${pair}"]`)?.value||'';
+ const rt=String(document.querySelector(`[data-sm-r-rate="${pair}"]`)?.value||'').trim();
+ const mx=String(document.querySelector(`[data-sm-r-max="${pair}"]`)?.value||'').trim();
+ const palletsPerHour=rt===''?null:Math.max(1,Math.floor(Number(rt)||0));
+ const maxPallets=mx===''?null:Math.max(1,Math.floor(Number(mx)||0));
+
+ /* Canonical owner: warehouse.ramp_settings inside Master Data. */
+ const d=master(),w=d.warehouses.find(x=>String(x.id)===String(id));if(!w)return;
+ w.ramp_settings=Array.isArray(w.ramp_settings)?w.ramp_settings:[];
+ const existing=w.ramp_settings.find(x=>Number(x?.number)===Number(r));
+ const row={number:Number(r),name,active,from,to,pallets_per_hour:palletsPerHour,max_pallets:maxPallets};
+ if(existing)Object.assign(existing,row);else w.ramp_settings.push(row);
+ w.ramps=Math.max(Number(w.ramps)||0,Number(r)||0);
+ commit(d,'ramp.operational');
+
+ /* Compatibility mirrors for older modules until fully retired. */
+ const meta=jget(RMETA,{});meta[id]=meta[id]||{};meta[id][String(r)]={name,active};jset(RMETA,meta);
+ const hh=jget(RH,{});hh[id]=hh[id]||{};hh[id][String(r)]={from,to};jset(RH,hh);
+ const rates=jget(RATE,{});rates[id]=rates[id]||{};rates[id][String(r)]=palletsPerHour;jset(RATE,rates);
+ const c=jget(CAP,{});c[id]=c[id]||{warehousePallets:null,ramps:{}};c[id].ramps=c[id].ramps||{};c[id].ramps[String(r)]=maxPallets;jset(CAP,c);
+ const cfg=jget(RCFG,{});cfg[id]=cfg[id]||{count:w.ramps,locked:[]};cfg[id].count=w.ramps;
+ cfg[id].locked=(cfg[id].locked||[]).filter(x=>Number(x)!==Number(r));if(!active)cfg[id].locked.push(Number(r));jset(RCFG,cfg);
+ try{window.YardivoRampConfig?.setLocked?.(id,r,!active)}catch(_){}
  try{window.YardivoSupabase?.flushQueue?.()}catch(_){}
  refreshOperational();
- try{showYmsToast?.('success','RAMPA SPREMLJENA',meta[id][String(r)].name)}catch(_){}
+ try{showYmsToast?.('success','RAMPA SPREMLJENA',name)}catch(_){}
 }
 
 /* ---------------- Render only on explicit operations/navigation ---------------- */
@@ -46314,10 +46100,16 @@ function render(force=false){
     <div class="ysm-add"><input id="smNewLocation" placeholder="Naziv nove lokacije"><button class="primary" data-sm-add-loc>DODAJ LOKACIJU</button></div>
    </section>
    <section class="ysm-card">
-    <h3>SKLADIŠTA</h3><p>Novo skladište automatski se veže na aktivnu lokaciju. Nema dodatnog dropdowna uz naziv.</p>
-    <div class="ysm-location-lock">AKTIVNA LOKACIJA: <strong>${esc(locName(loc,d))}</strong></div>
-    <div class="ysm-list" style="margin-top:9px">${whs.length?whs.map(w=>`<div class="ysm-row"><div><input data-sm-wh-name="${esc(w.id)}" value="${esc(w.name)}"><small>${esc(locName(w.location_id,d))}</small></div><div><button data-sm-save-wh="${esc(w.id)}">SPREMI</button> <button class="danger" data-sm-del-wh="${esc(w.id)}">OBRIŠI</button></div></div>`).join(''):'<div class="ysm-empty">Nema skladišta.</div>'}</div>
-    <div class="ysm-add"><input id="smNewWarehouse" placeholder="Naziv novog skladišta"><button class="primary" data-sm-add-wh ${loc?'':'disabled'}>DODAJ SKLADIŠTE</button></div>
+    <h3>SKLADIŠTA</h3><p>Svako skladište mora pripadati jednoj postojećoj lokaciji. Prvo upiši naziv, zatim odaberi lokaciju.</p>
+    <div class="ysm-list" style="margin-top:9px">${whs.length?whs.map(w=>`<div class="ysm-row"><div><input data-sm-wh-name="${esc(w.id)}" value="${esc(w.name)}"><small>${esc(locName(w.location_id,d))} · ${esc(w.id)}</small></div><div><button data-sm-save-wh="${esc(w.id)}">SPREMI</button> <button class="danger" data-sm-del-wh="${esc(w.id)}">OBRIŠI</button></div></div>`).join(''):'<div class="ysm-empty">Nema skladišta.</div>'}</div>
+    <div class="ysm-add" style="grid-template-columns:minmax(180px,1fr) minmax(180px,.8fr) auto">
+      <input id="smNewWarehouse" placeholder="Naziv novog skladišta">
+      <select id="smNewWarehouseLocation">
+        <option value="">Odaberi lokaciju</option>
+        ${locs.map(x=>`<option value="${esc(x.id)}" ${String(x.id)===String(loc)?'selected':''}>${esc(x.name)}</option>`).join('')}
+      </select>
+      <button class="primary" data-sm-add-wh ${locs.length?'':'disabled'}>DODAJ SKLADIŠTE</button>
+    </div>
    </section>
    <section class="ysm-card full">
     <h3>SKLADIŠTA · RAMPE · PALETE · RADNO VRIJEME · KAPACITET</h3>
@@ -46355,7 +46147,7 @@ document.addEventListener('click',e=>{
  let b=e.target.closest?.('[data-sm-add-loc]');if(b){e.preventDefault();e.stopImmediatePropagation();addLocation(document.getElementById('smNewLocation')?.value);return}
  b=e.target.closest?.('[data-sm-save-loc]');if(b){e.preventDefault();e.stopImmediatePropagation();saveLocation(b.dataset.smSaveLoc);return}
  b=e.target.closest?.('[data-sm-del-loc]');if(b){e.preventDefault();e.stopImmediatePropagation();if(confirm('Obrisati lokaciju?'))deleteLocation(b.dataset.smDelLoc);return}
- b=e.target.closest?.('[data-sm-add-wh]');if(b){e.preventDefault();e.stopImmediatePropagation();addWarehouse(document.getElementById('smNewWarehouse')?.value);return}
+ b=e.target.closest?.('[data-sm-add-wh]');if(b){e.preventDefault();e.stopImmediatePropagation();addWarehouse(document.getElementById('smNewWarehouse')?.value,document.getElementById('smNewWarehouseLocation')?.value);return}
  b=e.target.closest?.('[data-sm-save-wh]');if(b){e.preventDefault();e.stopImmediatePropagation();saveWarehouseName(b.dataset.smSaveWh);return}
  b=e.target.closest?.('[data-sm-del-wh]');if(b){e.preventDefault();e.stopImmediatePropagation();if(confirm('Obrisati skladište?'))deleteWarehouse(b.dataset.smDelWh);return}
  b=e.target.closest?.('[data-sm-save-ops]');if(b){e.preventDefault();e.stopImmediatePropagation();saveWarehouseOps(b.dataset.smSaveOps);return}
@@ -46517,7 +46309,8 @@ function normalizeAdminSession(){
  }
 }
 function boot(){
- wipeLocalBusiness();sanitizeLegacy();enforceEmptyUi();normalizeAdminSession();
+ /* Factory Zero is explicit only: never erase Admin-entered Master Data on reload/login. */
+ sanitizeLegacy();enforceEmptyUi();normalizeAdminSession();
 }
 document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,70));
 window.addEventListener('load',()=>setTimeout(boot,220),{once:true});
@@ -46961,5 +46754,52 @@ window.YARDIVO_DEV_BUILD=BUILD;
 })();
 </script>
 
+
+<script id="yardivo-v583-master-runtime-sync-final-authority">
+(function(){
+'use strict';
+const MASTER='yardivo_master_data_registry_v583';
+function data(){try{const d=JSON.parse(localStorage.getItem(MASTER)||'{}');return {locations:Array.isArray(d.locations)?d.locations:[],warehouses:Array.isArray(d.warehouses)?d.warehouses:[],suppliers:Array.isArray(d.suppliers)?d.suppliers:[]}}catch(_){return{locations:[],warehouses:[],suppliers:[]}}}
+function activeWh(){const d=data();let id='';try{id=String(window.YardivoAppStateV583?.warehouse?.()||window.activeWarehouse||'')}catch(_){};return d.warehouses.some(w=>w.active!==false&&String(w.id)===id)?id:''}
+function activeLoc(){const d=data();let id='';try{id=String(window.YardivoAppStateV583?.location?.()||window.currentSession?.location||'')}catch(_){};return d.locations.some(l=>l.active!==false&&String(l.id)===id)?id:''}
+function ensureContext(){
+ const d=data(),loc=activeLoc();let wh=activeWh();const rows=d.warehouses.filter(w=>w.active!==false&&(!loc||String(w.location_id)===loc));
+ if(!wh&&rows.length){wh=rows[0].id;try{window.YardivoAppStateV583?.setWarehouse?.(wh)}catch(_){window.activeWarehouse=wh}}
+ return wh;
+}
+function cap(id){const w=data().warehouses.find(x=>String(x.id)===String(id));if(!w)return null;const v=w.daily_pallet_capacity;if(v!=null&&v!==''&&Number(v)>0)return Number(v);try{const c=JSON.parse(localStorage.getItem('yardivo_capacity_config_v1')||'{}')?.[id]?.warehousePallets;return c!=null&&c!==''&&Number(c)>0?Number(c):null}catch(_){return null}}
+window.getWarehouseCapacity=cap;
+function rampCount(id){const w=data().warehouses.find(x=>x.active!==false&&String(x.id)===String(id));return Math.max(0,Number(w?.ramps)||0)}
+if(window.YardivoRampConfig){window.YardivoRampConfig.count=rampCount;window.YardivoRampConfig.getCount=rampCount}
+function sanitize(){
+ const d=data(),ids=new Set(d.warehouses.map(w=>String(w.id)));
+ document.querySelectorAll('select option').forEach(o=>{if(/^W(?:101|103|104|201|202|203|204)$/i.test(String(o.value||''))&&!ids.has(String(o.value)))o.remove()});
+ try{yardivoLoadDynamicWarehousesIntoSystem?.()}catch(_){}
+ ensureContext();
+ try{yardivoRefreshAllWarehouseUi?.()}catch(_){}
+ try{renderDockOverview?.()}catch(_){}
+ try{renderDashboardSimple?.()}catch(_){}
+ try{window.YardivoUnifiedRampsV583?.refresh?.()}catch(_){}
+}
+['yardivo:master-data-changed','yardivo:context-changed','yardivo:login'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(sanitize,30)));
+document.addEventListener('DOMContentLoaded',()=>setTimeout(sanitize,180),{once:true});
+window.addEventListener('load',()=>setTimeout(sanitize,350),{once:true});
+window.YardivoMasterRuntimeAuthorityV583={data,activeWh,activeLoc,ensureContext,capacity:cap,rampCount};
+window.YARDIVO_DEV_BUILD='20260913-dev-v5.8.3-backend-audit-alignment-final';
+})();
+</script>
+
+<script id="yardivo-v583-canonical-master-context-final-authority">
+(function(){
+'use strict';
+function master(){try{return JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){return {locations:[],warehouses:[]}}}
+function wh(id){return (master().warehouses||[]).find(x=>x&&x.active!==false&&String(x.id)===String(id))||null}
+function locationForWarehouse(id){const w=wh(id);return w?String(w.location_id||''):''}
+window.yardivoCanonicalLocationForWarehouseV583=locationForWarehouse;
+/* Legacy global helper, when present, must resolve through Master instead of W1/W2 prefixes. */
+try{window.locationForWarehouse=locationForWarehouse}catch(_){}
+window.YardivoMasterAuthorityV583={master,warehouse:wh,locationForWarehouse};
+})();
+</script>
 </body>
 </html>
