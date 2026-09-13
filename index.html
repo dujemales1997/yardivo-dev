@@ -6052,7 +6052,7 @@ html.yardivo-welcome-complete #yardivoWelcomeBar{
 #yardivoSupplierPortal .ysp-mini-cal{z-index:999999!important;min-width:300px;max-width:340px;box-shadow:0 18px 44px rgba(0,0,0,.45)}
 #yardivoSupplierPortal .ysp-mini-cal.open{display:block!important}
 </style>
-<script id="yardivo-v575-build-marker">window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-scanner-theme-ui-final';</script>
+<script id="yardivo-v575-build-marker">window.YARDIVO_DEV_BUILD='20260913-dev-v5.8.3-header-warehouse-dropdown-clean-final';</script>
 
 <style id="yardivo-v583-map-fullscreen-day-drilldown">
 .yardivo-map-fullscreen-btn{white-space:nowrap}
@@ -12283,7 +12283,7 @@ function yardivoRefreshAllWarehouseUi(){
     else if([...sel.options].some(o=>o.value===currentWh))sel.value=currentWh;
     else if(rows.length===1)sel.value=rows[0].id;
   }
-  refill(document.getElementById('globalWarehouse'),{location:activeLoc,includePlaceholder:true,includeAll:false});
+  refill(document.getElementById('globalWarehouse'),{location:activeLoc,includePlaceholder:false,includeAll:false});
   ['warehouseFilter','annWarehouse','announcementWarehouse','savedWarehouseFilter','dailyMapWarehouseSelect','weeklyMapWarehouse','uaWarehouse']
     .forEach(id=>refill(document.getElementById(id),{location:activeLoc}));
   document.querySelectorAll('select').forEach(sel=>{
@@ -45800,6 +45800,13 @@ body.light-mode #yardivoStableMasterEditorV583 .ysm-location-lock{
 #yardivoStableMasterEditorV583 .ysm-step span{display:grid;gap:2px}#yardivoStableMasterEditorV583 .ysm-step strong{font-size:9px}#yardivoStableMasterEditorV583 .ysm-step small{font-size:7.5px;color:#7e96aa}
 #yardivoStableMasterEditorV583 .ysm-card-kicker{color:#66b7df;font-size:8px;font-weight:950;letter-spacing:.8px;margin-bottom:4px}
 #yardivoStableMasterEditorV583 .ysm-warehouse-create{display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) auto;gap:8px;align-items:end;margin-top:10px;padding:10px;border:1px solid #29485e;border-radius:9px;background:#06131e}
+#yardivoStableMasterEditorV583 .ysm-wh-location-field{padding:9px;border:1px solid #376784;border-radius:8px;background:#081b29}
+#yardivoStableMasterEditorV583 .ysm-wh-location-field>span{color:#a9d8f4;font-size:9px;font-weight:950;letter-spacing:.35px}
+#yardivoStableMasterEditorV583 .ysm-wh-location-field>span b{color:#ffb45e}
+#yardivoStableMasterEditorV583 .ysm-wh-location-field select{display:block!important;visibility:visible!important;opacity:1!important;min-height:38px;border-color:#4d8db5!important;font-weight:900}
+#yardivoStableMasterEditorV583 .ysm-wh-location-field small{color:#7898ad;font-size:7.5px;font-weight:700}
+body.light-mode #yardivoStableMasterEditorV583 .ysm-wh-location-field{background:#f7fbff!important;border-color:#a9c8dd!important}
+body.light-mode #yardivoStableMasterEditorV583 .ysm-wh-location-field>span{color:#285a78!important}
 #yardivoStableMasterEditorV583 .ysm-config-selector{max-width:520px;margin:10px 0 4px;padding:10px;border:1px solid #29485e;border-radius:9px;background:#06131e}
 #yardivoStableMasterEditorV583 .ysm-config-path{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:8px 10px;border:1px solid #29485e;border-radius:8px;background:#06131e;font-size:8px;color:#7891a5}
 #yardivoStableMasterEditorV583 .ysm-config-path b{color:#dcefff}#yardivoStableMasterEditorV583 .ysm-config-path i{font-style:normal;color:#66b7df;font-weight:950}
@@ -45821,7 +45828,7 @@ body.light-mode #yardivoStableMasterEditorV583 .ysm-config-path b{color:#0f1f35!
 <script id="yardivo-v583-stable-master-supplier-zero-final">
 (function(){
 'use strict';
-const BUILD='20260913-dev-v5.8.3-master-workflow-location-warehouse-config';
+const BUILD='20260913-dev-v5.8.3-master-warehouse-location-dropdown';
 let configWarehouseId='';
 const MASTER='yardivo_master_data_registry_v583';
 const CAP='yardivo_capacity_config_v1';
@@ -46153,11 +46160,11 @@ function render(force=false){
     <div class="ysm-card-kicker">KORAK 2</div><h3>SKLADIŠTA</h3><p>Upiši naziv skladišta i <b>obavezno odaberi lokaciju</b> kojoj pripada. YARDIVO neće sam pretpostaviti lokaciju.</p>
     <div class="ysm-list">${whs.length?whs.map(w=>`<div class="ysm-row"><div><input data-sm-wh-name="${esc(w.id)}" value="${esc(w.name)}"><small>${esc(locName(w.location_id,d))} · ${esc(w.id)}</small></div><div><button data-sm-config-wh="${esc(w.id)}">KONFIGURIRAJ</button> <button data-sm-save-wh="${esc(w.id)}">SPREMI</button> <button class="danger" data-sm-del-wh="${esc(w.id)}">OBRIŠI</button></div></div>`).join(''):'<div class="ysm-empty">Nema skladišta. Prvo dodaj lokaciju, zatim skladište.</div>'}</div>
     <div class="ysm-warehouse-create">
-      <label>NAZIV SKLADIŠTA<input id="smNewWarehouse" placeholder="npr. Glavno skladište"></label>
-      <label>LOKACIJA SKLADIŠTA<select id="smNewWarehouseLocation" ${locs.length?'':'disabled'}><option value="">— Odaberi lokaciju —</option>${locs.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></label>
-      <button class="primary" data-sm-add-wh ${locs.length?'':'disabled'}>DODAJ SKLADIŠTE</button>
+      <label class="ysm-wh-name-field"><span>1 · NAZIV SKLADIŠTA</span><input id="smNewWarehouse" placeholder="npr. Glavno skladište"></label>
+      <label class="ysm-wh-location-field"><span>2 · ODABERI LOKACIJU <b>*</b></span><select id="smNewWarehouseLocation" ${locs.length?'':'disabled'} aria-label="Odaberi lokaciju za novo skladište"><option value="" selected disabled>— ODABERI LOKACIJU —</option>${locs.map(x=>`<option value="${esc(x.id)}">${esc(x.name)} (${esc(x.id)})</option>`).join('')}</select><small>${locs.length?`Dostupno lokacija: ${locs.length}`:'Prvo kreiraj lokaciju u Koraku 1.'}</small></label>
+      <button class="primary" data-sm-add-wh disabled>DODAJ SKLADIŠTE</button>
     </div>
-    ${locs.length?'':'<div class="ysm-hint warn">Za dodavanje skladišta prvo napravi barem jednu lokaciju u Koraku 1.</div>'}
+    ${locs.length?'<div class="ysm-hint">Skladište će biti trajno povezano s lokacijom koju ovdje odabereš.</div>':'<div class="ysm-hint warn">Za dodavanje skladišta prvo napravi barem jednu lokaciju u Koraku 1.</div>'}
    </section>
    <section class="ysm-card full" id="smWarehouseConfiguration">
     <div class="ysm-card-kicker">KORAK 3</div><h3>RAMPE I OPERATIVNI PODACI</h3>
@@ -46181,6 +46188,12 @@ document.addEventListener('click',e=>{
  b=e.target.closest?.('[data-sm-save-ramp]');if(b){e.preventDefault();e.stopImmediatePropagation();const [id,r]=b.dataset.smSaveRamp.split(':');saveRamp(id,Number(r));return}
 },true);
 document.addEventListener('change',e=>{
+ const locSel=e.target.closest?.('#smNewWarehouseLocation');
+ if(locSel){
+   const btn=document.querySelector('#yardivoStableMasterEditorV583 [data-sm-add-wh]');
+   if(btn)btn.disabled=!String(locSel.value||'').trim();
+   return;
+ }
  const sel=e.target.closest?.('#smConfigWarehouse');if(!sel)return;
  configWarehouseId=String(sel.value||'');render(true);
 },true);
@@ -46830,5 +46843,59 @@ try{window.locationForWarehouse=locationForWarehouse}catch(_){}
 window.YardivoMasterAuthorityV583={master,warehouse:wh,locationForWarehouse};
 })();
 </script>
-</body>
+\n<script id="yardivo-v583-header-warehouse-dropdown-authority">
+(function(){
+'use strict';
+function master(){
+  try{return JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{}}catch(_){return{}}
+}
+function session(){try{return window.currentSession||null}catch(_){return null}}
+function activeLocation(){
+  const s=session();
+  const v=String(s?.location||window.YardivoAppStateV583?.location?.()||'').trim();
+  return v==='ALL'?'':v;
+}
+function rows(){
+  const d=master(),loc=activeLocation();
+  const all=Array.isArray(d.warehouses)?d.warehouses.filter(w=>w&&w.active!==false):[];
+  return loc?all.filter(w=>String(w.location_id)===loc):all;
+}
+function esc(v){return String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]))}
+function label(w){return `${w.name||w.id}`;}
+function rebuild(sel){
+  if(!sel)return;
+  const d=master();
+  const locationIds=new Set((Array.isArray(d.locations)?d.locations:[]).map(x=>String(x?.id||'')).filter(Boolean));
+  const ws=rows();
+  const old=String(sel.value||'');
+  let html='';
+  if(ws.length){
+    html=ws.map(w=>`<option value="${esc(w.id)}">${esc(label(w))}</option>`).join('');
+  }else{
+    html='<option value="" disabled>Nema konfiguriranih skladišta</option>';
+  }
+  sel.innerHTML=html;
+  sel.disabled=!ws.length;
+  const valid=ws.map(w=>String(w.id));
+  if(valid.includes(old)&&!locationIds.has(old))sel.value=old;
+  else {
+    const current=String(window.YardivoAppStateV583?.warehouse?.()||window.activeWarehouse||'');
+    if(valid.includes(current)&&!locationIds.has(current))sel.value=current;
+    else if(valid.length)sel.value=valid[0];
+  }
+}
+function sync(){
+  rebuild(document.getElementById('globalWarehouse'));
+  rebuild(document.getElementById('ygcWarehouseSelect'));
+  const g=document.getElementById('globalWarehouse');
+  if(g&&g.value){
+    try{if(typeof window.activeWarehouse!=='undefined')window.activeWarehouse=g.value}catch(_){}
+  }
+}
+window.YardivoHeaderWarehouseAuthorityV583={sync};
+['yardivo:login','yardivo:context-changed','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(sync,0)));
+document.addEventListener('DOMContentLoaded',()=>setTimeout(sync,0));
+window.addEventListener('load',()=>setTimeout(sync,40));
+})();
+</script>\n</body>
 </html>
