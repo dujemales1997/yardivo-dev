@@ -7967,8 +7967,6 @@ AUTOMATSKA PREPORUKA</small>
 <label>LOKACIJA
         <select id="epalLocationFilter">
 <option value="CURRENT">Trenutna lokacija</option>
-<option value="VG">Lokacija 1</option>
-<option value="DU">Lokacija 2</option>
 <option value="ALL">Sve lokacije</option>
 </select>
 </label>
@@ -15382,7 +15380,18 @@ function load(){try{const x=JSON.parse(localStorage.getItem(KEY)||'[]');return A
 function save(rows){localStorage.setItem(KEY,JSON.stringify(rows))}
 function locationForWarehouse(wh){try{const m=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');const w=(m.warehouses||[]).find(x=>x&&x.active!==false&&String(x.id)===String(wh));return w?String(w.location_id||''):''}catch(_){return ''}}
 function locName(loc){try{const m=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');return String((m.locations||[]).find(x=>String(x.id)===String(loc))?.name||loc||'Sve lokacije')}catch(_){return String(loc||'Sve lokacije')}}
-function warehouseName(code){try{return `${code} · ${WAREHOUSES?.[code]?.name||''}`}catch(e){return code}}
+function epalMaster(){try{const d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');return {locations:Array.isArray(d.locations)?d.locations:[],warehouses:Array.isArray(d.warehouses)?d.warehouses:[],suppliers:Array.isArray(d.suppliers)?d.suppliers:[]}}catch(_){return {locations:[],warehouses:[],suppliers:[]}}}
+function currentMasterLocation(){
+  const d=epalMaster();
+  const valid=new Set(d.locations.filter(x=>x&&x.active!==false).map(x=>String(x.id)));
+  let a='';try{a=String(window.YardivoAppStateV583?.location?.()||'')}catch(_){}
+  if(valid.has(a))return a;
+  let b='';try{b=String(currentSession?.location||'')}catch(_){}
+  if(valid.has(b))return b;
+  if(b==='ALL'||String(currentSession?.role||'').toLowerCase()==='admin')return 'ALL';
+  return d.locations.filter(x=>x&&x.active!==false)[0]?.id||'ALL';
+}
+function warehouseName(code){const w=epalMaster().warehouses.find(x=>x&&x.active!==false&&String(x.id)===String(code));return String(w?.name||code||'')}
 function allAnnouncements(){try{return Array.isArray(announcements)?announcements:[]}catch(e){return []}}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function supplierList(){
@@ -15391,15 +15400,20 @@ function supplierList(){
   allAnnouncements().forEach(a=>a.supplier&&set.add(a.supplier));
   return [...set].sort((a,b)=>a.localeCompare(b,'hr'));
 }
-function warehouseList(){
-  const loc=currentSession?.location||'VG';
-  const list=loc==='DU'?['W201','W203','W204']:['W101','W103','W104'];
-  return list;
+function warehouseList(loc=selectedLocation()){
+  const d=epalMaster();
+  return d.warehouses.filter(w=>w&&w.active!==false&&(loc==='ALL'||String(w.location_id)===String(loc)));
 }
 function selectedLocation(){
   const v=document.getElementById('epalLocationFilter')?.value||'CURRENT';
-  if(v==='CURRENT')return currentSession?.location||'VG';
-  return v;
+  return v==='CURRENT'?currentMasterLocation():v;
+}
+function updateLocationFilter(){
+  const sel=document.getElementById('epalLocationFilter');if(!sel)return;
+  const d=epalMaster(),old=sel.value||'CURRENT',cur=currentMasterLocation();
+  const curName=cur==='ALL'?'Sve lokacije':String(d.locations.find(x=>String(x.id)===String(cur))?.name||'Trenutna lokacija');
+  sel.innerHTML=`<option value="CURRENT">Trenutna lokacija · ${esc(curName)}</option>`+d.locations.filter(x=>x&&x.active!==false).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')+'<option value="ALL">Sve lokacije</option>';
+  if([...sel.options].some(o=>o.value===old))sel.value=old;else sel.value='CURRENT';
 }
 function filteredTransactions(){
   const loc=selectedLocation(),wh=document.getElementById('epalWarehouseFilter')?.value||'ALL',q=(document.getElementById('epalSupplierSearch')?.value||'').trim().toLocaleLowerCase('hr-HR');
@@ -15417,11 +15431,11 @@ function balances(){
   return [...map.values()].map(x=>({...x,balance:x.received-x.returned})).sort((a,b)=>b.balance-a.balance||a.supplier.localeCompare(b.supplier,'hr'));
 }
 function updateWarehouseFilter(){
+  updateLocationFilter();
   const loc=selectedLocation(),sel=document.getElementById('epalWarehouseFilter');if(!sel)return;
-  const current=sel.value;
-  const codes=loc==='DU'?['W201','W203','W204']:loc==='VG'?['W101','W103','W104']:['W101','W103','W104','W201','W203','W204'];
-  sel.innerHTML='<option value="ALL">Sva skladišta</option>'+codes.map(c=>`<option value="${c}">${warehouseName(c)}</option>`).join('');
-  if([...sel.options].some(o=>o.value===current))sel.value=current;
+  const current=sel.value,rows=warehouseList(loc);
+  sel.innerHTML='<option value="ALL">Sva skladišta</option>'+rows.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');
+  if([...sel.options].some(o=>o.value===current))sel.value=current;else sel.value='ALL';
 }
 function render(){
   const view=document.getElementById('epal'),nav=document.querySelector('[data-view="epal"]');
@@ -15459,9 +15473,8 @@ function render(){
 function populateDialog(){
   const supplier=document.getElementById('epalSupplier'),wh=document.getElementById('epalWarehouse'),ann=document.getElementById('epalAnnouncement');
   supplier.innerHTML='<option value="">Odaberi dobavljača...</option>'+supplierList().map(s=>`<option>${esc(s)}</option>`).join('');
-  const loc=currentSession?.location||'VG';
-  const whs=loc==='DU'?['W201','W203','W204']:['W101','W103','W104'];
-  wh.innerHTML=whs.map(c=>`<option value="${c}">${warehouseName(c)}</option>`).join('');
+  const loc=selectedLocation(),whs=warehouseList(loc);
+  wh.innerHTML='<option value="">Odaberi skladište...</option>'+whs.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');
   const recent=allAnnouncements().filter(a=>a.supplier&&a.date).slice().sort((a,b)=>String(b.date+b.time).localeCompare(String(a.date+a.time))).slice(0,200);
   ann.innerHTML='<option value="">Bez povezane najave</option>'+recent.map(a=>`<option value="${a.id}">${a.date} ${a.time||''} · ${esc(a.supplier)} · ${esc(a.warehouse||'')}</option>`).join('');
   document.getElementById('epalDate').value=localDate();
@@ -15581,9 +15594,14 @@ function role(){
 function isAdmin(){return role()==='admin'}
 function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){return {}}}
 function save(x){localStorage.setItem(KEY,JSON.stringify(x))}
-function whName(c){try{return WAREHOUSES?.[c]?.name||c}catch(e){return c}}
-function codesForLocation(loc){return loc==='DU'?['W201','W203','W204']:['W101','W103','W104']}
-function currentLoc(){try{return currentSession?.location||'VG'}catch(e){return 'VG'}}
+function initialMaster(){try{const d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');return {locations:Array.isArray(d.locations)?d.locations:[],warehouses:Array.isArray(d.warehouses)?d.warehouses:[]}}catch(_){return {locations:[],warehouses:[]}}}
+function whName(c){const w=initialMaster().warehouses.find(x=>x&&x.active!==false&&String(x.id)===String(c));return String(w?.name||c||'')}
+function codesForLocation(loc){return initialMaster().warehouses.filter(w=>w&&w.active!==false&&(loc==='ALL'||String(w.location_id)===String(loc))).map(w=>String(w.id))}
+function currentLoc(){
+ const d=initialMaster(),valid=new Set(d.locations.filter(x=>x&&x.active!==false).map(x=>String(x.id)));
+ let v='';try{v=String(window.YardivoAppStateV583?.location?.()||currentSession?.location||'')}catch(_){}
+ if(valid.has(v))return v;if(v==='ALL'||role()==='admin')return 'ALL';return d.locations.filter(x=>x&&x.active!==false)[0]?.id||'ALL';
+}
 
 function ensurePanel(){
  const settings=document.getElementById('settings');if(!settings||!isAdmin())return;
@@ -15594,15 +15612,17 @@ function ensurePanel(){
  <div class="panel-body">
    <div class="epal-toolbar">
      <label>LOKACIJA
-       <select id="epalInitialLocation"><option value="VG">Lokacija 1</option><option value="DU">Lokacija 2</option></select>
+       <select id="epalInitialLocation"></select>
      </label>
    </div>
    <div class="epal-initial-grid" id="epalInitialGrid"></div>
    <div class="epal-initial-actions"><button type="button" class="primary" id="saveEpalInitial">SPREMI POČETNO STANJE</button></div>
  </div>`;
  settings.appendChild(panel);
- document.getElementById('epalInitialLocation').value=currentLoc();
- document.getElementById('epalInitialLocation').onchange=renderInputs;
+ const ls=document.getElementById('epalInitialLocation'),md=initialMaster();
+ ls.innerHTML=md.locations.filter(x=>x&&x.active!==false).map(x=>`<option value="${x.id}">${x.name}</option>`).join('')+'<option value="ALL">Sve lokacije</option>';
+ ls.value=[...ls.options].some(o=>o.value===currentLoc())?currentLoc():(ls.options[0]?.value||'ALL');
+ ls.onchange=renderInputs;
  document.getElementById('saveEpalInitial').onclick=saveInputs;
  renderInputs();
 }
@@ -15616,12 +15636,12 @@ function saveInputs(){
  document.querySelectorAll('[data-epal-initial]').forEach(i=>data[i.dataset.epalInitial]=Math.max(0,Math.floor(Number(i.value||0))));
  data.updatedAt=new Date().toISOString();data.updatedBy=currentSession?.username||currentSession?.user||'Admin';
  save(data);
- try{showYmsToast?.('success','EPAL POČETNO STANJE SPREMLJENO',loc==='DU'?'Lokacija 2':'Lokacija 1')}catch(e){}
+ try{const md=initialMaster(),name=loc==='ALL'?'Sve lokacije':(md.locations.find(x=>String(x.id)===String(loc))?.name||loc);showYmsToast?.('success','EPAL POČETNO STANJE SPREMLJENO',name)}catch(e){}
  try{YardivoEPAL?.render?.()}catch(e){}
 }
 function totalForWarehouse(wh){return Math.max(0,Number(load()[wh]||0))}
 function totalForLocation(loc){return codesForLocation(loc).reduce((s,c)=>s+totalForWarehouse(c),0)}
-function totalAll(){return totalForLocation('VG')+totalForLocation('DU')}
+function totalAll(){return initialMaster().warehouses.filter(w=>w&&w.active!==false).reduce((s,w)=>s+totalForWarehouse(w.id),0)}
 
 function addStockKpi(){
  const epal=document.getElementById('epal');if(!epal)return;
@@ -41563,7 +41583,7 @@ function renderOps(){
             <label>DO<input type="time" data-yma-ramp-to="${w.id}:${r}" value="${h.to}"></label>
             <label>PALETA / SAT<input type="number" min="0" step="1" data-yma-ramp-rate="${w.id}:${r}" value="${rate}"></label>
             <label>MAX PALETA<input type="number" min="0" step="1" data-yma-ramp-total="${w.id}:${r}" value="${total}"></label>
-            <button type="button" class="ymd-ramp-save" data-yma-ramp-save="${w.id}:${r}">SPREMI RAMPU ${r}</button>
+            <button type="button" class="ymd-ramp-save" data-yma-ramp-save="${w.id}:${r}">SPREMI PROMJENE RAMPE ${r}</button>
           </div>`;
         }).join(''):'<div class="ymd-ops-empty">Nema rampi. Broj rampi prvo postavi u MASTER PODACI → SKLADIŠTA.</div>'}
       </div>
@@ -45402,7 +45422,7 @@ function render(){
            <label>RADI DO<input ${disabled} data-mf-r-to="${esc(w.id)}:${r}" type="time" value="${esc(rh.to)}"></label>
            <label>PALETA / SAT<input ${disabled} data-mf-r-rate="${esc(w.id)}:${r}" type="number" min="1" placeholder="NEPOZNAT" value="${rate??''}"></label>
            <label>MAX PALETA<input ${disabled} data-mf-r-max="${esc(w.id)}:${r}" type="number" min="1" placeholder="NEPOZNAT" value="${mx??''}"></label>
-           <button ${disabled} data-mf-save-ramp="${esc(w.id)}:${r}">SPREMI RAMPU ${r}</button>
+           <button ${disabled} data-mf-save-ramp="${esc(w.id)}:${r}">SPREMI PROMJENE RAMPE ${r}</button>
           </div>`;
         }).join(''):'<div class="ymf-empty">Nema rampi. Klikni + DODAJ RAMPU.</div>'}
        </div>
@@ -46163,7 +46183,7 @@ function render(force=false){
  const configHtml=selectedWh?(()=>{
       const w=selectedWh,cp=cap(w.id),hr=whHours(w.id),de=detention(w.id),n=Math.max(0,Number(w.ramps)||0),ep=epal(w.id);
       return `<article class="ysm-wh ysm-wh-selected">
-       <div class="ysm-wh-head"><div><strong>${esc(w.name)}</strong><small>${esc(locName(w.location_id,d))} · ${esc(w.id)}</small></div><span class="ysm-unknown">${cp==null?'KAPACITET NEPOZNAT':cp+' PALETA / DAN'}</span></div>
+       <div class="ysm-wh-head"><div><strong>${esc(w.name)}</strong><small>${esc(locName(w.location_id,d))}</small></div><span class="ysm-unknown">${cp==null?'KAPACITET NEPOZNAT':cp+' PALETA / DAN'}</span></div>
        <div class="ysm-config-path"><span>LOKACIJA</span><b>${esc(locName(w.location_id,d))}</b><i>→</i><span>SKLADIŠTE</span><b>${esc(w.name)}</b><i>→</i><span>RAMPE I OPERATIVA</span></div>
        <div class="ysm-sector"><h4>OPERATIVNI PODACI SKLADIŠTA</h4><div class="ysm-fields">
         <label>DNEVNI KAPACITET PALETA<input data-sm-cap="${esc(w.id)}" type="number" min="1" placeholder="NEPOZNAT" value="${cp??''}"></label>
@@ -46173,7 +46193,7 @@ function render(force=false){
         <label>DETENTION ČEKANJE MIN<input data-sm-det-wait="${esc(w.id)}" type="number" min="0" placeholder="NEPOZNAT" value="${esc(de.wait)}"></label>
         <label>DETENTION NA RAMPI MIN<input data-sm-det-dock="${esc(w.id)}" type="number" min="0" placeholder="NEPOZNAT" value="${esc(de.dock)}"></label>
        </div><button class="primary" data-sm-save-ops="${esc(w.id)}">SPREMI PODATKE SKLADIŠTA</button></div>
-       <div class="ysm-sector"><h4>RAMPE</h4><p class="ysm-sector-help">Dodaj stvarni broj rampi za ovo skladište. Svaka rampa zatim dobiva svoj naziv, status, radno vrijeme i kapacitet.</p>
+       <div class="ysm-sector ysm-ramp-management"><h4>RAMPE — UPRAVLJANJE</h4><p class="ysm-sector-help">Ovdje upravljaš svim rampama ovog skladišta. Postojeću rampu možeš u bilo kojem trenutku uključiti/ugasiti, preimenovati te promijeniti radno vrijeme i kapacitet.</p>
         <div class="ysm-ramp-tools"><button class="primary" data-sm-add-ramp="${esc(w.id)}">+ DODAJ RAMPU</button><button data-sm-rem-ramp="${esc(w.id)}" ${n?'':'disabled'}>− OBRIŠI ZADNJU RAMPU</button><span class="ysm-unknown">${n} ${n===1?'RAMPA':'RAMPI'}</span></div>
         ${n?Array.from({length:n},(_,i)=>i+1).map(r=>{const m=rampMeta(w.id,r),rh=rampHours(w.id,r),rate=rampRate(w.id,r),mx=rampMax(w.id,r);return `<div class="ysm-ramp ${m.active?'':'off'}">
          <label>NAZIV<input data-sm-r-name="${esc(w.id)}:${r}" value="${esc(m.name)}"></label>
@@ -46182,7 +46202,7 @@ function render(force=false){
          <label>RADI DO<input data-sm-r-to="${esc(w.id)}:${r}" type="time" value="${esc(rh.to)}"></label>
          <label>PALETA / SAT<input data-sm-r-rate="${esc(w.id)}:${r}" type="number" min="1" placeholder="NEPOZNAT" value="${rate}"></label>
          <label>MAX PALETA<input data-sm-r-max="${esc(w.id)}:${r}" type="number" min="1" placeholder="NEPOZNAT" value="${mx}"></label>
-         <button data-sm-save-ramp="${esc(w.id)}:${r}">SPREMI RAMPU ${r}</button>
+         <button data-sm-save-ramp="${esc(w.id)}:${r}">SPREMI PROMJENE RAMPE ${r}</button>
         </div>`}).join(''):'<div class="ysm-empty">Još nema rampi. Klikni <b>+ DODAJ RAMPU</b> da započneš konfiguraciju.</div>'}
        </div>
       </article>`
@@ -46198,7 +46218,7 @@ function render(force=false){
    </section>
    <section class="ysm-card">
     <div class="ysm-card-kicker">KORAK 2</div><h3>SKLADIŠTA</h3><p>Upiši naziv skladišta i <b>obavezno odaberi lokaciju</b> kojoj pripada. YARDIVO neće sam pretpostaviti lokaciju.</p>
-    <div class="ysm-list">${whs.length?whs.map(w=>`<div class="ysm-row"><div><input data-sm-wh-name="${esc(w.id)}" value="${esc(w.name)}"><small>${esc(locName(w.location_id,d))} · ${esc(w.id)}</small></div><div><button data-sm-config-wh="${esc(w.id)}">KONFIGURIRAJ</button> <button data-sm-save-wh="${esc(w.id)}">SPREMI</button> <button class="danger" data-sm-del-wh="${esc(w.id)}">OBRIŠI</button></div></div>`).join(''):'<div class="ysm-empty">Nema skladišta. Prvo dodaj lokaciju, zatim skladište.</div>'}</div>
+    <div class="ysm-list">${whs.length?whs.map(w=>`<div class="ysm-row"><div><input data-sm-wh-name="${esc(w.id)}" value="${esc(w.name)}"><small>${esc(locName(w.location_id,d))}</small></div><div><button data-sm-config-wh="${esc(w.id)}">KONFIGURIRAJ</button> <button data-sm-save-wh="${esc(w.id)}">SPREMI</button> <button class="danger" data-sm-del-wh="${esc(w.id)}">OBRIŠI</button></div></div>`).join(''):'<div class="ysm-empty">Nema skladišta. Prvo dodaj lokaciju, zatim skladište.</div>'}</div>
     <div class="ysm-warehouse-create">
       <label class="ysm-wh-name-field"><span>1 · NAZIV SKLADIŠTA</span><input id="smNewWarehouse" placeholder="npr. Glavno skladište"></label>
       <label class="ysm-wh-location-field"><span>2 · ODABERI LOKACIJU <b>*</b></span><select id="smNewWarehouseLocation" ${locs.length?'':'disabled'} aria-label="Odaberi lokaciju za novo skladište"><option value="" selected disabled>— ODABERI LOKACIJU —</option>${locs.map(x=>`<option value="${esc(x.id)}">${esc(x.name)} (${esc(x.id)})</option>`).join('')}</select><small>${locs.length?`Odaberi jednu od ${locs.length} kreiranih lokacija. Skladište će biti vezano na taj location_id.`:'Prvo kreiraj lokaciju u Koraku 1.'}</small></label>
@@ -46209,7 +46229,7 @@ function render(force=false){
    <section class="ysm-card full" id="smWarehouseConfiguration">
     <div class="ysm-card-kicker">KORAK 3</div><h3>RAMPE I OPERATIVNI PODACI</h3>
     <p>Odaberi jedno skladište. Sve što uneseš ispod pripada isključivo tom skladištu i njegovoj lokaciji.</p>
-    <div class="ysm-config-selector"><label>SKLADIŠTE ZA KONFIGURACIJU<select id="smConfigWarehouse" ${whs.length?'':'disabled'}><option value="">— Odaberi skladište —</option>${whs.map(w=>`<option value="${esc(w.id)}" ${String(w.id)===String(configWarehouseId)?'selected':''}>${esc(locName(w.location_id,d))} → ${esc(w.name)} (${esc(w.id)})</option>`).join('')}</select></label></div>
+    <div class="ysm-config-selector"><label>SKLADIŠTE ZA KONFIGURACIJU<select id="smConfigWarehouse" ${whs.length?'':'disabled'}><option value="">— Odaberi skladište —</option>${whs.map(w=>`<option value="${esc(w.id)}" ${String(w.id)===String(configWarehouseId)?'selected':''}>${esc(locName(w.location_id,d))} → ${esc(w.name)}</option>`).join('')}</select></label></div>
     ${configHtml}
    </section>
   </div>`;
@@ -46961,5 +46981,36 @@ window.addEventListener('yardivo:master-data-changed',()=>setTimeout(enforceMast
 window.addEventListener('load',()=>setTimeout(enforceMasterWarehouseLocation,1800));
 })();
 </script>
+
+<style id="yardivo-v583-epal-ramp-master-clean-style">
+#epalMasterInitialBreakdownV583{margin:10px 0 14px;padding:12px;border:1px solid #29485e;border-radius:10px;background:#071722}
+#epalMasterInitialBreakdownV583 h3{margin:0 0 8px;font-size:10px;color:#dcefff}
+#epalMasterInitialBreakdownV583 .yeib-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+#epalMasterInitialBreakdownV583 .yeib-item{padding:9px;border:1px solid #203c50;border-radius:8px;background:#06131e}
+#epalMasterInitialBreakdownV583 .yeib-item small{display:block;color:#7891a5;font-size:7px}.yeib-item strong{display:block;margin-top:3px;font-size:13px}
+#yardivoStableMasterEditorV583 .ysm-ramp-management{border-color:#376784!important}
+#yardivoStableMasterEditorV583 .ysm-ramp-management h4{color:#8fd2f4}
+body.light-mode #epalMasterInitialBreakdownV583,body.light-mode #epalMasterInitialBreakdownV583 .yeib-item{background:#fff!important;color:#0f1f35!important;border-color:#b8d3ee!important}
+</style>
+<script id="yardivo-v583-epal-ramp-master-clean-authority">
+(function(){
+'use strict';
+const MASTER='yardivo_master_data_registry_v583',EPAL='yardivo_epal_initial_stock_v1';
+function md(){try{const d=JSON.parse(localStorage.getItem(MASTER)||'{}');return {locations:Array.isArray(d.locations)?d.locations:[],warehouses:Array.isArray(d.warehouses)?d.warehouses:[]}}catch(_){return {locations:[],warehouses:[]}}}
+function stock(){try{return JSON.parse(localStorage.getItem(EPAL)||'{}')||{}}catch(_){return{}}}
+function locName(id,d=md()){return String(d.locations.find(x=>String(x.id)===String(id))?.name||id||'')}
+function visibleRows(){const d=md(),lf=document.getElementById('epalLocationFilter')?.value||'CURRENT',wf=document.getElementById('epalWarehouseFilter')?.value||'ALL';let loc=lf;if(loc==='CURRENT'){try{loc=String(window.YardivoAppStateV583?.location?.()||currentSession?.location||'ALL')}catch(_){loc='ALL'};if(!d.locations.some(x=>String(x.id)===loc))loc='ALL'}return d.warehouses.filter(w=>w&&w.active!==false&&(loc==='ALL'||String(w.location_id)===String(loc))&&(wf==='ALL'||String(w.id)===String(wf)))}
+function renderBreakdown(){const ep=document.getElementById('epal');if(!ep)return;let box=document.getElementById('epalMasterInitialBreakdownV583');if(!box){box=document.createElement('div');box.id='epalMasterInitialBreakdownV583';const k=ep.querySelector('.performance-kpis');k?.insertAdjacentElement('afterend',box)}if(!box)return;const d=md(),st=stock(),rows=visibleRows();box.innerHTML='<h3>POČETNO STANJE EPAL PO SKLADIŠTU</h3><div class="yeib-grid">'+(rows.length?rows.map(w=>`<div class="yeib-item"><small>${locName(w.location_id,d)} · ${w.name}</small><strong>${Math.max(0,Number(st[w.id]||0))} EPAL</strong></div>`).join(''):'<div class="yeib-item"><small>Nema skladišta u odabranom području</small><strong>0 EPAL</strong></div>')+'</div>'}
+function cleanWarehouseLabels(){const d=md(),names=new Map(d.warehouses.map(w=>[String(w.id),String(w.name||w.id)]));document.querySelectorAll('#epalWarehouseFilter option,#epalWarehouse option').forEach(o=>{if(names.has(String(o.value)))o.textContent=names.get(String(o.value))});}
+function refresh(){cleanWarehouseLabels();renderBreakdown();try{window.YardivoEPALInitial?.totalAll?.()}catch(_){}}
+['yardivo:master-data-changed','yardivo:context-changed','yardivo:login'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(refresh,50)));
+document.addEventListener('change',e=>{if(e.target?.matches?.('#epalLocationFilter,#epalWarehouseFilter'))setTimeout(refresh,20)},true);
+document.addEventListener('click',e=>{if(e.target.closest?.('[data-view="epal"],[data-home-target="epal"]'))setTimeout(refresh,80)},true);
+document.addEventListener('DOMContentLoaded',()=>setTimeout(refresh,300));window.addEventListener('load',()=>setTimeout(refresh,700));
+window.YardivoEpalRampMasterCleanV583={refresh,build:'20260913-dev-v5.8.3-epal-ramp-master-clean-final'};
+window.YARDIVO_DEV_BUILD='20260913-dev-v5.8.3-epal-ramp-master-clean-final';
+})();
+</script>
+
 </body>
 </html>
