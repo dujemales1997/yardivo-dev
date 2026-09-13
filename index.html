@@ -8153,34 +8153,6 @@ AUTOMATSKA PREPORUKA</small>
 <div class="qr-mobile-mode" id="qrMobileModeInfo">—</div>
 </div>
 </section>
-<section class="panel" id="receptionRampSettings" data-yardivo-settings="reception">
-<div class="panel-head">
-<div>
-<h2>UPRAVLJANJE RAMPAMA</h2>
-<small>Samo Prijam i Admin · dodavanje te zaključavanje/otključavanje rampi</small>
-</div>
-<span class="master-sync-state ok" id="rampSettingsWarehouseBadge">—</span>
-</div>
-<div class="master-settings-body">
-<div class="form-grid">
-<label>Skladište
-        <select id="rampSettingsWarehouse">
-<option value="">Odaberi skladište...</option>
-</select>
-</label>
-<label>Nova rampa
-        <div style="display:flex;gap:8px">
-<input id="newRampNumber" min="1" placeholder="npr. 7" step="1" type="number"/>
-<button class="primary" id="addRampBtn" type="button">DODAJ RAMPU</button>
-</div>
-</label>
-</div>
-<div class="master-note" style="margin-top:10px">
-      Dodana rampa automatski se prikazuje u Rampe, Dvorište, dnevnoj/tjednoj mapi, preporuci termina i dropdownu za odabir rampe.
-    </div>
-<div class="ramp-settings-list" id="rampSettingsList" style="margin-top:12px"></div>
-</div>
-</section>
 <section class="panel" data-yardivo-settings="inventory reception" id="yardivoNonWorkingDaysSettings">
 <div class="panel-head"><div><h2>NERADNI DANI PRIJAMA</h2><small>Državni blagdani i interne iznimke</small></div></div>
 <div class="panel-body">
@@ -45888,8 +45860,10 @@ body.light-mode #yardivoStableMasterEditorV583 .ysm-config-path b{color:#0f1f35!
 <script id="yardivo-v583-stable-master-supplier-zero-final">
 (function(){
 'use strict';
-const BUILD='20260913-dev-v5.8.3-master-warehouse-location-dropdown';
+const BUILD='20260913-dev-v5.8.3-master-persistence-ramp-context-clean';
 let configWarehouseId='';
+let masterEditHoldUntil=0;
+function holdMasterEdit(ms=700){masterEditHoldUntil=Math.max(masterEditHoldUntil,Date.now()+ms)}
 const MASTER='yardivo_master_data_registry_v583';
 const CAP='yardivo_capacity_config_v1';
 const HOURS='yardivo_reception_master_hours_v1';
@@ -46176,8 +46150,10 @@ function render(force=false){
  const h=host();if(!h)return;
  const a=document.activeElement;
  const typing=!!a?.closest?.('#yardivoStableMasterEditorV583')&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName||'');
- if(!force&&typing)return;
+ if(!force&&(typing||Date.now()<masterEditHoldUntil))return;
  const d=master(),locs=d.locations.filter(x=>x.active!==false),whs=d.warehouses.filter(x=>x.active!==false);
+ const currentWh=activeWarehouse();
+ if(currentWh&&whs.some(w=>String(w.id)===String(currentWh)))configWarehouseId=currentWh;
  if(configWarehouseId&&!whs.some(w=>String(w.id)===String(configWarehouseId)))configWarehouseId='';
  const selectedWh=whs.find(w=>String(w.id)===String(configWarehouseId))||null;
  const configHtml=selectedWh?(()=>{
@@ -46193,7 +46169,7 @@ function render(force=false){
         <label>DETENTION ČEKANJE MIN<input data-sm-det-wait="${esc(w.id)}" type="number" min="0" placeholder="NEPOZNAT" value="${esc(de.wait)}"></label>
         <label>DETENTION NA RAMPI MIN<input data-sm-det-dock="${esc(w.id)}" type="number" min="0" placeholder="NEPOZNAT" value="${esc(de.dock)}"></label>
        </div><button class="primary" data-sm-save-ops="${esc(w.id)}">SPREMI PODATKE SKLADIŠTA</button></div>
-       <div class="ysm-sector ysm-ramp-management"><h4>RAMPE — UPRAVLJANJE</h4><p class="ysm-sector-help">Ovdje upravljaš svim rampama ovog skladišta. Postojeću rampu možeš u bilo kojem trenutku uključiti/ugasiti, preimenovati te promijeniti radno vrijeme i kapacitet.</p>
+       <div class="ysm-sector ysm-ramp-management"><h4>UPRAVLJANJE RAMPAMA — ${esc(w.name)}</h4><p class="ysm-sector-help">Ovdje upravljaš svim rampama ovog skladišta. Postojeću rampu možeš u bilo kojem trenutku uključiti/ugasiti, preimenovati te promijeniti radno vrijeme i kapacitet.</p>
         <div class="ysm-ramp-tools"><button class="primary" data-sm-add-ramp="${esc(w.id)}">+ DODAJ RAMPU</button><button data-sm-rem-ramp="${esc(w.id)}" ${n?'':'disabled'}>− OBRIŠI ZADNJU RAMPU</button><span class="ysm-unknown">${n} ${n===1?'RAMPA':'RAMPI'}</span></div>
         ${n?Array.from({length:n},(_,i)=>i+1).map(r=>{const m=rampMeta(w.id,r),rh=rampHours(w.id,r),rate=rampRate(w.id,r),mx=rampMax(w.id,r);return `<div class="ysm-ramp ${m.active?'':'off'}">
          <label>NAZIV<input data-sm-r-name="${esc(w.id)}:${r}" value="${esc(m.name)}"></label>
@@ -46239,7 +46215,7 @@ document.addEventListener('click',e=>{
  b=e.target.closest?.('[data-sm-save-loc]');if(b){e.preventDefault();e.stopImmediatePropagation();saveLocation(b.dataset.smSaveLoc);return}
  b=e.target.closest?.('[data-sm-del-loc]');if(b){e.preventDefault();e.stopImmediatePropagation();if(confirm('Obrisati lokaciju?'))deleteLocation(b.dataset.smDelLoc);return}
  b=e.target.closest?.('[data-sm-add-wh]');if(b){e.preventDefault();e.stopImmediatePropagation();addWarehouse(document.getElementById('smNewWarehouse')?.value,document.getElementById('smNewWarehouseLocation')?.value);return}
- b=e.target.closest?.('[data-sm-config-wh]');if(b){e.preventDefault();e.stopImmediatePropagation();configWarehouseId=String(b.dataset.smConfigWh||'');render(true);setTimeout(()=>document.getElementById('smWarehouseConfiguration')?.scrollIntoView?.({behavior:'smooth',block:'start'}),20);return}
+ b=e.target.closest?.('[data-sm-config-wh]');if(b){e.preventDefault();e.stopImmediatePropagation();configWarehouseId=String(b.dataset.smConfigWh||'');const d=master(),w=d.warehouses.find(x=>String(x.id)===configWarehouseId);try{if(w?.location_id)window.YardivoAppStateV583?.setLocation?.(w.location_id);window.YardivoAppStateV583?.setWarehouse?.(configWarehouseId)}catch(_){window.activeWarehouse=configWarehouseId}render(true);setTimeout(()=>document.getElementById('smWarehouseConfiguration')?.scrollIntoView?.({behavior:'smooth',block:'start'}),20);return}
  b=e.target.closest?.('[data-sm-save-wh]');if(b){e.preventDefault();e.stopImmediatePropagation();saveWarehouseName(b.dataset.smSaveWh);return}
  b=e.target.closest?.('[data-sm-del-wh]');if(b){e.preventDefault();e.stopImmediatePropagation();if(confirm('Obrisati skladište?'))deleteWarehouse(b.dataset.smDelWh);return}
  b=e.target.closest?.('[data-sm-save-ops]');if(b){e.preventDefault();e.stopImmediatePropagation();saveWarehouseOps(b.dataset.smSaveOps);return}
@@ -46255,7 +46231,7 @@ document.addEventListener('change',e=>{
    return;
  }
  const sel=e.target.closest?.('#smConfigWarehouse');if(!sel)return;
- configWarehouseId=String(sel.value||'');render(true);
+ configWarehouseId=String(sel.value||'');const d=master(),w=d.warehouses.find(x=>String(x.id)===configWarehouseId);try{if(w?.location_id)window.YardivoAppStateV583?.setLocation?.(w.location_id);window.YardivoAppStateV583?.setWarehouse?.(configWarehouseId)}catch(_){window.activeWarehouse=configWarehouseId}render(true);
 },true);
 
 /* Only explicit navigation/real master changes when editor isn't being edited. */
@@ -46263,8 +46239,22 @@ document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{render();hardEm
 window.addEventListener('load',()=>setTimeout(()=>{render();hardEmptySupplierUi();observeFreshSupplierRows();document.getElementById('epalInitialSettings')?.remove()},260),{once:true});
 document.addEventListener('click',e=>{if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(()=>{render();document.getElementById('epalInitialSettings')?.remove()},30)},true);
 window.addEventListener('yardivo:login',()=>setTimeout(()=>{hardEmptySupplierUi();observeFreshSupplierRows();render()},80));
-window.addEventListener('yardivo:context-changed',()=>{if(!document.activeElement?.closest?.('#yardivoStableMasterEditorV583'))setTimeout(render,20)});
-window.addEventListener('yardivo:master-data-changed',()=>{if(!document.activeElement?.closest?.('#yardivoStableMasterEditorV583'))setTimeout(render,20)});
+window.addEventListener('yardivo:context-changed',e=>{if(e?.detail?.source==='stable-master')return;if(!document.activeElement?.closest?.('#yardivoStableMasterEditorV583')&&Date.now()>=masterEditHoldUntil)setTimeout(render,20)});
+window.addEventListener('yardivo:master-data-changed',e=>{if(e?.detail?.source==='stable-master')return;if(!document.activeElement?.closest?.('#yardivoStableMasterEditorV583')&&Date.now()>=masterEditHoldUntil)setTimeout(render,20)});
+
+
+/* Keep the Master form stable while the user is editing; no background redraw/flicker. */
+document.addEventListener('focusin',e=>{if(e.target?.closest?.('#yardivoStableMasterEditorV583'))holdMasterEdit(1200)},true);
+document.addEventListener('input',e=>{if(e.target?.closest?.('#yardivoStableMasterEditorV583'))holdMasterEdit(1200)},true);
+document.addEventListener('keydown',e=>{if(e.target?.closest?.('#yardivoStableMasterEditorV583'))holdMasterEdit(1200)},true);
+
+/* Retire the old Settings ramp owner. It used legacy W101/W103 codes and must never be visible. */
+function retireLegacyRampSettings(){
+ const old=document.getElementById('receptionRampSettings');
+ if(old){old.setAttribute('aria-hidden','true');old.style.setProperty('display','none','important')}
+}
+document.addEventListener('DOMContentLoaded',retireLegacyRampSettings);
+window.addEventListener('load',retireLegacyRampSettings,{once:true});
 
 window.YardivoStableMasterV583={render,master,addLocation,addWarehouse,saveWarehouseOps,saveRamp,build:BUILD};
 window.YARDIVO_DEV_BUILD=BUILD;
@@ -47011,6 +47001,12 @@ window.YardivoEpalRampMasterCleanV583={refresh,build:'20260913-dev-v5.8.3-epal-r
 window.YARDIVO_DEV_BUILD='20260913-dev-v5.8.3-epal-ramp-master-clean-final';
 })();
 </script>
+
+
+<style id="yardivo-v583-ramp-context-clean-style">
+#receptionRampSettings{display:none!important}
+#yardivoStableMasterEditorV583 .ysm-ramp-management h4{font-size:10px!important;color:#9ad2ff!important}
+</style>
 
 </body>
 </html>
