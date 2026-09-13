@@ -34159,8 +34159,16 @@ function ensure(){
             <button type="button" class="yucr-close" data-yucr-close="fixed">×</button>
           </div>
 
+          <section class="yucr-section" id="yufSupplierSelectSection" style="display:none">
+            <strong>1 · ODABERI DOBAVLJAČA</strong>
+            <label style="margin-top:10px">Dobavljač iz Master podataka
+              <select id="yufSupplierSelect"><option value="">— ODABERI DOBAVLJAČA —</option></select>
+            </label>
+            <div class="yucr-fixed-note" style="margin-top:10px">Account se može napraviti samo za dobavljača koji već postoji u Master podacima.</div>
+          </section>
+
           <section class="yucr-section">
-            <strong>1 · OSNOVNI PODACI</strong>
+            <strong id="yufBasicStepTitle">1 · OSNOVNI PODACI</strong>
             <div class="yucr-grid" style="margin-top:10px">
               <label>Ime i prezime<input id="yufName" autocomplete="off"></label>
               <label>Username<input id="yufUsername" autocomplete="off"></label>
@@ -34174,7 +34182,7 @@ function ensure(){
             </div>
           </section>
 
-          <section class="yucr-section" id="yufScopeSection"> <strong>2 · LOKACIJA I SKLADIŠTA</strong>
+          <section class="yucr-section" id="yufScopeSection"> <strong id="yufScopeStepTitle">2 · LOKACIJA I SKLADIŠTA</strong>
             <label style="margin-top:10px">Lokacija
               <select id="yufLocation"><option value="">Odaberi lokaciju...</option></select>
             </label>
@@ -34239,10 +34247,32 @@ function openFixed(role){
   document.getElementById('yufTitle').textContent='NOVI KORISNIK · '+info.label.toUpperCase();
   document.getElementById('yufSubtitle').textContent=info.desc;
   const nameLabel=document.getElementById('yufName')?.closest('label');
-  if(nameLabel)nameLabel.childNodes[0].nodeValue=role==='supplier'?'Naziv dobavljača':'Ime i prezime';
+  if(nameLabel){nameLabel.childNodes[0].nodeValue='Ime i prezime';nameLabel.style.display=role==='supplier'?'none':'';}
   ['yufName','yufUsername','yufPassword','yufPassword2','yufContactName','yufContactEmail','yufContactPhone'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  const supplierSelectSection=document.getElementById('yufSupplierSelectSection');
+  const supplierSelect=document.getElementById('yufSupplierSelect');
+  const basicStepTitle=document.getElementById('yufBasicStepTitle');
+  if(supplierSelectSection)supplierSelectSection.style.display=role==='supplier'?'':'none';
+  if(basicStepTitle)basicStepTitle.textContent=role==='supplier'?'2 · PODACI ZA ACCOUNT':'1 · OSNOVNI PODACI';
+  if(supplierSelect){
+    let md={suppliers:[]};try{md=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){}
+    const suppliers=(Array.isArray(md.suppliers)?md.suppliers:[]).filter(x=>x&&x.active!==false&&String(x.name||'').trim()).sort((a,b)=>String(a.name).localeCompare(String(b.name),'hr'));
+    supplierSelect.innerHTML='<option value="">— ODABERI DOBAVLJAČA —</option>'+suppliers.map(x=>`<option value="${esc(x.id)}">${esc(x.name)} (${esc(x.id)})</option>`).join('');
+    supplierSelect.value='';
+    supplierSelect.onchange=()=>{
+      const id=String(supplierSelect.value||'');
+      const row=suppliers.find(x=>String(x.id)===id);
+      const nameInput=document.getElementById('yufName');
+      if(nameInput)nameInput.value=row?String(row.name||''):'';
+      if(row){
+        const loc=document.getElementById('yufLocation');
+        if(loc&&row.location_id&&[...loc.options].some(o=>o.value===String(row.location_id))){loc.value=String(row.location_id);renderWh();}
+      }
+    };
+  }
   const supplierFields=document.getElementById('yufSupplierContactFields');if(supplierFields)supplierFields.style.display=role==='supplier'?'grid':'none';
   const scope=document.getElementById('yufScopeSection');if(scope)scope.style.display=role==='admin'?'none':'';
+  const scopeStepTitle=document.getElementById('yufScopeStepTitle');if(scopeStepTitle)scopeStepTitle.textContent=role==='supplier'?'3 · LOKACIJA I SKLADIŠTA':'2 · LOKACIJA I SKLADIŠTA';
   const locSel=document.getElementById('yufLocation');
   if(locSel){
     let d={locations:[]};try{d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){}
@@ -34259,7 +34289,17 @@ function openFixed(role){
 }
 async function createFixedUser(){
   if(!isAdmin()||!fixedRole)return;
-  const name=(document.getElementById('yufName')?.value||'').trim();
+  let name=(document.getElementById('yufName')?.value||'').trim();
+  let supplierId='';
+  if(fixedRole==='supplier'){
+    supplierId=String(document.getElementById('yufSupplierSelect')?.value||'').trim();
+    let md={suppliers:[]};try{md=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){}
+    const row=(Array.isArray(md.suppliers)?md.suppliers:[]).find(x=>String(x.id)===supplierId&&x.active!==false);
+    if(!supplierId||!row)return alert('Prvo odaberi dobavljača iz Master podataka.');
+    name=String(row.name||'').trim();
+    if(!name)return alert('Odabrani dobavljač nema ispravan naziv.');
+    const nameInput=document.getElementById('yufName');if(nameInput)nameInput.value=name;
+  }
   const username=(document.getElementById('yufUsername')?.value||'').trim().toLowerCase();
   const password=document.getElementById('yufPassword')?.value||'';
   const password2=document.getElementById('yufPassword2')?.value||'';
@@ -34293,8 +34333,8 @@ async function createFixedUser(){
       try{
         const d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');
         d.suppliers=Array.isArray(d.suppliers)?d.suppliers:[];
-        let s=d.suppliers.find(x=>String(x.name||'').trim().toLowerCase()===name.toLowerCase());
-        if(!s){let n=0;d.suppliers.forEach(x=>{const m=String(x.id||'').match(/(\d+)$/);if(m)n=Math.max(n,+m[1]||0)});s={id:'SUP'+String(n+1).padStart(3,'0'),name,active:true};d.suppliers.push(s)}
+        let s=d.suppliers.find(x=>String(x.id||'')===supplierId);
+        if(!s)throw new Error('Dobavljač više ne postoji u Master podacima.');
         s.username=username;s.location_id=location;s.warehouses=[...warehouses];
         localStorage.setItem('yardivo_master_data_registry_v583',JSON.stringify(d));
         try{window.YardivoMasterDataV583?.save?.(d)}catch(_){}
@@ -46161,7 +46201,7 @@ function render(force=false){
     <div class="ysm-list">${whs.length?whs.map(w=>`<div class="ysm-row"><div><input data-sm-wh-name="${esc(w.id)}" value="${esc(w.name)}"><small>${esc(locName(w.location_id,d))} · ${esc(w.id)}</small></div><div><button data-sm-config-wh="${esc(w.id)}">KONFIGURIRAJ</button> <button data-sm-save-wh="${esc(w.id)}">SPREMI</button> <button class="danger" data-sm-del-wh="${esc(w.id)}">OBRIŠI</button></div></div>`).join(''):'<div class="ysm-empty">Nema skladišta. Prvo dodaj lokaciju, zatim skladište.</div>'}</div>
     <div class="ysm-warehouse-create">
       <label class="ysm-wh-name-field"><span>1 · NAZIV SKLADIŠTA</span><input id="smNewWarehouse" placeholder="npr. Glavno skladište"></label>
-      <label class="ysm-wh-location-field"><span>2 · ODABERI LOKACIJU <b>*</b></span><select id="smNewWarehouseLocation" ${locs.length?'':'disabled'} aria-label="Odaberi lokaciju za novo skladište"><option value="" selected disabled>— ODABERI LOKACIJU —</option>${locs.map(x=>`<option value="${esc(x.id)}">${esc(x.name)} (${esc(x.id)})</option>`).join('')}</select><small>${locs.length?`Dostupno lokacija: ${locs.length}`:'Prvo kreiraj lokaciju u Koraku 1.'}</small></label>
+      <label class="ysm-wh-location-field"><span>2 · ODABERI LOKACIJU <b>*</b></span><select id="smNewWarehouseLocation" ${locs.length?'':'disabled'} aria-label="Odaberi lokaciju za novo skladište"><option value="" selected disabled>— ODABERI LOKACIJU —</option>${locs.map(x=>`<option value="${esc(x.id)}">${esc(x.name)} (${esc(x.id)})</option>`).join('')}</select><small>${locs.length?`Odaberi jednu od ${locs.length} kreiranih lokacija. Skladište će biti vezano na taj location_id.`:'Prvo kreiraj lokaciju u Koraku 1.'}</small></label>
       <button class="primary" data-sm-add-wh disabled>DODAJ SKLADIŠTE</button>
     </div>
     ${locs.length?'<div class="ysm-hint">Skladište će biti trajno povezano s lokacijom koju ovdje odabereš.</div>':'<div class="ysm-hint warn">Za dodavanje skladišta prvo napravi barem jednu lokaciju u Koraku 1.</div>'}
@@ -46897,5 +46937,29 @@ window.YardivoHeaderWarehouseAuthorityV583={sync};
 document.addEventListener('DOMContentLoaded',()=>setTimeout(sync,0));
 window.addEventListener('load',()=>setTimeout(sync,40));
 })();
-</script>\n</body>
+</script>\n
+<script id="yardivo-v583-master-location-and-supplier-account-authority-final">
+(function(){
+'use strict';
+function enforceMasterWarehouseLocation(){
+  const root=document.getElementById('yardivoStableMasterEditorV583');
+  const sel=document.getElementById('smNewWarehouseLocation');
+  if(!root||!sel)return;
+  const label=sel.closest('label');
+  const span=label?.querySelector('span');
+  if(span)span.innerHTML='2 · ODABERI LOKACIJU <b>*</b>';
+  let md={locations:[]};try{md=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){}
+  const rows=(Array.isArray(md.locations)?md.locations:[]).filter(x=>x&&x.active!==false&&String(x.id||'')&&String(x.name||'').trim());
+  const previous=sel.value;
+  sel.innerHTML='<option value="" disabled>— ODABERI LOKACIJU —</option>'+rows.map(x=>`<option value="${String(x.id).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}">${String(x.name).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))} (${String(x.id).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))})</option>`).join('');
+  if(rows.some(x=>String(x.id)===previous))sel.value=previous;else sel.value='';
+  sel.disabled=!rows.length;
+  const btn=root.querySelector('[data-sm-add-wh]');if(btn)btn.disabled=!String(sel.value||'').trim();
+}
+document.addEventListener('click',e=>{if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(enforceMasterWarehouseLocation,120)},true);
+window.addEventListener('yardivo:master-data-changed',()=>setTimeout(enforceMasterWarehouseLocation,80));
+window.addEventListener('load',()=>setTimeout(enforceMasterWarehouseLocation,1800));
+})();
+</script>
+</body>
 </html>
