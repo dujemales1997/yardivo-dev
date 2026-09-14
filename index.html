@@ -31405,8 +31405,11 @@ window.YardivoFullOperationalNotificationsV548={
           <h2 data-i18n="newTitle">Nova najava dostave</h2>
           <p class="muted" data-i18n="newHelp">Unesite podatke o planiranoj isporuci. Termin postaje operativan nakon potvrde.</p>
           <div class="ysp-form">
+            <label><span id="yspLocationLabel" data-i18n="location">LOKACIJA</span>
+              <select id="yspLocation"><option value="">— ODABERI LOKACIJU —</option></select>
+            </label>
             <label><span data-i18n="warehouse">SKLADIŠTE</span>
-              <select id="yspWarehouse"></select>
+              <select id="yspWarehouse" disabled><option value="">— PRVO ODABERI LOKACIJU —</option></select>
             </label>
             <label><span data-i18n="orderNo">BROJ NARUDŽBE / PO *</span>
               <input id="yspOrder" autocomplete="off" placeholder="6W..." required>
@@ -31672,7 +31675,7 @@ const I18N={
     settingsPage:'Postavke',settingsSub:'Odaberite hrvatski ili engleski jezik.',
     kpiWarehouses:'DODIJELJENA SKLADIŠTA',kpiActive:'AKTIVNE NAJAVE',kpiPending:'ČEKA POTVRDU',kpiDone:'ZAVRŠENE',
     newTitle:'Nova najava dostave',newHelp:'Unesite podatke o planiranoj isporuci. Termin postaje operativan nakon potvrde.',
-    warehouse:'SKLADIŠTE',orderNo:'BROJ NARUDŽBE / PO',deliveryDate:'DATUM DOSTAVE',time:'ŽELJENI TERMIN',
+    location:'LOKACIJA',warehouse:'SKLADIŠTE',orderNo:'BROJ NARUDŽBE / PO',deliveryDate:'DATUM DOSTAVE',time:'ŽELJENI TERMIN',
     plate:'REGISTRACIJA VOZILA',driver:'VOZAČ',pallets:'BROJ PALETA',reference:'REFERENCA / OTPREMNICA',note:'NAPOMENA',
     submitInfo:'Dobavljač može odabrati samo skladišta koja mu je dodijelio Admin. Poslani termin mora potvrditi operativni tim.',
     clear:'OČISTI',send:'POŠALJI NAJAVU',historyTitle:'Povijest najava',
@@ -31695,7 +31698,7 @@ const I18N={
     settingsPage:'Settings',settingsSub:'Choose Croatian or English.',
     kpiWarehouses:'ASSIGNED WAREHOUSES',kpiActive:'ACTIVE ANNOUNCEMENTS',kpiPending:'AWAITING CONFIRMATION',kpiDone:'COMPLETED',
     newTitle:'New delivery announcement',newHelp:'Enter the planned delivery details. The appointment becomes operational after confirmation.',
-    warehouse:'WAREHOUSE',orderNo:'PURCHASE ORDER / PO',deliveryDate:'DELIVERY DATE',time:'REQUESTED TIME',
+    location:'LOCATION',warehouse:'WAREHOUSE',orderNo:'PURCHASE ORDER / PO',deliveryDate:'DELIVERY DATE',time:'REQUESTED TIME',
     plate:'VEHICLE REGISTRATION',driver:'DRIVER',pallets:'NUMBER OF PALLETS',reference:'REFERENCE / DELIVERY NOTE',note:'NOTE',
     submitInfo:'Suppliers can select only warehouses assigned by Admin. The requested appointment must be confirmed by the operations team.',
     clear:'CLEAR',send:'SUBMIT ANNOUNCEMENT',historyTitle:'Announcement history',
@@ -31783,20 +31786,46 @@ function show(view){
   setPageText(view);
   render();
 }
-function currentWarehouses(){
-  const s=session();
-  const assigned=Array.isArray(s.warehouses)?s.warehouses.map(x=>String(x).trim().toUpperCase()).filter(Boolean):[];
-  let md={warehouses:[]};try{md=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){}
-  const active=(Array.isArray(md.warehouses)?md.warehouses:[]).filter(w=>w&&w.active!==false);
-  if(String(s.location||'').toUpperCase()==='ALL')return active.map(w=>String(w.id||'').toUpperCase()).filter(Boolean);
-  const valid=new Set(active.map(w=>String(w.id||'').toUpperCase()));
-  return assigned.filter(id=>valid.has(id));
+function supplierMaster(){
+  try{const m=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');return {locations:Array.isArray(m.locations)?m.locations:[],warehouses:Array.isArray(m.warehouses)?m.warehouses:[]}}
+  catch(_){return {locations:[],warehouses:[]}}
+}
+function currentLocations(){
+  const s=session(),m=supplierMaster();
+  const assignedWh=new Set((Array.isArray(s.warehouses)?s.warehouses:[]).map(x=>String(x||'').trim().toUpperCase()).filter(Boolean));
+  const allowedWh=m.warehouses.filter(w=>w&&w.active!==false&&(String(s.location||'').toUpperCase()==='ALL'||assignedWh.has(String(w.id||'').toUpperCase())));
+  const allowedLocIds=new Set(allowedWh.map(w=>String(w.location_id||'')).filter(Boolean));
+  if(String(s.location||'').toUpperCase()!=='ALL'&&s.location)allowedLocIds.add(String(s.location));
+  return m.locations.filter(l=>l&&l.active!==false&&allowedLocIds.has(String(l.id||'')));
+}
+function currentWarehouses(locationId){
+  const s=session(),m=supplierMaster();
+  const assigned=new Set((Array.isArray(s.warehouses)?s.warehouses:[]).map(x=>String(x).trim().toUpperCase()).filter(Boolean));
+  return m.warehouses.filter(w=>w&&w.active!==false&&(!locationId||String(w.location_id||'')===String(locationId))&&(String(s.location||'').toUpperCase()==='ALL'?assigned.has(String(w.id||'').toUpperCase()):assigned.has(String(w.id||'').toUpperCase()))).map(w=>String(w.id||'').toUpperCase()).filter(Boolean);
+}
+function renderLocations(){
+  const el=document.getElementById('yspLocation');if(!el)return;
+  const keep=el.value;const rows=currentLocations();
+  el.innerHTML='<option value="">— ODABERI LOKACIJU —</option>'+rows.map(l=>`<option value="${escapeHtml(l.id)}">${escapeHtml(l.name||l.id)}</option>`).join('');
+  if(keep&&rows.some(l=>String(l.id)===keep))el.value=keep;
+  else if(rows.length===1)el.value=String(rows[0].id);
 }
 function renderWarehouses(){
   const el=document.getElementById('yspWarehouse'); if(!el)return;
-  const rows=currentWarehouses();
-  el.innerHTML=rows.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(whLabel(c))}</option>`).join('');
+  const locationId=document.getElementById('yspLocation')?.value||'';
+  const keep=el.value;
+  if(!locationId){el.disabled=true;el.innerHTML='<option value="">— PRVO ODABERI LOKACIJU —</option>';return}
+  const rows=currentWarehouses(locationId);
+  el.disabled=!rows.length;
+  el.innerHTML='<option value="">— ODABERI SKLADIŠTE —</option>'+rows.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(whLabel(c))}</option>`).join('');
+  if(keep&&rows.includes(String(keep).toUpperCase()))el.value=keep;
+  else if(rows.length===1)el.value=rows[0];
 }
+async function hydrateSupplierMaster(){
+  try{if(window.YardivoSupabase?.fastPull)await window.YardivoSupabase.fastPull()}catch(_){}
+  renderLocations();renderWarehouses();
+}
+
 function renderHistory(){
   const body=document.getElementById('yspHistoryBody'); if(!body)return;
   const rows=loadRows().slice().reverse();
@@ -31861,7 +31890,7 @@ function renderKpis(){
   document.getElementById('yspKpiDone').textContent=rows.filter(x=>String(x.status).toLowerCase()==='completed').length;
 }
 function render(){
-  renderWarehouses();renderHistory();renderStatus();renderKpis();
+  renderLocations();renderWarehouses();renderHistory();renderStatus();renderKpis();
 }
 function clearForm(){
   ['yspOrder','yspDate','yspTime','yspDock','yspPlate','yspTrailerPlate','yspDriver','yspDriverContact','yspPallets','yspSkuCount','yspReference','yspNote'].forEach(id=>{
@@ -31981,6 +32010,7 @@ async function supplierAttachmentFromInput(){
 }
 function supplierAttachmentKey(id){return 'yardivo_supplier_attachment_'+String(id||'')}
 async function submit(){
+  const locationId=document.getElementById('yspLocation')?.value||'';
   const warehouse=document.getElementById('yspWarehouse')?.value||'';
   const order=document.getElementById('yspOrder')?.value.trim().toUpperCase()||'';
   const date=document.getElementById('yspDate')?.value||'';
@@ -31989,6 +32019,7 @@ async function submit(){
   const pallets=Number(document.getElementById('yspPallets')?.value||0);
   const skuCount=Number(document.getElementById('yspSkuCount')?.value||0);
   const missing=[];
+  if(!locationId)missing.push('LOKACIJA');
   if(!warehouse)missing.push('SKLADIŠTE');
   if(!date)missing.push('DATUM DOSTAVE');
   if(!time||!dock)missing.push('TERMIN I RAMPA');
@@ -31996,11 +32027,11 @@ async function submit(){
   if(!Number.isInteger(skuCount)||skuCount<1)missing.push('BROJ SKU-OVA');
   if(missing.length){
     alert((lang==='en'?'Please complete: ':'Molim popuni: ')+missing.join(', '));
-    const ids={SKLADIŠTE:'yspWarehouse','DATUM DOSTAVE':'yspDate','BROJ PALETA':'yspPallets','BROJ SKU-OVA':'yspSkuCount'};
+    const ids={LOKACIJA:'yspLocation',SKLADIŠTE:'yspWarehouse','DATUM DOSTAVE':'yspDate','BROJ PALETA':'yspPallets','BROJ SKU-OVA':'yspSkuCount'};
     document.getElementById(ids[missing[0]])?.focus?.();
     return;
   }
-  const allowed=window.YardivoSupplierV561?.allAssignedWarehouses?.()||currentWarehouses();
+  const allowed=currentWarehouses(locationId);
   if(!allowed.includes(String(warehouse).toUpperCase())){
     alert(lang==='en'?'This warehouse is not assigned to your account.':'Ovo skladište nije dodijeljeno vašem accountu.');return;
   }
@@ -32046,6 +32077,7 @@ function open(){
     String(s.location||'—')+' · '+currentWarehouses().join(', ');
   setLang(lang);
   show('new');
+  setTimeout(()=>hydrateSupplierMaster(),60);
   return true;
 }
 function close(){
@@ -32064,6 +32096,7 @@ document.addEventListener('click',e=>{
   if(rb){reviseRequest(rb.dataset.yspRevise);return}
 },true);
 
+document.getElementById('yspLocation')?.addEventListener('change',()=>{const w=document.getElementById('yspWarehouse');if(w)w.value='';renderWarehouses();try{window.dispatchEvent(new Event('change'))}catch(_){}});
 document.getElementById('yspSend')?.addEventListener('click',submit);
 document.getElementById('yspClear')?.addEventListener('click',clearForm);
 document.getElementById('yspLogout')?.addEventListener('click',()=>{
@@ -47333,5 +47366,671 @@ window.YARDIVO_DEV_BUILD='20260913-dev-v5.8.3-supplier-portal-ui-language-font-m
 })();
 </script>
 <script id="yardivo-v583-supplier-inbox-master-persistence-recovery-final">window.__YARDIVO_V583_SUPPLIER_INBOX_MASTER_RECOVERY__="20260913-v583-supplier-inbox-master-persistence-recovery";</script>
+
+<style id="yardivo-v583-responsible-person-authority-style">
+/* Canonical responsible-person owner: no hardcoded staff names in announcement form. */
+#annResponsible option{display:block!important}
+#yardivoResponsiblePeopleV583{margin-top:14px;border:1px solid #2b4758;border-radius:12px;background:#0a1821;padding:14px}
+#yardivoResponsiblePeopleV583 .yrp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+#yardivoResponsiblePeopleV583 h3{margin:0;font-size:14px}
+#yardivoResponsiblePeopleV583 .yrp-sub{margin-top:4px;color:#839cab;font-size:9px;line-height:1.45}
+#yardivoResponsiblePeopleV583 .yrp-add{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin:10px 0 12px}
+#yardivoResponsiblePeopleV583 label{display:flex;flex-direction:column;gap:5px;font-size:8px;font-weight:900;color:#8fa6b5}
+#yardivoResponsiblePeopleV583 input{width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid #315061;border-radius:7px;background:#06141d;color:#edf6fa}
+#yardivoResponsiblePeopleV583 button{padding:10px 12px;border:1px solid #315d78;border-radius:7px;background:#0d3045;color:#e5f5ff;font-weight:900;cursor:pointer}
+#yardivoResponsiblePeopleV583 .yrp-list{display:grid;gap:7px}
+#yardivoResponsiblePeopleV583 .yrp-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:9px 10px;border:1px solid #203b4b;border-radius:8px;background:#07151e}
+#yardivoResponsiblePeopleV583 .yrp-row strong{display:block;font-size:11px;color:#eef7fb}
+#yardivoResponsiblePeopleV583 .yrp-row small{display:block;margin-top:3px;color:#7892a2;font-size:8px}
+#yardivoResponsiblePeopleV583 .yrp-delete{border-color:#6c3439!important;background:#281317!important;color:#ffc4c8!important}
+#yardivoResponsiblePeopleV583 .yrp-empty{padding:12px;text-align:center;color:#7891a1;font-size:9px;border:1px dashed #294353;border-radius:8px}
+#yufResponsibleSelectSection .yucr-fixed-note{margin-top:10px}
+@media(max-width:700px){#yardivoResponsiblePeopleV583 .yrp-add{grid-template-columns:1fr}}
+body.light-mode #yardivoResponsiblePeopleV583,
+html[data-yardivo-main-theme="light"] #yardivoResponsiblePeopleV583{background:#fff!important;border-color:#d5e0e6!important;color:#17242d!important}
+body.light-mode #yardivoResponsiblePeopleV583 .yrp-row,
+html[data-yardivo-main-theme="light"] #yardivoResponsiblePeopleV583 .yrp-row{background:#f7fafc!important;border-color:#d9e3e8!important}
+body.light-mode #yardivoResponsiblePeopleV583 input,
+html[data-yardivo-main-theme="light"] #yardivoResponsiblePeopleV583 input{background:#fff!important;color:#17242d!important;border-color:#bdcbd3!important}
+body.light-mode #yardivoResponsiblePeopleV583 .yrp-row strong,
+html[data-yardivo-main-theme="light"] #yardivoResponsiblePeopleV583 .yrp-row strong{color:#17242d!important}
+</style>
+<script id="yardivo-v583-responsible-person-inventory-account-authority">
+(function(){
+'use strict';
+const MASTER_KEY='yardivo_master_data_registry_v583';
+let inventoryRoleSelected=false;
+const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function readMaster(){
+  let d={};
+  try{d=JSON.parse(localStorage.getItem(MASTER_KEY)||'{}')||{}}catch(_){d={}}
+  d.suppliers=Array.isArray(d.suppliers)?d.suppliers:[];
+  d.locations=Array.isArray(d.locations)?d.locations:[];
+  d.warehouses=Array.isArray(d.warehouses)?d.warehouses:[];
+  d.responsible_people=Array.isArray(d.responsible_people)?d.responsible_people:[];
+  return d;
+}
+async function saveMaster(d,source){
+  d.responsible_people=Array.isArray(d.responsible_people)?d.responsible_people:[];
+  d.__masterUpdatedAtV583=new Date().toISOString();
+  d.__masterWriteTokenV583='RP-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
+  localStorage.setItem(MASTER_KEY,JSON.stringify(d));
+  try{await Promise.resolve(window.YardivoMasterDataV583?.save?.(d))}catch(e){console.error('Responsible people cloud save',e);throw e}
+  try{await Promise.resolve(window.YardivoMasterDataV583?.flushQueue?.())}catch(_){ }
+  window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{source:source||'responsible-people'}}));
+}
+function nextId(rows){
+  let n=0;for(const x of rows){const m=String(x?.id||'').match(/^RP(\d+)$/i);if(m)n=Math.max(n,Number(m[1])||0)}
+  return 'RP'+String(n+1).padStart(3,'0');
+}
+function fullName(p){return [p?.first_name,p?.last_name].map(x=>String(x||'').trim()).filter(Boolean).join(' ').trim()}
+function people(activeOnly=true){
+  return readMaster().responsible_people.filter(p=>p&&(!activeOnly||p.active!==false)&&fullName(p)).sort((a,b)=>fullName(a).localeCompare(fullName(b),'hr'));
+}
+function populateAnnouncementResponsible(preserve=true){
+  const sel=document.getElementById('annResponsible');if(!sel)return;
+  const current=preserve?String(sel.value||''):'';
+  const rows=people(true);
+  sel.innerHTML='<option value="">Odaberi odgovornu osobu...</option>'+rows.map(p=>`<option value="${esc(fullName(p))}" data-rp-id="${esc(p.id)}">${esc(fullName(p))}</option>`).join('');
+  if(current&&[...sel.options].some(o=>o.value===current))sel.value=current;
+  else sel.value='';
+}
+function sectionHost(){
+  const stable=document.getElementById('yardivoStableMasterEditorV583');
+  if(stable)return stable;
+  return document.getElementById('yardivoSettingsMasterPaneV583')||document.getElementById('settings');
+}
+function ensureSettingsSection(){
+  const host=sectionHost();if(!host)return;
+  let sec=document.getElementById('yardivoResponsiblePeopleV583');
+  if(!sec){
+    sec=document.createElement('section');sec.id='yardivoResponsiblePeopleV583';
+    sec.innerHTML=`<div class="yrp-head"><div><h3>ODGOVORNE OSOBE</h3><div class="yrp-sub">Dodaj stvarne odgovorne osobe. Ovaj popis je jedini izvor za dropdown “Odgovorna osoba” u Unosu najave i za povezivanje s accountom Upravljanje zalihama.</div></div></div>
+      <div class="yrp-add"><label>IME<input id="yrpFirstName" autocomplete="off" placeholder="Ime"></label><label>PREZIME<input id="yrpLastName" autocomplete="off" placeholder="Prezime"></label><button type="button" id="yrpAddBtn">＋ DODAJ ODGOVORNU OSOBU</button></div>
+      <div class="yrp-list" id="yrpList"></div>`;
+    host.appendChild(sec);
+    sec.querySelector('#yrpAddBtn')?.addEventListener('click',addPerson);
+    sec.addEventListener('click',async e=>{
+      const b=e.target.closest('[data-yrp-delete]');if(!b)return;
+      const id=String(b.dataset.yrpDelete||'');const d=readMaster();const p=d.responsible_people.find(x=>String(x.id)===id);if(!p)return;
+      if(p.account_username||p.auth_user_id)return alert('Ova odgovorna osoba je povezana s accountom Upravljanje zalihama. Prvo promijeni/ukloni vezu accounta.');
+      if(!confirm(`Obrisati odgovornu osobu “${fullName(p)}”?`))return;
+      d.responsible_people=d.responsible_people.filter(x=>String(x.id)!==id);
+      try{await saveMaster(d,'responsible-person-delete')}catch(err){alert('Spremanje nije uspjelo: '+String(err?.message||err));return}
+      renderPeople();populateAnnouncementResponsible(false);syncInventorySelector();
+    });
+  }
+  renderPeople();
+}
+function renderPeople(){
+  const list=document.getElementById('yrpList');if(!list)return;
+  const rows=people(false);
+  list.innerHTML=rows.length?rows.map(p=>{
+    const linked=p.account_username?`Povezan account: ${esc(p.account_username)}`:'Nije povezan s accountom';
+    return `<div class="yrp-row"><div><strong>${esc(fullName(p))}</strong><small>${linked}</small></div><button type="button" class="yrp-delete" data-yrp-delete="${esc(p.id)}" ${p.account_username||p.auth_user_id?'disabled title="Povezana osoba se ne može obrisati"':''}>OBRIŠI</button></div>`
+  }).join(''):'<div class="yrp-empty">Još nema odgovornih osoba. Dodaj ime i prezime iznad.</div>';
+}
+async function addPerson(){
+  const first=String(document.getElementById('yrpFirstName')?.value||'').trim();
+  const last=String(document.getElementById('yrpLastName')?.value||'').trim();
+  if(!first||!last)return alert('Upiši ime i prezime odgovorne osobe.');
+  const d=readMaster();const name=(first+' '+last).toLocaleLowerCase('hr');
+  if(d.responsible_people.some(p=>fullName(p).toLocaleLowerCase('hr')===name))return alert('Ta odgovorna osoba već postoji.');
+  d.responsible_people.push({id:nextId(d.responsible_people),first_name:first,last_name:last,active:true,account_username:null,auth_user_id:null});
+  try{await saveMaster(d,'responsible-person-create')}catch(err){alert('Spremanje nije uspjelo: '+String(err?.message||err));return}
+  const a=document.getElementById('yrpFirstName'),b=document.getElementById('yrpLastName');if(a)a.value='';if(b)b.value='';
+  renderPeople();populateAnnouncementResponsible(false);syncInventorySelector();
+  try{showYmsToast?.('success','ODGOVORNA OSOBA DODANA',first+' '+last)}catch(_){ }
+}
+function ensureInventorySection(){
+  const modal=document.getElementById('yardivoFixedUserModal');if(!modal)return null;
+  let sec=document.getElementById('yufResponsibleSelectSection');
+  if(!sec){
+    sec=document.createElement('section');sec.className='yucr-section';sec.id='yufResponsibleSelectSection';sec.style.display='none';
+    sec.innerHTML=`<strong>1 · ODABERI ODGOVORNU OSOBU</strong><label style="margin-top:10px">Odgovorna osoba iz Master podataka<select id="yufResponsibleSelect"><option value="">— ODABERI ODGOVORNU OSOBU —</option></select></label><div class="yucr-fixed-note">Account Upravljanje zalihama može se napraviti samo za osobu koja već postoji u Master podacima.</div>`;
+    const supplier=document.getElementById('yufSupplierSelectSection');
+    if(supplier?.parentNode)supplier.parentNode.insertBefore(sec,supplier.nextSibling);else modal.querySelector('.yucr-card')?.prepend(sec);
+    sec.querySelector('#yufResponsibleSelect')?.addEventListener('change',e=>{
+      const p=people(true).find(x=>String(x.id)===String(e.target.value));
+      const name=document.getElementById('yufName');if(name)name.value=p?fullName(p):'';
+    });
+  }
+  return sec;
+}
+function syncInventorySelector(){
+  const sec=ensureInventorySection();const sel=document.getElementById('yufResponsibleSelect');if(!sec||!sel)return;
+  const current=sel.value;const rows=people(true);
+  sel.innerHTML='<option value="">— ODABERI ODGOVORNU OSOBU —</option>'+rows.map(p=>{
+    const linked=Boolean(p.account_username||p.auth_user_id);
+    return `<option value="${esc(p.id)}" ${linked?'disabled':''}>${esc(fullName(p))}${linked?` — account: ${esc(p.account_username||'povezan')}`:''}</option>`;
+  }).join('');
+  if(current&&[...sel.options].some(o=>o.value===current&&!o.disabled))sel.value=current;
+}
+function configureRole(role){
+  inventoryRoleSelected=role==='inventory';
+  const sec=ensureInventorySection();if(sec)sec.style.display=inventoryRoleSelected?'':'none';
+  const name=document.getElementById('yufName');const label=name?.closest('label');
+  if(inventoryRoleSelected){
+    syncInventorySelector();if(label)label.style.display='none';if(name)name.value='';
+    const basic=document.getElementById('yufBasicStepTitle');if(basic)basic.textContent='2 · PODACI ZA ACCOUNT';
+    const scope=document.getElementById('yufScopeStepTitle');if(scope)scope.textContent='3 · LOKACIJA I SKLADIŠTA';
+    const note=document.getElementById('yufFixedNote');if(note)note.textContent='Upravljanje zalihama account je vezan uz odabranu odgovornu osobu. Lokacija i skladišta određuju operativni scope accounta.';
+  }else if(sec){
+    const sel=document.getElementById('yufResponsibleSelect');if(sel)sel.value='';
+  }
+}
+function selectedWarehouses(){return [...document.querySelectorAll('#yufWarehouseGrid input[name="yufWarehouse"]:checked')].map(x=>x.value)}
+async function invokeCreate(payload){
+  const c=await window.YardivoAuth?.client?.();if(!c)throw new Error('ONLINE AUTH NIJE SPREMAN.');
+  const {data,error}=await c.functions.invoke('yardivo-admin-users',{body:{action:'create',...payload}});
+  if(error){let detail='';try{const cloned=error.context?.clone?.()||error.context;if(cloned){const body=await cloned.json();detail=body?.error||body?.message||''}}catch(_){ }throw new Error(detail||error.message||'Kreiranje korisnika nije uspjelo.');}
+  if(data?.error)throw new Error(data.error);if(data?.ok===false)throw new Error(data?.message||'Kreiranje korisnika nije uspjelo.');return data?.data??data;
+}
+async function createInventoryAccount(btn){
+  const rpId=String(document.getElementById('yufResponsibleSelect')?.value||'');const d=readMaster();const rp=d.responsible_people.find(x=>String(x.id)===rpId&&x.active!==false);
+  if(!rp)return alert('Prvo odaberi odgovornu osobu iz Master podataka.');
+  if(rp.account_username||rp.auth_user_id)return alert('Odabrana odgovorna osoba već je povezana s accountom Upravljanje zalihama.');
+  const username=String(document.getElementById('yufUsername')?.value||'').trim().toLowerCase();
+  const password=String(document.getElementById('yufPassword')?.value||'');const password2=String(document.getElementById('yufPassword2')?.value||'');
+  const location=String(document.getElementById('yufLocation')?.value||'');const warehouses=selectedWarehouses();
+  if(!/^[a-z0-9._-]{3,40}$/.test(username))return alert('Username mora imati najmanje 3 znaka.');
+  if(password.length<8)return alert('Lozinka mora imati najmanje 8 znakova.');if(password!==password2)return alert('Lozinke se ne podudaraju.');
+  if(!location)return alert('Odaberi lokaciju.');if(!warehouses.length)return alert('Odaberi barem jedno skladište.');
+  btn.disabled=true;const old=btn.textContent;btn.textContent='KREIRAM...';
+  try{
+    const created=await invokeCreate({username,password,role:'inventory',location,warehouses});
+    const fresh=readMaster();const target=fresh.responsible_people.find(x=>String(x.id)===rpId);if(!target)throw new Error('Odgovorna osoba više ne postoji u Master podacima.');
+    target.account_username=username;target.auth_user_id=String(created?.auth_user_id||'')||null;target.account_role='inventory';target.location_id=location;target.warehouses=[...warehouses];
+    try{await saveMaster(fresh,'inventory-account-link')}catch(saveErr){
+      alert('Account je kreiran, ali veza s odgovornom osobom nije spremljena u Master Data. Nemoj kreirati novi account; prijavi ovu grešku. '+String(saveErr?.message||saveErr));return;
+    }
+    document.getElementById('yardivoFixedUserModal')?.classList.remove('open');document.getElementById('yardivoFixedUserModal')?.setAttribute('aria-hidden','true');
+    inventoryRoleSelected=false;renderPeople();populateAnnouncementResponsible(false);
+    try{await window.YardivoServerProfiles?.render?.()}catch(_){ }
+    try{showYmsToast?.('success','UPRAVLJANJE ZALIHAMA ACCOUNT KREIRAN',fullName(target)+' · '+username)}catch(_){ }
+  }catch(err){alert('Kreiranje korisnika nije uspjelo: '+String(err?.message||err));}
+  finally{btn.disabled=false;btn.textContent=old||'KREIRAJ KORISNIKA';}
+}
+// Capture only Inventory creation; all other role flows remain on the canonical existing owner.
+document.addEventListener('click',e=>{
+  const roleBtn=e.target.closest?.('[data-yucr-role]');
+  if(roleBtn){const r=String(roleBtn.dataset.yucrRole||'');setTimeout(()=>configureRole(r),0);return;}
+  const create=e.target.closest?.('#yufCreate');
+  if(create&&inventoryRoleSelected){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();void createInventoryAccount(create);return;}
+  if(e.target.closest?.('[data-yucr-close="fixed"]'))inventoryRoleSelected=false;
+  const settingsBtn=e.target.closest?.('[data-view="settings"], [data-settings-tab], [data-settings-section]');if(settingsBtn)setTimeout(()=>{ensureSettingsSection();populateAnnouncementResponsible(true)},0);
+},true);
+window.addEventListener('yardivo:master-data-changed',()=>setTimeout(()=>{ensureSettingsSection();renderPeople();populateAnnouncementResponsible(true);syncInventorySelector()},0));
+window.addEventListener('yardivo:login',()=>setTimeout(()=>{ensureSettingsSection();populateAnnouncementResponsible(false)},0));
+window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>{ensureSettingsSection();populateAnnouncementResponsible(true)},0));
+// Wrap the announcement control refresh so every render receives only Master Data responsible people.
+const prevPopulate=window.populateAnnouncementControls;
+if(typeof prevPopulate==='function'){
+  window.populateAnnouncementControls=function(){const r=prevPopulate.apply(this,arguments);populateAnnouncementResponsible(true);return r;};
+}
+// Export only the small canonical API used by other modules/tests.
+window.YardivoResponsiblePeopleV583={read:()=>people(false),active:()=>people(true),refresh:()=>{ensureSettingsSection();populateAnnouncementResponsible(true)}};
+setTimeout(()=>{ensureSettingsSection();populateAnnouncementResponsible(false)},0);
+window.YARDIVO_DEV_BUILD='20260914-dev-v5.8.3-responsible-person-inventory-account-flow';
+})();
+</script>
+
+
+<style id="yardivo-v583-premium-light-mode-authority">
+/* ============================================================
+   YARDIVO DEV V5.8.3 · PREMIUM LIGHT MODE AUTHORITY
+   Visual-only redesign based on approved YARDIVO concept.
+   Dark mode and application logic are intentionally untouched.
+   ============================================================ */
+html[data-yardivo-main-theme="light"] body,
+html[data-theme="light"] body.light-mode{
+  --yv58-bg:#f3f6fa;
+  --yv58-surface:#ffffff;
+  --yv58-surface-soft:#f8fafc;
+  --yv58-line:#dfe7f0;
+  --yv58-line-strong:#d2dce8;
+  --yv58-text:#0f1d33;
+  --yv58-muted:#708096;
+  --yv58-blue:#1877f2;
+  --yv58-blue-2:#0f64d9;
+  --yv58-green:#14a85a;
+  --yv58-orange:#ee9916;
+  --yv58-red:#df4150;
+  --yv58-purple:#7457e8;
+  --yv58-sidebar:#0a1827;
+  --yv58-sidebar-2:#0d2134;
+  --yv58-sidebar-line:#203447;
+  background:var(--yv58-bg)!important;
+  color:var(--yv58-text)!important;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+}
+
+/* App canvas */
+html[data-yardivo-main-theme="light"] body .app-shell,
+html[data-theme="light"] body.light-mode .app-shell{
+  background:var(--yv58-bg)!important;
+}
+html[data-yardivo-main-theme="light"] body .main,
+html[data-yardivo-main-theme="light"] body .main-content,
+html[data-yardivo-main-theme="light"] body #mainContent,
+html[data-theme="light"] body.light-mode .main,
+html[data-theme="light"] body.light-mode .main-content,
+html[data-theme="light"] body.light-mode #mainContent{
+  background:var(--yv58-bg)!important;
+}
+html[data-yardivo-main-theme="light"] body .view,
+html[data-theme="light"] body.light-mode .view{
+  background:transparent!important;
+  padding:16px 18px 22px!important;
+}
+
+/* DARK PREMIUM SIDEBAR — intentional in light mode */
+html[data-yardivo-main-theme="light"] body .sidebar,
+html[data-theme="light"] body.light-mode .sidebar{
+  background:
+    radial-gradient(circle at 55% 0%,rgba(31,124,245,.12),transparent 30%),
+    linear-gradient(180deg,var(--yv58-sidebar) 0%,#071422 100%)!important;
+  border-right:1px solid var(--yv58-sidebar-line)!important;
+  box-shadow:12px 0 34px rgba(15,35,55,.10)!important;
+  color:#eaf2fb!important;
+  padding:17px 12px 15px!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar .brand-combo,
+html[data-theme="light"] body.light-mode .sidebar .brand-combo{
+  background:transparent!important;
+  border:0!important;
+  padding:10px 11px 18px!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar .brand-combo img,
+html[data-theme="light"] body.light-mode .sidebar .brand-combo img{
+  filter:none!important;
+  opacity:1!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar .nav,
+html[data-theme="light"] body.light-mode .sidebar .nav{gap:3px!important}
+html[data-yardivo-main-theme="light"] body .sidebar .nav-btn,
+html[data-theme="light"] body.light-mode .sidebar .nav-btn{
+  min-height:41px!important;
+  padding:9px 12px!important;
+  border:1px solid transparent!important;
+  border-radius:9px!important;
+  background:transparent!important;
+  color:#d8e4f0!important;
+  font-weight:650!important;
+  box-shadow:none!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar .nav-btn span,
+html[data-theme="light"] body.light-mode .sidebar .nav-btn span{
+  color:#b7cbe0!important;
+  font-size:16px!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar .nav-btn:hover,
+html[data-theme="light"] body.light-mode .sidebar .nav-btn:hover{
+  background:#10283f!important;
+  border-color:#1d4264!important;
+  color:#ffffff!important;
+  transform:translateX(1px);
+}
+html[data-yardivo-main-theme="light"] body .sidebar .nav-btn.active,
+html[data-theme="light"] body.light-mode .sidebar .nav-btn.active{
+  background:linear-gradient(135deg,#176fe4 0%,#0d5fc8 100%)!important;
+  border-color:#2d86ed!important;
+  color:#ffffff!important;
+  box-shadow:0 8px 22px rgba(8,88,190,.28)!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar .nav-btn.active span,
+html[data-theme="light"] body.light-mode .sidebar .nav-btn.active span{color:#ffffff!important}
+html[data-yardivo-main-theme="light"] body .sidebar-footer,
+html[data-theme="light"] body.light-mode .sidebar-footer{
+  color:#8ea5ba!important;
+  border-top:1px solid #1c3144!important;
+  background:transparent!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar-footer strong,
+html[data-theme="light"] body.light-mode .sidebar-footer strong{color:#57d990!important}
+html[data-yardivo-main-theme="light"] body .sidebar-footer p,
+html[data-theme="light"] body.light-mode .sidebar-footer p{color:#8ea5ba!important}
+
+/* WHITE TOPBAR */
+html[data-yardivo-main-theme="light"] body .topbar,
+html[data-theme="light"] body.light-mode .topbar{
+  min-height:66px!important;
+  height:auto!important;
+  padding:9px 20px!important;
+  background:rgba(255,255,255,.96)!important;
+  border-bottom:1px solid var(--yv58-line)!important;
+  box-shadow:0 4px 18px rgba(22,45,73,.045)!important;
+  backdrop-filter:blur(18px) saturate(1.08)!important;
+  color:var(--yv58-text)!important;
+}
+html[data-yardivo-main-theme="light"] body .topbar h1,
+html[data-theme="light"] body.light-mode .topbar h1{
+  color:var(--yv58-text)!important;
+  font-size:20px!important;
+  font-weight:850!important;
+  letter-spacing:-.02em!important;
+}
+html[data-yardivo-main-theme="light"] body .topbar .subtitle,
+html[data-theme="light"] body.light-mode .topbar .subtitle,
+html[data-yardivo-main-theme="light"] body .clock small,
+html[data-theme="light"] body.light-mode .clock small{color:var(--yv58-muted)!important}
+html[data-yardivo-main-theme="light"] body .clock strong,
+html[data-theme="light"] body.light-mode .clock strong{color:#10192a!important;font-weight:850!important}
+html[data-yardivo-main-theme="light"] body .live,
+html[data-theme="light"] body.light-mode .live{
+  background:#eaf8ef!important;
+  border-color:#ccebd8!important;
+  color:#128647!important;
+  border-radius:999px!important;
+  padding:7px 12px!important;
+  box-shadow:none!important;
+}
+html[data-yardivo-main-theme="light"] body .live i,
+html[data-theme="light"] body.light-mode .live i{background:#13ad57!important;box-shadow:none!important}
+html[data-yardivo-main-theme="light"] body .user-chip,
+html[data-theme="light"] body.light-mode .user-chip{
+  background:#ffffff!important;
+  border:1px solid var(--yv58-line)!important;
+  border-radius:12px!important;
+  color:var(--yv58-text)!important;
+  box-shadow:0 4px 12px rgba(23,49,79,.04)!important;
+}
+html[data-yardivo-main-theme="light"] body .user-chip *,
+html[data-theme="light"] body.light-mode .user-chip *{color:inherit!important}
+html[data-yardivo-main-theme="light"] body .notif-bell,
+html[data-theme="light"] body.light-mode .notif-bell{
+  background:#fff!important;border:1px solid var(--yv58-line)!important;border-radius:50%!important;
+  color:#1f334b!important;box-shadow:0 4px 12px rgba(23,49,79,.04)!important;
+}
+
+/* Page heading */
+html[data-yardivo-main-theme="light"] body .section-title,
+html[data-theme="light"] body.light-mode .section-title{
+  background:transparent!important;
+  border:0!important;
+  padding:2px 0!important;
+  margin-bottom:13px!important;
+}
+html[data-yardivo-main-theme="light"] body .section-title h1,
+html[data-theme="light"] body.light-mode .section-title h1{
+  color:#111c30!important;
+  font-weight:900!important;
+  letter-spacing:-.025em!important;
+}
+html[data-yardivo-main-theme="light"] body .section-title p,
+html[data-theme="light"] body.light-mode .section-title p{color:#718198!important}
+
+/* Core panels/cards */
+html[data-yardivo-main-theme="light"] body .panel,
+html[data-yardivo-main-theme="light"] body .card,
+html[data-yardivo-main-theme="light"] body .home-menu-card,
+html[data-yardivo-main-theme="light"] body .settings-card,
+html[data-yardivo-main-theme="light"] body .settings-section,
+html[data-theme="light"] body.light-mode .panel,
+html[data-theme="light"] body.light-mode .card,
+html[data-theme="light"] body.light-mode .home-menu-card,
+html[data-theme="light"] body.light-mode .settings-card,
+html[data-theme="light"] body.light-mode .settings-section{
+  background:#ffffff!important;
+  border:1px solid var(--yv58-line)!important;
+  border-radius:13px!important;
+  color:var(--yv58-text)!important;
+  box-shadow:0 8px 24px rgba(25,50,78,.045)!important;
+}
+html[data-yardivo-main-theme="light"] body .panel-head,
+html[data-theme="light"] body.light-mode .panel-head{
+  background:transparent!important;
+  border-bottom:0!important;
+  padding:13px 14px 10px!important;
+}
+html[data-yardivo-main-theme="light"] body .panel-head h2,
+html[data-theme="light"] body.light-mode .panel-head h2{
+  color:#17243a!important;font-weight:900!important;letter-spacing:-.01em!important;
+}
+html[data-yardivo-main-theme="light"] body .panel-head small,
+html[data-theme="light"] body.light-mode .panel-head small{color:#8390a2!important}
+
+/* Executive Live strip */
+html[data-yardivo-main-theme="light"] body #yardivoExecutiveLive,
+html[data-theme="light"] body.light-mode #yardivoExecutiveLive{
+  background:#ffffff!important;
+  border:1px solid var(--yv58-line)!important;
+  border-radius:14px!important;
+  box-shadow:0 8px 24px rgba(25,50,78,.045)!important;
+  overflow:hidden!important;
+}
+html[data-yardivo-main-theme="light"] body #yardivoExecutiveLive .yex-head,
+html[data-theme="light"] body.light-mode #yardivoExecutiveLive .yex-head{padding:12px 15px 10px!important}
+html[data-yardivo-main-theme="light"] body .yex-title strong,
+html[data-theme="light"] body.light-mode .yex-title strong{color:#142139!important;font-size:15px!important;font-weight:950!important}
+html[data-yardivo-main-theme="light"] body .yex-title small,
+html[data-theme="light"] body.light-mode .yex-title small{color:#74849a!important;font-size:9px!important}
+html[data-yardivo-main-theme="light"] body .yex-grid,
+html[data-theme="light"] body.light-mode .yex-grid{
+  gap:8px!important;
+  padding:0 10px 10px!important;
+  border-top:0!important;
+}
+html[data-yardivo-main-theme="light"] body .yex-kpi,
+html[data-theme="light"] body.light-mode .yex-kpi{
+  border:1px solid #e1e8f0!important;
+  border-radius:10px!important;
+  background:#f8fbfe!important;
+  padding:12px 13px!important;
+}
+html[data-yardivo-main-theme="light"] body .yex-kpi:nth-child(1),
+html[data-theme="light"] body.light-mode .yex-kpi:nth-child(1){background:#eef7ff!important;border-color:#d7eafa!important}
+html[data-yardivo-main-theme="light"] body .yex-kpi:nth-child(2),
+html[data-theme="light"] body.light-mode .yex-kpi:nth-child(2){background:#f3f2ff!important;border-color:#e0ddfb!important}
+html[data-yardivo-main-theme="light"] body .yex-kpi:nth-child(3),
+html[data-theme="light"] body.light-mode .yex-kpi:nth-child(3){background:#fff8e9!important;border-color:#f2e5c8!important}
+html[data-yardivo-main-theme="light"] body .yex-kpi:nth-child(4),
+html[data-theme="light"] body.light-mode .yex-kpi:nth-child(4){background:#eefaf4!important;border-color:#d9eee3!important}
+html[data-yardivo-main-theme="light"] body .yex-kpi:nth-child(5),
+html[data-theme="light"] body.light-mode .yex-kpi:nth-child(5){background:#f4f7fa!important;border-color:#e1e7ee!important}
+html[data-yardivo-main-theme="light"] body .yex-kpi:nth-child(6),
+html[data-theme="light"] body.light-mode .yex-kpi:nth-child(6){background:#fff1f3!important;border-color:#f4dade!important}
+html[data-yardivo-main-theme="light"] body .yex-kpi small,
+html[data-theme="light"] body.light-mode .yex-kpi small{color:#6e7d91!important;font-size:8px!important}
+html[data-yardivo-main-theme="light"] body .yex-kpi strong,
+html[data-theme="light"] body.light-mode .yex-kpi strong{color:#111c30!important;font-size:22px!important}
+html[data-yardivo-main-theme="light"] body .yex-kpi span,
+html[data-theme="light"] body.light-mode .yex-kpi span{color:#8290a1!important;font-size:8px!important}
+html[data-yardivo-main-theme="light"] body .yex-risk.ok,
+html[data-theme="light"] body.light-mode .yex-risk.ok{
+  color:#137f43!important;border-color:#ccebd8!important;background:#eaf8ef!important;
+}
+html[data-yardivo-main-theme="light"] body .yex-loadbar,
+html[data-theme="light"] body.light-mode .yex-loadbar{background:#e5ebf2!important}
+
+/* Dashboard KPI cards */
+html[data-yardivo-main-theme="light"] body .dash-clean-kpis,
+html[data-theme="light"] body.light-mode .dash-clean-kpis{gap:9px!important}
+html[data-yardivo-main-theme="light"] body .dash-clean-kpi,
+html[data-theme="light"] body.light-mode .dash-clean-kpi{
+  background:#ffffff!important;
+  border:1px solid var(--yv58-line)!important;
+  border-radius:11px!important;
+  box-shadow:0 6px 18px rgba(25,50,78,.035)!important;
+  padding:14px 13px!important;
+}
+html[data-yardivo-main-theme="light"] body .dash-clean-kpi::before,
+html[data-theme="light"] body.light-mode .dash-clean-kpi::before{width:0!important}
+html[data-yardivo-main-theme="light"] body .dash-clean-kpi small,
+html[data-theme="light"] body.light-mode .dash-clean-kpi small{color:#6f8095!important;font-size:8px!important}
+html[data-yardivo-main-theme="light"] body .dash-clean-kpi strong,
+html[data-theme="light"] body.light-mode .dash-clean-kpi strong{color:#101b2f!important;font-size:22px!important}
+html[data-yardivo-main-theme="light"] body .dash-clean-kpi span,
+html[data-theme="light"] body.light-mode .dash-clean-kpi span{color:#7e8d9f!important;font-size:8px!important}
+html[data-yardivo-main-theme="light"] body .dash-clean-kpi.blue,
+html[data-theme="light"] body.light-mode .dash-clean-kpi.blue{background:#eef7ff!important;border-color:#d8eafa!important}
+html[data-yardivo-main-theme="light"] body .dash-clean-kpi.green,
+html[data-theme="light"] body.light-mode .dash-clean-kpi.green{background:#effaf4!important;border-color:#d6ecdf!important}
+html[data-yardivo-main-theme="light"] body .dash-clean-kpi.yellow,
+html[data-theme="light"] body.light-mode .dash-clean-kpi.yellow,
+html[data-yardivo-main-theme="light"] body .dash-clean-kpi.orange,
+html[data-theme="light"] body.light-mode .dash-clean-kpi.orange{background:#fff8e9!important;border-color:#f1e4c5!important}
+html[data-yardivo-main-theme="light"] body .dash-clean-kpi.red,
+html[data-theme="light"] body.light-mode .dash-clean-kpi.red{background:#fff1f3!important;border-color:#f3dade!important}
+
+/* Charts */
+html[data-yardivo-main-theme="light"] body .dash-chart-panel,
+html[data-theme="light"] body.light-mode .dash-chart-panel{min-height:275px!important}
+html[data-yardivo-main-theme="light"] body .dash-donut::after,
+html[data-yardivo-main-theme="light"] body .dash-cap-ring::after,
+html[data-theme="light"] body.light-mode .dash-donut::after,
+html[data-theme="light"] body.light-mode .dash-cap-ring::after{
+  background:#ffffff!important;border:1px solid #e1e8f0!important;
+}
+html[data-yardivo-main-theme="light"] body .dash-donut-center strong,
+html[data-yardivo-main-theme="light"] body .dash-cap-ring strong,
+html[data-theme="light"] body.light-mode .dash-donut-center strong,
+html[data-theme="light"] body.light-mode .dash-cap-ring strong{color:#111b2e!important}
+html[data-yardivo-main-theme="light"] body .dash-donut-row,
+html[data-theme="light"] body.light-mode .dash-donut-row{color:#53667d!important}
+html[data-yardivo-main-theme="light"] body .dash-donut-row strong,
+html[data-theme="light"] body.light-mode .dash-donut-row strong{color:#17243a!important}
+html[data-yardivo-main-theme="light"] body .dash-hourly-chart,
+html[data-theme="light"] body.light-mode .dash-hourly-chart{
+  border-top:1px solid #eef2f6!important;
+  background-image:linear-gradient(to bottom,#eef2f6 1px,transparent 1px)!important;
+  background-size:100% 33px!important;
+}
+html[data-yardivo-main-theme="light"] body .dash-hour-track,
+html[data-theme="light"] body.light-mode .dash-hour-track{border-bottom-color:#d7e0e9!important}
+html[data-yardivo-main-theme="light"] body .dash-hour-bar,
+html[data-theme="light"] body.light-mode .dash-hour-bar{background:linear-gradient(180deg,#318cf4,#1877e8)!important}
+html[data-yardivo-main-theme="light"] body .dash-hour-value,
+html[data-theme="light"] body.light-mode .dash-hour-value{color:#4a6077!important}
+html[data-yardivo-main-theme="light"] body .dash-hour-label,
+html[data-theme="light"] body.light-mode .dash-hour-label{color:#7c8da0!important}
+html[data-yardivo-main-theme="light"] body .dash-cap-metrics div,
+html[data-theme="light"] body.light-mode .dash-cap-metrics div{
+  background:#f8fafc!important;border:1px solid #e1e8ef!important;border-radius:8px!important;
+}
+html[data-yardivo-main-theme="light"] body .dash-cap-metrics small,
+html[data-theme="light"] body.light-mode .dash-cap-metrics small{color:#7d8da0!important}
+html[data-yardivo-main-theme="light"] body .dash-cap-metrics strong,
+html[data-theme="light"] body.light-mode .dash-cap-metrics strong{color:#142039!important}
+html[data-yardivo-main-theme="light"] body .dash-attention-item,
+html[data-yardivo-main-theme="light"] body .dash-next-item,
+html[data-theme="light"] body.light-mode .dash-attention-item,
+html[data-theme="light"] body.light-mode .dash-next-item{border-top-color:#edf1f5!important;color:#26384f!important}
+
+/* Controls */
+html[data-yardivo-main-theme="light"] body input,
+html[data-yardivo-main-theme="light"] body select,
+html[data-yardivo-main-theme="light"] body textarea,
+html[data-theme="light"] body.light-mode input,
+html[data-theme="light"] body.light-mode select,
+html[data-theme="light"] body.light-mode textarea{
+  background:#ffffff!important;
+  color:#152339!important;
+  border:1px solid #d6e0ea!important;
+  border-radius:9px!important;
+  box-shadow:0 1px 2px rgba(18,42,70,.02)!important;
+}
+html[data-yardivo-main-theme="light"] body input:focus,
+html[data-yardivo-main-theme="light"] body select:focus,
+html[data-yardivo-main-theme="light"] body textarea:focus,
+html[data-theme="light"] body.light-mode input:focus,
+html[data-theme="light"] body.light-mode select:focus,
+html[data-theme="light"] body.light-mode textarea:focus{
+  border-color:#4d9bf4!important;
+  outline:3px solid rgba(24,119,242,.11)!important;
+  outline-offset:0!important;
+}
+html[data-yardivo-main-theme="light"] body button.primary,
+html[data-theme="light"] body.light-mode button.primary,
+html[data-yardivo-main-theme="light"] body .primary,
+html[data-theme="light"] body.light-mode .primary{
+  background:linear-gradient(180deg,#2a88f4,#176edb)!important;
+  border-color:#1b70d8!important;
+  color:#ffffff!important;
+  border-radius:9px!important;
+  box-shadow:0 6px 16px rgba(24,119,242,.18)!important;
+}
+html[data-yardivo-main-theme="light"] body button:not(.primary):not(.danger):not(.unannounced-approve):not(.unannounced-reject),
+html[data-theme="light"] body.light-mode button:not(.primary):not(.danger):not(.unannounced-approve):not(.unannounced-reject){
+  border-radius:9px!important;
+}
+
+/* Tables */
+html[data-yardivo-main-theme="light"] body table,
+html[data-theme="light"] body.light-mode table{
+  background:#fff!important;border-color:#e0e7ef!important;border-radius:10px!important;overflow:hidden!important;
+}
+html[data-yardivo-main-theme="light"] body thead th,
+html[data-theme="light"] body.light-mode thead th{
+  background:#f7f9fc!important;color:#607188!important;border-color:#e1e8ef!important;font-weight:800!important;
+}
+html[data-yardivo-main-theme="light"] body tbody td,
+html[data-theme="light"] body.light-mode tbody td{
+  background:#ffffff!important;color:#22344b!important;border-color:#edf1f5!important;
+}
+html[data-yardivo-main-theme="light"] body tbody tr:hover td,
+html[data-theme="light"] body.light-mode tbody tr:hover td{background:#f7fbff!important}
+
+/* Dialogs / overlays */
+html[data-yardivo-main-theme="light"] body dialog,
+html[data-yardivo-main-theme="light"] body .dialog,
+html[data-yardivo-main-theme="light"] body .modal-content,
+html[data-yardivo-main-theme="light"] body .notification-dropdown,
+html[data-theme="light"] body.light-mode dialog,
+html[data-theme="light"] body.light-mode .dialog,
+html[data-theme="light"] body.light-mode .modal-content,
+html[data-theme="light"] body.light-mode .notification-dropdown{
+  background:#ffffff!important;
+  color:#142239!important;
+  border-color:#dbe4ed!important;
+  border-radius:14px!important;
+  box-shadow:0 22px 60px rgba(21,43,67,.16)!important;
+}
+
+/* Operational maps / scheduler stay light and structured */
+html[data-yardivo-main-theme="light"] body .daily-map-shell,
+html[data-yardivo-main-theme="light"] body .daily-map-inner,
+html[data-yardivo-main-theme="light"] body .schedule-grid,
+html[data-yardivo-main-theme="light"] body .week-grid,
+html[data-yardivo-main-theme="light"] body .planner-grid,
+html[data-theme="light"] body.light-mode .daily-map-shell,
+html[data-theme="light"] body.light-mode .daily-map-inner,
+html[data-theme="light"] body.light-mode .schedule-grid,
+html[data-theme="light"] body.light-mode .week-grid,
+html[data-theme="light"] body.light-mode .planner-grid{
+  background:#ffffff!important;
+  border-color:#dce5ee!important;
+  color:#1c3048!important;
+}
+
+/* Status colors, softer like approved concept */
+html[data-yardivo-main-theme="light"] body .badge,
+html[data-theme="light"] body.light-mode .badge{border-radius:999px!important;font-weight:850!important}
+html[data-yardivo-main-theme="light"] body .dash-attention-count,
+html[data-theme="light"] body.light-mode .dash-attention-count{
+  background:#fff0f2!important;color:#d83d4c!important;border-color:#f0cfd4!important;
+}
+
+/* Supplier portal follows same approved light language */
+html[data-yardivo-main-theme="light"] body #yardivoSupplierPortal,
+html[data-theme="light"] body.light-mode #yardivoSupplierPortal{
+  --ysp-bg:#f3f6fa!important;
+  --ysp-card:#ffffff!important;
+  --ysp-text:#132238!important;
+  --ysp-muted:#74859a!important;
+  --ysp-border:#dfe7f0!important;
+  --ysp-blue:#1877f2!important;
+}
+
+/* Responsive polish */
+@media(max-width:1180px){
+  html[data-yardivo-main-theme="light"] body .app-shell,
+  html[data-theme="light"] body.light-mode .app-shell{grid-template-columns:226px 1fr!important}
+}
+@media(max-width:900px){
+  html[data-yardivo-main-theme="light"] body .topbar,
+  html[data-theme="light"] body.light-mode .topbar{gap:8px!important;flex-wrap:wrap!important}
+}
+</style>
 </body>
 </html>
