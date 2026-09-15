@@ -49211,5 +49211,48 @@ window.YardivoSupplierCalendarV583={open,close};window.YARDIVO_DEV_BUILD='202609
 })();
 </script>
 
+
+<style id="yardivo-v583-supplier-premium-ux-final-style">
+#yardivoSupplierPortal [data-ysp-section="new"]{background:#f4f8fc!important;padding:22px!important}
+#yardivoSupplierPortal [data-ysp-section="new"]>.ysp-card,#yardivoSupplierPortal [data-ysp-section="new"] .ysp-form{width:min(980px,100%)!important;max-width:980px!important;margin:0 auto!important;background:#fff!important;border:1px solid #dce8f2!important;border-radius:22px!important;box-shadow:0 14px 38px rgba(15,55,88,.08)!important;padding:24px!important}
+#yardivoSupplierPortal [data-ysp-section="new"] .ysp-form-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:16px!important;background:transparent!important;padding:0!important;width:100%!important;max-width:none!important}
+#yardivoSupplierPortal [data-ysp-section="new"] .ysa-step{display:block!important;min-width:0!important;margin:0!important;padding:17px 18px!important;border:1px solid #dbe7f1!important;border-radius:16px!important;background:#fff!important;box-shadow:none!important;contain:none!important}
+#yardivoSupplierPortal [data-ysp-section="new"] .ysa-step.ysa-locked{display:none!important}
+#yardivoSupplierPortal [data-ysp-section="new"] .ysa-step select,#yardivoSupplierPortal [data-ysp-section="new"] .ysa-step input{width:100%!important;height:48px!important;min-height:48px!important;border:1px solid #c9dbea!important;border-radius:12px!important;background:#f8fbfe!important;color:#102a43!important;font-size:14px!important;font-weight:750!important;padding:0 14px!important;box-sizing:border-box!important;outline:none!important}
+#yardivoSupplierPortal [data-ysp-section="new"] .ysa-step select:focus,#yardivoSupplierPortal [data-ysp-section="new"] .ysa-step input:focus{border-color:#1677df!important;box-shadow:0 0 0 3px rgba(22,119,223,.11)!important}
+#yardivoSupplierPortal [data-ysp-section="new"] .ysp-field-title{font-size:11px!important;letter-spacing:.06em!important;color:#284a67!important;margin-bottom:10px!important}
+#yardivoSupplierPortal [data-ysp-section="new"] .ysp-step-no{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:28px!important;height:28px!important;border-radius:9px!important;background:#1677df!important;color:#fff!important;margin-right:9px!important}
+#yardivoSupplierPortal #yspDateDisplay{display:block!important;width:100%!important;height:48px!important;border:1px solid #bcd4e8!important;border-radius:12px!important;background:#0d2638!important;color:#fff!important;font-weight:900!important;text-align:left!important;padding:0 44px 0 14px!important;cursor:pointer!important;opacity:1!important}
+#yardivoSupplierPortal #yspDateDisplay::placeholder{color:#fff!important;opacity:.9!important}
+#yardivoSupplierPortal #ysaCanonicalMapV583{grid-column:1/-1!important;width:100%!important;margin:2px 0 0!important;padding:20px!important;border:1px solid #d7e6f1!important;border-radius:18px!important;background:#f8fbfe!important;box-sizing:border-box!important}
+#yardivoSupplierPortal #ysaCanonicalMapV583.open{display:block!important}
+#yardivoSupplierPortal .ysa-ramp{background:#fff!important;border:1px solid #d9e6f0!important;border-radius:14px!important;padding:14px!important;margin:10px 0!important}
+#yardivoSupplierPortal .ysa-ramp-head{display:flex!important;justify-content:space-between!important;gap:12px!important;color:#173a57!important;font-size:12px!important;font-weight:900!important}
+#yardivoSupplierPortal .ysa-slots{display:flex!important;flex-wrap:wrap!important;gap:8px!important;margin-top:12px!important}
+#yardivoSupplierPortal .ysa-slot{min-width:74px!important;height:38px!important;border:1px solid #b9d4e9!important;border-radius:10px!important;background:#fff!important;color:#145c9e!important;font-weight:900!important;cursor:pointer!important}
+#yardivoSupplierPortal .ysa-slot:hover,#yardivoSupplierPortal .ysa-slot.selected{background:#1677df!important;border-color:#1677df!important;color:#fff!important}
+#ysaCalendarOverlayV583{display:none!important;position:fixed!important;inset:0!important;z-index:2147483646!important;align-items:center!important;justify-content:center!important;background:rgba(5,20,34,.68)!important;backdrop-filter:blur(10px)!important;padding:24px!important}
+#ysaCalendarOverlayV583.open{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+#ysaCalendarModalV583{position:relative!important;display:block!important;width:min(680px,94vw)!important;max-height:88vh!important;overflow:auto!important;margin:auto!important;background:#fff!important;border-radius:24px!important;padding:24px!important;box-shadow:0 30px 100px rgba(0,0,0,.34)!important;transform:none!important}
+@media(max-width:760px){#yardivoSupplierPortal [data-ysp-section="new"] .ysp-form-grid{grid-template-columns:1fr!important}#yardivoSupplierPortal [data-ysp-section="new"]{padding:12px!important}#yardivoSupplierPortal [data-ysp-section="new"]>.ysp-card,#yardivoSupplierPortal [data-ysp-section="new"] .ysp-form{padding:15px!important;border-radius:17px!important}}
+</style>
+<script id="yardivo-v583-supplier-premium-ux-final-authority">
+(function(){
+'use strict';
+if(window.__YARDIVO_SUPPLIER_PREMIUM_UX_FINAL__)return;window.__YARDIVO_SUPPLIER_PREMIUM_UX_FINAL__=true;
+const $=id=>document.getElementById(id);let initialized=false;
+function supplier(){try{const s=(typeof currentSession!=='undefined'&&currentSession)||window.currentSession||{};return String(s.role||'').toLowerCase()==='supplier'}catch(_){return false}}
+function scope(){return window.YardivoSupplierNoFlickerV583?.scope?.()||window.YardivoSupplierAnnouncementAuthorityV583?.scope?.()||window.__YARDIVO_SUPPLIER_SCOPE_AUTHORITY_V583||{}}
+function mk(t,v=''){const o=document.createElement('option');o.value=v;o.textContent=t;return o}
+function resetPrompts(){if(!supplier())return;const l=$('yspLocation'),w=$('yspWarehouse'),d=$('yspDate'),dd=$('yspDateDisplay');if(l){const rows=Array.isArray(scope().locations)?scope().locations:[];l.replaceChildren(mk('ODABERI LOKACIJU'));rows.forEach(x=>l.appendChild(mk(String(x.name||'Lokacija'),String(x.id||''))));l.value=''}if(w){w.replaceChildren(mk('PRVO ODABERI LOKACIJU'));w.value='';w.disabled=true}if(d)d.value='';if(dd){dd.value='';dd.placeholder='ODABERI DATUM DOSTAVE';dd.setAttribute('readonly','readonly')}['yspTime','yspDock'].forEach(id=>{if($(id))$(id).value=''});$('ysaCanonicalMapV583')?.classList.remove('open')}
+function warehouses(){const l=String($('yspLocation')?.value||''),w=$('yspWarehouse');if(!w)return;const rows=(Array.isArray(scope().warehouses)?scope().warehouses:[]).filter(x=>String(x.location_id)===l);w.replaceChildren(mk(l?'ODABERI SKLADIŠTE':'PRVO ODABERI LOKACIJU'));rows.forEach(x=>w.appendChild(mk(String(x.name||'Skladište'),String(x.id||''))));w.value='';w.disabled=!l}
+function directCalendar(){const d=$('yspDateDisplay');if(!d||d.dataset.premiumCalendar==='1')return;d.dataset.premiumCalendar='1';const fire=e=>{if(!supplier())return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();window.YardivoSupplierCalendarV583?.open?.()};d.addEventListener('pointerdown',fire,true);d.addEventListener('click',fire,true);d.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){fire(e)}},true)}
+function bind(){const l=$('yspLocation');if(l&&l.dataset.premiumLoc!=='1'){l.dataset.premiumLoc='1';l.addEventListener('change',e=>{e.stopImmediatePropagation();const val=String(l.value||'');warehouses();l.value=val},true)}directCalendar()}
+async function init(){if(!supplier())return;try{await window.YardivoSupplierNoFlickerV583?.refresh?.()}catch(_){}setTimeout(()=>{bind();if(!initialized){resetPrompts();initialized=true}},60)}
+window.addEventListener('yardivo:login',()=>{initialized=false;setTimeout(init,500)});window.addEventListener('load',()=>setTimeout(init,650));document.addEventListener('DOMContentLoaded',()=>setTimeout(init,700));setTimeout(init,800);
+window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-premium-ux-calendar-ramp-map-final';
+})();
+</script>
+
 </body>
 </html>
