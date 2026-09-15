@@ -31757,8 +31757,11 @@ function labelStatus(v){
   return t('pending');
 }
 function whLabel(code){
-  try{return typeof warehouseOptionLabel==='function'?warehouseOptionLabel(code):code}
-  catch(e){return code}
+  try{
+    const m=supplierMaster();
+    const w=(Array.isArray(m.warehouses)?m.warehouses:[]).find(x=>String(x?.id||'').toUpperCase()===String(code||'').toUpperCase());
+    return String(w?.name||'Skladište');
+  }catch(e){return 'Skladište'}
 }
 function setLang(next){
   lang=next==='en'?'en':'hr';
@@ -32078,8 +32081,10 @@ function open(){
   p.style.display='block';
   p.setAttribute('aria-hidden','false');
   document.getElementById('yspUser').textContent=String(s.username||s.user||'Dobavljač');
-  document.getElementById('yspScope').textContent=
-    String(s.location||'—')+' · '+currentWarehouses().join(', ');
+  const __ym=supplierMaster();
+  const __loc=(Array.isArray(__ym.locations)?__ym.locations:[]).find(x=>String(x?.id||'')===String(s.location||''));
+  const __whNames=currentWarehouses().map(id=>whLabel(id)).filter(Boolean);
+  document.getElementById('yspScope').textContent=(String(s.location||'').toUpperCase()==='ALL'?'SVE LOKACIJE':String(__loc?.name||'Lokacija'))+' · '+(__whNames.length?__whNames.join(', '):'Skladišta');
   setLang(lang);
   show('new');
   setTimeout(()=>hydrateSupplierMaster(),60);
@@ -43884,8 +43889,8 @@ function allRows(){let a=[];try{if(Array.isArray(announcements))a.push(...announ
 function busy(w,d,r,s,e){return allRows().some(x=>{if(String(x.warehouse||'').toUpperCase()!==w||String(x.date||x.delivery_date||'')!==d||dock(x.dock)!==r||/rejected|cancel/i.test(String(x.status||'')))return false;const st=mn(hm(x.time||x.requested_time)),cc=cap(w,r),dur=cc>0?duration(Math.max(1,Number(x.pallets||x.pallet_count)||1),cc):Math.max(30,Number(x.duration||60)||60),en=st+dur;return s<en&&e>st})}
 function free(w,d,p){const out=[];for(let r=1;r<=rampCount(w);r++){if(!rampOn(w,r))continue;const c=cap(w,r),h=hours(w,r),need=duration(p,c);if(!c||!h.a||!h.b||!Number.isFinite(need)||mn(h.b)<=mn(h.a))continue;for(let m=mn(h.a);m+need<=mn(h.b);m+=30)if(!busy(w,d,r,m,m+need))out.push({date:d,time:tm(m),dock:r,need,capacity:c})}return out}
 function drawDays(){const ds=Array.from({length:7},(_,i)=>add(i));if(!day||day<ds[0])day=val('yspDate')||ds[0];$('ysmDays').innerHTML=ds.map(d=>`<button type="button" class="ysm-day ${d===day?'sel':''}" data-ysm-day="${d}">${new Date(d+'T12:00').toLocaleDateString('hr-HR',{weekday:'short',day:'2-digit',month:'2-digit'})}</button>`).join('')}
-function draw(){const w=wh(),p=pal(),a=free(w,day,p);$('ysmSub').textContent=`${w} · ${p} paleta · slobodni termini i aktivne rampe`;$('ysmInfo').textContent=a.length?`Pronađeno ${a.length} slobodnih opcija. Trajanje termina prilagođeno je količini paleta i kapacitetu rampe.`:'Za odabrani dan nema slobodnog termina za ovu količinu paleta.';$('ysmGrid').innerHTML=a.length?a.slice(0,140).map(x=>`<button type="button" class="ysm-slot ${pick&&pick.date===x.date&&pick.time===x.time&&pick.dock===x.dock?'sel':''}" data-ysm="${x.date}|${x.time}|${x.dock}"><strong>${x.time} · R${x.dock}</strong><small>${x.need} min · ${x.capacity} pal/h</small></button>`).join(''):'<div class="ysm-empty">Nema slobodnog termina.</div>'}
-function open(){const w=wh(),p=pal();if(!w){alert('Prvo odaberi skladište.');return}if(p<1){alert('Prvo upiši broj paleta.');return}if(rampCount(w)<1){alert(`Za ${w} nisu konfigurirane rampe.`);return}day=val('yspDate')||add(0);pick=null;drawDays();draw();$('yspSlotMapV583').classList.add('open');$('yspSlotMapV583').setAttribute('aria-hidden','false')}
+function draw(){const w=wh(),p=pal(),a=free(w,day,p),wn=(()=>{try{const x=whRow(w);return String(x?.name||'Skladište')}catch(_){return 'Skladište'}})();$('ysmSub').textContent=`${wn} · ${p} paleta · slobodni termini i aktivne rampe`;$('ysmInfo').textContent=a.length?`Pronađeno ${a.length} slobodnih opcija. Trajanje termina prilagođeno je količini paleta i kapacitetu rampe.`:'Za odabrani dan nema slobodnog termina za ovu količinu paleta.';$('ysmGrid').innerHTML=a.length?a.slice(0,140).map(x=>`<button type="button" class="ysm-slot ${pick&&pick.date===x.date&&pick.time===x.time&&pick.dock===x.dock?'sel':''}" data-ysm="${x.date}|${x.time}|${x.dock}"><strong>${x.time} · R${x.dock}</strong><small>${x.need} min · ${x.capacity} pal/h</small></button>`).join(''):'<div class="ysm-empty">Nema slobodnog termina.</div>'}
+function open(){const w=wh(),p=pal();if(!w){alert('Prvo odaberi skladište.');return}if(p<1){alert('Prvo upiši broj paleta.');return}if(rampCount(w)<1){const x=whRow(w);alert(`Za ${String(x?.name||'odabrano skladište')} nisu konfigurirane rampe.`);return}day=val('yspDate')||add(0);pick=null;drawDays();draw();$('yspSlotMapV583').classList.add('open');$('yspSlotMapV583').setAttribute('aria-hidden','false')}
 function close(){$('yspSlotMapV583').classList.remove('open');$('yspSlotMapV583').setAttribute('aria-hidden','true')}
 function install(){
  const portal=$('yardivoSupplierPortal');if(!portal)return;
@@ -46168,8 +46173,8 @@ function render(force=false){
    </section>
    <section class="ysm-card full" id="smWarehouseConfiguration">
     <div class="ysm-card-kicker">KORAK 3</div><h3>RAMPE I OPERATIVNI PODACI</h3>
-    <p>Odaberi jedno skladište. Sve što uneseš ispod pripada isključivo tom skladištu i njegovoj lokaciji.</p>
-    <div class="ysm-config-selector"><label>SKLADIŠTE ZA KONFIGURACIJU<select id="smConfigWarehouse" ${whs.length?'':'disabled'}><option value="">— Odaberi skladište —</option>${whs.map(w=>`<option value="${esc(w.id)}" ${String(w.id)===String(configWarehouseId)?'selected':''}>${esc(locName(w.location_id,d))} → ${esc(w.name)}</option>`).join('')}</select></label></div>
+    <p>Odaberi bilo koje uneseno skladište. YARDIVO uvijek otvara njegovu punu konfiguraciju: operativne podatke, sve rampe, ON/OFF status, naziv rampe, radno vrijeme, palete/sat i maksimalni kapacitet. Sve vrijednosti možeš naknadno mijenjati i ponovno spremiti.</p>
+    <div class="ysm-config-selector"><label>SKLADIŠTE ZA KONFIGURACIJU · SVA MASTER SKLADIŠTA<select id="smConfigWarehouse" ${whs.length?'':'disabled'}><option value="">— Odaberi skladište —</option>${whs.map(w=>`<option value="${esc(w.id)}" ${String(w.id)===String(configWarehouseId)?'selected':''}>${esc(locName(w.location_id,d))} → ${esc(w.name)}</option>`).join('')}</select></label></div>
     ${configHtml}
    </section>
   </div>`;
@@ -49006,6 +49011,13 @@ window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-global-scope-connected-fi
 
 <script id="yardivo-v583-master-warehouse-dropdown-config-fix-marker">
 window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-master-warehouse-dropdown-config-fix-final';
+</script>
+<script id="yardivo-v583-supplier-visible-warehouse-name-only-marker">
+window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-visible-warehouse-name-only-fix-final';
+</script>
+
+<script id="yardivo-v583-master-full-warehouse-config-marker">
+window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-master-full-warehouse-configuration-final';
 </script>
 </body>
 </html>
