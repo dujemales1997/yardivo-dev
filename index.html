@@ -45791,7 +45791,7 @@ body.light-mode #yardivoStableMasterEditorV583 .ysm-config-path b{color:#0f1f35!
 <script id="yardivo-v583-stable-master-supplier-zero-final">
 (function(){
 'use strict';
-const BUILD='20260915-dev-v5.8.3-master-setup-capacity-authority';
+const BUILD='20260915-dev-v5.8.3-master-warehouse-dropdown-config-fix';
 let configWarehouseId='';
 let masterEditHoldUntil=0;
 let draftWarehouseName='';
@@ -46117,8 +46117,7 @@ function render(force=false){
  const typing=!!a?.closest?.('#yardivoStableMasterEditorV583')&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName||'');
  if(!force&&(typing||Date.now()<masterEditHoldUntil))return;
  const d=master(),locs=d.locations.filter(x=>x.active!==false),whs=d.warehouses.filter(x=>x.active!==false);
- const currentWh=activeWarehouse();
- if(currentWh&&whs.some(w=>String(w.id)===String(currentWh)))configWarehouseId=currentWh;
+ /* Settings Master configuration is intentionally independent from Header context. */
  if(configWarehouseId&&!whs.some(w=>String(w.id)===String(configWarehouseId)))configWarehouseId='';
  const selectedWh=whs.find(w=>String(w.id)===String(configWarehouseId))||null;
  const configHtml=selectedWh?(()=>{
@@ -46174,7 +46173,41 @@ function render(force=false){
     ${configHtml}
    </section>
   </div>`;
+ hydrateMasterSelectors();
 }
+function hydrateMasterLocationSelect(){
+ const sel=document.getElementById('smNewWarehouseLocation');if(!sel)return;
+ const d=master(),rows=d.locations.filter(x=>x&&x.active!==false),wanted=String(draftWarehouseLocation||sel.value||'');
+ const sig=JSON.stringify(rows.map(x=>[x.id,x.name]));
+ if(sel.dataset.masterLocationSig!==sig){
+  sel.innerHTML='<option value="" disabled>— ODABERI LOKACIJU —</option>'+rows.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+  sel.dataset.masterLocationSig=sig;
+ }
+ sel.disabled=!rows.length;
+ sel.value=rows.some(x=>String(x.id)===wanted)?wanted:'';
+ const btn=document.querySelector('#yardivoStableMasterEditorV583 [data-sm-add-wh]');if(btn)btn.disabled=!String(sel.value||'');
+}
+function hydrateMasterConfigWarehouseSelect(){
+ const sel=document.getElementById('smConfigWarehouse');if(!sel)return;
+ const d=master(),rows=d.warehouses.filter(x=>x&&x.active!==false),wanted=String(configWarehouseId||sel.value||'');
+ const sig=JSON.stringify(rows.map(w=>[w.id,w.name,w.location_id,locName(w.location_id,d)]));
+ if(sel.dataset.masterWarehouseSig!==sig){
+  sel.innerHTML='<option value="">— Odaberi skladište —</option>'+rows.map(w=>`<option value="${esc(w.id)}">${esc(locName(w.location_id,d))} → ${esc(w.name)}</option>`).join('');
+  sel.dataset.masterWarehouseSig=sig;
+ }
+ sel.disabled=!rows.length;
+ sel.value=rows.some(w=>String(w.id)===wanted)?wanted:'';
+}
+function hydrateMasterSelectors(){hydrateMasterLocationSelect();hydrateMasterConfigWarehouseSelect()}
+document.addEventListener('focusin',e=>{
+ if(e.target?.id==='smNewWarehouseLocation')hydrateMasterLocationSelect();
+ if(e.target?.id==='smConfigWarehouse')hydrateMasterConfigWarehouseSelect();
+},true);
+document.addEventListener('pointerdown',e=>{
+ if(e.target?.id==='smNewWarehouseLocation')hydrateMasterLocationSelect();
+ if(e.target?.id==='smConfigWarehouse')hydrateMasterConfigWarehouseSelect();
+},true);
+
 document.addEventListener('click',e=>{
  let b=e.target.closest?.('[data-sm-add-loc]');if(b){e.preventDefault();e.stopImmediatePropagation();addLocation(document.getElementById('smNewLocation')?.value);return}
  b=e.target.closest?.('[data-sm-save-loc]');if(b){e.preventDefault();e.stopImmediatePropagation();saveLocation(b.dataset.smSaveLoc);return}
@@ -48969,6 +49002,10 @@ window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-announcement-inventory-co
 
 <script id="yardivo-v583-supplier-global-scope-connected-final">
 window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-global-scope-connected-final';
+</script>
+
+<script id="yardivo-v583-master-warehouse-dropdown-config-fix-marker">
+window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-master-warehouse-dropdown-config-fix-final';
 </script>
 </body>
 </html>
