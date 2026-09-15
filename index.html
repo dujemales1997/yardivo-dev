@@ -46040,11 +46040,19 @@ function changeRampCount(id,delta){
  const d=master(),w=d.warehouses.find(x=>x.id===id);if(!w)return;
  const oldCount=Math.max(0,Number(w.ramps)||0);
  const newCount=Math.max(0,Math.min(50,oldCount+delta));
+ /* A newly added ramp inherits the warehouse reception window. Prefer the values
+    currently visible in Settings so Admin does not have to save the warehouse
+    before adding a ramp; then fall back to canonical/mirrored Master hours. */
+ const liveFrom=String(document.querySelector(`[data-sm-wh-from="${id}"]`)?.value||'').trim();
+ const liveTo=String(document.querySelector(`[data-sm-wh-to="${id}"]`)?.value||'').trim();
+ const savedHours=whHours(id);
+ const inheritedFrom=liveFrom||String(w.reception_from||savedHours.from||'').trim();
+ const inheritedTo=liveTo||String(w.reception_to||savedHours.to||'').trim();
  w.ramps=newCount;
  w.ramp_settings=Array.isArray(w.ramp_settings)?w.ramp_settings.filter(x=>Number(x?.number)<=newCount):[];
  for(let r=1;r<=newCount;r++){
   if(!w.ramp_settings.some(x=>Number(x?.number)===r)){
-   w.ramp_settings.push({number:r,name:`Rampa ${r}`,active:true,from:'',to:'',pallets_per_hour:null,max_pallets:null});
+   w.ramp_settings.push({number:r,name:`Rampa ${r}`,active:true,from:inheritedFrom,to:inheritedTo,pallets_per_hour:null,max_pallets:null});
   }
  }
  const configured=(Array.isArray(w.ramp_settings)?w.ramp_settings:[]).slice(0,newCount);
@@ -46053,6 +46061,7 @@ function changeRampCount(id,delta){
  commit(d,'ramps.count');
  /* Compatibility mirrors only; Master remains authoritative. */
  const cfg=jget(RCFG,{});cfg[id]=cfg[id]||{count:0,locked:[]};cfg[id].count=newCount;cfg[id].locked=(cfg[id].locked||[]).filter(x=>Number(x)<=newCount);jset(RCFG,cfg);
+ if(newCount>oldCount){const hh=jget(RH,{});hh[id]=hh[id]||{};for(let r=oldCount+1;r<=newCount;r++)hh[id][String(r)]={from:inheritedFrom,to:inheritedTo};jset(RH,hh)}
  try{window.YardivoRampConfig?.setCount?.(id,newCount)}catch(_){}
  render(true);
 }
@@ -48571,7 +48580,7 @@ document.addEventListener('change',e=>{
 ['yardivo:master-data-changed','yardivo:data-synced','yardivo:login','yardivo:context-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(refresh,25)));
 document.addEventListener('DOMContentLoaded',()=>setTimeout(refresh,140));window.addEventListener('load',()=>setTimeout(refresh,360),{once:true});
 window.YardivoHeaderMasterContextV583={refresh};
-window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-master-setup-location-warehouse-ramp-capacity-final';
+window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-ramp-inherits-reception-hours-final';
 })();
 </script>
 
@@ -49018,6 +49027,48 @@ window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-visible-warehouse-name-on
 
 <script id="yardivo-v583-master-full-warehouse-config-marker">
 window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-master-full-warehouse-configuration-final';
+</script>
+
+<script id="yardivo-v583-supplier-canonical-master-ramps-map-final">
+(function(){
+'use strict';
+if(window.__YARDIVO_V583_SUPPLIER_CANONICAL_RAMPS_MAP__)return;window.__YARDIVO_V583_SUPPLIER_CANONICAL_RAMPS_MAP__=true;
+const KEY='yardivo_master_data_registry_v583', $=id=>document.getElementById(id);
+function session(){try{return (typeof currentSession!=='undefined'&&currentSession)||window.currentSession||{}}catch(_){return window.currentSession||{}}}
+function isSupplier(){return String(session().role||'').toLowerCase()==='supplier'}
+function read(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(_){return{}}}
+function warehouseName(id){const m=read(),x=(Array.isArray(m.warehouses)?m.warehouses:[]).find(w=>String(w?.id||'')===String(id||''));return String(x?.name||'Skladište')}
+function cleanMapLabels(){
+ const wid=String($('yspWarehouse')?.value||'');if(!wid)return;const name=warehouseName(wid);if(!name)return;
+ ['ysdmSub','ysrSub','yardivoFsMapDate','ysmSub'].forEach(id=>{const e=$(id);if(e&&e.textContent)e.textContent=e.textContent.replace(new RegExp('(^|\\s|·)'+wid.replace(/[.*+?^${}()|[\\]\\]/g,'\\$&')+'(?=\\s|·|$)','gi'),m=>m.replace(wid,name))});
+}
+async function syncCanonicalSupplierMaster(){
+ if(!isSupplier())return null;
+ try{
+  const c=await window.YardivoAuth?.client?.();if(!c)return null;
+  const {data,error}=await c.functions.invoke('yardivo-user-scope',{body:{}});if(error||!data?.ok)throw error||new Error(data?.error||'Scope nije dostupan');
+  const d=data.data||{}, old=read();
+  const next={...old,locations:Array.isArray(d.locations)?d.locations:[],warehouses:Array.isArray(d.warehouses)?d.warehouses:[]};
+  localStorage.setItem(KEY,JSON.stringify(next));
+  window.__YARDIVO_SUPPLIER_CANONICAL_SCOPE_V583=d;
+  try{window.dispatchEvent(new CustomEvent('yardivo:data-synced',{detail:{key:KEY,source:'supplier-scope'}}))}catch(_){}
+  try{window.dispatchEvent(new Event('yardivo:master-data-changed'))}catch(_){}
+  setTimeout(cleanMapLabels,40);return d;
+ }catch(e){console.error('[YARDIVO] canonical Supplier Master/ramp sync',e);return null}
+}
+function bind(){
+ const p=$('yardivoSupplierPortal');if(!p)return;
+ ['yspLocation','yspWarehouse','yspDate','yspPallets'].forEach(id=>{const e=$(id);if(e&&!e.dataset.canonicalRampBound){e.dataset.canonicalRampBound='1';e.addEventListener('change',()=>{if(id==='yspLocation'||id==='yspWarehouse')syncCanonicalSupplierMaster();setTimeout(cleanMapLabels,60)});}});
+ p.querySelectorAll('button').forEach(b=>{if(!b.dataset.canonicalMapLabelBound){b.dataset.canonicalMapLabelBound='1';b.addEventListener('click',()=>setTimeout(cleanMapLabels,80));}});
+}
+window.YardivoSupplierCanonicalMasterV583={refresh:syncCanonicalSupplierMaster};
+window.addEventListener('yardivo:login',()=>setTimeout(()=>{syncCanonicalSupplierMaster().then(bind)},180));
+window.addEventListener('focus',()=>{if(isSupplier())syncCanonicalSupplierMaster()});
+window.addEventListener('load',()=>setTimeout(()=>{syncCanonicalSupplierMaster().then(bind)},350));
+document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,150));
+setTimeout(()=>{syncCanonicalSupplierMaster().then(bind)},500);
+window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-canonical-ramps-map-fix-final';
+})();
 </script>
 </body>
 </html>
