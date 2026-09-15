@@ -48698,5 +48698,85 @@ window.YardivoSettingsSinglePageV583={refresh:apply};
 window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-settings-single-page-master-light-blue-final';
 })();
 </script>
+
+
+<!-- YARDIVO DEV V5.8.3 · HEADER CONTEXT + SETTINGS CONTRAST FINAL AUTHORITY · 2026-09-15 -->
+<style id="yardivo-v583-header-context-settings-contrast-final-style">
+/* One context authority only. Retire the older left-side context strip everywhere. */
+#yardivoStableContextV583,#yardivoGlobalContextV583,.ygc-wrap{display:none!important}
+
+/* APP SECTIONS: exactly one compact Location + Warehouse group, centered in the header. */
+body:not(.home-menu-mode):not([data-yardivo-role="supplier"]) .topbar .warehouse-toolbar{
+ display:flex!important;position:absolute!important;left:50%!important;top:50%!important;
+ transform:translate(-50%,-50%)!important;align-items:flex-end!important;justify-content:center!important;
+ gap:12px!important;margin:0!important;padding:0!important;min-width:0!important;
+ border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;z-index:4!important
+}
+body:not(.home-menu-mode) .topbar #yardivoHeaderLocationV583,
+body:not(.home-menu-mode) .topbar .warehouse-toolbar>label{
+ display:grid!important;gap:3px!important;min-width:175px!important;margin:0!important;
+ color:#8da5b8!important;font-size:7px!important;font-weight:950!important;letter-spacing:.10em!important;text-transform:uppercase!important
+}
+body:not(.home-menu-mode) .topbar .warehouse-toolbar select{
+ display:block!important;min-width:175px!important;max-width:230px!important;height:32px!important;
+ background:#071824!important;color:#f4f8fb!important;border:1px solid #315169!important;border-radius:7px!important;
+ padding:0 28px 0 9px!important;font-size:10px!important;font-weight:900!important;box-shadow:none!important
+}
+body.light-mode:not(.home-menu-mode) .topbar .warehouse-toolbar select{background:#fff!important;color:#173b5d!important;border-color:#c7d9e8!important}
+.topbar #globalWarehouseInfo{display:none!important}
+
+/* Far right is reserved for theme + account/logout. */
+.topbar #currentUserChip{display:flex!important;margin-left:auto!important;order:100!important;z-index:6!important}
+.topbar .theme-switch-wrap{display:flex!important;order:99!important;z-index:6!important}
+
+/* HOME: no warehouse/context controls in the header. Logo -> location selector -> selected location title. */
+body.home-menu-mode .topbar .warehouse-toolbar,
+body.home-menu-mode #yardivoStableContextV583,
+body.home-menu-mode #yardivoGlobalContextV583{display:none!important}
+body.home-menu-mode .topbar{justify-content:flex-end!important}
+body.home-menu-mode #homeMenu .home-top-actions{display:flex!important;justify-content:center!important;width:100%!important}
+body.home-menu-mode #homeMenu .home-location-box{display:flex!important;justify-content:center!important}
+body.home-menu-mode #homeMenu #homeLocationSelect{display:block!important}
+body.home-menu-mode #homeMenu #homeSelectedLocation{display:block!important;color:#f5f8fb!important}
+body.light-mode.home-menu-mode #homeMenu #homeSelectedLocation{color:#102b45!important}
+
+/* SETTINGS MASTER: light-blue cards stay light. Any deliberately dark control/card gets white typography. */
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 :is(.ysm-step,.ysm-warehouse-create,.ysm-wh-location-field,.ysm-config-selector,.ysm-config-path){
+ color:#f5f9fc!important
+}
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-step strong,
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-warehouse-create :is(label,strong,span),
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-wh-location-field>span,
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-config-selector :is(label,strong,span),
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-config-path b{color:#f5f9fc!important}
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-step small,
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-warehouse-create small,
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-wh-location-field small,
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-config-selector small,
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-config-path{color:#a9c2d5!important}
+/* Light mode reverses those dark setup blocks to white, so use dark text there. */
+body.light-mode.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 :is(.ysm-step,.ysm-warehouse-create,.ysm-wh-location-field,.ysm-config-selector,.ysm-config-path),
+body.light-mode.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 :is(.ysm-step strong,.ysm-warehouse-create label,.ysm-warehouse-create strong,.ysm-warehouse-create span,.ysm-wh-location-field>span,.ysm-config-selector label,.ysm-config-selector strong,.ysm-config-selector span,.ysm-config-path b){color:#153a5a!important}
+body.light-mode.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 :is(.ysm-step small,.ysm-warehouse-create small,.ysm-wh-location-field small,.ysm-config-selector small,.ysm-config-path){color:#607b92!important}
+
+@media(max-width:900px){
+ body:not(.home-menu-mode) .topbar .warehouse-toolbar{position:static!important;transform:none!important;margin:0 auto!important}
+ body:not(.home-menu-mode) .topbar #yardivoHeaderLocationV583,body:not(.home-menu-mode) .topbar .warehouse-toolbar>label{min-width:140px!important}
+ body:not(.home-menu-mode) .topbar .warehouse-toolbar select{min-width:140px!important;max-width:180px!important}
+}
+</style>
+<script id="yardivo-v583-header-context-settings-contrast-final-authority">
+(()=>{'use strict';
+const BUILD='20260915-dev-v5.8.3-header-context-settings-contrast-final';
+function retireDuplicateContext(){
+ for(const id of ['yardivoStableContextV583','yardivoGlobalContextV583']){const el=document.getElementById(id);if(el){el.hidden=true;el.setAttribute('aria-hidden','true')}}
+}
+function refresh(){retireDuplicateContext();try{window.YardivoHeaderHomeFinalV583?.refresh?.()}catch(_){}}
+['yardivo:login','yardivo:context-changed','yardivo:master-data-changed','yardivo:data-synced'].forEach(ev=>window.addEventListener(ev,()=>requestAnimationFrame(refresh)));
+document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(refresh),{once:true});
+window.addEventListener('load',()=>setTimeout(refresh,120),{once:true});
+window.YARDIVO_DEV_BUILD=BUILD;
+})();
+</script>
 </body>
 </html>
