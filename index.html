@@ -49171,11 +49171,11 @@ function draw(){const wid=String($('yspWarehouse')?.value||''),date=String($('ys
 function choose(v){const [date,time,dock]=String(v).split('|');chosen={date,time,dock:Number(dock)};let t=$('yspTime');if(!t){t=document.createElement('input');t.type='hidden';t.id='yspTime';document.querySelector('#yardivoSupplierPortal .ysp-form')?.appendChild(t)}let d=$('yspDock');if(!d){d=document.createElement('input');d.type='hidden';d.id='yspDock';document.querySelector('#yardivoSupplierPortal .ysp-form')?.appendChild(d)}t.value=time;d.value='R'+dock;if($('ysaChoice'))$('ysaChoice').textContent='ODABRANO · '+new Date(date+'T12:00:00').toLocaleDateString('hr-HR')+' · '+time+' · RAMPA R'+dock;draw()}
 async function start(){if(!isSupplier())return;await pull();refillLocations(true);refillWarehouses(true);ensureMap();update()}
 // Capture authority: old Supplier listeners never get a chance to redraw/repopulate these controls.
-document.addEventListener('change',async e=>{if(!isSupplier())return;const id=e.target?.id;if(!['yspLocation','yspWarehouse','yspDate'].includes(id))return;e.stopImmediatePropagation();if(id==='yspLocation'){const selected=e.target.value;clearFrom(1);e.target.value=selected;await pull();refillWarehouses(false)}else if(id==='yspWarehouse'){const selected=e.target.value;clearFrom(2);e.target.value=selected;await pull()}update()},true);
+document.addEventListener('change',e=>{if(!isSupplier())return;const id=e.target?.id;if(!['yspLocation','yspWarehouse','yspDate'].includes(id))return;e.stopImmediatePropagation();if(id==='yspLocation'){const selected=String(e.target.value||'');clearFrom(1);e.target.value=selected;refillWarehouses(false)}else if(id==='yspWarehouse'){const selected=String(e.target.value||'');clearFrom(2);e.target.value=selected}update()},true);
 document.addEventListener('input',e=>{if(!isSupplier())return;if(!['yspPallets','yspSkuCount'].includes(e.target?.id))return;e.stopImmediatePropagation();update()},true);
 document.addEventListener('click',e=>{const b=e.target?.closest?.('[data-ysa-slot]');if(b){e.preventDefault();e.stopImmediatePropagation();choose(b.dataset.ysaSlot)}},true);
 window.addEventListener('yardivo:login',()=>setTimeout(start,120));window.addEventListener('load',()=>setTimeout(start,250));setTimeout(start,350);
-window.YardivoSupplierNoFlickerV583={refresh:start,scope:()=>scope};window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-no-flicker-canonical-map-final';
+window.YardivoSupplierNoFlickerV583={refresh:start,scope:()=>scope};window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-dropdown-stable-no-blink-final';
 })();
 </script>
 
