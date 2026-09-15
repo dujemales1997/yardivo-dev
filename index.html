@@ -49283,5 +49283,42 @@ window.YardivoSupplierDailyMapV583={open,close};window.YARDIVO_DEV_BUILD='202609
 })();
 </script>
 
+
+<style id="yardivo-v583-supplier-true-location-placeholder-style">
+#yspLocationFieldV583{position:relative;width:100%}
+#yspLocationFieldV583 #yspLocation{position:relative;z-index:1;width:100%}
+#yspLocationPlaceholderV583{position:absolute;z-index:2;left:16px;right:42px;top:50%;transform:translateY(-50%);pointer-events:none;color:#66788d;font-weight:800;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#yspLocationFieldV583.has-value #yspLocationPlaceholderV583{display:none}
+</style>
+<script id="yardivo-v583-supplier-true-location-placeholder-authority">
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+function isSupplier(){return String(window.__yardivoSession?.role||window.currentUser?.role||'').toLowerCase()==='supplier'||!!$('yspLocation')}
+function ensureShell(){
+ const sel=$('yspLocation'); if(!sel||!isSupplier())return;
+ let shell=$('yspLocationFieldV583');
+ if(!shell){shell=document.createElement('div');shell.id='yspLocationFieldV583';sel.parentNode.insertBefore(shell,sel);shell.appendChild(sel)}
+ let ph=$('yspLocationPlaceholderV583');
+ if(!ph){ph=document.createElement('div');ph.id='yspLocationPlaceholderV583';ph.textContent='ODABERI LOKACIJU';shell.appendChild(ph)}
+ sync();
+}
+function cleanOptions(){
+ const sel=$('yspLocation');if(!sel)return;
+ [...sel.options].filter(o=>!String(o.value||'')).forEach(o=>o.remove());
+ if(!sel.value)sel.selectedIndex=-1;
+ sync();
+}
+function sync(){const sel=$('yspLocation'),shell=$('yspLocationFieldV583');if(!sel||!shell)return;shell.classList.toggle('has-value',!!String(sel.value||''))}
+function initial(){ensureShell();const sel=$('yspLocation');if(!sel)return;cleanOptions();sel.value='';sel.selectedIndex=-1;sync()}
+document.addEventListener('change',e=>{if(e.target?.id==='yspLocation'){cleanOptions();sync()}},true);
+document.addEventListener('pointerdown',e=>{if(e.target?.id==='yspLocation'){ensureShell();cleanOptions()}},true);
+document.addEventListener('focusin',e=>{if(e.target?.id==='yspLocation'){ensureShell();cleanOptions()}},true);
+document.addEventListener('click',e=>{const t=e.target;if(t?.closest?.('[data-page="supplier-new"],#supplierNew,#yspNew,#yspNewAnnouncement'))setTimeout(initial,0)},true);
+window.addEventListener('load',()=>setTimeout(initial,120));
+document.addEventListener('yardivo:data-synced',()=>setTimeout(()=>{ensureShell();cleanOptions()},0));
+document.addEventListener('yardivo:master-data-changed',()=>setTimeout(()=>{ensureShell();cleanOptions()},0));
+window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-true-location-placeholder-final';
+})();
+</script>
 </body>
 </html>
