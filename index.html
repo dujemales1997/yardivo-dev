@@ -19840,7 +19840,7 @@ window.YardivoMyAnnouncements={render,apply,open,isMine};
 
 /* V5.8.3 MY YARD geometry authority: contiguous docks + 42-truck parking */
 #myYard .myy-dock{box-sizing:border-box;transition:left .25s ease,width .25s ease}
-#myYard .myy-parking{position:absolute;left:292px;top:505px;width:756px;height:174px;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(6,1fr);gap:3px;z-index:5;transform:translateZ(3px)}
+#myYard .myy-parking{position:absolute;left:225px;top:520px;width:860px;height:120px;display:grid;grid-template-columns:repeat(21,1fr);grid-template-rows:repeat(2,1fr);gap:3px;z-index:5;transform:translateZ(3px)}
 #myYard .myy-park{position:relative;border:1px solid rgba(255,255,255,.48);border-left:3px solid rgba(255,255,255,.68);background:rgba(22,32,28,.18);min-width:0;overflow:hidden;color:#f7fbf8;font:900 8px Arial;padding:3px 5px;box-sizing:border-box}
 #myYard .myy-park b{position:relative;z-index:2;text-shadow:0 1px 2px #000}
 #myYard .myy-park.occupied{background:rgba(45,122,75,.42);border-color:#65e296}
@@ -19922,24 +19922,24 @@ function stateOf(a,selected){
  return'incoming'
 }
 function dockX(n,dock){
- const count=Math.max(1,n),gap=10,maxW=58,minW=34;
+ const count=Math.max(1,n),gap=8,maxW=58,minW=34;
  const usable=620-gap*Math.max(0,count-1);
  const w=Math.max(minW,Math.min(maxW,usable/count));
- const total=count*w+Math.max(0,count-1)*gap;
- return 270+(650-total)/2+(dock-1)*(w+gap);
+ /* R1 always starts at the LEFT side of the warehouse; R2..Rn continue right. */
+ return 286+(dock-1)*(w+gap);
 }
 function parkingSlot(a,i){
  const raw=String(a.yardPosition||'').toUpperCase();
  let idx=/^P([1-9]|[1-3][0-9]|4[0-2])$/.test(raw)?Number(raw.slice(1))-1:-1;
  if(idx<0)idx=Math.max(0,Math.min(41,i));
- return {idx,col:idx%7,row:Math.floor(idx/7)};
+ return {idx,col:idx%21,row:Math.floor(idx/21)};
 }
 function pos(a,i,n,q){
  const dock=Math.max(1,Math.min(Math.max(1,n),Number(a.dock)||1));
  if(q==='dock')return{x:dockX(n,dock)-26,y:307,r:90};
  if(q==='yard'){
    const p=parkingSlot(a,i);
-   return{x:310+p.col*108,y:514+p.row*27,r:0};
+   return{x:232+(p.idx%21)*41,y:530+Math.floor(p.idx/21)*58,r:90};
  }
  if(q==='gate')return{x:95+(i%2)*82,y:505+(i%2)*48,r:0};
  if(q==='rejected')return{x:-85,y:555+(i%2)*48,r:180};
@@ -19979,7 +19979,7 @@ function render(){
  const parking=s.querySelector('.myy-parking');
  if(parking)parking.innerHTML=parkingSlots.map((slot,i)=>{
    const a=dayData.find(x=>stateOf(x,d)==='yard'&&String(x.yardPosition||'').toUpperCase()===slot);
-   return `<div class="myy-park ${a?'occupied':''}" data-parking="${slot}" style="--pc:${i%7};--pr:${Math.floor(i/7)}"><b>${slot}</b>${a?'<i></i>':''}</div>`;
+   return `<div class="myy-park ${a?'occupied':''}" data-parking="${slot}" style="--pc:${i%21};--pr:${Math.floor(i/21)}"><b>${slot}</b>${a?'<i></i>':''}</div>`;
  }).join('');
  s.querySelector('.myy-meta').textContent=`${w} · ${dayData.length} NAJAVA · ${isToday?'LIVE':'PLAN DANA'}`;
  const docks=s.querySelector('.myy-docks');
@@ -19987,7 +19987,7 @@ function render(){
    const busy=dayData.some(a=>stateOf(a,d)==='dock'&&Number(a.dock)===i+1);
    const planned=dayData.some(a=>Number(a.dock)===i+1);
    let locked=false;try{locked=!!YardivoRampConfig?.isLocked?.(w,i+1)}catch(e){}
-   return `<div class="myy-dock ${busy?'busy':''} ${locked?'locked':''}" style="left:${dockX(n,i+1)}px;width:${Math.max(34,Math.min(58,(620-10*Math.max(0,n-1))/Math.max(1,n)))}px">R${i+1}${!isToday&&planned?' · PLAN':''}</div>`
+   return `<div class="myy-dock ${busy?'busy':''} ${locked?'locked':''}" style="left:${dockX(n,i+1)}px;width:${Math.max(34,Math.min(58,(620-8*Math.max(0,n-1))/Math.max(1,n)))}px">R${i+1}${!isToday&&planned?' · PLAN':''}</div>`
  }).join('');
  const list=dayData.slice(-18);
  const host=s.querySelector('.myy-trucks');
@@ -22328,6 +22328,19 @@ function buildEngine(T,host){
  for(let x=-47;x<49;x+=7){const l=mesh(new T.PlaneGeometry(3.2,.15),lineMat,x,.035,14,false);l.rotation.x=-Math.PI/2}
  for(let i=0;i<8;i++){const l=mesh(new T.PlaneGeometry(.14,10),lineMat,-25+i*7.5,.036,-9,false);l.rotation.x=-Math.PI/2}
 
+ // 42 physical truck parking bays: P1-P21 left→right, then P22-P42 left→right.
+ const parkingLineMat=new T.MeshBasicMaterial({color:0xe7ece8});
+ for(let row=0;row<2;row++){
+   const z=2+row*6.2;
+   for(let col=0;col<21;col++){
+     const x=-42+col*4.25;
+     const left=mesh(new T.PlaneGeometry(.10,5.1),parkingLineMat,x-1.95,.041,z,false);left.rotation.x=-Math.PI/2;
+     if(col===20){const right=mesh(new T.PlaneGeometry(.10,5.1),parkingLineMat,x+1.95,.041,z,false);right.rotation.x=-Math.PI/2}
+     const back=mesh(new T.PlaneGeometry(3.9,.10),parkingLineMat,x,.042,z-2.55,false);back.rotation.x=-Math.PI/2;
+     const lab=canvasLabel(T,'P'+(row*21+col+1),'#f2f7f3','#7f9b89');lab.scale.set(2.1,.42,1);lab.position.set(x,.12,z-2.15);lab.material.depthTest=false;scene.add(lab);
+   }
+ }
+
  // warehouse: upright detailed block
  box(70,9,14,0xd6ddda,8,4.5,-24,.68,.10);
  const roof=box(71,.35,15,0xf0f3f1,8,9.1,-24,.45,.18);
@@ -22340,7 +22353,7 @@ function buildEngine(T,host){
  function rebuildRamps(n){
    staticObjects.splice(0).forEach(o=>scene.remove(o));
    for(let i=1;i<=n;i++){
-     const x=-22+(i-1)*(49/Math.max(1,n-1));
+     const x=-24+(i-1)*6.0;
      const door=box(5.1,4.4,.22,0x1a201d,x,2.25,-16.9,.65,.12);staticObjects.push(door);
      const dock=box(5.5,.55,3.1,0x0d110f,x,.28,-15.3,.7,.15);staticObjects.push(dock);
      const bumper1=box(.35,.8,.5,0xc62f36,x-2.15,.55,-13.7,.6,.08),bumper2=box(.35,.8,.5,0xc62f36,x+2.15,.55,-13.7,.6,.08);staticObjects.push(bumper1,bumper2);
@@ -22371,9 +22384,9 @@ function buildEngine(T,host){
    g.traverse(o=>{if(o.isMesh)o.userData.a=a});return g
  }
  function target(a,i,n,d){
-   const q=phase(a,d),dock=Math.max(1,Math.min(n,Number(a.dock)||1)),rx=-22+(dock-1)*(49/Math.max(1,n-1));
+   const q=phase(a,d),dock=Math.max(1,Math.min(n,Number(a.dock)||1)),rx=-24+(dock-1)*6.0;
    if(q==='dock')return{q,p:new T.Vector3(rx,.05,-11.9),r:-Math.PI/2,op:1};
-   if(q==='yard')return{q,p:new T.Vector3(-7+(i%5)*9,.05,-1+Math.floor(i/5)*6.3),r:Math.PI,op:1};
+   if(q==='yard'){const raw=String(a.yardPosition||'').toUpperCase(),m=/^P([1-9]|[1-3][0-9]|4[0-2])$/.exec(raw),pi=m?Number(m[1])-1:(i%42);return{q,p:new T.Vector3(-42+(pi%21)*4.25,.05,2+Math.floor(pi/21)*6.2),r:-Math.PI/2,op:1};}
    if(q==='gate')return{q,p:new T.Vector3(-31+(i%2)*8,.05,20+(i%2)*5.5),r:-Math.PI/2,op:1};
    if(q==='done'||q==='rejected')return{q,p:new T.Vector3(-55,.05,29-(i%3)*4),r:Math.PI,op:0};
    return{q,p:new T.Vector3(-62-(i%4)*10,.05,10+(i%5)*4.2),r:-Math.PI/2,op:1}
@@ -48488,7 +48501,7 @@ function ensureHeaderLocation(){
 function refreshLocation(){
  const sel=ensureHeaderLocation();if(!sel)return;
  const d=read(),current=locId(),sig=JSON.stringify(d.locations.filter(x=>x&&x.active!==false).map(x=>[x.id,x.name]));
- if(sel.dataset.sig!==sig){sel.innerHTML='<option value="">Odaberi lokaciju...</option>'+d.locations.filter(x=>x&&x.active!==false).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');sel.dataset.sig=sig}
+ if(sel.dataset.sig!==sig){sel.innerHTML='<option value="" disabled hidden>Odaberi lokaciju...</option>'+d.locations.filter(x=>x&&x.active!==false).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');sel.dataset.sig=sig}
  sel.value=d.locations.some(x=>String(x.id)===current&&x.active!==false)?current:'';
 }
 function refreshWarehouse(){
@@ -48496,8 +48509,8 @@ function refreshWarehouse(){
  const d=read(),l=locId(),current=whId();
  const rows=d.warehouses.filter(w=>w&&w.active!==false&&(!l||String(w.location_id)===l));
  const sig=JSON.stringify([l,rows.map(w=>[w.id,w.name])]);
- if(sel.dataset.masterLocSig!==sig){sel.innerHTML='<option value="ALL">Sva skladišta</option>'+rows.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');sel.dataset.masterLocSig=sig}
- sel.value=rows.some(w=>String(w.id)===current)?current:'ALL';
+ if(sel.dataset.masterLocSig!==sig){sel.innerHTML='<option value="" disabled hidden>Odaberi skladište...</option>'+rows.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');sel.dataset.masterLocSig=sig}
+ sel.disabled=!l||!rows.length; sel.value=rows.some(w=>String(w.id)===current)?current:'';
  const info=document.getElementById('globalWarehouseInfo');if(info){const w=rows.find(x=>String(x.id)===String(sel.value));info.textContent=w?String(w.name):'SVA SKLADIŠTA'}
 }
 function refresh(){refreshLocation();refreshWarehouse()}
@@ -48838,6 +48851,23 @@ function cleanLegacy(){document.querySelectorAll('#myYard *').forEach(el=>{if(el
 document.addEventListener('click',e=>{if(e.target.closest('[data-view="myYard"]'))requestAnimationFrame(cleanLegacy)},true);
 window.addEventListener('yardivo:context-changed',()=>{try{window.YardivoMyYard?.render?.()}catch(e){};requestAnimationFrame(cleanLegacy)});
 window.addEventListener('load',()=>setTimeout(cleanLegacy,250));
+})();
+</script>
+
+<style id="yardivo-v583-header-prompt-myyard-parking42-authority-style">
+#myYard .myy-parking{grid-auto-flow:row!important}
+#myYard .myy-park{padding:3px 2px!important;text-align:center!important;font-size:7px!important}
+#myYard .myy-park.occupied i{width:8px!important;height:34px!important;right:50%!important;top:50%!important;transform:translate(50%,-50%)!important}
+</style>
+<script id="yardivo-v583-header-prompt-myyard-parking42-authority">
+(()=>{'use strict';
+const BUILD='20260915-dev-v5.8.3-header-prompt-myyard-3d-parking42-final';
+function master(){try{return JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){return{locations:[],warehouses:[]}}}
+function context(){const m=master();let l='',w='';try{l=String(YardivoAppStateV583?.location?.()||'');w=String(YardivoAppStateV583?.warehouse?.()||activeWarehouse||'')}catch(_){};if(l==='ALL')l='';if(w==='ALL')w='';return{m,l,w}}
+function fixHeader(){const {m,l,w}=context(),ls=document.getElementById('globalLocationV583'),ws=document.getElementById('globalWarehouse');if(ls){const valid=(m.locations||[]).some(x=>x&&x.active!==false&&String(x.id)===l);if(!valid){ls.value='';const p=ls.querySelector('option[value=""]');if(p){p.disabled=true;p.hidden=true;p.textContent='Odaberi lokaciju...'}}}if(ws){const rows=(m.warehouses||[]).filter(x=>x&&x.active!==false&&l&&String(x.location_id)===l);const valid=rows.some(x=>String(x.id)===w);const p=ws.querySelector('option[value=""]');if(p){p.disabled=true;p.hidden=true;p.textContent='Odaberi skladište...'}ws.disabled=!l||!rows.length;if(!valid)ws.value=''}}
+['yardivo:context-changed','yardivo:master-data-changed','yardivo:data-synced','yardivo:login'].forEach(e=>window.addEventListener(e,()=>requestAnimationFrame(fixHeader)));
+document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(fixHeader),{once:true});window.addEventListener('load',()=>setTimeout(fixHeader,200),{once:true});
+window.YARDIVO_DEV_BUILD=BUILD;
 })();
 </script>
 </body>
