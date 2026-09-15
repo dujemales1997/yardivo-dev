@@ -31406,52 +31406,18 @@ window.YardivoFullOperationalNotificationsV548={
       </div>
 
       <section class="ysp-view active" data-ysp-section="new">
-        <div class="ysp-card">
-          <h2 data-i18n="newTitle">Nova najava dostave</h2>
-          <p class="muted" data-i18n="newHelp">Unesite podatke o planiranoj isporuci. Termin postaje operativan nakon potvrde.</p>
-          <div class="ysp-form">
-            <label><span id="yspLocationLabel" data-i18n="location">LOKACIJA</span>
-              <select id="yspLocation"><option value="">— ODABERI LOKACIJU —</option></select>
-            </label>
-            <label><span data-i18n="warehouse">SKLADIŠTE</span>
-              <select id="yspWarehouse" disabled><option value="">— PRVO ODABERI LOKACIJU —</option></select>
-            </label>
-            <label><span data-i18n="orderNo">BROJ NARUDŽBE / PO *</span>
-              <input id="yspOrder" autocomplete="off" placeholder="6W..." required>
-            </label>
-            <label><span data-i18n="deliveryDate">DATUM DOSTAVE *</span>
-              <div class="ysp-date-wrap">
-  <input id="yspDateDisplay" class="ysp-date-display" type="text" readonly placeholder="Odaberi datum">
-  <input id="yspDate" type="hidden">
-  <div id="yspMiniCal" class="ysp-mini-cal"></div>
-</div>
-            </label>
-            <label><span data-i18n="time">ŽELJENI TERMIN *</span>
-              <input id="yspTime" type="time" step="900" required>
-            </label>
-            <label><span data-i18n="plate">REGISTRACIJA VOZILA · OPCIONALNO</span>
-              <input id="yspPlate" autocomplete="off">
-            </label>
-            <label><span data-i18n="driver">VOZAČ · OPCIONALNO</span>
-              <input id="yspDriver" autocomplete="off">
-            </label>
-            <label><span data-i18n="pallets">BROJ PALETA *</span>
-              <input id="yspPallets" type="number" min="1" step="1" required>
-            </label>
-            <label><span data-i18n="reference">REFERENCA / OTPREMNICA · OPCIONALNO</span>
-              <input id="yspReference" autocomplete="off">
-            </label>
-            <label class="span2"><span data-i18n="note">NAPOMENA · OPCIONALNO</span>
-              <textarea id="yspNote"></textarea>
-            </label>
+        <div id="ysnRoot" class="ysn-shell">
+          <div class="ysn-head"><div><span class="ysn-kicker">SUPPLIER · NOVA NAJAVA</span><h2>Planiraj dostavu</h2><p>Odaberi skladište, količinu i datum. Zatim rezerviraj slobodan termin na dnevnoj mapi.</p></div><div class="ysn-status" id="ysnStatus">SPREMNO ZA UNOS</div></div>
+          <div class="ysn-flow" id="ysnFlow">
+            <div class="ysn-field" id="ysnLocationWrap"><span class="ysn-step">1</span><label for="ysnLocation">Lokacija</label><select id="ysnLocation"><option value="">Odaberi lokaciju</option></select><small>Samo lokacije dodijeljene vašem računu.</small></div>
+            <div class="ysn-field"><span class="ysn-step">2</span><label for="ysnWarehouse">Skladište</label><select id="ysnWarehouse" disabled><option value="">Odaberi skladište</option></select><small>Samo skladišta koja je dodijelio Admin.</small></div>
+            <div class="ysn-field"><span class="ysn-step">3</span><label for="ysnPallets">Broj paleta</label><input id="ysnPallets" type="number" min="1" step="1" placeholder="npr. 24"><small>Količina određuje trajanje termina.</small></div>
+            <div class="ysn-field"><span class="ysn-step">4</span><label for="ysnSku">Broj SKU-a</label><input id="ysnSku" type="number" min="1" step="1" placeholder="npr. 8"><small>Broj različitih SKU stavki.</small></div>
+            <div class="ysn-field ysn-date-field"><span class="ysn-step">5</span><label>Datum dostave</label><button type="button" id="ysnDateBtn" class="ysn-date-btn"><span id="ysnDateText">Odaberi datum dostave</span><b>OTVORI KALENDAR</b></button><small>Nakon odabira prikazuje se dnevna mapa.</small></div>
           </div>
-          <div class="ysp-info" data-i18n="submitInfo">
-            Dobavljač može odabrati samo skladišta koja mu je dodijelio Admin. Poslani termin mora potvrditi operativni tim.
-          </div>
-          <div class="ysp-actions">
-            <button type="button" class="btn-secondary" id="yspClear" data-i18n="clear">OČISTI</button>
-            <button type="button" class="btn-primary" id="yspSend" data-i18n="send">POŠALJI NAJAVU</button>
-          </div>
+          <div class="ysn-map" id="ysnMap"><div class="ysn-map-head"><div><span class="ysn-kicker">DNEVNA MAPA</span><h3>Slobodni termini po rampama</h3><p id="ysnMapSub">Odaberi skladište, palete i datum.</p></div><div class="ysn-legend"><span><i class="free"></i>SLOBODNO</span><span><i class="busy"></i>ZAUZETO</span><span><i class="sel"></i>ODABRANO</span></div></div><div id="ysnBoard" class="ysn-board"><div class="ysn-empty"><strong>Mapa termina još nije aktivna</strong><span>Dovrši korake iznad i odaberi datum dostave.</span></div></div><div class="ysn-map-foot"><div id="ysnChoice"><strong>TERMIN NIJE ODABRAN</strong><span>Odaberi zeleni termin na mapi.</span></div><button type="button" id="ysnConfirm" disabled>POTVRDI TERMIN</button></div></div>
+          <div class="ysn-extra"><div><label>Broj narudžbe / PO <em>opcionalno</em></label><input id="ysnOrder" placeholder="npr. PO-123"></div><div><label>Napomena <em>opcionalno</em></label><input id="ysnNote" placeholder="Dodatna napomena za Zalihe"></div></div>
+          <div class="ysn-submit"><button type="button" id="ysnClear">OČISTI</button><button type="button" id="ysnSend" disabled>POŠALJI NAJAVU U YARDIVO</button></div>
         </div>
       </section>
 
@@ -49103,7 +49069,7 @@ window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-canonical-ramps-map-fix-f
 #yardivoSupplierPortal .ysa-choice{margin-top:10px;padding:10px 12px;border-radius:10px;background:#eaf5ff;color:#174a72;font-size:9px;font-weight:950}
 #yardivoSupplierPortal #yardivoSupplierRightDailyMapV583,#yardivoSupplierPortal .ysp-slot-planner-v583{display:none!important}
 </style>
-<script id="yardivo-v583-supplier-announcement-total-authority">
+<script id="yardivo-v583-supplier-announcement-total-authority" type="application/yardivo-retired">
 (function(){
 'use strict';
 if(window.__YARDIVO_SUPPLIER_ANNOUNCEMENT_TOTAL_AUTHORITY__)return;window.__YARDIVO_SUPPLIER_ANNOUNCEMENT_TOTAL_AUTHORITY__=true;
@@ -49145,7 +49111,7 @@ window.YardivoSupplierAnnouncementAuthorityV583={refresh:async()=>{await fetchSc
 #yardivoSupplierPortal .ysa-step{contain:layout paint;will-change:auto}
 #yardivoSupplierPortal .ysa-step select{appearance:auto!important}
 </style>
-<script id="yardivo-v583-supplier-no-flicker-canonical-authority">
+<script id="yardivo-v583-supplier-no-flicker-canonical-authority" type="application/yardivo-retired">
 (function(){
 'use strict';
 if(window.__YARDIVO_SUPPLIER_NO_FLICKER_CANONICAL__)return;window.__YARDIVO_SUPPLIER_NO_FLICKER_CANONICAL__=true;
@@ -49190,7 +49156,7 @@ window.YardivoSupplierNoFlickerV583={refresh:start,scope:()=>scope};window.YARDI
 body.ysa-calendar-open{overflow:hidden!important}
 @media(max-width:640px){#ysaCalendarModalV583{padding:16px!important;border-radius:19px!important}.ysa-cal-day{border-radius:9px!important}.ysa-cal-grid,.ysa-cal-week{gap:4px}.ysa-cal-title{font-size:17px}}
 </style>
-<script id="yardivo-v583-supplier-center-calendar-authority">
+<script id="yardivo-v583-supplier-center-calendar-authority" type="application/yardivo-retired">
 (function(){
 'use strict';
 if(window.__YARDIVO_SUPPLIER_CENTER_CALENDAR_V583__)return;window.__YARDIVO_SUPPLIER_CENTER_CALENDAR_V583__=true;
@@ -49236,7 +49202,7 @@ window.YardivoSupplierCalendarV583={open,close};window.YARDIVO_DEV_BUILD='202609
 #ysaCalendarModalV583{position:relative!important;display:block!important;width:min(680px,94vw)!important;max-height:88vh!important;overflow:auto!important;margin:auto!important;background:#fff!important;border-radius:24px!important;padding:24px!important;box-shadow:0 30px 100px rgba(0,0,0,.34)!important;transform:none!important}
 @media(max-width:760px){#yardivoSupplierPortal [data-ysp-section="new"] .ysp-form-grid{grid-template-columns:1fr!important}#yardivoSupplierPortal [data-ysp-section="new"]{padding:12px!important}#yardivoSupplierPortal [data-ysp-section="new"]>.ysp-card,#yardivoSupplierPortal [data-ysp-section="new"] .ysp-form{padding:15px!important;border-radius:17px!important}}
 </style>
-<script id="yardivo-v583-supplier-premium-ux-final-authority">
+<script id="yardivo-v583-supplier-premium-ux-final-authority" type="application/yardivo-retired">
 (function(){
 'use strict';
 if(window.__YARDIVO_SUPPLIER_PREMIUM_UX_FINAL__)return;window.__YARDIVO_SUPPLIER_PREMIUM_UX_FINAL__=true;
@@ -49266,7 +49232,7 @@ window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-premium-ux-calendar-ramp-
 #ysaDailyMapModalV583 #ysaCanonicalMapV583{display:block!important;width:100%!important;margin:0!important;border:0!important;box-shadow:none!important;padding:4px!important;background:#fff!important}
 body.ysa-daily-map-open{overflow:hidden!important}
 </style>
-<script id="yardivo-v583-shared-ramp-hours-centered-supplier-map-authority">
+<script id="yardivo-v583-shared-ramp-hours-centered-supplier-map-authority" type="application/yardivo-retired">
 (function(){
 'use strict';
 if(window.__YARDIVO_SHARED_RAMP_HOURS_CENTER_MAP__)return;window.__YARDIVO_SHARED_RAMP_HOURS_CENTER_MAP__=true;
@@ -49290,7 +49256,7 @@ window.YardivoSupplierDailyMapV583={open,close};window.YARDIVO_DEV_BUILD='202609
 #yspLocationPlaceholderV583{position:absolute;z-index:2;left:16px;right:42px;top:50%;transform:translateY(-50%);pointer-events:none;color:#66788d;font-weight:800;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #yspLocationFieldV583.has-value #yspLocationPlaceholderV583{display:none}
 </style>
-<script id="yardivo-v583-supplier-true-location-placeholder-authority">
+<script id="yardivo-v583-supplier-true-location-placeholder-authority" type="application/yardivo-retired">
 (()=>{'use strict';
 const $=id=>document.getElementById(id);
 function isSupplier(){return String(window.__yardivoSession?.role||window.currentUser?.role||'').toLowerCase()==='supplier'||!!$('yspLocation')}
@@ -49333,7 +49299,7 @@ window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-true-location-placeholder
 .ysaf-ramp{border:1px solid #d9e6ef;border-radius:16px;background:#fff;padding:15px;margin:11px 0}.ysaf-ramp-head{display:flex;justify-content:space-between;gap:12px;margin-bottom:11px;color:#153a58;font-size:12px;font-weight:950}.ysaf-slots{display:flex;flex-wrap:wrap;gap:8px}.ysaf-slot{height:40px;min-width:78px;border-radius:10px!important;font-size:11px!important;font-weight:950!important;cursor:pointer}.ysaf-slot.free{background:#eaf8ef!important;border:1px solid #8bd3a4!important;color:#126b35!important}.ysaf-slot.busy{background:#fff0f0!important;border:1px solid #efaaaa!important;color:#a72b2b!important;cursor:not-allowed!important}.ysaf-slot.selected{background:#1378df!important;border-color:#1378df!important;color:#fff!important;box-shadow:0 0 0 3px rgba(19,120,223,.13)!important}.ysaf-legend{display:flex;gap:14px;align-items:center;font-size:10px;color:#607d96}.ysaf-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px}.ysaf-dot.free{background:#2dad5f}.ysaf-dot.busy{background:#df4b4b}.ysaf-confirm{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:16px;padding-top:16px;border-top:1px solid #e1ebf2}.ysaf-confirm button{height:44px;border:0;border-radius:11px;background:#1378df;color:#fff;font-weight:950;padding:0 20px;cursor:pointer}.ysaf-confirm button:disabled{opacity:.4;cursor:not-allowed}.ysaf-picked{font-size:11px;font-weight:900;color:#173a57}
 @media(max-width:760px){#yardivoSupplierPortal [data-ysp-section="new"] .ysp-form-grid{grid-template-columns:1fr!important}.ysaf-map-summary,.ysaf-confirm{align-items:flex-start;flex-direction:column}}
 </style>
-<script id="yardivo-v583-supplier-single-authority-final">
+<script id="yardivo-v583-supplier-single-authority-final" type="application/yardivo-retired">
 (()=>{'use strict';
 const $=id=>document.getElementById(id);let S=null,picked=null,booting=false;
 function supplier(){try{const s=(typeof currentSession!=='undefined'&&currentSession)||window.currentSession||{};return String(s.role||'').toLowerCase()==='supplier'}catch(_){return false}}
@@ -49375,7 +49341,7 @@ window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-announcement-single-autho
 #ysafRightMapFinal .rm-body{padding:16px;overflow:auto;max-height:650px}.rm-grid{display:grid;gap:10px}.rm-ramp{border:1px solid #d9e7f1;border-radius:13px;overflow:hidden}.rm-ramp-h{display:flex;justify-content:space-between;padding:10px 12px;background:#f4f8fb;color:#173a57;font-size:10px;font-weight:950}.rm-slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:7px;padding:10px}.rm-slot{border:1px solid;border-radius:9px;padding:9px 8px;font-size:10px;font-weight:950;text-align:left}.rm-slot.free{background:#eaf8ef;border-color:#87d3a4;color:#176b38;cursor:pointer}.rm-slot.free:hover,.rm-slot.free.sel{background:#ccefd9;border-color:#27a85d}.rm-slot.busy{background:#fff0f0;border-color:#efb0b0;color:#a53b3b;cursor:default}.rm-empty{padding:46px 24px;text-align:center;color:#7890a4;font-size:11px;line-height:1.6}.rm-confirm{padding:14px 16px;border-top:1px solid #e2edf5;display:flex;justify-content:space-between;align-items:center;gap:12px}.rm-confirm button{border:0;border-radius:10px;background:#1378df;color:white;font-weight:950;padding:12px 18px}.rm-confirm button:disabled{opacity:.4}.rm-choice{font-size:10px;font-weight:900;color:#355b76}
 @media(max-width:980px){#yardivoSupplierPortal [data-ysp-section="new"] .ysp-form-grid{grid-template-columns:1fr!important}#yardivoSupplierPortal [data-ysp-section="new"] #ysafRightMapFinal{grid-column:1!important;grid-row:auto!important;position:static!important}}
 </style>
-<script id="yardivo-v583-supplier-right-map-final">
+<script id="yardivo-v583-supplier-right-map-final" type="application/yardivo-retired">
 (()=>{'use strict';const $=id=>document.getElementById(id);let scope=null,selected=null,loading=null;const esc=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));const hm=v=>String(v||'').slice(0,5),mn=t=>{let a=hm(t).split(':').map(Number);return(a[0]||0)*60+(a[1]||0)},tm=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 async function load(){if(scope)return scope;if(loading)return loading;loading=(async()=>{try{let c=await window.YardivoAuth?.client?.();if(!c)return null;let {data,error}=await c.functions.invoke('yardivo-user-scope',{body:{fresh:true}});if(error||!data?.ok)throw error||Error('scope');scope=data.data||{};return scope}catch(e){console.error('[YARDIVO Supplier scope]',e);return null}finally{loading=null}})();return loading}
 function rows(k){return Array.isArray(scope?.[k])?scope[k].filter(x=>x&&x.active!==false):[]}function opt(t,v){let o=document.createElement('option');o.textContent=t;o.value=v;return o}
@@ -49403,7 +49369,7 @@ window.YardivoSupplierRightMapFinalV583={init,render};document.addEventListener(
 .ysi-board{overflow:auto;padding:14px}.ysi-table{border-collapse:separate;border-spacing:4px;width:max-content;min-width:100%}.ysi-table th{font-size:10px;color:#526b82;padding:7px;white-space:nowrap}.ysi-table th:first-child{position:sticky;left:0;background:#f8fbfe;z-index:2}.ysi-ramp{position:sticky;left:0;background:#fff!important;border:1px solid #d9e5ef;border-radius:8px;font-weight:950;color:#173653;min-width:110px}.ysi-slot{min-width:74px;border:0;border-radius:8px;padding:9px 7px;font-size:10px;font-weight:900;cursor:pointer}.ysi-slot.free{background:#dff6e8;color:#14723d;border:1px solid #91dbad}.ysi-slot.busy{background:#fde6e6;color:#a53636;border:1px solid #efadad;cursor:not-allowed}.ysi-slot.selected{outline:3px solid #1683f3;background:#1683f3;color:#fff}.ysi-empty{padding:24px;text-align:center;color:#6d8398;font-size:12px}.ysi-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}.ysi-btn{border:0;border-radius:9px;padding:11px 16px;font-size:11px;font-weight:950;cursor:pointer}.ysi-btn.secondary{background:#edf3f8;color:#35516b}.ysi-btn.primary{background:#1683f3;color:#fff}.ysi-btn.primary:disabled{opacity:.45;cursor:not-allowed}.ysi-choice{padding:10px 14px;background:#edf6ff;border-top:1px solid #cfdeeb;font-size:11px;font-weight:900;color:#28506f}
 @media(max-width:900px){#yspInventoryStyleNew .ysi-form{grid-template-columns:1fr}.ysi-full{grid-column:auto!important}.ysi-map-head{align-items:flex-start;flex-direction:column}}
 </style>
-<script id="yardivo-v583-supplier-inventory-style-authority">
+<script id="yardivo-v583-supplier-inventory-style-authority" type="application/yardivo-retired">
 (function(){'use strict';
 if(window.__YARDIVO_SUPPLIER_INVENTORY_STYLE_AUTHORITY__)return;window.__YARDIVO_SUPPLIER_INVENTORY_STYLE_AUTHORITY__=true;
 const $=id=>document.getElementById(id); let selected={dock:'',time:''};
@@ -49435,5 +49401,32 @@ function clear(){['yspWarehouse','yspPallets','yspSkuCount','yspDate','yspOrder'
 function bind(){$('yspLocation').addEventListener('change',renderWh);$('yspWarehouse').addEventListener('change',renderMap);$('yspDate').addEventListener('change',renderMap);$('yspPallets').addEventListener('input',renderMap);$('yspSkuCount').addEventListener('input',updateSend);$('ysiClear').onclick=clear;$('yspSend').onclick=send;}
 document.addEventListener('click',e=>{if(e.target.closest?.('#yardivoSupplierPortal [data-ysp-view="new"]'))setTimeout(mount,0)},true);window.addEventListener('yardivo:login',()=>setTimeout(mount,300));window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>{if($('yspInventoryStyleNew')){hydrate();renderMap()}else mount()},80));window.addEventListener('load',()=>setTimeout(mount,700));setTimeout(mount,50);
 })();
-</script>\n</body>
+</script>\n
+<style id="yardivo-v583-supplier-rebuilt-zero-style">
+#ysnRoot{max-width:1180px;margin:0 auto;background:#fff;border:1px solid #d9e5ef;border-radius:20px;box-shadow:0 14px 38px rgba(24,58,90,.08);overflow:hidden;color:#17324d}.ysn-head{padding:22px 24px;border-bottom:1px solid #e4edf4;display:flex;justify-content:space-between;gap:20px;align-items:flex-start}.ysn-kicker{font-size:10px;font-weight:950;letter-spacing:.11em;color:#1677df}.ysn-head h2,.ysn-map-head h3{margin:4px 0 3px;font-size:22px}.ysn-head p,.ysn-map-head p{margin:0;color:#6b8195;font-size:12px}.ysn-status{font-size:10px;font-weight:950;color:#176f45;background:#eaf8f1;border:1px solid #c9ead9;padding:8px 11px;border-radius:999px}.ysn-flow{padding:20px 24px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;background:#f7fafd}.ysn-field{position:relative;background:#fff;border:1px solid #dbe6ef;border-radius:14px;padding:14px 13px 12px;min-width:0}.ysn-field.is-disabled{opacity:.52}.ysn-step{display:inline-grid;place-items:center;width:23px;height:23px;border-radius:7px;background:#1677df;color:#fff;font-size:10px;font-weight:950;margin-bottom:9px}.ysn-field label{display:block;font-size:10px;font-weight:950;letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px}.ysn-field small{display:block;margin-top:7px;font-size:9px;color:#7c90a2;line-height:1.3}.ysn-field select,.ysn-field input{width:100%;height:43px;border:1px solid #cbdbe8;border-radius:9px;background:#fff;color:#17324d;padding:0 10px;font-weight:800;box-sizing:border-box;outline:none}.ysn-field select:focus,.ysn-field input:focus{border-color:#1677df;box-shadow:0 0 0 3px rgba(22,119,223,.10)}.ysn-date-btn{width:100%;height:43px;border:1px solid #1677df;border-radius:9px;background:#eef6ff;color:#135da9;padding:0 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:850;cursor:pointer}.ysn-date-btn b{font-size:8px;letter-spacing:.05em}.ysn-map{margin:0 24px 20px;border:1px solid #d4e2ed;border-radius:16px;overflow:hidden;background:#fff}.ysn-map-head{padding:16px 18px;background:#f1f7fc;display:flex;justify-content:space-between;gap:16px;align-items:center}.ysn-map-head h3{font-size:16px}.ysn-legend{display:flex;gap:13px;font-size:9px;font-weight:950;white-space:nowrap}.ysn-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}.ysn-legend .free{background:#28a85f}.ysn-legend .busy{background:#d95353}.ysn-legend .sel{background:#1677df}.ysn-board{overflow:auto;min-height:210px;padding:14px}.ysn-empty{min-height:180px;display:grid;place-content:center;text-align:center;gap:6px;color:#7890a4;border:1px dashed #ccdae6;border-radius:12px;background:#fbfdff}.ysn-empty strong{color:#36546f}.ysn-grid{border-collapse:separate;border-spacing:5px;width:max-content;min-width:100%}.ysn-grid th{font-size:9px;font-weight:950;color:#5f7890;padding:5px;white-space:nowrap}.ysn-grid .ramp{position:sticky;left:0;z-index:2;background:#fff;text-align:left;min-width:125px;color:#17324d}.ysn-slot{min-width:82px;height:42px;border-radius:8px;border:1px solid;font-size:8px;font-weight:950;cursor:pointer}.ysn-slot.free{background:#eaf8f0;border-color:#a8dfc0;color:#197547}.ysn-slot.busy{background:#fff0f0;border-color:#efb8b8;color:#a83c3c;cursor:not-allowed}.ysn-slot.selected{background:#1677df;border-color:#1677df;color:#fff;box-shadow:0 0 0 3px rgba(22,119,223,.13)}.ysn-map-foot{padding:12px 16px;border-top:1px solid #e2ebf2;display:flex;justify-content:space-between;align-items:center;gap:16px}.ysn-map-foot strong{display:block;font-size:10px}.ysn-map-foot span{font-size:9px;color:#7a8fa2}.ysn-map-foot button,.ysn-submit button{border:0;border-radius:9px;padding:11px 15px;font-weight:950;font-size:10px;cursor:pointer}.ysn-map-foot button{background:#1677df;color:#fff}.ysn-map-foot button:disabled,.ysn-submit button:disabled{opacity:.4;cursor:not-allowed}.ysn-extra{margin:0 24px 18px;padding:16px;border:1px solid #e0e9f0;border-radius:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px}.ysn-extra label{display:block;font-size:9px;font-weight:950;margin-bottom:6px;text-transform:uppercase}.ysn-extra em{font-style:normal;color:#8498aa;font-weight:700}.ysn-extra input{width:100%;height:41px;border:1px solid #ccdae6;border-radius:9px;padding:0 11px;box-sizing:border-box}.ysn-submit{padding:0 24px 22px;display:flex;justify-content:flex-end;gap:9px}.ysn-submit #ysnClear{background:#edf3f7;color:#36546f}.ysn-submit #ysnSend{background:#1677df;color:#fff;min-width:220px}.ysn-cal-back{position:fixed;inset:0;z-index:2147483000;background:rgba(9,25,40,.62);backdrop-filter:blur(6px);display:grid;place-items:center;padding:20px}.ysn-cal{width:min(460px,94vw);background:#fff;border-radius:20px;box-shadow:0 30px 90px rgba(0,0,0,.28);overflow:hidden}.ysn-cal-head{padding:17px 18px;background:#102f4d;color:#fff;display:flex;justify-content:space-between;align-items:center}.ysn-cal-head strong{font-size:15px}.ysn-cal-head button{background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:8px;width:32px;height:32px;cursor:pointer}.ysn-cal-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 16px}.ysn-cal-nav button{border:1px solid #d5e2ec;background:#fff;border-radius:8px;width:34px;height:34px;cursor:pointer}.ysn-cal-nav b{text-transform:capitalize}.ysn-cal-grid{padding:0 16px 17px;display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.ysn-cal-grid .dow{text-align:center;font-size:9px;font-weight:950;color:#7a8fa2;padding:5px}.ysn-day{height:43px;border:1px solid #dce7ef;background:#fff;border-radius:9px;font-weight:850;color:#294b68;cursor:pointer}.ysn-day:hover:not(:disabled){border-color:#1677df;background:#eef6ff}.ysn-day:disabled{opacity:.25;cursor:not-allowed}.ysn-day.today{box-shadow:inset 0 0 0 2px #1677df}.ysn-day.blank{visibility:hidden}@media(max-width:980px){.ysn-flow{grid-template-columns:1fr 1fr}.ysn-date-field{grid-column:1/-1}}@media(max-width:650px){.ysn-flow{grid-template-columns:1fr}.ysn-date-field{grid-column:auto}.ysn-head,.ysn-map-head,.ysn-map-foot{align-items:flex-start;flex-direction:column}.ysn-extra{grid-template-columns:1fr}.ysn-submit{flex-direction:column}.ysn-submit button{width:100%}}
+</style>
+<script id="yardivo-v583-supplier-rebuilt-zero-authority">
+(()=>{'use strict';const $=id=>document.getElementById(id);let chosen=null,chosenDate='',calMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
+const master=()=>{try{return JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch{return {}}};
+const scope=()=>window.__YARDIVO_SUPPLIER_CANONICAL_SCOPE_V583||{};
+const locs=()=>{const s=scope();return Array.isArray(s.locations)&&s.locations.length?s.locations:(master().locations||[]).filter(x=>x.active!==false)};
+const whs=()=>{const s=scope();return Array.isArray(s.warehouses)&&s.warehouses.length?s.warehouses:(master().warehouses||[]).filter(x=>x.active!==false)};
+const W=()=>whs().find(x=>String(x.id)===String($('ysnWarehouse')?.value||''));
+function opt(t,v){const o=document.createElement('option');o.textContent=t;o.value=v;return o}
+function hydrate(){if(!$('ysnRoot'))return;const L=locs(),l=$('ysnLocation'),wrap=$('ysnLocationWrap');let old=l.value;l.replaceChildren();if(L.length===1){l.append(opt(L[0].name||'Lokacija',L[0].id));l.value=String(L[0].id);wrap.style.display='none'}else{l.append(opt('Odaberi lokaciju',''));L.forEach(x=>l.append(opt(x.name||'Lokacija',x.id)));wrap.style.display='';if(L.some(x=>String(x.id)===old))l.value=old}fillWarehouses()}
+function fillWarehouses(){const lid=$('ysnLocation').value,w=$('ysnWarehouse'),keep=w.value;w.replaceChildren(opt('Odaberi skladište',''));const rows=whs().filter(x=>String(x.location_id)===String(lid));rows.forEach(x=>w.append(opt(x.name||'Skladište',x.id)));w.disabled=!lid;if(rows.some(x=>String(x.id)===String(keep)))w.value=keep;else w.value='';chosen=null;renderMap();update()}
+function hm(x){const a=String(x||'').split(':').map(Number);return a.length>1&&a.every(Number.isFinite)?a[0]*60+a[1]:NaN} function mh(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')}
+function rows(){return window.YardivoSupplierLiveSync?.getRows?.()||[]}
+function duration(r){const p=Number($('ysnPallets').value||0),pph=Number(r?.pallets_per_hour||0);return p>0&&pph>0?Math.max(30,Math.ceil((p/pph)*60/15)*15):0}
+function renderMap(){const b=$('ysnBoard'),w=W(),p=Number($('ysnPallets').value||0);chosen=null;$('ysnConfirm').disabled=true;$('ysnChoice').innerHTML='<strong>TERMIN NIJE ODABRAN</strong><span>Odaberi zeleni termin na mapi.</span>';if(!w||!chosenDate||p<1){b.innerHTML='<div class="ysn-empty"><strong>Mapa termina još nije aktivna</strong><span>Dovrši skladište, palete i datum.</span></div>';update();return}const ramps=(w.ramp_settings||[]).filter(r=>r&&r.active!==false),from=hm(w.reception_from),to=hm(w.reception_to);$('ysnMapSub').textContent=(w.name||'Skladište')+' · '+new Date(chosenDate+'T12:00:00').toLocaleDateString('hr-HR')+' · '+p+' paleta';if(!ramps.length||!Number.isFinite(from)||!Number.isFinite(to)||to<=from){b.innerHTML='<div class="ysn-empty"><strong>Nema operativne konfiguracije</strong><span>Admin mora postaviti rampe i vrijeme prijama za ovo skladište.</span></div>';update();return}const times=[];for(let m=from;m<to;m+=30)times.push(m);let h='<table class="ysn-grid"><thead><tr><th class="ramp">RAMPA</th>'+times.map(m=>'<th>'+mh(m)+'</th>').join('')+'</tr></thead><tbody>';const R=rows();ramps.forEach((r,i)=>{const rn=String(r.number||i+1),du=duration(r);h+='<tr><th class="ramp">'+String(r.name||('Rampa '+rn))+'</th>';times.forEach(m=>{const occupied=R.some(x=>String(x.warehouse)===String(w.id)&&String(x.date)===chosenDate&&String(x.dock||'').replace(/\D/g,'')===rn&&(()=>{const a=hm(x.time),d=Number(x.duration||60);return Number.isFinite(a)&&m<a+d&&m+Math.max(du,30)>a})());const free=du>0&&m+du<=to&&!occupied;h+='<td><button type="button" class="ysn-slot '+(free?'free':'busy')+'" '+(free?'data-ysn-time="'+mh(m)+'" data-ysn-dock="R'+rn+'"':'disabled')+'>'+(free?'SLOBODNO':'ZAUZETO')+'</button></td>'});h+='</tr>'});h+='</tbody></table>';b.innerHTML=h;b.querySelectorAll('[data-ysn-time]').forEach(btn=>btn.onclick=()=>{b.querySelectorAll('.selected').forEach(x=>x.classList.remove('selected'));btn.classList.add('selected');chosen={time:btn.dataset.ysnTime,dock:btn.dataset.ysnDock};$('ysnChoice').innerHTML='<strong>ODABRANO · '+chosen.dock+' · '+chosen.time+'</strong><span>Klikni POTVRDI TERMIN za nastavak.</span>';$('ysnConfirm').disabled=false;update()});update()}
+function update(){const ok=!!(W()&&Number($('ysnPallets').value)>0&&Number($('ysnSku').value)>0&&chosenDate&&chosen);$('ysnSend').disabled=!ok;$('ysnStatus').textContent=ok?'SPREMNO ZA SLANJE':'SPREMNO ZA UNOS'}
+function openCal(){if(!W()||Number($('ysnPallets').value)<1||Number($('ysnSku').value)<1){alert('Prvo odaberi skladište i unesi broj paleta i SKU-a.');return}document.querySelector('.ysn-cal-back')?.remove();const x=document.createElement('div');x.className='ysn-cal-back';x.innerHTML='<div class="ysn-cal"><div class="ysn-cal-head"><strong>ODABERI DATUM DOSTAVE</strong><button type="button" data-close>×</button></div><div class="ysn-cal-nav"><button type="button" data-prev>‹</button><b id="ysnCalTitle"></b><button type="button" data-next>›</button></div><div class="ysn-cal-grid" id="ysnCalGrid"></div></div>';document.body.appendChild(x);x.onclick=e=>{if(e.target===x||e.target.closest('[data-close]'))x.remove()};x.querySelector('[data-prev]').onclick=()=>{calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()-1,1);drawCal()};x.querySelector('[data-next]').onclick=()=>{calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()+1,1);drawCal()};drawCal()}
+function drawCal(){const g=$('ysnCalGrid');if(!g)return;const names=['PON','UTO','SRI','ČET','PET','SUB','NED'];g.innerHTML=names.map(x=>'<div class="dow">'+x+'</div>').join('');$('ysnCalTitle').textContent=calMonth.toLocaleDateString('hr-HR',{month:'long',year:'numeric'});let first=(new Date(calMonth.getFullYear(),calMonth.getMonth(),1).getDay()+6)%7;for(let i=0;i<first;i++)g.insertAdjacentHTML('beforeend','<button class="ysn-day blank"></button>');const today=new Date();today.setHours(0,0,0,0);const n=new Date(calMonth.getFullYear(),calMonth.getMonth()+1,0).getDate();for(let d=1;d<=n;d++){const dt=new Date(calMonth.getFullYear(),calMonth.getMonth(),d),iso=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'),b=document.createElement('button');b.className='ysn-day'+(dt.getTime()===today.getTime()?' today':'');b.textContent=d;b.disabled=dt<today;b.onclick=()=>{chosenDate=iso;$('ysnDateText').textContent=dt.toLocaleDateString('hr-HR');document.querySelector('.ysn-cal-back')?.remove();renderMap();setTimeout(()=>$('ysnMap')?.scrollIntoView({behavior:'smooth',block:'center'}),30)};g.appendChild(b)}}
+async function send(){update();if($('ysnSend').disabled)return;const w=W(),btn=$('ysnSend'),row={id:'SUP-'+Date.now(),warehouse:w.id,date:chosenDate,time:chosen.time,dock:chosen.dock,order:$('ysnOrder').value.trim().toUpperCase(),pallets:Number($('ysnPallets').value),skuCount:Number($('ysnSku').value),note:$('ysnNote').value.trim(),status:'pending',createdAt:new Date().toISOString()};btn.disabled=true;btn.textContent='ŠALJEM U YARDIVO...';try{if(!window.YardivoSupplierLiveSync?.pushSupplierRow)throw new Error('Supplier backend nije dostupan');const saved=await window.YardivoSupplierLiveSync.pushSupplierRow(row);await window.YardivoSupplierLiveSync.pullSupplier?.();window.dispatchEvent(new CustomEvent('yardivo:supplier-request-updated',{detail:{id:saved?.id||row.id,warehouse:row.warehouse,source:'supplier-submit'}}));alert('Najava je poslana u YARDIVO. Zalihe i Admin je mogu pregledati.');clearAll()}catch(e){alert('Najava nije poslana: '+(e?.message||e))}finally{btn.textContent='POŠALJI NAJAVU U YARDIVO';update()}}
+function clearAll(){const L=locs();if(L.length!==1)$('ysnLocation').value='';['ysnPallets','ysnSku','ysnOrder','ysnNote'].forEach(i=>$(i).value='');chosenDate='';chosen=null;$('ysnDateText').textContent='Odaberi datum dostave';fillWarehouses();renderMap()}
+function bind(){if(!$('ysnRoot')||$('ysnRoot').dataset.bound)return;$('ysnRoot').dataset.bound='1';$('ysnLocation').onchange=fillWarehouses;$('ysnWarehouse').onchange=()=>{chosenDate='';$('ysnDateText').textContent='Odaberi datum dostave';renderMap()};$('ysnPallets').oninput=()=>{chosen=null;renderMap()};$('ysnSku').oninput=update;$('ysnDateBtn').onclick=openCal;$('ysnConfirm').onclick=()=>{if(chosen){$('ysnChoice').innerHTML='<strong>POTVRĐENO · '+chosen.dock+' · '+chosen.time+'</strong><span>Termin je spreman za slanje najave.</span>';update()}};$('ysnClear').onclick=clearAll;$('ysnSend').onclick=send}
+function init(){if(!$('ysnRoot'))return;hydrate();bind();update()}
+window.addEventListener('yardivo:data-synced',()=>setTimeout(init,60));window.addEventListener('yardivo:login',()=>setTimeout(init,250));document.addEventListener('click',e=>{if(e.target.closest?.('[data-ysp-view="new"]'))setTimeout(init,30)},true);setTimeout(init,100);window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-announcement-rebuilt-zero-final';})();
+</script>
+</body>
 </html>
