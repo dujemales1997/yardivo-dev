@@ -48561,5 +48561,142 @@ document.addEventListener('DOMContentLoaded',()=>setTimeout(render,120));window.
 window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-header-home-context-clean-final';
 })();
 </script>
+
+
+<!-- YARDIVO DEV V5.8.3 · HEADER/HOME FINAL AUTHORITY · 2026-09-15 -->
+<style id="yardivo-v583-header-home-user-right-final-style">
+/* FINAL UI AUTHORITY
+   HOME: logo first, then one location selector, then selected location title.
+   APP: one centered Location/Warehouse context. User/logout + theme stay at far right. */
+.topbar{position:relative!important;display:flex!important;align-items:center!important;min-height:64px!important;padding:8px 16px!important;gap:10px!important}
+.topbar>div:first-child,.topbar .top-actions,.topbar .clock,.topbar .live,.topbar .notif-center,#globalWarehouseInfo{display:none!important}
+.topbar .warehouse-toolbar{position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;margin:0!important;display:flex!important;align-items:flex-end!important;justify-content:center!important;gap:12px!important;z-index:3!important}
+.topbar .warehouse-toolbar label{display:grid!important;gap:4px!important;margin:0!important;min-width:180px!important;color:#8299ad!important;font-size:8px!important;font-weight:950!important;letter-spacing:.08em!important;text-transform:uppercase!important}
+.topbar .warehouse-toolbar select{min-width:180px!important;max-width:250px!important}
+.topbar #yardivoHeaderLocationV583{display:grid!important;min-width:180px!important}
+.topbar #currentUserChip{display:flex!important;align-items:center!important;gap:8px!important;margin-left:auto!important;white-space:nowrap!important;z-index:5!important;order:90!important}
+.topbar .theme-switch-wrap{margin-left:0!important;z-index:5!important;order:89!important}
+/* Kill duplicate context controls accidentally injected outside the canonical warehouse toolbar. */
+.topbar select[id*="Location"]:not(#globalLocationV583),
+.topbar select[id*="location"]:not(#globalLocationV583){display:none!important}
+.topbar label:has(> select[id*="Location"]:not(#globalLocationV583)),
+.topbar label:has(> select[id*="location"]:not(#globalLocationV583)){display:none!important}
+
+/* HOME has no operational header context; only right-side account + theme. */
+body.home-menu-mode .topbar .warehouse-toolbar{display:none!important}
+body.home-menu-mode .topbar{justify-content:flex-end!important}
+body.home-menu-mode .topbar #currentUserChip{margin-left:auto!important}
+
+/* Restore original home hierarchy: LOGO -> location selector -> selected location name -> cards. */
+body.home-menu-mode #homeMenu .home-menu-wrap{display:flex!important;flex-direction:column!important;align-items:stretch!important}
+body.home-menu-mode #homeMenu .brand-combo{order:1!important;margin:18px auto 14px!important}
+body.home-menu-mode #homeMenu .home-top-actions{order:2!important;display:flex!important;justify-content:center!important;margin:0 auto 4px!important;width:100%!important}
+body.home-menu-mode #homeMenu .home-location-box{display:flex!important;justify-content:center!important;align-items:center!important;margin:0 auto!important}
+body.home-menu-mode #homeMenu .home-location-box label{display:grid!important;justify-items:center!important;gap:7px!important;font-size:10px!important;font-weight:950!important;letter-spacing:.12em!important;text-align:center!important}
+body.home-menu-mode #homeMenu #homeLocationSelect{display:block!important;min-width:300px!important;max-width:430px!important;text-align:center!important;text-align-last:center!important}
+body.home-menu-mode #homeMenu #homeLocationStatus,
+body.home-menu-mode #homeMenu #homeStorageStatus,
+body.home-menu-mode #homeMenu .home-logout-btn{display:none!important}
+body.home-menu-mode #homeMenu .home-menu-hero{order:3!important;margin:2px auto 18px!important;text-align:center!important}
+body.home-menu-mode #homeMenu .home-menu-hero h1,
+body.home-menu-mode #homeMenu #homeMenuSubtitle{display:none!important}
+body.home-menu-mode #homeMenu #homeSelectedLocation{display:block!important;margin:6px auto 0!important;font-size:30px!important;font-weight:1000!important;letter-spacing:.06em!important;text-transform:uppercase!important;text-align:center!important}
+body.home-menu-mode #yardivoHomeContextV583{display:none!important}
+body.home-menu-mode #homeMenu .home-location-warning{order:4!important}
+body.home-menu-mode #homeMenu .home-menu-grid{order:5!important}
+@media(max-width:900px){.topbar .warehouse-toolbar{position:static!important;transform:none!important;margin:0 auto!important}.topbar{flex-wrap:wrap!important}.topbar #currentUserChip{margin-left:auto!important}.topbar .warehouse-toolbar label,.topbar #yardivoHeaderLocationV583{min-width:145px!important}.topbar .warehouse-toolbar select{min-width:145px!important}}
+</style>
+<script id="yardivo-v583-header-home-user-right-final-authority">
+(()=>{'use strict';
+const BUILD='20260915-dev-v5.8.3-header-home-user-right-final';
+const $=id=>document.getElementById(id);
+function master(){try{const d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');return{locations:Array.isArray(d.locations)?d.locations:[],warehouses:Array.isArray(d.warehouses)?d.warehouses:[]}}catch(_){return{locations:[],warehouses:[]}}}
+function locId(){try{const v=String(window.YardivoAppStateV583?.location?.()||'');return v==='ALL'?'':v}catch(_){return''}}
+function syncHome(){
+ const d=master(),id=locId(),sel=$('homeLocationSelect'),title=$('homeSelectedLocation');
+ if(sel){const active=d.locations.filter(x=>x&&x.active!==false);const html='<option value="">Odaberi lokaciju...</option>'+active.map(x=>`<option value="${String(x.id).replace(/"/g,'&quot;')}">${String(x.name||'')}</option>`).join('');if(sel.dataset.yardivoMasterHome!==html){sel.innerHTML=html;sel.dataset.yardivoMasterHome=html}sel.value=active.some(x=>String(x.id)===id)?id:''}
+ if(title){const row=d.locations.find(x=>x&&x.active!==false&&String(x.id)===id);title.textContent=row?String(row.name||'').toUpperCase():'ODABERI LOKACIJU';title.classList.toggle('selected',!!row)}
+}
+function cleanTopbar(){
+ const tb=document.querySelector('.topbar');if(!tb)return;
+ const toolbar=tb.querySelector('.warehouse-toolbar'),chip=$('currentUserChip'),theme=tb.querySelector('.theme-switch-wrap')||document.querySelector('.theme-switch-wrap');
+ if(toolbar&&toolbar.parentElement!==tb)tb.appendChild(toolbar);
+ if(theme&&theme.parentElement!==tb)tb.appendChild(theme);
+ if(chip&&chip.parentElement!==tb)tb.appendChild(chip);
+ /* canonical right edge order: theme, username/logout */
+ if(theme&&theme.parentElement===tb)tb.appendChild(theme);
+ if(chip&&chip.parentElement===tb)tb.appendChild(chip);
+}
+function refresh(){cleanTopbar();syncHome()}
+['yardivo:login','yardivo:master-data-changed','yardivo:data-synced','yardivo:context-changed'].forEach(ev=>window.addEventListener(ev,()=>requestAnimationFrame(refresh)));
+document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(refresh),{once:true});window.addEventListener('load',()=>setTimeout(refresh,120),{once:true});
+window.YardivoHeaderHomeFinalV583={refresh,build:BUILD};window.YARDIVO_DEV_BUILD=BUILD;
+})();
+</script>
+
+
+
+<!-- YARDIVO DEV V5.8.3 · SETTINGS SINGLE PAGE / MASTER LIGHT BLUE AUTHORITY · 2026-09-15 -->
+<style id="yardivo-v583-settings-single-page-master-light-blue-style">
+/* Settings is one continuous surface. No Master/Admin switches. */
+#settings #yardivoMasterAdminSettingsV583,
+#settings #yardivoSettingsTabsFinal,
+#settings #yardivoSettingsChooseV583{display:none!important}
+
+/* Administration is always part of Settings. Master remains strictly Admin-only. */
+#settings #yardivoSettingsAdminPaneV583{display:block!important;margin-top:24px!important;padding-top:22px!important;border-top:1px solid #29465b!important}
+#settings #yardivoSettingsAdminPaneV583:before{content:"ADMINISTRACIJA"!important;display:block!important;margin:0 0 14px!important;color:#dfeaf3!important;font-size:13px!important;font-weight:950!important;letter-spacing:.8px!important}
+#settings #yardivoSettingsMasterPaneV583{display:none!important}
+body.yardivo-v583-master-admin #settings #yardivoSettingsMasterPaneV583{display:block!important}
+
+/* The Master setup is intentionally the light-blue onboarding surface. */
+body.yardivo-v583-master-admin #settings #yardivoSettingsMasterPaneV583,
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583{color:#102b45!important}
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-head,
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-card,
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-wh,
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-ramp,
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 .ysm-row,
+body.yardivo-v583-master-admin #settings #yardivoMasterSuppliersV583,
+body.yardivo-v583-master-admin #settings #yardivoResponsiblePeopleV583{
+ background:#eef7ff!important;border-color:#c8def2!important;color:#102b45!important;
+ box-shadow:0 7px 22px rgba(29,91,145,.07)!important
+}
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 :is(input,select,textarea){background:#fff!important;color:#153a5a!important;border-color:#bfd5e8!important}
+body.yardivo-v583-master-admin #settings #yardivoStableMasterEditorV583 :is(.ysm-head p,.ysm-card>p,small,label),
+body.yardivo-v583-master-admin #settings #yardivoMasterSuppliersV583 p,
+body.yardivo-v583-master-admin #settings #yardivoResponsiblePeopleV583 .yrp-sub{color:#607b92!important}
+
+/* Administration keeps the normal YARDIVO theme instead of inheriting Master light-blue cards. */
+body:not(.light-mode) #settings #yardivoSettingsAdminPaneV583{color:inherit!important}
+body:not(.light-mode) #settings #yardivoSettingsAdminPaneV583:before{color:#dfeaf3!important}
+body.light-mode #settings #yardivoSettingsAdminPaneV583{border-top-color:#d9e5ef!important}
+body.light-mode #settings #yardivoSettingsAdminPaneV583:before{color:#173b5d!important}
+</style>
+<script id="yardivo-v583-settings-single-page-master-light-blue-authority">
+(function(){
+'use strict';
+if(window.__YARDIVO_SETTINGS_SINGLE_PAGE_V583__)return;
+window.__YARDIVO_SETTINGS_SINGLE_PAGE_V583__=true;
+function apply(){
+ const settings=document.getElementById('settings');if(!settings)return;
+ const admin=document.getElementById('yardivoSettingsAdminPaneV583');
+ const master=document.getElementById('yardivoSettingsMasterPaneV583');
+ if(admin){admin.classList.add('active');admin.hidden=false;admin.removeAttribute('aria-hidden')}
+ if(master){
+   const allowed=document.body.classList.contains('yardivo-v583-master-admin');
+   master.classList.toggle('active',allowed);master.hidden=!allowed;
+   master.setAttribute('aria-hidden',allowed?'false':'true');
+ }
+ try{if(document.body.classList.contains('yardivo-v583-master-admin'))window.YardivoStableMasterV583?.render?.(true)}catch(_){}
+}
+document.addEventListener('click',e=>{if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(apply,40)},true);
+['yardivo:login','yardivo:master-data-changed','yardivo:data-synced'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(apply,30)));
+document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,160));
+window.addEventListener('load',()=>setTimeout(apply,420),{once:true});
+window.YardivoSettingsSinglePageV583={refresh:apply};
+window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-settings-single-page-master-light-blue-final';
+})();
+</script>
 </body>
 </html>
