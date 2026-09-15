@@ -19837,6 +19837,19 @@ window.YardivoMyAnnouncements={render,apply,open,isMine};
 #myYard .myy-label{position:absolute;left:4px;top:-18px;white-space:nowrap;padding:3px 5px;border-radius:4px;background:#171d1acc;color:#fff;font:800 8px Arial}
 #myYard .myy-world.d2 .myy-building{transform:none}.myy-world.d2 .myy-roof,.myy-world.d2 .myy-side{display:none}.myy-world.d2 .myy-dock,.myy-world.d2 .myy-gate,.myy-world.d2 .myy-bar{transform:none}.myy-world.d2 .myy-truck{transform:rotate(var(--tr,0deg))!important}
 @media(max-width:1050px){#myYard .myy-world.d2{transform:translate(-50%,-50%) scale(.66)}#myYard .myy-world.d3{transform:translate(-50%,-50%) rotateX(55deg) rotateZ(var(--rz,-10deg)) scale(.58)}}
+
+/* V5.8.3 MY YARD geometry authority: contiguous docks + 42-truck parking */
+#myYard .myy-dock{box-sizing:border-box;transition:left .25s ease,width .25s ease}
+#myYard .myy-parking{position:absolute;left:292px;top:505px;width:756px;height:174px;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(6,1fr);gap:3px;z-index:5;transform:translateZ(3px)}
+#myYard .myy-park{position:relative;border:1px solid rgba(255,255,255,.48);border-left:3px solid rgba(255,255,255,.68);background:rgba(22,32,28,.18);min-width:0;overflow:hidden;color:#f7fbf8;font:900 8px Arial;padding:3px 5px;box-sizing:border-box}
+#myYard .myy-park b{position:relative;z-index:2;text-shadow:0 1px 2px #000}
+#myYard .myy-park.occupied{background:rgba(45,122,75,.42);border-color:#65e296}
+#myYard .myy-park.occupied i{position:absolute;right:7px;top:50%;width:36px;height:10px;transform:translateY(-50%);background:#f4f7f5;border:1px solid #7f8a84;border-radius:2px;box-shadow:0 2px 3px #0008}
+#myYard .myy-truck.yard{transform:translateZ(28px) rotate(var(--tr,0deg)) scale(.58)!important;transform-origin:left center}
+#myYard .myy-world.d2 .myy-truck.yard{transform:rotate(var(--tr,0deg)) scale(.58)!important;transform-origin:left center}
+#myYard .myy-world.d3 .myy-parking{transform:translateZ(4px)}
+#myYard .myy-world.d2 .myy-parking{transform:none}
+#myYard .myy-world.d2 .myy-park{background:rgba(18,27,23,.32)}
 </style>
 <script id="yardivo-v35-my-yard">
 (function(){
@@ -19868,7 +19881,7 @@ function ensure(){
  <div class="myy-stage"><div class="myy-world d3"><div class="myy-floor"><div class="myy-road"></div>
  <div class="myy-building"><div class="myy-front">WAREHOUSE</div><div class="myy-roof"></div><div class="myy-side"></div></div>
  <div class="myy-gate"></div><div class="myy-bar"></div><div class="myy-sign">ULAZ → &nbsp;&nbsp; ← IZLAZ</div>
- <div class="myy-docks"></div><div class="myy-trucks"></div></div></div>
+ <div class="myy-parking" aria-label="Parking za kamione P1 do P42"></div><div class="myy-docks"></div><div class="myy-trucks"></div></div></div>
  <div class="myy-help">3D: POVUCI MIŠ = ROTACIJA · CTRL + KOTAČIĆ = ZOOM</div></div></div>`;
  main.appendChild(s);
  const nav=document.querySelector('.nav');
@@ -19908,11 +19921,26 @@ function stateOf(a,selected){
  if(a.gateCheckedAt||a.actualDate||a.actualTime||s.includes('porta')||s.includes('gate')||s.includes('ulaz'))return'gate';
  return'incoming'
 }
+function dockX(n,dock){
+ const count=Math.max(1,n),gap=10,maxW=58,minW=34;
+ const usable=620-gap*Math.max(0,count-1);
+ const w=Math.max(minW,Math.min(maxW,usable/count));
+ const total=count*w+Math.max(0,count-1)*gap;
+ return 270+(650-total)/2+(dock-1)*(w+gap);
+}
+function parkingSlot(a,i){
+ const raw=String(a.yardPosition||'').toUpperCase();
+ let idx=/^P([1-9]|[1-3][0-9]|4[0-2])$/.test(raw)?Number(raw.slice(1))-1:-1;
+ if(idx<0)idx=Math.max(0,Math.min(41,i));
+ return {idx,col:idx%7,row:Math.floor(idx/7)};
+}
 function pos(a,i,n,q){
- const dock=Math.max(1,Math.min(n,Number(a.dock)||1));
- const step=Math.min(96,620/Math.max(1,n-1));
- if(q==='dock')return{x:250+(dock-1)*step,y:318,r:90};
- if(q==='yard')return{x:320+(i%4)*150,y:500+Math.floor((i%8)/4)*72,r:(i%2?5:-5)};
+ const dock=Math.max(1,Math.min(Math.max(1,n),Number(a.dock)||1));
+ if(q==='dock')return{x:dockX(n,dock)-26,y:307,r:90};
+ if(q==='yard'){
+   const p=parkingSlot(a,i);
+   return{x:310+p.col*108,y:514+p.row*27,r:0};
+ }
  if(q==='gate')return{x:95+(i%2)*82,y:505+(i%2)*48,r:0};
  if(q==='rejected')return{x:-85,y:555+(i%2)*48,r:180};
  if(q==='done')return{x:-175,y:485+(i%2)*45,r:180};
@@ -19934,13 +19962,32 @@ function render(){
  s.querySelector('.myy-date').value=d;
  s.querySelector('.myy-date-title').textContent=d===today?'DANAS · '+prettyDate(d):(d===addDays(today,1)?'SUTRA · ':'')+prettyDate(d);
  const dayData=data().filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===w&&a.date===d);
+ const parkingSlots=Array.from({length:42},(_,i)=>`P${i+1}`);
+ if(isToday){
+   const parked=dayData.filter(a=>stateOf(a,d)==='yard');
+   const used=new Set(parked.map(a=>String(a.yardPosition||'').toUpperCase()).filter(x=>parkingSlots.includes(x)));
+   let changed=false;
+   parked.forEach(a=>{
+     const cur=String(a.yardPosition||'').toUpperCase();
+     if(!parkingSlots.includes(cur)){
+       const free=parkingSlots.find(x=>!used.has(x));
+       if(free){a.yardPosition=free;used.add(free);changed=true}
+     }
+   });
+   if(changed){try{saveAnnouncements()}catch(e){}}
+ }
+ const parking=s.querySelector('.myy-parking');
+ if(parking)parking.innerHTML=parkingSlots.map((slot,i)=>{
+   const a=dayData.find(x=>stateOf(x,d)==='yard'&&String(x.yardPosition||'').toUpperCase()===slot);
+   return `<div class="myy-park ${a?'occupied':''}" data-parking="${slot}" style="--pc:${i%7};--pr:${Math.floor(i/7)}"><b>${slot}</b>${a?'<i></i>':''}</div>`;
+ }).join('');
  s.querySelector('.myy-meta').textContent=`${w} · ${dayData.length} NAJAVA · ${isToday?'LIVE':'PLAN DANA'}`;
  const docks=s.querySelector('.myy-docks');
  docks.innerHTML=Array.from({length:n},(_,i)=>{
    const busy=dayData.some(a=>stateOf(a,d)==='dock'&&Number(a.dock)===i+1);
    const planned=dayData.some(a=>Number(a.dock)===i+1);
    let locked=false;try{locked=!!YardivoRampConfig?.isLocked?.(w,i+1)}catch(e){}
-   return `<div class="myy-dock ${busy?'busy':''} ${locked?'locked':''}" style="left:${260+i*Math.min(96,620/Math.max(1,n-1))}px">R${i+1}${!isToday&&planned?' · PLAN':''}</div>`
+   return `<div class="myy-dock ${busy?'busy':''} ${locked?'locked':''}" style="left:${dockX(n,i+1)}px;width:${Math.max(34,Math.min(58,(620-10*Math.max(0,n-1))/Math.max(1,n)))}px">R${i+1}${!isToday&&planned?' · PLAN':''}</div>`
  }).join('');
  const list=dayData.slice(-18);
  const host=s.querySelector('.myy-trucks');
@@ -48776,6 +48823,21 @@ function refresh(){retireDuplicateContext();try{window.YardivoHeaderHomeFinalV58
 document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(refresh),{once:true});
 window.addEventListener('load',()=>setTimeout(refresh,120),{once:true});
 window.YARDIVO_DEV_BUILD=BUILD;
+})();
+</script>
+
+<style id="yardivo-v583-myyard-parking42-final-style">
+/* Never show legacy NN/NN corner marker in MY YARD. */
+#myYard [data-legacy-nn],#myYard .nn-nn,#myYard .yard-nn{display:none!important}
+</style>
+<script id="yardivo-v583-myyard-parking42-final-authority">
+(function(){
+'use strict';
+window.__YARDIVO_V583_MYYARD_PARKING42__='20260915-dev-v5.8.3-myyard-parking42-dock-confirmation';
+function cleanLegacy(){document.querySelectorAll('#myYard *').forEach(el=>{if(el.children.length===0&&/^NN\s*\/\s*NN$/i.test((el.textContent||'').trim()))el.remove()})}
+document.addEventListener('click',e=>{if(e.target.closest('[data-view="myYard"]'))requestAnimationFrame(cleanLegacy)},true);
+window.addEventListener('yardivo:context-changed',()=>{try{window.YardivoMyYard?.render?.()}catch(e){};requestAnimationFrame(cleanLegacy)});
+window.addEventListener('load',()=>setTimeout(cleanLegacy,250));
 })();
 </script>
 </body>
