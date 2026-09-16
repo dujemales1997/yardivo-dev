@@ -46126,8 +46126,8 @@ function render(force=false){
        <div class="ysm-sector"><h4>OPERATIVNI PODACI SKLADIŠTA</h4><div class="ysm-fields">
         <label>KAPACITET ZAPRIMANJA SKLADIŠTA<input data-sm-cap="${esc(w.id)}" type="number" readonly aria-readonly="true" placeholder="IZRAČUN IZ RAMPI" value="${cp??''}"><small class="ysm-cap-help">Automatski zbroj MAX PALETA svih konfiguriranih rampi.</small></label>
         <label>POČETNO STANJE EPAL<input data-sm-epal="${esc(w.id)}" type="number" min="0" placeholder="0 / NEPOZNAT" value="${ep}"></label>
-        <label>PRIJAM OD<input data-sm-wh-from="${esc(w.id)}" type="time" value="${esc(hr.from)}"></label>
-        <label>PRIJAM DO<input data-sm-wh-to="${esc(w.id)}" type="time" value="${esc(hr.to)}"></label>
+        <label>RADNO VRIJEME PRIJAMA OD<input data-sm-wh-from="${esc(w.id)}" type="time" value="${esc(hr.from)}"><small>Primjenjuje se na svaku rampu ovog skladišta.</small></label>
+        <label>RADNO VRIJEME PRIJAMA DO<input data-sm-wh-to="${esc(w.id)}" type="time" value="${esc(hr.to)}"><small>Primjenjuje se na svaku rampu ovog skladišta.</small></label>
         <label>DETENTION ČEKANJE MIN<input data-sm-det-wait="${esc(w.id)}" type="number" min="0" placeholder="NEPOZNAT" value="${esc(de.wait)}"></label>
         <label>DETENTION NA RAMPI MIN<input data-sm-det-dock="${esc(w.id)}" type="number" min="0" placeholder="NEPOZNAT" value="${esc(de.dock)}"></label>
        </div><button class="primary" data-sm-save-ops="${esc(w.id)}">SPREMI PODATKE SKLADIŠTA</button></div>
@@ -46165,7 +46165,7 @@ function render(force=false){
    </section>
    <section class="ysm-card full" id="smWarehouseConfiguration">
     <div class="ysm-card-kicker">KORAK 3</div><h3>RAMPE I OPERATIVNI PODACI</h3>
-    <p>Odaberi bilo koje uneseno skladište. YARDIVO uvijek otvara njegovu punu konfiguraciju: operativne podatke, sve rampe, ON/OFF status, naziv rampe, radno vrijeme, palete/sat i maksimalni kapacitet. Sve vrijednosti možeš naknadno mijenjati i ponovno spremiti.</p>
+    <p>Odaberi bilo koje Master skladište iz dropdowna ispod. Ovaj odabir je potpuno neovisan o lokaciji i skladištu u headeru. Uređuje se isključivo skladište odabrano ovdje. RADNO VRIJEME PRIJAMA je zajedničko radno vrijeme svih rampi tog skladišta; rampe nemaju zasebno radno vrijeme.</p>
     <div class="ysm-config-selector"><label>SKLADIŠTE ZA KONFIGURACIJU · SVA MASTER SKLADIŠTA<select id="smConfigWarehouse" ${whs.length?'':'disabled'}><option value="">— Odaberi skladište —</option>${whs.map(w=>`<option value="${esc(w.id)}" ${String(w.id)===String(configWarehouseId)?'selected':''}>${esc(locName(w.location_id,d))} → ${esc(w.name)}</option>`).join('')}</select></label></div>
     ${configHtml}
    </section>
@@ -46225,6 +46225,26 @@ document.addEventListener('change',e=>{
    draftWarehouseLocation=String(locSel.value||'');holdMasterEdit(5000);
    const btn=document.querySelector('#yardivoStableMasterEditorV583 [data-sm-add-wh]');
    if(btn)btn.disabled=!String(locSel.value||'').trim();
+   return;
+ }
+ const sharedHours=e.target.closest?.('[data-sm-wh-from],[data-sm-wh-to]');
+ if(sharedHours){
+   const id=String(sharedHours.getAttribute('data-sm-wh-from')||sharedHours.getAttribute('data-sm-wh-to')||'');
+   if(!id)return;
+   holdMasterEdit(5000);
+   const from=String(document.querySelector(`[data-sm-wh-from="${id}"]`)?.value||'');
+   const to=String(document.querySelector(`[data-sm-wh-to="${id}"]`)?.value||'');
+   const d=master(),w=d.warehouses.find(x=>String(x.id)===id);
+   if(w){
+     w.reception_from=from;w.reception_to=to;
+     w.ramp_settings=Array.isArray(w.ramp_settings)?w.ramp_settings:[];
+     w.ramp_settings.forEach(r=>{if(r){r.from=from;r.to=to}});
+     const h=jget(HOURS,{});h[id]={from,to};jset(HOURS,h);
+     const rh=jget(RH,{});rh[id]=rh[id]||{};for(let r=1;r<=Math.max(0,Number(w.ramps)||0);r++)rh[id][String(r)]={from,to};jset(RH,rh);
+     commit(d,'warehouse.reception.shared-hours');
+     document.querySelectorAll('#yardivoStableMasterEditorV583 .ysm-shared-hours').forEach(el=>{el.textContent=(from||'—')+' – '+(to||'—')});
+     try{window.YardivoSupabase?.flushQueue?.()}catch(_){}
+   }
    return;
  }
  const sel=e.target.closest?.('#smConfigWarehouse');if(!sel)return;
@@ -49465,5 +49485,45 @@ setInterval(renderAll,1500);setTimeout(renderAll,120);window.YARDIVO_DEV_BUILD='
 })();
 </script>
 
+\n<style id="yardivo-v583-header-clean-context-final-style">
+#yvGlobalCapacityStrip{display:none!important}
+</style>
+<script id="yardivo-v583-header-clean-context-final">
+(()=>{'use strict';
+if(window.__YARDIVO_HEADER_CLEAN_CONTEXT_FINAL_V583__)return;
+window.__YARDIVO_HEADER_CLEAN_CONTEXT_FINAL_V583__=true;
+function clean(){const strip=document.getElementById('yvGlobalCapacityStrip');if(strip)strip.remove()}
+['yardivo:master-data-changed','yardivo:data-synced','yardivo:login'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(clean,0)));
+document.addEventListener('change',e=>{if(e.target?.id==='globalWarehouse'||e.target?.id==='globalLocation')setTimeout(clean,0)},true);
+setTimeout(clean,0);
+window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-header-clean-location-warehouse-final';
+})();
+</script>\n
+<style id="yardivo-v583-supplier-daily-map-after-date-final-css">
+#ysnMap.ysn-date-active{border:2px solid #1784e8!important;box-shadow:0 14px 36px rgba(20,105,190,.12)!important}
+#ysnMap.ysn-date-active .ysn-map-head{background:#f3f9ff!important}
+#ysnMap.ysn-date-active #ysnBoard{min-height:260px!important}
+</style>
+<script id="yardivo-v583-supplier-daily-map-after-date-final">
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+let keep={warehouse:'',date:'',pallets:'',sku:''};
+function supplier(){try{return String(window.YARDIVO_SESSION?.role||window.__YARDIVO_SESSION__?.role||'').toLowerCase()==='supplier'||!!$('ysnRoot')}catch{return !!$('ysnRoot')}}
+function remember(){if(!supplier())return;const w=$('ysnWarehouse'),p=$('ysnPallets'),sku=$('ysnSku');if(w?.value)keep.warehouse=w.value;if(p?.value)keep.pallets=p.value;if(sku?.value)keep.sku=sku.value;const txt=$('ysnDateText')?.textContent||'';if(txt&&!/odaberi datum/i.test(txt))keep.date=txt}
+function forceMap(){if(!supplier())return;remember();const w=$('ysnWarehouse'),p=$('ysnPallets'),map=$('ysnMap'),board=$('ysnBoard');if(!w?.value&&keep.warehouse&&[...w.options].some(o=>o.value===keep.warehouse))w.value=keep.warehouse;if(p&&!p.value&&keep.pallets)p.value=keep.pallets;map?.classList.add('ysn-date-active');
+ // Call the canonical map owner by emitting the same input/change signals it already owns.
+ p?.dispatchEvent(new Event('input',{bubbles:false}));
+ setTimeout(()=>{const b=$('ysnBoard');if(b&&/Mapa termina još nije aktivna|Odaberi skladište, broj paleta i datum/i.test(b.textContent||'')){
+   p?.dispatchEvent(new Event('input',{bubbles:false}));
+ } map?.scrollIntoView({behavior:'smooth',block:'center'});},40);
+}
+// Calendar day buttons are created dynamically. Capture the click, then run after its canonical onclick has stored chosenDate.
+document.addEventListener('click',e=>{if(!supplier())return;const day=e.target?.closest?.('.ysn-day:not(.blank)');if(day&&!day.disabled){remember();setTimeout(forceMap,25)}},true);
+// Keep user warehouse selection stable while the Supplier form is active.
+document.addEventListener('change',e=>{if(!supplier())return;if(['ysnWarehouse','ysnPallets','ysnSku'].includes(e.target?.id))remember()},true);
+window.addEventListener('yardivo:data-synced',()=>{if(!supplier()||!$('ysnRoot'))return;const w=$('ysnWarehouse');if(keep.warehouse&&w&&!w.value&&[...w.options].some(o=>o.value===keep.warehouse)){w.value=keep.warehouse}},{capture:true});
+window.YardivoSupplierDailyMapAfterDateV583={open:forceMap};
+})();
+</script>
 </body>
 </html>
