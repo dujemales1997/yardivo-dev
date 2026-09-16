@@ -6514,6 +6514,204 @@ window.yardivoLocalDateV583=function(input){
 }
 #yardivoSupplierMasterModalV583 .ysmp-checks label{cursor:pointer;user-select:none;align-items:center !important;min-height:38px}
 </style>
+
+<style id="yardivo-v583-master-supplier-contrast-final">
+/* Supplier Master list: explicit readable surfaces in both themes. */
+#yardivoMasterSuppliersV583{
+  background:#081722!important;color:#eaf3fb!important;border-color:#294b63!important
+}
+#yardivoMasterSuppliersV583 h3{color:#f4f8fc!important}
+#yardivoMasterSuppliersV583>p,
+#yardivoMasterSuppliersV583 .yv-supplier-meta,
+#yardivoMasterSuppliersV583 .ysm-empty{color:#a9bdcd!important;opacity:1!important}
+#yardivoMasterSuppliersV583 .ymsup-row{background:#06151f!important;border-color:#29485e!important;color:#eaf3fb!important}
+#yardivoMasterSuppliersV583 input{
+  background:#0b1d29!important;color:#f5f9fc!important;border-color:#3a5d74!important;
+  -webkit-text-fill-color:#f5f9fc!important;caret-color:#f5f9fc!important
+}
+#yardivoMasterSuppliersV583 input::placeholder{color:#91a8ba!important;opacity:1!important}
+
+body.light-mode #yardivoMasterSuppliersV583{
+  background:#fff!important;color:#10233f!important;border-color:#d8e2ec!important
+}
+body.light-mode #yardivoMasterSuppliersV583 h3{color:#10233f!important}
+body.light-mode #yardivoMasterSuppliersV583>p,
+body.light-mode #yardivoMasterSuppliersV583 .yv-supplier-meta,
+body.light-mode #yardivoMasterSuppliersV583 .ysm-empty{color:#5c7088!important;opacity:1!important}
+body.light-mode #yardivoMasterSuppliersV583 .ymsup-row{
+  background:#f8fbfe!important;border-color:#d8e2ec!important;color:#10233f!important
+}
+body.light-mode #yardivoMasterSuppliersV583 input{
+  background:#fff!important;color:#10233f!important;border-color:#c8d6e4!important;
+  -webkit-text-fill-color:#10233f!important;caret-color:#10233f!important
+}
+body.light-mode #yardivoMasterSuppliersV583 input::placeholder{color:#71839b!important;opacity:1!important}
+body.light-mode #yardivoMasterSuppliersV583 button:not(.primary):not(.danger){
+  background:#fff!important;color:#24415f!important;border-color:#bfcddd!important
+}
+body.light-mode #yardivoMasterSuppliersV583 .danger{
+  background:#fff5f5!important;color:#a61b29!important;border-color:#e2aab0!important
+}
+
+/* Supplier scope checkboxes: keep a clear square control in light and dark. */
+#yardivoSupplierMasterModalV583 .ysmp-checks label,
+#yardivoSupplierMasterModalV583 .ysmp-wide>label{color:#36506e!important}
+#yardivoSupplierMasterModalV583 .ysmp-checks{
+  background:#fff!important;border-color:#cbd8e7!important;color:#10233f!important
+}
+#yardivoSupplierMasterModalV583 input[type="checkbox"]{
+  appearance:auto!important;-webkit-appearance:checkbox!important;
+  width:18px!important;height:18px!important;min-width:18px!important;
+  accent-color:#1769e0!important;cursor:pointer!important
+}
+</style>
+
+
+<style id="yardivo-v583-light-white-darkblue-sidebar-css-audit-final">
+/* YARDIVO DEV V5.8.3 — authoritative Light Mode visual contract.
+   White application surfaces + permanently dark-blue left navigation. */
+
+/* Canvas */
+html[data-yardivo-main-theme="light"] body,
+html[data-theme="light"] body.light-mode,
+html[data-yardivo-main-theme="light"] body .app-shell,
+html[data-theme="light"] body.light-mode .app-shell,
+html[data-yardivo-main-theme="light"] body main,
+html[data-theme="light"] body.light-mode main,
+html[data-yardivo-main-theme="light"] body .main,
+html[data-theme="light"] body.light-mode .main,
+html[data-yardivo-main-theme="light"] body .content,
+html[data-theme="light"] body.light-mode .content,
+html[data-yardivo-main-theme="light"] body .page,
+html[data-theme="light"] body.light-mode .page,
+html[data-yardivo-main-theme="light"] body .page-content,
+html[data-theme="light"] body.light-mode .page-content{
+  background:#fff!important;
+  background-image:none!important;
+  color:#10233f!important;
+}
+
+/* Top bar stays white. */
+html[data-yardivo-main-theme="light"] body .topbar,
+html[data-theme="light"] body.light-mode .topbar,
+html[data-yardivo-main-theme="light"] body header.topbar,
+html[data-theme="light"] body.light-mode header.topbar{
+  background:#fff!important;
+  background-image:none!important;
+  color:#10233f!important;
+  border-color:#dce5ee!important;
+}
+
+/* Common SaaS surfaces: prevent dark-card + dark-text leaks in Light Mode. */
+html[data-yardivo-main-theme="light"] body :is(.card,.panel,.box,.section-card,.settings-card,.modal-content,.dialog,.drawer,.table-wrap,.table-card),
+html[data-theme="light"] body.light-mode :is(.card,.panel,.box,.section-card,.settings-card,.modal-content,.dialog,.drawer,.table-wrap,.table-card){
+  background-color:#fff!important;
+  color:#10233f!important;
+  border-color:#dce5ee!important;
+}
+html[data-yardivo-main-theme="light"] body :is(.card,.panel,.box,.section-card,.settings-card,.modal-content,.dialog,.drawer,.table-wrap,.table-card) :is(h1,h2,h3,h4,h5,h6,strong,label),
+html[data-theme="light"] body.light-mode :is(.card,.panel,.box,.section-card,.settings-card,.modal-content,.dialog,.drawer,.table-wrap,.table-card) :is(h1,h2,h3,h4,h5,h6,strong,label){
+  color:#10233f!important;
+}
+html[data-yardivo-main-theme="light"] body :is(.muted,.hint,.help,.subtle,.meta),
+html[data-theme="light"] body.light-mode :is(.muted,.hint,.help,.subtle,.meta){
+  color:#60758d!important;
+}
+
+/* Form controls: explicit readable white fields. */
+html[data-yardivo-main-theme="light"] body :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea),
+html[data-theme="light"] body.light-mode :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea){
+  background:#fff!important;
+  background-image:none!important;
+  color:#10233f!important;
+  -webkit-text-fill-color:#10233f!important;
+  border-color:#c7d4e1!important;
+  caret-color:#10233f!important;
+}
+html[data-yardivo-main-theme="light"] body :is(input,textarea)::placeholder,
+html[data-theme="light"] body.light-mode :is(input,textarea)::placeholder{
+  color:#71849a!important;
+  -webkit-text-fill-color:#71849a!important;
+  opacity:1!important;
+}
+html[data-yardivo-main-theme="light"] body select option,
+html[data-theme="light"] body.light-mode select option{
+  background:#fff!important;color:#10233f!important;
+}
+
+/* Tables. */
+html[data-yardivo-main-theme="light"] body table,
+html[data-theme="light"] body.light-mode table,
+html[data-yardivo-main-theme="light"] body :is(thead,tbody,tr,td,th),
+html[data-theme="light"] body.light-mode :is(thead,tbody,tr,td,th){
+  color:#10233f!important;
+  border-color:#dce5ee!important;
+}
+html[data-yardivo-main-theme="light"] body :is(td,th),
+html[data-theme="light"] body.light-mode :is(td,th){
+  background-color:#fff!important;
+}
+
+/* LEFT SIDEBAR — dark blue in Light Mode, always. Overrides old bright-blue/white/preset rules. */
+html[data-yardivo-main-theme="light"] body .sidebar,
+html[data-theme="light"] body.light-mode .sidebar,
+html[data-theme="light"][data-theme-preset] body.light-mode .sidebar{
+  background:#0b1f3a!important;
+  background-image:linear-gradient(180deg,#0b1f3a 0%,#081a31 100%)!important;
+  border-right:1px solid #16395f!important;
+  box-shadow:none!important;
+  color:#eef5ff!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar :is(.brand-combo,.sidebar-footer),
+html[data-theme="light"] body.light-mode .sidebar :is(.brand-combo,.sidebar-footer){
+  color:#dbe9f8!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar .nav-btn,
+html[data-theme="light"] body.light-mode .sidebar .nav-btn{
+  background:transparent!important;
+  color:#e7f0fb!important;
+  border-color:transparent!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar .nav-btn span,
+html[data-theme="light"] body.light-mode .sidebar .nav-btn span{
+  color:#b9cce1!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar .nav-btn:hover,
+html[data-theme="light"] body.light-mode .sidebar .nav-btn:hover{
+  background:#132e50!important;
+  color:#fff!important;
+  border-color:#1e4774!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar .nav-btn.active,
+html[data-theme="light"] body.light-mode .sidebar .nav-btn.active{
+  background:#174a80!important;
+  color:#fff!important;
+  border-color:#28629d!important;
+  box-shadow:none!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar .nav-btn.active span,
+html[data-theme="light"] body.light-mode .sidebar .nav-btn.active span{
+  color:#dbeaff!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar-footer,
+html[data-theme="light"] body.light-mode .sidebar-footer{
+  background:#081a31!important;
+  border-top-color:#1b3b60!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar-footer :is(p,strong,span),
+html[data-theme="light"] body.light-mode .sidebar-footer :is(p,strong,span){
+  color:#c7d8ea!important;
+}
+
+/* Master workspace/list surfaces specifically audited. */
+html[data-yardivo-main-theme="light"] body #yardivoMasterDataModalV583 :is(.modal-content,.card,.panel,.box),
+html[data-theme="light"] body.light-mode #yardivoMasterDataModalV583 :is(.modal-content,.card,.panel,.box),
+html[data-yardivo-main-theme="light"] body #yardivoMasterSuppliersV583,
+html[data-theme="light"] body.light-mode #yardivoMasterSuppliersV583{
+  background:#fff!important;color:#10233f!important;border-color:#d8e2ec!important;
+}
+</style>
+
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -49686,6 +49884,13 @@ function ensure(){const settings=document.getElementById('settings');if(!setting
  let btn=document.getElementById('yardivoMasterPopupLaunchV583');if(admin()){if(!btn){btn=document.createElement('button');btn.type='button';btn.id='yardivoMasterPopupLaunchV583';btn.innerHTML='<div><strong>MASTER PODACI</strong><span>Upravljaj lokacijama, skladištima, rampama, kapacitetima, dobavljačima i odgovornim osobama.</span></div><b>→</b>';btn.onclick=open;const title=settings.querySelector('.section-title');if(title)title.insertAdjacentElement('afterend',btn);else settings.prepend(btn)}btn.style.display='flex'}else if(btn)btn.style.display='none';
  const nav=document.getElementById('yardivoMasterAdminSettingsV583');if(nav)nav.style.setProperty('display','none','important');
  const pane=document.getElementById('yardivoSettingsMasterPaneV583');const body=document.getElementById('yardivoMasterPopupBodyV583');if(pane&&body&&pane.parentElement!==body)body.appendChild(pane);
+ // MASTER POPUP is the exclusive owner of every Settings block that appears before the font-size setting.
+ // This removes the duplicated Master/Admin input area from the Settings page itself.
+ const grid=settings.querySelector('.settings-grid');const font=document.getElementById('yardivoFontSettings');
+ if(grid&&body&&font&&font.parentElement===grid){
+   const before=[];for(const child of Array.from(grid.children)){if(child===font)break;before.push(child)}
+   before.forEach(child=>{if(child!==btn&&child.parentElement!==body)body.appendChild(child)});
+ }
 }
 function open(){if(!admin())return;ensure();const p=document.getElementById('yardivoMasterPopupV583');if(!p)return;p.classList.add('open');p.setAttribute('aria-hidden','false');document.body.classList.add('ymp-open-v583');try{window.YardivoStableMasterV583?.render?.();window.YardivoMasterDataV583?.refresh?.()}catch(_){}}
 function close(){const p=document.getElementById('yardivoMasterPopupV583');if(!p)return;p.classList.remove('open');p.setAttribute('aria-hidden','true');document.body.classList.remove('ymp-open-v583')}
@@ -49975,7 +50180,7 @@ async function importFull(f,im){const st=$('ysiStatusV583');if(!f||!window.XLSX)
 function supplierAccountUI(){const sel=$('yufSupplierSelect');if(!sel)return;let d=md();sel.innerHTML='<option value="">— ODABERI DOBAVLJAČA —</option>'+d.suppliers.filter(x=>x.active!==false).sort((a,b)=>String(a.name).localeCompare(String(b.name),'hr')).map(x=>`<option value="${esc(x.id)}">${esc(x.supplier_code||'')} · ${esc(x.name)}</option>`).join('');const sf=$('yufSupplierContactFields'),scope=$('yufScopeSection'),name=$('yufName');if(sf)sf.style.display='none';if(scope)scope.style.display='none';if(name?.closest('label'))name.closest('label').style.display='none';const title=$('yufBasicStepTitle');if(title)title.textContent='2 · USERNAME I LOZINKA';sel.onchange=()=>{d=md();const x=d.suppliers.find(v=>String(v.id)===String(sel.value));if(!x)return;name.value=x.name||'';$('yufContactName').value=x.contact_name||'N/A';$('yufContactEmail').value=x.contact_email||'supplier@yardivo.local';$('yufContactPhone').value=x.contact_phone||'';const loc=$('yufLocation');if(loc){loc.innerHTML='<option value="ALL">SVE LOKACIJE</option>';loc.value='ALL'}const aw=$('yufAllWarehouses');if(aw)aw.checked=true;};}
 document.addEventListener('click',e=>{if(e.target.closest?.('#yvAddSupplierPopupV583,#ymdAddSupplier,[data-spec-sup-add]'))setTimeout(()=>{installSupplierModal();resetSupplierModal()},0);if(e.target.closest?.('[data-yucr-role="supplier"]'))setTimeout(supplierAccountUI,0)},true);
 ['yardivo:master-data-changed','yardivo:master-data-ready','yardivo:data-synced'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{patchList();installSupplierModal();installImport()},0)));
-setTimeout(()=>{installSupplierModal();installImport();patchList()},0);window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-supplier-checkbox-deep-master-fix-final';
+setTimeout(()=>{installSupplierModal();installImport();patchList()},0);window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-light-white-dark-blue-sidebar-css-audit-final';
 })();
 </script>
 
