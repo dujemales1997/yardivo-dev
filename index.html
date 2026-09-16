@@ -49559,5 +49559,59 @@ document.addEventListener('change',e=>{if(e.target?.id==='smNewWarehouseLocation
 document.addEventListener('DOMContentLoaded',()=>setTimeout(sync,0)); window.addEventListener('load',()=>setTimeout(sync,100));
 window.YardivoLocationDropdownAuthorityV583={sync};
 })();
+</script>\n
+<style id="yardivo-v583-master-popup-admin-final-style">
+#yardivoMasterAdminSettingsV583{display:none!important}
+#yardivoSettingsMasterPaneV583{margin:0!important}
+#yardivoMasterPopupLaunchV583{width:100%;min-height:76px;margin:0 0 22px;padding:0 24px;border:1px solid #2387df;border-radius:16px;background:linear-gradient(135deg,#0b3552,#0b69b7);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;cursor:pointer;box-shadow:0 12px 30px rgba(0,73,133,.18);text-align:left}
+#yardivoMasterPopupLaunchV583 strong{display:block;font-size:18px;font-weight:1000;letter-spacing:.04em}#yardivoMasterPopupLaunchV583 span{display:block;margin-top:5px;font-size:11px;font-weight:750;opacity:.8}#yardivoMasterPopupLaunchV583 b{font-size:24px}
+#yardivoMasterPopupV583{position:fixed;inset:0;z-index:2147482000;display:none;align-items:center;justify-content:center;padding:28px;background:rgba(2,15,25,.78);backdrop-filter:blur(8px)}
+#yardivoMasterPopupV583.open{display:flex}#yardivoMasterPopupV583 .ymp-shell{width:min(1480px,96vw);height:min(900px,94vh);display:flex;flex-direction:column;overflow:hidden;border:1px solid #315c78;border-radius:20px;background:#061722;box-shadow:0 30px 90px rgba(0,0,0,.48)}
+#yardivoMasterPopupV583 .ymp-top{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:17px 20px;border-bottom:1px solid #27485d;background:#0a2231;color:#fff}#yardivoMasterPopupV583 .ymp-top strong{display:block;font-size:17px;font-weight:1000}#yardivoMasterPopupV583 .ymp-top small{display:block;margin-top:4px;color:#8fb2c9;font-size:10px;font-weight:800}#yardivoMasterPopupV583 .ymp-close{width:42px;height:42px;border:1px solid #42677e;border-radius:12px;background:#102d3e;color:#fff;font-size:24px;font-weight:900;cursor:pointer}
+#yardivoMasterPopupV583 .ymp-body{flex:1;min-height:0;overflow:auto;padding:20px}#yardivoMasterPopupV583 #yardivoSettingsMasterPaneV583{display:block!important}body.ymp-open-v583{overflow:hidden!important}
+@media(max-width:760px){#yardivoMasterPopupV583{padding:8px}#yardivoMasterPopupV583 .ymp-shell{width:100%;height:98vh;border-radius:14px}#yardivoMasterPopupLaunchV583{min-height:68px}}
+</style>
+<script id="yardivo-v583-master-popup-admin-final">
+(()=>{'use strict';
+if(window.__YARDIVO_MASTER_POPUP_ADMIN_FINAL__)return;window.__YARDIVO_MASTER_POPUP_ADMIN_FINAL__=true;
+function role(){try{const s=(typeof currentSession!=='undefined'&&currentSession)||window.currentSession||null;let r=String(s?.role||s?.app_role||'').trim().toLowerCase();if(r==='management'||r==='voditelj')r='manager';return r}catch(_){return ''}}
+function admin(){return role()==='admin'}
+function ensure(){const settings=document.getElementById('settings');if(!settings)return;
+ let popup=document.getElementById('yardivoMasterPopupV583');if(!popup){popup=document.createElement('div');popup.id='yardivoMasterPopupV583';popup.setAttribute('aria-hidden','true');popup.innerHTML='<div class="ymp-shell" role="dialog" aria-modal="true" aria-label="Master podaci"><div class="ymp-top"><div><strong>MASTER PODACI</strong><small>Lokacije · skladišta · rampe i prijam · dobavljači · odgovorne osobe</small></div><button type="button" class="ymp-close" aria-label="Zatvori">×</button></div><div class="ymp-body" id="yardivoMasterPopupBodyV583"></div></div>';document.body.appendChild(popup);popup.querySelector('.ymp-close').onclick=close;popup.addEventListener('click',e=>{if(e.target===popup)close()})}
+ let btn=document.getElementById('yardivoMasterPopupLaunchV583');if(admin()){if(!btn){btn=document.createElement('button');btn.type='button';btn.id='yardivoMasterPopupLaunchV583';btn.innerHTML='<div><strong>MASTER PODACI</strong><span>Upravljaj lokacijama, skladištima, rampama, kapacitetima, dobavljačima i odgovornim osobama.</span></div><b>→</b>';btn.onclick=open;const title=settings.querySelector('.section-title');if(title)title.insertAdjacentElement('afterend',btn);else settings.prepend(btn)}btn.style.display='flex'}else if(btn)btn.style.display='none';
+ const nav=document.getElementById('yardivoMasterAdminSettingsV583');if(nav)nav.style.setProperty('display','none','important');
+ const pane=document.getElementById('yardivoSettingsMasterPaneV583');const body=document.getElementById('yardivoMasterPopupBodyV583');if(pane&&body&&pane.parentElement!==body)body.appendChild(pane);
+}
+function open(){if(!admin())return;ensure();const p=document.getElementById('yardivoMasterPopupV583');if(!p)return;p.classList.add('open');p.setAttribute('aria-hidden','false');document.body.classList.add('ymp-open-v583');try{window.YardivoStableMasterV583?.render?.();window.YardivoMasterDataV583?.refresh?.()}catch(_){}}
+function close(){const p=document.getElementById('yardivoMasterPopupV583');if(!p)return;p.classList.remove('open');p.setAttribute('aria-hidden','true');document.body.classList.remove('ymp-open-v583')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});document.addEventListener('DOMContentLoaded',()=>setTimeout(ensure,160));window.addEventListener('load',()=>setTimeout(ensure,420));window.addEventListener('yardivo:data-synced',()=>setTimeout(ensure,80));window.addEventListener('yardivo:master-data-changed',()=>setTimeout(ensure,80));setTimeout(ensure,40);
+window.YardivoMasterPopupV583={open,close,refresh:ensure};window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-master-data-admin-popup-final';
+})();
+</script>
+\n<style id="yardivo-v583-shared-hours-dropdown-style">
+.yv583-time-pair{display:grid;grid-template-columns:minmax(86px,1fr) 18px minmax(86px,1fr);align-items:center;gap:8px;width:100%}.yv583-time-pair select{width:100%;min-height:44px;border:1px solid #9fc4e5;border-radius:10px;background:#fff;color:#102a43;font-weight:800;padding:0 10px}.yv583-time-pair .yv583-colon{text-align:center;font-weight:900;font-size:18px}.yv583-time-pair-label{display:flex;justify-content:space-between;gap:12px;margin:0 0 6px;color:#5b7894;font-size:10px;font-weight:900;letter-spacing:.06em}.yv583-time-native{display:none!important}
+</style>
+<script id="yardivo-v583-shared-hours-dropdown-authority">
+(()=>{'use strict';
+ const pad=n=>String(n).padStart(2,'0');
+ const opt=(n,max,selected)=>Array.from({length:max},(_,i)=>`<option value="${pad(i)}"${i===selected?' selected':''}>${pad(i)}</option>`).join('');
+ function upgrade(input){
+  if(!input||input.dataset.yv583TimeUpgraded==='1')return;
+  const val=/^\\d{2}:\\d{2}$/.test(input.value)?input.value:'00:00', parts=val.split(':').map(Number);
+  input.dataset.yv583TimeUpgraded='1'; input.classList.add('yv583-time-native');
+  const box=document.createElement('div');box.className='yv583-time-control';
+  box.innerHTML=`<div class="yv583-time-pair-label"><span>SAT (00–23)</span><span>MINUTA (00–59)</span></div><div class="yv583-time-pair"><select aria-label="Sat">${opt(0,24,parts[0])}</select><span class="yv583-colon">:</span><select aria-label="Minuta">${opt(0,60,parts[1])}</select></div>`;
+  input.insertAdjacentElement('afterend',box); const sels=box.querySelectorAll('select');
+  const sync=()=>{input.value=`${sels[0].value}:${sels[1].value}`;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));};
+  sels.forEach(x=>x.addEventListener('change',sync));
+ }
+ function upgradeAll(){document.querySelectorAll('input[type="time"][data-sm-wh-from],input[type="time"][data-sm-wh-to]').forEach(upgrade);}
+ function removeNNN(){document.querySelectorAll('body *').forEach(el=>{if(el.children.length===0&&el.textContent.trim()==='NNN')el.remove();});}
+ const refresh=()=>{upgradeAll();removeNNN();};
+ refresh(); setTimeout(refresh,0); setTimeout(refresh,250);
+ document.addEventListener('click',()=>setTimeout(refresh,0),true);
+ document.addEventListener('yardivo:master-data-changed',()=>setTimeout(refresh,0));
+ document.addEventListener('yardivo:data-synced',()=>setTimeout(refresh,0));
+})();
 </script>\n</body>
 </html>
