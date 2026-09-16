@@ -6502,6 +6502,18 @@ window.yardivoLocalDateV583=function(input){
 })();
 </script>
 
+
+<style id="yardivo-v583-supplier-checkbox-square-final">
+#yardivoSupplierMasterModalV583 .ysmp-checks input[type="checkbox"],
+#yardivoSupplierMasterModalV583 #ysmpAllLocations,
+#yardivoSupplierMasterModalV583 #ysmpAllWarehouses{
+  appearance:auto !important;-webkit-appearance:checkbox !important;
+  width:18px !important;height:18px !important;min-width:18px !important;
+  margin:0 10px 0 0 !important;padding:0 !important;vertical-align:middle;
+  accent-color:#1f6feb;cursor:pointer;box-shadow:none !important;
+}
+#yardivoSupplierMasterModalV583 .ysmp-checks label{cursor:pointer;user-select:none;align-items:center !important;min-height:38px}
+</style>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -33825,8 +33837,7 @@ async function createManager(){
   if(password.length<8)return alert('Lozinka mora imati najmanje 8 znakova.');
   if(password!==password2)return alert('Lozinke se ne podudaraju.');
   if(fixedRole!=='admin'&&!all_warehouses&&!warehouses.length)return alert('Odaberi barem jedno skladište ili SVA SKLADIŠTA.');
-  if(fixedRole==='supplier'&&!contact_name)return alert('Upiši kontakt osobu dobavljača.');
-  if(fixedRole==='supplier'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact_email))return alert('Upiši ispravan kontakt e-mail dobavljača.');
+  
   if(!sections.length)return alert('Odaberi barem jednu sekciju.');
 
   const btn=document.getElementById('ymCreate');
@@ -34240,7 +34251,7 @@ function openFixed(role){
   const supplierSelect=document.getElementById('yufSupplierSelect');
   const basicStepTitle=document.getElementById('yufBasicStepTitle');
   if(supplierSelectSection)supplierSelectSection.style.display=role==='supplier'?'':'none';
-  if(basicStepTitle)basicStepTitle.textContent=role==='supplier'?'2 · PODACI ZA ACCOUNT':'1 · OSNOVNI PODACI';
+  if(basicStepTitle)basicStepTitle.textContent=role==='supplier'?'2 · USERNAME I LOZINKA':'1 · OSNOVNI PODACI';
   if(supplierSelect){
     let md={suppliers:[]};try{md=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){}
     const suppliers=(Array.isArray(md.suppliers)?md.suppliers:[]).filter(x=>x&&x.active!==false&&String(x.name||'').trim()).sort((a,b)=>String(a.name).localeCompare(String(b.name),'hr'));
@@ -34251,15 +34262,13 @@ function openFixed(role){
       const row=suppliers.find(x=>String(x.id)===id);
       const nameInput=document.getElementById('yufName');
       if(nameInput)nameInput.value=row?String(row.name||''):'';
-      if(row){
-        const loc=document.getElementById('yufLocation');
-        if(loc&&row.location_id&&[...loc.options].some(o=>o.value===String(row.location_id))){loc.value=String(row.location_id);renderWh();}
-      }
+      // Supplier account scope is owned only by Master Data; no account-level location/warehouse editing.
+      if(row){ /* selection is sufficient; create handler derives full Master scope */ }
     };
   }
-  const supplierFields=document.getElementById('yufSupplierContactFields');if(supplierFields)supplierFields.style.display=role==='supplier'?'grid':'none';
-  const scope=document.getElementById('yufScopeSection');if(scope)scope.style.display=role==='admin'?'none':'';
-  const scopeStepTitle=document.getElementById('yufScopeStepTitle');if(scopeStepTitle)scopeStepTitle.textContent=role==='supplier'?'3 · LOKACIJA I SKLADIŠTA':'2 · LOKACIJA I SKLADIŠTA';
+  const supplierFields=document.getElementById('yufSupplierContactFields');if(supplierFields)supplierFields.style.display='none';
+  const scope=document.getElementById('yufScopeSection');if(scope)scope.style.display=(role==='admin'||role==='supplier')?'none':'';
+  const scopeStepTitle=document.getElementById('yufScopeStepTitle');if(scopeStepTitle)scopeStepTitle.textContent='2 · LOKACIJA I SKLADIŠTA';
   const locSel=document.getElementById('yufLocation');
   if(locSel){
     let d={locations:[]};try{d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){}
@@ -34268,13 +34277,13 @@ function openFixed(role){
     locSel.value=role==='admin'?'ALL':'';
     locSel.onchange=()=>renderWh();
   }
-  const scopeHelp=document.getElementById('yufSupplierScopeHelp');if(scopeHelp)scopeHelp.style.display=role==='supplier'?'':'none';
+  const scopeHelp=document.getElementById('yufSupplierScopeHelp');if(scopeHelp)scopeHelp.style.display='none';
   if(role==='admin'){
     document.getElementById('yufWarehouseGrid').innerHTML='';const all=document.getElementById('yufAllWarehouses');if(all)all.checked=false;
   }else renderWh();
-  const note=document.getElementById('yufFixedNote');if(note)note.textContent=role==='supplier'?'Dobavljač dobiva pristup samo odabranoj lokaciji i skladištima iz Master podataka.':'Sekcije su fiksirane prema roli. Admin je globalan. Za ostale role odabiru se lokacija i skladišta.';
+  const note=document.getElementById('yufFixedNote');if(note)note.textContent=role==='supplier'?'Lokacije, skladišta i kontaktni podaci automatski se preuzimaju iz Master podataka odabranog dobavljača. Ovdje se postavljaju samo username i lozinka.':'Sekcije su fiksirane prema roli. Admin je globalan. Za ostale role odabiru se lokacija i skladišta.';
   const m=document.getElementById('yardivoFixedUserModal');m.classList.add('open');m.setAttribute('aria-hidden','false');
-  setTimeout(()=>document.getElementById('yufName')?.focus(),30);
+  setTimeout(()=>document.getElementById(role==='supplier'?'yufSupplierSelect':'yufName')?.focus(),30);
 }
 async function createFixedUser(){
   if(!isAdmin()||!fixedRole)return;
@@ -34292,29 +34301,36 @@ async function createFixedUser(){
   const username=(document.getElementById('yufUsername')?.value||'').trim().toLowerCase();
   const password=document.getElementById('yufPassword')?.value||'';
   const password2=document.getElementById('yufPassword2')?.value||'';
-  const contact_name=(document.getElementById('yufContactName')?.value||'').trim();
-  const contact_email=(document.getElementById('yufContactEmail')?.value||'').trim().toLowerCase();
-  const contact_phone=(document.getElementById('yufContactPhone')?.value||'').trim();
-  const location=fixedRole==='admin'?'ALL':(document.getElementById('yufLocation')?.value||'');
-  const all_locations=fixedRole==='supplier'&&location==='ALL';
-  const all_warehouses=fixedRole==='supplier'&&Boolean(document.getElementById('yufAllWarehouses')?.checked);
-  const warehouses=(fixedRole==='admin'||all_warehouses)?[]:selectedWh();
+  let contact_name=(document.getElementById('yufContactName')?.value||'').trim();
+  let contact_email=(document.getElementById('yufContactEmail')?.value||'').trim().toLowerCase();
+  let contact_phone=(document.getElementById('yufContactPhone')?.value||'').trim();
+  let location=fixedRole==='admin'?'ALL':(document.getElementById('yufLocation')?.value||'');
+  let all_locations=false,all_warehouses=false,warehouses=fixedRole==='admin'?[]:selectedWh();
+  if(fixedRole==='supplier'){
+    let md={suppliers:[]};try{md=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){}
+    const row=(Array.isArray(md.suppliers)?md.suppliers:[]).find(x=>String(x.id)===supplierId&&x.active!==false);
+    if(!row)return alert('Odabrani dobavljač više ne postoji u Master podacima.');
+    all_locations=Boolean(row.all_locations);all_warehouses=Boolean(row.all_warehouses);
+    const locs=Array.isArray(row.locations)?row.locations.map(String):[];
+    warehouses=all_warehouses?[]:(Array.isArray(row.warehouses)?row.warehouses.map(String):[]);
+    location=all_locations?'ALL':(locs[0]||'');
+    contact_name=String(row.contact_name||'').trim();contact_email=String(row.contact_email||'').trim().toLowerCase();contact_phone=String(row.contact_phone||'').trim();
+  }
 
   if(!name)return alert(fixedRole==='supplier'?'Upiši naziv dobavljača.':'Upiši ime i prezime.');
   if(!/^[a-z0-9._-]{3,40}$/.test(username))return alert('Username mora imati najmanje 3 znaka.');
   if(password.length<8)return alert('Lozinka mora imati najmanje 8 znakova.');
   if(password!==password2)return alert('Lozinke se ne podudaraju.');
-  if(fixedRole!=='admin'&&!location)return alert('Odaberi lokaciju.');
-  if(fixedRole!=='admin'&&!warehouses.length)return alert('Odaberi barem jedno skladište.');
-  if(fixedRole==='supplier'&&!contact_name)return alert('Upiši kontakt osobu dobavljača.');
-  if(fixedRole==='supplier'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact_email))return alert('Upiši ispravan kontakt e-mail dobavljača.');
+  if(fixedRole!=='admin'&&fixedRole!=='supplier'&&!location)return alert('Odaberi lokaciju.');
+  if(fixedRole!=='admin'&&fixedRole!=='supplier'&&!warehouses.length)return alert('Odaberi barem jedno skladište.');
+  
 
   const btn=document.getElementById('yufCreate');
   btn.disabled=true;btn.textContent='KREIRAM...';
   try{
     await invokeCreate({
       username,password,role:fixedRole,location,warehouses,all_locations,all_warehouses,
-      display_name:name,
+      supplier_id:fixedRole==='supplier'?supplierId:null,display_name:name,
       supplier_name:fixedRole==='supplier'?name:null,
       contact_name:fixedRole==='supplier'?contact_name:null,
       contact_email:fixedRole==='supplier'?contact_email:null,
@@ -34326,7 +34342,7 @@ async function createFixedUser(){
         d.suppliers=Array.isArray(d.suppliers)?d.suppliers:[];
         let s=d.suppliers.find(x=>String(x.id||'')===supplierId);
         if(!s)throw new Error('Dobavljač više ne postoji u Master podacima.');
-        s.username=username;s.location_id=location;s.warehouses=[...warehouses];s.all_locations=all_locations;s.all_warehouses=all_warehouses;
+        s.username=username; // Scope remains exclusively owned by Master Data.
         localStorage.setItem('yardivo_master_data_registry_v583',JSON.stringify(d));
         try{window.YardivoMasterDataV583?.save?.(d)}catch(_){}
         window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{source:'supplier-create'}}));
