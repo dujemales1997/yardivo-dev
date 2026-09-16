@@ -9006,16 +9006,48 @@ function renderDailyTotalCapacity(){
   const wh=dailyMapWarehouseCode();
   const data=announcements.filter(a=>(a.warehouse||yardivoCanonicalWarehouseV583())===wh&&a.date===date);
   const used=data.reduce((s,a)=>s+Number(a.pallets||0),0);
-  const free=Math.max(0,DAILY_RECEIVING_CAPACITY_PALLETS-used);
-  const pct=Math.min(100,Math.round(used/DAILY_RECEIVING_CAPACITY_PALLETS*100));
-  const band=capacityBand(pct);
+  let total=null;
+  try{
+    const md=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');
+    const w=(Array.isArray(md.warehouses)?md.warehouses:[]).find(x=>String(x?.id||'')===String(wh||''));
+    if(w){
+      const n=Math.max(0,Number(w.ramps)||0);
+      const rs=(Array.isArray(w.ramp_settings)?w.ramp_settings:[]).filter(r=>r&&Number(r.number)>0&&Number(r.number)<=n);
+      const caps=rs.map(r=>Number(r.max_pallets));
+      if(rs.length&&caps.every(v=>Number.isFinite(v)&&v>0)) total=caps.reduce((a,b)=>a+b,0);
+      else if(Number(w.daily_pallet_capacity)>0) total=Number(w.daily_pallet_capacity);
+    }
+  }catch(_){}
   const panel=document.getElementById('dailyTotalCapacity');if(!panel)return;
-  panel.classList.remove('cap-low','cap-mid','cap-high','cap-critical');panel.classList.add(band.cls);
-  document.getElementById('dailyCapacityPercent').textContent=pct+'%';
-  document.getElementById('dailyCapacityUsed').textContent=used+' pal.';
-  document.getElementById('dailyCapacityFree').textContent=free+' pal.';
-  document.getElementById('dailyCapacityState').textContent=band.label;
-  document.getElementById('dailyCapacityBar').style.width=pct+'%';
+  const label=document.getElementById('dailyCapacityLabel');
+  const totalEl=document.getElementById('dailyCapacityTotal');
+  const usedEl=document.getElementById('dailyCapacityUsed');
+  const freeEl=document.getElementById('dailyCapacityFree');
+  const pctEl=document.getElementById('dailyCapacityPercent');
+  const stateEl=document.getElementById('dailyCapacityState');
+  const bar=document.getElementById('dailyCapacityBar');
+  panel.classList.remove('cap-low','cap-mid','cap-high','cap-critical');
+  if(!(Number(total)>0)){
+    if(label)label.textContent='Kapacitet: NEPOZNAT';
+    if(totalEl){totalEl.textContent='NEPOZNAT';totalEl.classList.add('unknown')}
+    if(usedEl)usedEl.textContent=used+' pal.';
+    if(freeEl){freeEl.textContent='—';freeEl.classList.add('unknown')}
+    if(pctEl)pctEl.textContent='—';
+    if(stateEl)stateEl.textContent='NEPOZNAT';
+    if(bar)bar.style.width='0%';
+    return;
+  }
+  const free=Math.max(0,total-used);
+  const pct=Math.min(100,Math.round(used/total*100));
+  const band=capacityBand(pct);
+  panel.classList.add(band.cls);
+  if(label)label.textContent='Kapacitet: '+total+' paleta / dan';
+  if(totalEl){totalEl.textContent=total+' pal.';totalEl.classList.remove('unknown')}
+  if(usedEl)usedEl.textContent=used+' pal.';
+  if(freeEl){freeEl.textContent=free+' pal.';freeEl.classList.remove('unknown')}
+  if(pctEl)pctEl.textContent=pct+'%';
+  if(stateEl)stateEl.textContent=band.label;
+  if(bar)bar.style.width=pct+'%';
 }
 function openDailyRampDetail(dock){
   selectedDailyRamp=Number(dock);
@@ -45452,6 +45484,10 @@ function paintCapacityUi(){
    if(free){free.textContent='—';free.classList.add('unknown')}
    if(pct)pct.textContent='—';
    if(state)state.textContent='NEPOZNAT';
+ }else{
+   if(label)label.textContent=`Kapacitet: ${c} paleta / dan`;
+   if(total){total.textContent=`${c} pal.`;total.classList.remove('unknown')}
+   if(free)free.classList.remove('unknown');
  }
  document.querySelectorAll('#dashboard .panel-head small').forEach(el=>{
    if(/Dnevni kapacitet:/i.test(el.textContent||''))el.textContent=c==null?'Dnevni kapacitet: NEPOZNAT':`Dnevni kapacitet: ${c} paleta`;
@@ -49733,7 +49769,7 @@ document.addEventListener('change',e=>{if(e.target?.id==='globalWarehouse')setTi
 ['yardivo:master-data-changed','yardivo:data-synced','yardivo:context-changed','yardivo:login'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(refresh,60)));
 setTimeout(refresh,180);
 window.YardivoMasterContextCapacityV583={refresh,capacity,warehouse:()=>wh(activeWh())};
-window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-master-header-capacity-binding-verified-final';
+window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-daily-map-master-capacity-fix-final';
 })();
 </script>
 
@@ -49888,5 +49924,31 @@ window.YardivoSupplierMasterAuthorityV583={patchUI,openSupplier,openImport};wind
 })();
 </script>
 
+<style id="yardivo-v583-supplier-master-scope-total-style">
+.ysmp-scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.ysmp-checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px;max-height:180px;overflow:auto;border:1px solid #294552;border-radius:10px;padding:9px}.ysmp-checks label{display:flex!important;flex-direction:row!important;gap:8px;align-items:center}.ysmp-checks input{width:auto!important}.ysmp-wide{grid-column:1/-1}.yv-supplier-meta{font-size:11px;opacity:.78;margin:4px 0 8px}.ysi-note b{font-weight:900}@media(max-width:720px){.ysmp-scope-grid{grid-template-columns:1fr}.ysmp-wide{grid-column:auto}}
+</style>
+<script id="yardivo-v583-supplier-master-scope-account-xlsx-total">
+(()=>{'use strict';
+if(window.__YV_SUPPLIER_MASTER_SCOPE_ACCOUNT_XLSX_TOTAL__)return;window.__YV_SUPPLIER_MASTER_SCOPE_ACCOUNT_XLSX_TOTAL__=true;
+const KEY='yardivo_master_data_registry_v583',$=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
+function md(){try{const d=JSON.parse(localStorage.getItem(KEY)||'{}');d.suppliers=Array.isArray(d.suppliers)?d.suppliers:[];d.locations=Array.isArray(d.locations)?d.locations:[];d.warehouses=Array.isArray(d.warehouses)?d.warehouses:[];return d}catch(_){return{suppliers:[],locations:[],warehouses:[]}}}
+function nextId(a){let n=0;(a||[]).forEach(x=>{const m=String(x?.id||'').match(/^SUP(\d+)$/);if(m)n=Math.max(n,+m[1]||0)});return 'SUP'+String(n+1).padStart(3,'0')}
+async function persist(d,reason){d.__masterUpdatedAtV583=new Date().toISOString();d.__masterWriteTokenV583='SUPSCOPE-'+Date.now();localStorage.setItem(KEY,JSON.stringify(d));await Promise.resolve(window.YardivoMasterDataV583?.save?.(JSON.parse(JSON.stringify(d))));try{await window.YardivoSupabase?.flushQueue?.()}catch(_){}window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{source:'supplier-master-scope',reason}}));}
+function installSupplierModal(){const m=$('yardivoSupplierMasterModalV583');if(!m)return;const body=m.querySelector('.ysmp-body');if(!body||body.dataset.scopeReady)return;body.dataset.scopeReady='1';body.innerHTML=`<div class="ysmp-scope-grid"><label>ŠIFRA DOBAVLJAČA *<input id="ysmpCode" maxlength="60" autocomplete="off"></label><label>NAZIV DOBAVLJAČA *<input id="ysmpName" maxlength="120" autocomplete="off"></label><label>KONTAKT BROJ<input id="ysmpPhone" maxlength="60" autocomplete="off"></label><label>EMAIL<input id="ysmpEmail" type="email" maxlength="160" autocomplete="off"></label><label class="ysmp-wide">KONTAKT OSOBA · OPCIONALNO<input id="ysmpContact" maxlength="120" autocomplete="off"></label><div class="ysmp-wide"><label style="display:flex;flex-direction:row;gap:8px;align-items:center"><input id="ysmpAllLocations" type="checkbox" style="width:auto"> SVE LOKACIJE</label><div id="ysmpLocations" class="ysmp-checks"></div></div><div class="ysmp-wide"><label style="display:flex;flex-direction:row;gap:8px;align-items:center"><input id="ysmpAllWarehouses" type="checkbox" style="width:auto"> SVA SKLADIŠTA</label><div id="ysmpWarehouses" class="ysmp-checks"></div></div></div><div id="ysmpError" class="ysmp-error" aria-live="polite"></div>`;
+ const old=m.querySelector('.ysmp-save');if(old){const b=old.cloneNode(true);old.replaceWith(b);b.addEventListener('click',saveSupplier)}
+ function renderScope(){const d=md(),allL=$('ysmpAllLocations').checked,chosen=[...m.querySelectorAll('[name="ysmpLoc"]:checked')].map(x=>x.value);$('ysmpLocations').innerHTML=d.locations.filter(x=>x&&x.active!==false).map(x=>`<label><input name="ysmpLoc" type="checkbox" value="${esc(x.id)}" ${allL?'checked disabled':''}> ${esc(x.name)}</label>`).join('')||'<span>Nema aktivnih lokacija.</span>';const allowed=allL?new Set(d.locations.filter(x=>x.active!==false).map(x=>String(x.id))):new Set(chosen);$('ysmpWarehouses').innerHTML=d.warehouses.filter(w=>w&&w.active!==false&&allowed.has(String(w.location_id))).map(w=>`<label><input name="ysmpWh" type="checkbox" value="${esc(w.id)}" ${$('ysmpAllWarehouses').checked?'checked disabled':''}> ${esc(w.name)}</label>`).join('')||'<span>Odaberi lokaciju.</span>'}
+ $('ysmpAllLocations').addEventListener('change',()=>{renderScope()});$('ysmpAllWarehouses').addEventListener('change',renderScope);$('ysmpLocations').addEventListener('change',renderScope);renderScope();
+ async function saveSupplier(){const d=md(),code=$('ysmpCode').value.trim(),name=$('ysmpName').value.trim(),email=$('ysmpEmail').value.trim().toLowerCase(),err=$('ysmpError'),all_locations=$('ysmpAllLocations').checked,all_warehouses=$('ysmpAllWarehouses').checked,locations=all_locations?[]:[...m.querySelectorAll('[name="ysmpLoc"]:checked')].map(x=>x.value),warehouses=all_warehouses?[]:[...m.querySelectorAll('[name="ysmpWh"]:checked')].map(x=>x.value);err.textContent='';if(!code||!name)return err.textContent='Šifra i naziv su obavezni.';if(email&&!/^\S+@\S+\.\S+$/.test(email))return err.textContent='Email nije ispravan.';if(!all_locations&&!locations.length)return err.textContent='Odaberi barem jednu lokaciju ili SVE LOKACIJE.';if(!all_warehouses&&!warehouses.length)return err.textContent='Odaberi barem jedno skladište ili SVA SKLADIŠTA.';if(d.suppliers.some(x=>String(x.supplier_code||x.code||'').trim().toLowerCase()===code.toLowerCase()))return err.textContent='Ta šifra dobavljača već postoji.';d.suppliers.push({id:nextId(d.suppliers),supplier_code:code,name,locations,warehouses,all_locations,all_warehouses,contact_phone:$('ysmpPhone').value.trim(),contact_email:email,contact_name:$('ysmpContact').value.trim(),active:true});try{await persist(d,'supplier.add.full');m.classList.remove('open');patchList()}catch(e){err.textContent='Spremanje nije uspjelo: '+String(e?.message||e)}}
+ }
+function resetSupplierModal(){const m=$('yardivoSupplierMasterModalV583');if(!m)return;['ysmpCode','ysmpName','ysmpPhone','ysmpEmail','ysmpContact'].forEach(id=>{if($(id))$(id).value=''});if($('ysmpAllLocations'))$('ysmpAllLocations').checked=false;if($('ysmpAllWarehouses'))$('ysmpAllWarehouses').checked=false;const d=md();if($('ysmpLocations'))$('ysmpLocations').innerHTML=d.locations.filter(x=>x.active!==false).map(x=>`<label><input name="ysmpLoc" type="checkbox" value="${esc(x.id)}"> ${esc(x.name)}</label>`).join('');if($('ysmpWarehouses'))$('ysmpWarehouses').innerHTML='<span>Odaberi lokaciju.</span>';if($('ysmpError'))$('ysmpError').textContent=''}
+function patchList(){const card=$('yardivoMasterSuppliersV583');if(!card)return;const d=md();card.querySelectorAll('[data-spec-sup-name]').forEach(inp=>{const x=d.suppliers.find(v=>String(v.id)===String(inp.dataset.specSupName));if(!x)return;let z=inp.parentElement.querySelector('.yv-supplier-meta');if(!z){z=document.createElement('div');z.className='yv-supplier-meta';inp.insertAdjacentElement('afterend',z)}const ln=x.all_locations?'SVE LOKACIJE':(x.locations||[]).map(id=>d.locations.find(l=>String(l.id)===String(id))?.name).filter(Boolean).join(', ');const wn=x.all_warehouses?'SVA SKLADIŠTA':(x.warehouses||[]).map(id=>d.warehouses.find(w=>String(w.id)===String(id))?.name).filter(Boolean).join(', ');z.textContent=`${x.supplier_code||'—'} · ${ln||'—'} · ${wn||'—'}${x.contact_email?' · '+x.contact_email:''}`})}
+function installImport(){const im=$('yardivoSupplierImportModalV583');if(!im||im.dataset.fullReady)return;im.dataset.fullReady='1';const note=im.querySelector('.ysi-note');if(note)note.innerHTML='Stupci: <b>Šifra dobavljača</b> | <b>Naziv</b> | <b>Lokacije</b> | <b>Skladišta</b> | <b>Kontakt broj</b> | <b>Email</b> | <b>Kontakt osoba</b><br>Za lokacije/skladišta koristi nazive odvojene sa <b>;</b> ili vrijednost <b>SVE</b>. Kontakt osoba je opcionalna.';const drop=im.querySelector('.ysi-drop strong');if(drop)drop.textContent='XLSX · MASTER DOBAVLJAČI';const old=$('ysiFileV583');if(!old)return;const file=old.cloneNode(true);old.replaceWith(file);const pick=im.querySelector('.ysi-pick');if(pick){const np=pick.cloneNode(true);pick.replaceWith(np);np.addEventListener('click',()=>file.click())}file.addEventListener('change',()=>importFull(file.files?.[0],im));}
+async function importFull(f,im){const st=$('ysiStatusV583');if(!f||!window.XLSX)return;try{st.textContent='Čitam i validiram XLSX…';const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});const d=md(),norm=v=>String(v??'').trim().toLowerCase(),find=(r,names)=>{for(const k of Object.keys(r))if(names.some(n=>norm(k).includes(n)))return String(r[k]??'').trim();return''},split=v=>String(v||'').split(/[;,]/).map(x=>x.trim()).filter(Boolean),locBy=new Map(d.locations.filter(x=>x.active!==false).map(x=>[norm(x.name),x.id])),whBy=new Map(d.warehouses.filter(x=>x.active!==false).map(x=>[norm(x.name),x.id])),existing=new Set(d.suppliers.map(x=>norm(x.supplier_code||x.code))),parsed=[];for(const [i,r] of rows.entries()){const code=find(r,['šifra','sifra','code']),name=find(r,['naziv','name']),lv=find(r,['lokacij']),wv=find(r,['skladi']),phone=find(r,['kontakt broj','telefon','phone']),email=find(r,['email','e-mail']),contact=find(r,['kontakt osoba','osoba','contact person']);if(!code&&!name)continue;if(!code||!name)throw new Error(`Red ${i+2}: šifra i naziv su obavezni.`);if(existing.has(norm(code))||parsed.some(x=>norm(x.supplier_code)===norm(code)))throw new Error(`Red ${i+2}: duplikat šifre ${code}.`);const all_locations=/^(sve|all)$/i.test(lv),all_warehouses=/^(sve|all)$/i.test(wv);const locations=all_locations?[]:split(lv).map(x=>locBy.get(norm(x)));const warehouses=all_warehouses?[]:split(wv).map(x=>whBy.get(norm(x)));if(!all_locations&&(!locations.length||locations.some(x=>!x)))throw new Error(`Red ${i+2}: nepoznata ili prazna lokacija.`);if(!all_warehouses&&(!warehouses.length||warehouses.some(x=>!x)))throw new Error(`Red ${i+2}: nepoznato ili prazno skladište.`);if(email&&!/^\S+@\S+\.\S+$/.test(email))throw new Error(`Red ${i+2}: email nije ispravan.`);parsed.push({supplier_code:code,name,locations,warehouses,all_locations,all_warehouses,contact_phone:phone,contact_email:email.toLowerCase(),contact_name:contact,active:true})}if(!parsed.length)throw new Error('Nema dobavljača za import.');let n=0;d.suppliers.forEach(x=>{const m=String(x.id||'').match(/^SUP(\d+)$/);if(m)n=Math.max(n,+m[1])});parsed.forEach(x=>{x.id='SUP'+String(++n).padStart(3,'0');d.suppliers.push(x)});await persist(d,'supplier.xlsx.full');st.textContent='Uvezeno dobavljača: '+parsed.length;st.className='ysi-status ok';patchList();setTimeout(()=>im.classList.remove('open'),700)}catch(e){st.textContent=String(e?.message||e);st.className='ysi-status err'}}
+function supplierAccountUI(){const sel=$('yufSupplierSelect');if(!sel)return;let d=md();sel.innerHTML='<option value="">— ODABERI DOBAVLJAČA —</option>'+d.suppliers.filter(x=>x.active!==false).sort((a,b)=>String(a.name).localeCompare(String(b.name),'hr')).map(x=>`<option value="${esc(x.id)}">${esc(x.supplier_code||'')} · ${esc(x.name)}</option>`).join('');const sf=$('yufSupplierContactFields'),scope=$('yufScopeSection'),name=$('yufName');if(sf)sf.style.display='none';if(scope)scope.style.display='none';if(name?.closest('label'))name.closest('label').style.display='none';const title=$('yufBasicStepTitle');if(title)title.textContent='2 · USERNAME I LOZINKA';sel.onchange=()=>{d=md();const x=d.suppliers.find(v=>String(v.id)===String(sel.value));if(!x)return;name.value=x.name||'';$('yufContactName').value=x.contact_name||'N/A';$('yufContactEmail').value=x.contact_email||'supplier@yardivo.local';$('yufContactPhone').value=x.contact_phone||'';const loc=$('yufLocation');if(loc){loc.innerHTML='<option value="ALL">SVE LOKACIJE</option>';loc.value='ALL'}const aw=$('yufAllWarehouses');if(aw)aw.checked=true;};}
+document.addEventListener('click',e=>{if(e.target.closest?.('#yvAddSupplierPopupV583,#ymdAddSupplier,[data-spec-sup-add]'))setTimeout(()=>{installSupplierModal();resetSupplierModal()},0);if(e.target.closest?.('[data-yucr-role="supplier"]'))setTimeout(supplierAccountUI,0)},true);
+['yardivo:master-data-changed','yardivo:master-data-ready','yardivo:data-synced'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{patchList();installSupplierModal();installImport()},0)));
+setTimeout(()=>{installSupplierModal();installImport();patchList()},0);window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-supplier-master-scope-account-xlsx-total-final';
+})();
+</script>
 </body>
 </html>
