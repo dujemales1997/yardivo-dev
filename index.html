@@ -50241,5 +50241,114 @@ setTimeout(()=>{installSupplierModal();installImport();patchList()},0);window.YA
  window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-master-popup-only-fix-final';
 })();
 </script>
+
+<!-- YARDIVO DEV V5.8.3 · SETTINGS MASTER BOUNDARY + LOGIN HOME + HEADER STABILITY -->
+<style id="yardivo-v583-settings-master-login-home-header-stability-style">
+/* Master popup owns ONLY canonical system Master Data. Ordinary Settings stay on Settings page. */
+#yardivoMasterPopupBodyV583>#masterUserAdmin,
+#yardivoMasterPopupBodyV583>#yardivoFontSettings{display:none!important}
+
+/* Header warehouse context: never expose transient/internal text while canonical name is reconciling. */
+body:not(.home-menu-mode) .topbar .warehouse-toolbar select{
+  transition:none!important;
+}
+</style>
+<script id="yardivo-v583-settings-master-login-home-header-stability">
+(()=>{'use strict';
+if(window.__YARDIVO_SETTINGS_MASTER_LOGIN_HOME_HEADER_STABILITY__)return;
+window.__YARDIVO_SETTINGS_MASTER_LOGIN_HOME_HEADER_STABILITY__=true;
+
+const MASTER_IDS=new Set([
+ 'yardivoSettingsMasterPaneV583',
+ 'yardivoStableMasterEditorV583',
+ 'yardivoMasterDataRegistryV583',
+ 'yardivoMasterOperationalConfigV583'
+]);
+
+function repairSettingsBoundary(){
+ const settings=document.getElementById('settings');
+ const body=document.getElementById('yardivoMasterPopupBodyV583');
+ if(!settings||!body)return;
+ const grid=settings.querySelector('.settings-grid');
+ const font=document.getElementById('yardivoFontSettings');
+
+ /* Canonical Master pane remains in popup. */
+ let pane=document.getElementById('yardivoSettingsMasterPaneV583');
+ if(pane&&pane.parentElement!==body)body.appendChild(pane);
+
+ /* Undo the old broad "everything before font" move. */
+ [...body.children].forEach(el=>{
+   if(MASTER_IDS.has(el.id))return;
+   if(el.id==='yardivoMasterPopupLaunchV583')return;
+   if(grid){
+     if(font&&font.parentElement===grid)grid.insertBefore(el,font);
+     else grid.appendChild(el);
+   }
+ });
+
+ /* Ensure the canonical Master owners themselves are in the Master pane. */
+ if(pane){
+   ['yardivoStableMasterEditorV583','yardivoMasterDataRegistryV583','yardivoMasterOperationalConfigV583'].forEach(id=>{
+     const el=document.getElementById(id);if(el&&el.parentElement!==pane)pane.appendChild(el);
+   });
+   pane.classList.add('active');
+   pane.style.setProperty('display','block','important');
+ }
+}
+
+/* Login contract: authenticated users always land on Početni izbornik, never Dashboard. */
+function forceHomeAfterLogin(){
+ try{
+   if(typeof openAppView==='function'){openAppView('homeMenu');return}
+ }catch(_){}
+ const home=document.getElementById('homeMenu');if(!home)return;
+ document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+ home.classList.add('active');
+ document.body.classList.add('home-menu-mode');
+ document.querySelectorAll('[data-view]').forEach(b=>b.classList.remove('active'));
+}
+
+/* Header warehouse label is rendered from Master name only; no internal Wxxx flash. */
+function stabilizeWarehouseLabel(){
+ const sel=document.getElementById('globalWarehouse')||
+           document.querySelector('.topbar .warehouse-toolbar select');
+ if(!sel)return;
+ let master={warehouses:[]};
+ try{
+   master=window.YardivoStableMasterV583?.get?.()||
+          window.YardivoMasterDataV583?.get?.()||
+          JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');
+ }catch(_){}
+ const whs=Array.isArray(master?.warehouses)?master.warehouses.filter(w=>w&&w.active!==false):[];
+ const value=String(sel.value||'');
+ [...sel.options].forEach(o=>{
+   if(!o.value)return;
+   const w=whs.find(x=>String(x.id)===String(o.value));
+   if(w?.name&&o.textContent!==String(w.name))o.textContent=String(w.name);
+ });
+ if(value)sel.value=value;
+}
+
+document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{repairSettingsBoundary();stabilizeWarehouseLabel()},260));
+window.addEventListener('load',()=>setTimeout(()=>{repairSettingsBoundary();stabilizeWarehouseLabel()},520),{once:true});
+window.addEventListener('yardivo:login',()=>{
+ requestAnimationFrame(forceHomeAfterLogin);
+ setTimeout(forceHomeAfterLogin,90);
+ setTimeout(stabilizeWarehouseLabel,140);
+});
+['yardivo:data-synced','yardivo:master-data-changed','yardivo:context-changed'].forEach(ev=>
+ window.addEventListener(ev,()=>setTimeout(stabilizeWarehouseLabel,40))
+);
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('#yardivoMasterPopupLaunchV583,[data-view="settings"],[data-home-target="settings"]'))
+   setTimeout(repairSettingsBoundary,0);
+ if(e.target?.closest?.('[data-view="dashboard"],[data-home-target="dashboard"]'))
+   requestAnimationFrame(stabilizeWarehouseLabel);
+},true);
+setTimeout(repairSettingsBoundary,100);
+window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-settings-master-login-home-header-stability-final';
+})();
+</script>
+
 </body>
 </html>
