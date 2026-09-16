@@ -49432,5 +49432,38 @@ function bind(){if(!$('ysnRoot')||$('ysnRoot').dataset.bound)return;$('ysnRoot')
 function init(){if(!$('ysnRoot'))return;hydrate();bind();update()}
 window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>{if(!chosenDate&&!$('ysnWarehouse')?.value)init()},60));window.addEventListener('yardivo:login',()=>setTimeout(init,250));document.addEventListener('click',e=>{if(e.target.closest?.('[data-ysp-view="new"]'))setTimeout(init,30)},true);setTimeout(init,100);window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-map-pdf-vehicle-backend-final';})();
 </script>
+
+<style id="yardivo-v583-capacity-visible-all-sections-style">
+.yv-cap-strip{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 2px}.yv-cap-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #cfe0ed;background:#f6fbff;color:#214762;border-radius:999px;padding:6px 10px;font-size:10px;font-weight:900}.yv-cap-pill b{color:#0e6fce}.yv-cap-pill.ok{background:#eef9f3;border-color:#bfe4ce;color:#176a42}.yv-cap-pill.warn{background:#fff8e8;border-color:#edd9a3;color:#805d12}
+#ysnCapacitySummary{padding:0 18px 14px;background:#f1f7fc}.ysn-cap-grid{display:flex;flex-wrap:wrap;gap:8px}.ysn-cap-card{min-width:150px;background:#fff;border:1px solid #d6e4ee;border-radius:10px;padding:9px 11px}.ysn-cap-card strong{display:block;font-size:10px;color:#173a57}.ysn-cap-card span{display:block;margin-top:3px;font-size:9px;color:#6e8598}.ysn-ramp-cap{display:block;font-size:8px;font-weight:750;color:#6f8597;margin-top:3px;white-space:nowrap}
+</style>
+<script id="yardivo-v583-capacity-visible-all-sections-authority">
+(()=>{'use strict';
+if(window.__YARDIVO_CAPACITY_VISIBLE_ALL_SECTIONS_V583__)return;window.__YARDIVO_CAPACITY_VISIBLE_ALL_SECTIONS_V583__=true;
+const $=id=>document.getElementById(id);
+function master(){try{return JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){return {warehouses:[]}}}
+function scope(){return window.__YARDIVO_SUPPLIER_CANONICAL_SCOPE_V583||{}}
+function warehouses(){const s=scope();const sw=Array.isArray(s.warehouses)?s.warehouses:[];const mw=Array.isArray(master().warehouses)?master().warehouses:[];const map=new Map();mw.forEach(w=>w&&map.set(String(w.id),w));sw.forEach(w=>{if(!w)return;const old=map.get(String(w.id))||{};map.set(String(w.id),Object.assign({},old,w,{ramp_settings:Array.isArray(w.ramp_settings)?w.ramp_settings:(old.ramp_settings||[])}))});return [...map.values()]}
+function wh(id){return warehouses().find(w=>String(w.id)===String(id||''))||null}
+function ramps(w){return (w?.ramp_settings||[]).filter(r=>r&&r.active!==false)}
+function daily(w){const direct=Number(w?.daily_pallet_capacity);if(Number.isFinite(direct)&&direct>0)return direct;const rs=ramps(w),caps=rs.map(r=>Number(r.max_pallets));return rs.length&&caps.every(x=>Number.isFinite(x)&&x>0)?caps.reduce((a,b)=>a+b,0):null}
+function name(w){return String(w?.name||'Skladište')}
+function info(w){const rs=ramps(w),d=daily(w);return {rs,d,txt:(d?d+' pal/dan':'KAPACITET NEPOZNAT')+' · '+rs.length+' '+(rs.length===1?'rampa':'rampi')}}
+function selectedGlobal(){return String($('globalWarehouse')?.value||'')}
+function selectedDaily(){return String($('dailyMapWarehouseSelect')?.value||$('dailyMapWarehouse')?.dataset?.warehouse||selectedGlobal())}
+function pillHost(anchor,id,w){if(!anchor||!w)return;let h=$(id);if(!h){h=document.createElement('div');h.id=id;h.className='yv-cap-strip';anchor.insertAdjacentElement('afterend',h)}const x=info(w);h.innerHTML='<span class="yv-cap-pill ok"><b>'+esc(name(w))+'</b></span><span class="yv-cap-pill">PRIJAM: <b>'+esc(x.txt)+'</b></span>'+x.rs.map(r=>'<span class="yv-cap-pill">R'+Number(r.number||0)+': <b>'+(Number(r.max_pallets)>0?Number(r.max_pallets)+' pal':'—')+'</b> · '+(Number(r.pallets_per_hour)>0?Number(r.pallets_per_hour)+' pal/h':'pal/h —')+'</span>').join('')}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderGlobal(){const w=wh(selectedGlobal());const badge=$('globalWarehouseInfo');if(w&&badge){const x=info(w);badge.textContent=name(w)+' · '+x.txt}const dash=$('dashWarehouseSubtitle');if(w&&dash){const x=info(w);dash.textContent='Današnji operativni pregled · '+name(w)+' · kapacitet prijama '+(x.d?x.d+' pal/dan':'nepoznat')}if(w)pillHost($('globalWarehouse')?.closest('.header-context,.global-context,.context-control')||$('globalWarehouse'), 'yvGlobalCapacityStrip',w)}
+function renderDaily(){const w=wh(selectedDaily());if(!w)return;const x=info(w),b=$('dailyMapWarehouse');if(b)b.textContent=name(w)+' · '+x.txt;const sel=$('dailyMapWarehouseSelect');if(sel)pillHost(sel,'yvDailyCapacityStrip',w);const weekly=$('weeklyWarehouseLabel');if(weekly&&String($('weeklyMapWarehouse')?.value||'')===String(w.id))weekly.textContent=name(w)+' · '+x.txt}
+function renderSupplier(){const sel=$('ysnWarehouse');if(!sel)return;const w=wh(sel.value),map=$('ysnMap');if(!w||!map)return;let host=$('ysnCapacitySummary');if(!host){host=document.createElement('div');host.id='ysnCapacitySummary';const head=map.querySelector('.ysn-map-head');head?.insertAdjacentElement('afterend',host)}const x=info(w);host.innerHTML='<div class="ysn-cap-grid"><div class="ysn-cap-card"><strong>KAPACITET PRIJAMA</strong><span>'+(x.d?x.d+' paleta / dan':'KAPACITET NEPOZNAT')+'</span></div><div class="ysn-cap-card"><strong>AKTIVNE RAMPE</strong><span>'+x.rs.length+'</span></div>'+x.rs.map(r=>'<div class="ysn-cap-card"><strong>'+esc(r.name||('Rampa '+r.number))+'</strong><span>'+(Number(r.max_pallets)>0?Number(r.max_pallets)+' paleta max':'Max kapacitet —')+' · '+(Number(r.pallets_per_hour)>0?Number(r.pallets_per_hour)+' pal/h':'pal/h —')+'</span></div>').join('')+'</div>';
+const board=$('ysnBoard');if(board){board.querySelectorAll('.ysn-grid tbody tr').forEach((tr,i)=>{const r=x.rs[i],th=tr.querySelector('th.ramp');if(r&&th&&!th.querySelector('.ysn-ramp-cap'))th.insertAdjacentHTML('beforeend','<span class="ysn-ramp-cap">'+(Number(r.max_pallets)>0?Number(r.max_pallets)+' pal max':'max —')+' · '+(Number(r.pallets_per_hour)>0?Number(r.pallets_per_hour)+' pal/h':'pal/h —')+'</span>')})}}
+function renderAll(){renderGlobal();renderDaily();renderSupplier()}
+['globalWarehouse','dailyMapWarehouseSelect','weeklyMapWarehouse','annWarehouse','ysnWarehouse'].forEach(id=>document.addEventListener('change',e=>{if(e.target?.id===id)setTimeout(renderAll,0)},true));
+['yardivo:master-data-changed','yardivo:data-synced','yardivo:login','yardivo:supplier-request-updated'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(renderAll,80)));
+document.addEventListener('click',e=>{if(e.target.closest?.('[data-ysp-view="new"],.nav-item,[data-view]'))setTimeout(renderAll,80)},true);
+setInterval(renderAll,1500);setTimeout(renderAll,120);window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-capacity-visible-all-sections-final';
+})();
+</script>
+
 </body>
 </html>
