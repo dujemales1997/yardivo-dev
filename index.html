@@ -6047,7 +6047,7 @@ const LOCAL_ONLY_EXACT=new Set([
  'yardivo_voice_notifications_v583',
  'yardivo_remembered_session','yardivo_session','yardivo_custom_session',
  'yardivo_real_auth_cutover_v1','yardivo_rbac_session_migrated_20260831',
- 'yardivo_client_id_v1','yardivo_active_warehouse'
+ 'yardivo_client_id_v1','yardivo_active_warehouse','yardivo_master_boot_cache_v583'
 ]);
 
 function isAuthProviderKey(k){
@@ -6149,6 +6149,59 @@ window.YardivoBrowserlessStorageV583={
 })();
 </script>
 
+<script id="yardivo-v583-master-x10-instant-boot-authority">
+(function(){
+'use strict';
+if(window.__YARDIVO_MASTER_X10_INSTANT_BOOT_AUTHORITY__)return;
+window.__YARDIVO_MASTER_X10_INSTANT_BOOT_AUTHORITY__=true;
+const MASTER='yardivo_master_data_registry_v583';
+const CACHE='yardivo_master_boot_cache_v583';
+const BASE='https://rskticdbiovvgyocpzoc.supabase.co';
+const APIKEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
+const EDGE=BASE+'/functions/v1/yardivo-sync';
+function parse(v){try{return JSON.parse(v||'null')}catch(_){return null}}
+function normalized(d){return d&&Array.isArray(d.locations)&&Array.isArray(d.warehouses)&&Array.isArray(d.suppliers)}
+function hasData(d){return normalized(d)&&(d.locations.length||d.warehouses.length||d.suppliers.length||Array.isArray(d.responsible_people)&&d.responsible_people.length)}
+function current(){return parse(localStorage.getItem(MASTER))||{}}
+function cacheWrite(d){if(!normalized(d))return;try{localStorage.setItem(CACHE,JSON.stringify(d))}catch(_){}}
+function install(d,source){
+ if(!normalized(d))return false;
+ const cur=current();
+ /* Never replace an active local Master edit with an asynchronous bootstrap response. */
+ if(source==='server'&&hasData(cur))return false;
+ try{localStorage.setItem(MASTER,JSON.stringify(d));cacheWrite(d)}catch(_){return false}
+ try{window.dispatchEvent(new CustomEvent('yardivo:master-data-ready',{detail:{source}}))}catch(_){}
+ try{window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{source:'master-x10-'+source,bootstrap:true}}))}catch(_){}
+ return true;
+}
+/* Synchronous first paint from last verified server snapshot. Canonical writes still go to Supabase. */
+const cached=parse(localStorage.getItem(CACHE));
+if(normalized(cached)&&!hasData(current()))install(cached,'cache');
+/* Keep the read-through cache current without turning it into a second source of truth. */
+window.addEventListener('yardivo:data-synced',()=>cacheWrite(current()));
+window.addEventListener('yardivo:master-data-changed',()=>cacheWrite(current()));
+function tokenFromStorage(){
+ try{
+  const raw=localStorage.getItem('sb-rskticdbiovvgyocpzoc-auth-token');
+  const d=parse(raw);return String(d?.access_token||d?.currentSession?.access_token||'');
+ }catch(_){return''}
+}
+async function earlyServerMaster(){
+ if(hasData(current()))return;
+ const token=tokenFromStorage();if(!token)return;
+ try{
+  const r=await fetch(EDGE,{method:'POST',headers:{apikey:APIKEY,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({action:'bootstrap',clientId:'master-x10-boot'})});
+  if(!r.ok)return;
+  const d=await r.json();
+  const row=(Array.isArray(d?.state)?d.state:[]).find(x=>String(x?.key||'')===MASTER&&!x?.deleted);
+  const master=parse(row?.value_json);
+  if(normalized(master)&&!hasData(current()))install(master,'server');
+ }catch(_){}
+}
+earlyServerMaster();
+window.YardivoMasterInstantBootV583={ready:()=>hasData(current()),refresh:earlyServerMaster};
+})();
+</script>
 
 <script id="yardivo-factory-zero-bootstrap-v583">(function(){'use strict';window.__YARDIVO_FACTORY_ZERO_BOOTSTRAP_DISABLED_V583__=true;/* Factory Zero is explicit-only. Never wipe business data on normal page load. */})();</script>
 
@@ -49776,5 +49829,64 @@ window.YardivoHeaderMasterWarehouseAuthorityV583={sync,fillWarehouse};
 window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-supplier-popup-header-multiwarehouse-final';
 })();
 </script>
+
+<style id="yardivo-v583-master-total-stability-style">
+#yardivoMasterPopupV583[data-yv583-master-loading="1"] .ymp-body{opacity:1!important;pointer-events:auto!important}
+</style>
+<script id="yardivo-v583-master-total-stability-authority-final">
+(()=>{'use strict';
+if(window.__YARDIVO_MASTER_TOTAL_STABILITY_FINAL__)return;window.__YARDIVO_MASTER_TOTAL_STABILITY_FINAL__=true;
+let editHold=0,paintQueued=0;
+function editing(){return Date.now()<editHold||!!document.activeElement?.closest?.('#yardivoMasterPopupV583,#yardivoStableMasterEditorV583,#yardivoMasterFoundationV583')}
+function hold(){editHold=Date.now()+1400}
+function paint(){if(editing())return;cancelAnimationFrame(paintQueued);paintQueued=requestAnimationFrame(()=>{paintQueued=0;try{window.YardivoLocationDropdownAuthorityV583?.sync?.()}catch(_){}try{window.YardivoHeaderMasterWarehouseAuthorityV583?.sync?.()}catch(_){}try{window.YardivoStableMasterV583?.render?.()}catch(_){}try{window.YardivoMasterHeaderCapacityBindingV583?.refresh?.()}catch(_){}})}
+document.addEventListener('input',e=>{if(e.target?.closest?.('#yardivoMasterPopupV583,#yardivoStableMasterEditorV583,#yardivoMasterFoundationV583'))hold()},true);
+document.addEventListener('change',e=>{if(e.target?.closest?.('#yardivoMasterPopupV583,#yardivoStableMasterEditorV583,#yardivoMasterFoundationV583'))hold()},true);
+window.addEventListener('yardivo:master-data-ready',()=>paint());
+window.addEventListener('yardivo:data-synced',()=>paint());
+/* Opening Settings/Home paints from the already hydrated memory/cache immediately; network refresh is background-only. */
+document.addEventListener('click',e=>{if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"],#yardivoMasterPopupLaunchV583,[data-view="home"],[data-home-target="home"]')){paint();try{window.YardivoMasterInstantBootV583?.refresh?.()}catch(_){}}},true);
+window.YardivoMasterTotalStabilityV583={paint,editing};
+window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-master-x10-instant-boot-no-flicker-total-fix-final';
+})();
+</script>
+
+<style id="yardivo-v583-supplier-popup-xlsx-total-fix-style">
+#yardivoMasterSuppliersV583 .yv-supplier-actions-v583{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+#yardivoMasterSuppliersV583 .yv-supplier-actions-v583 button{min-height:46px;border-radius:12px;font-weight:900}
+#yardivoMasterSuppliersV583 .yv-supplier-code-v583{font-size:11px;font-weight:900;color:#5f7895;letter-spacing:.04em;margin-right:auto;white-space:nowrap}
+#yardivoMasterSuppliersV583 .ymsup-row{grid-template-columns:minmax(0,1fr) auto!important}
+#yardivoSupplierImportModalV583{position:fixed;inset:0;z-index:2147483201;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(9,18,35,.58);backdrop-filter:blur(8px)}
+#yardivoSupplierImportModalV583.open{display:flex}#yardivoSupplierImportModalV583 .ysi-card{width:min(620px,94vw);background:#fff;color:#10233f;border-radius:24px;overflow:hidden;box-shadow:0 28px 80px rgba(9,30,66,.28)}
+#yardivoSupplierImportModalV583 .ysi-head{display:flex;justify-content:space-between;align-items:center;padding:22px 24px;border-bottom:1px solid #e7edf4}#yardivoSupplierImportModalV583 h3{margin:0;font-size:19px}#yardivoSupplierImportModalV583 .ysi-x{width:40px;height:40px;border:0;border-radius:12px;background:#f2f6fb;font-size:22px;cursor:pointer}
+#yardivoSupplierImportModalV583 .ysi-body{padding:24px;display:grid;gap:14px}.ysi-drop{border:2px dashed #b9cbe0;border-radius:16px;padding:22px;text-align:center}.ysi-note{font-size:12px;line-height:1.55;color:#667d98}.ysi-status{min-height:20px;font-size:12px;font-weight:800}.ysi-status.err{color:#b42318}.ysi-status.ok{color:#137333}
+#yardivoSupplierImportModalV583 .ysi-actions{display:flex;gap:10px;justify-content:flex-end;padding:0 24px 24px}#yardivoSupplierImportModalV583 .ysi-actions button{min-height:44px;padding:0 18px;border-radius:12px;font-weight:900;cursor:pointer}.ysi-cancel{background:#fff;border:1px solid #ccd8e6}.ysi-pick{background:#1769e0;color:#fff;border:0}
+@media(max-width:600px){#yardivoMasterSuppliersV583 .yv-supplier-actions-v583{grid-template-columns:1fr}}
+</style>
+<div id="yardivoSupplierImportModalV583" role="dialog" aria-modal="true" aria-labelledby="ysiTitle">
+ <div class="ysi-card"><div class="ysi-head"><h3 id="ysiTitle">IMPORT DOBAVLJAČA · XLSX</h3><button type="button" class="ysi-x" aria-label="Zatvori">×</button></div>
+ <div class="ysi-body"><div class="ysi-drop"><strong>XLSX DATOTEKA S DVA STUPCA</strong><div class="ysi-note" style="margin-top:8px">Prvi red: <b>Šifra dobavljača</b> | <b>Naziv</b><br>Možeš uvesti 200+ dobavljača odjednom.</div></div><input id="ysiFileV583" type="file" accept=".xlsx,.xls" hidden><div id="ysiStatusV583" class="ysi-status" aria-live="polite"></div></div>
+ <div class="ysi-actions"><button type="button" class="ysi-cancel">ODUSTANI</button><button type="button" class="ysi-pick">ODABERI XLSX</button></div></div>
+</div>
+<script id="yardivo-v583-supplier-popup-xlsx-total-fix-authority">
+(()=>{'use strict';
+if(window.__YARDIVO_SUPPLIER_POPUP_XLSX_TOTAL_FIX_V583__)return;window.__YARDIVO_SUPPLIER_POPUP_XLSX_TOTAL_FIX_V583__=true;
+const KEY='yardivo_master_data_registry_v583',$=id=>document.getElementById(id),im=$('yardivoSupplierImportModalV583'),file=$('ysiFileV583'),status=$('ysiStatusV583');
+function master(){try{const d=JSON.parse(localStorage.getItem(KEY)||'{}');d.suppliers=Array.isArray(d.suppliers)?d.suppliers:[];return d}catch(_){return{suppliers:[]}}}
+function nextId(arr){let n=0;(arr||[]).forEach(x=>{const m=String(x?.id||'').match(/^SUP(\d+)$/);if(m)n=Math.max(n,+m[1]||0)});return()=>('SUP'+String(++n).padStart(3,'0'))}
+async function persist(d,reason){d.__masterUpdatedAtV583=new Date().toISOString();d.__masterWriteTokenV583='SUPIMPORT-'+Date.now();localStorage.setItem(KEY,JSON.stringify(d));await Promise.resolve(window.YardivoMasterDataV583?.save?.(JSON.parse(JSON.stringify(d))));try{await window.YardivoSupabase?.flushQueue?.()}catch(_){}window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{source:'supplier-authority-v583',reason}}));}
+function openSupplier(){const m=$('yardivoSupplierMasterModalV583');if(!m)return;m.classList.add('open');const n=$('ysmpName'),c=$('ysmpCode'),e=$('ysmpError');if(n)n.value='';if(c)c.value='';if(e)e.textContent='';setTimeout(()=>n?.focus(),0)}
+function openImport(){status.textContent='';status.className='ysi-status';file.value='';im.classList.add('open')}
+function closeImport(){im.classList.remove('open')}
+function patchUI(){const card=$('yardivoMasterSuppliersV583');if(!card)return;card.querySelector('#specNewSupplier')?.remove();const old=card.querySelector('[data-spec-sup-add]');if(old){old.removeAttribute('data-spec-sup-add');old.id='yvAddSupplierPopupV583';old.textContent='DODAJ DOBAVLJAČA'}let acts=card.querySelector('.yv-supplier-actions-v583');if(!acts){acts=document.createElement('div');acts.className='yv-supplier-actions-v583';acts.innerHTML='<button type="button" class="primary" id="yvAddSupplierPopupV583">DODAJ DOBAVLJAČA</button><button type="button" id="yvImportSuppliersXlsxV583">IMPORT DOBAVLJAČI XLSX</button>';card.querySelector('.ymsup-add')?.replaceWith(acts)}else if(!acts.querySelector('#yvImportSuppliersXlsxV583'))acts.insertAdjacentHTML('beforeend','<button type="button" id="yvImportSuppliersXlsxV583">IMPORT DOBAVLJAČI XLSX</button>');
+ const d=master();card.querySelectorAll('[data-spec-sup-name]').forEach(inp=>{const x=d.suppliers.find(v=>String(v.id)===String(inp.dataset.specSupName));if(!x)return;let badge=inp.parentElement?.querySelector('.yv-supplier-code-v583');if(!badge){badge=document.createElement('div');badge.className='yv-supplier-code-v583';inp.insertAdjacentElement('beforebegin',badge)}badge.textContent='ŠIFRA: '+String(x.supplier_code||x.code||'—')});}
+async function importFile(f){if(!f)return;if(!window.XLSX){status.textContent='XLSX modul nije učitan. Osvježi YARDIVO i pokušaj ponovno.';status.className='ysi-status err';return}status.textContent='Čitam datoteku…';try{const buf=await f.arrayBuffer(),wb=XLSX.read(buf,{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});if(rows.length<2)throw new Error('Datoteka nema redove za import.');const norm=v=>String(v??'').trim().toLowerCase().replace(/\s+/g,' ');const h=(rows[0]||[]).map(norm);let ci=h.findIndex(v=>v.includes('šifra')||v.includes('sifra')||v==='code'||v.includes('supplier code')),ni=h.findIndex(v=>v.includes('naziv')||v.includes('ime')||v==='name'||v.includes('supplier name'));if(ci<0||ni<0){ci=0;ni=1}const parsed=rows.slice(1).map(r=>({code:String(r[ci]??'').trim(),name:String(r[ni]??'').trim()})).filter(x=>x.code||x.name);if(!parsed.length)throw new Error('Nema dobavljača za import.');const bad=parsed.filter(x=>!x.code||!x.name);if(bad.length)throw new Error('Svaki red mora imati šifru i naziv. Neispravnih redova: '+bad.length);const d=master(),existing=new Set(d.suppliers.map(x=>norm(x.supplier_code||x.code))),seen=new Set(),dup=[];for(const x of parsed){const k=norm(x.code);if(existing.has(k)||seen.has(k))dup.push(x.code);seen.add(k)}if(dup.length)throw new Error('Duplikat šifre: '+dup.slice(0,8).join(', ')+(dup.length>8?'…':''));const id=nextId(d.suppliers);for(const x of parsed)d.suppliers.push({id:id(),supplier_code:x.code,name:x.name,active:true});await persist(d,'supplier.xlsx-import');status.textContent='Uvezeno dobavljača: '+parsed.length;status.className='ysi-status ok';patchUI();setTimeout(closeImport,700)}catch(e){console.error(e);status.textContent=e?.message||'Import nije uspio.';status.className='ysi-status err'}}
+document.addEventListener('click',e=>{const add=e.target.closest?.('#yvAddSupplierPopupV583');if(add){e.preventDefault();e.stopImmediatePropagation();openSupplier();return}const imp=e.target.closest?.('#yvImportSuppliersXlsxV583');if(imp){e.preventDefault();e.stopImmediatePropagation();openImport();return}},true);
+im.querySelector('.ysi-x').addEventListener('click',closeImport);im.querySelector('.ysi-cancel').addEventListener('click',closeImport);im.querySelector('.ysi-pick').addEventListener('click',()=>file.click());im.addEventListener('mousedown',e=>{if(e.target===im)closeImport()});file.addEventListener('change',()=>importFile(file.files?.[0]));
+['yardivo:master-data-changed','yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(patchUI,0)));document.addEventListener('click',e=>{if(e.target.closest?.('#yardivoMasterPopupLaunchV583'))setTimeout(patchUI,0)},true);setTimeout(patchUI,0);
+window.YardivoSupplierMasterAuthorityV583={patchUI,openSupplier,openImport};window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-supplier-popup-xlsx-import-total-fix-final';
+})();
+</script>
+
 </body>
 </html>
