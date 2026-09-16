@@ -49525,5 +49525,39 @@ window.addEventListener('yardivo:data-synced',()=>{if(!supplier()||!$('ysnRoot')
 window.YardivoSupplierDailyMapAfterDateV583={open:forceMap};
 })();
 </script>
-</body>
+\n<script id="yardivo-v583-location-dropdowns-master-binding-final">
+(function(){
+'use strict';
+const KEY='yardivo_master_data_registry_v583';
+function master(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(_){return {}}}
+function locations(){return (Array.isArray(master().locations)?master().locations:[]).filter(x=>x&&x.active!==false&&String(x.id||'').trim()&&String(x.name||'').trim())}
+function esc(v){return String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]))}
+function fill(sel, placeholder, preserve){
+ if(!sel)return; const rows=locations(), old=preserve?String(sel.value||''):'';
+ sel.innerHTML='<option value="" disabled>'+placeholder+'</option>'+rows.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
+ sel.value=rows.some(x=>String(x.id)===old)?old:''; sel.disabled=!rows.length;
+}
+function home(){
+ const sel=document.getElementById('homeLocationSelect'); if(!sel)return;
+ const old=String(sel.value||''); fill(sel,'Odaberi lokaciju...',true);
+ if(old&&locations().some(x=>String(x.id)===old))sel.value=old; else sel.value='';
+ const st=document.getElementById('homeLocationStatus'); if(st)st.textContent=sel.value?(locations().find(x=>String(x.id)===sel.value)?.name||''):'Lokacija nije odabrana';
+}
+function masterCreate(){
+ const sel=document.getElementById('smNewWarehouseLocation'); if(!sel)return;
+ const old=String(sel.value||''); fill(sel,'— ODABERI LOKACIJU —',true);
+ if(old&&locations().some(x=>String(x.id)===old))sel.value=old;
+ const label=sel.closest('label'); const span=label&&label.querySelector('span'); if(span)span.innerHTML='2 · ODABERI LOKACIJU <b>*</b>';
+ sel.setAttribute('aria-label','Odaberi lokaciju za novo skladište');
+ const btn=document.querySelector('#yardivoStableMasterEditorV583 [data-sm-add-wh]'); if(btn)btn.disabled=!sel.value;
+}
+function sync(){home();masterCreate()}
+document.addEventListener('focusin',e=>{if(e.target?.id==='homeLocationSelect')home();if(e.target?.id==='smNewWarehouseLocation')masterCreate()},true);
+document.addEventListener('pointerdown',e=>{if(e.target?.id==='homeLocationSelect')home();if(e.target?.id==='smNewWarehouseLocation')masterCreate()},true);
+document.addEventListener('change',e=>{if(e.target?.id==='smNewWarehouseLocation'){const b=document.querySelector('#yardivoStableMasterEditorV583 [data-sm-add-wh]');if(b)b.disabled=!e.target.value}},true);
+['yardivo:master-data-changed','yardivo:data-synced','yardivo:login'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(sync,0)));
+document.addEventListener('DOMContentLoaded',()=>setTimeout(sync,0)); window.addEventListener('load',()=>setTimeout(sync,100));
+window.YardivoLocationDropdownAuthorityV583={sync};
+})();
+</script>\n</body>
 </html>
