@@ -51078,5 +51078,141 @@ window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-settings-master-admin-role-fix-qa-
 })();
 </script>
 
+
+<style id="yardivo-v583-settings-ordinary-visible-master-isolated-style">
+/* SETTINGS page: Master button + ordinary settings visible immediately. */
+#settings .settings-grid{display:block!important}
+#settings #yardivoMasterPopupLaunchV583{display:flex!important;position:relative!important;width:100%!important;margin:0 0 18px!important}
+body.yv-v583-nonadmin #settings #yardivoMasterPopupLaunchV583{display:none!important}
+#settings #yardivoSettingsExactV583{display:grid!important;gap:14px!important;width:100%!important}
+#settings #yardivoSettingsExactV583 > #yardivoFontSettings,
+#settings #yardivoSettingsExactV583 > #yardivoThemeSettingExactV583,
+#settings #yardivoSettingsExactV583 > #yardivoNonWorkingDaysSettings,
+#settings #yardivoSettingsExactV583 > #yardivoVoiceSettingsV583,
+#settings #yardivoSettingsExactV583 > #yardivoVoicePlaceholderExactV583,
+#settings #yardivoSettingsExactV583 > #yardivoSmartToggleCardExactV583{display:block!important;visibility:visible!important;opacity:1!important}
+
+/* MASTER content can render only inside Master popup. */
+#settings #yardivoSettingsMasterPaneV583{display:none!important}
+#yardivoMasterPopupV583 #yardivoSettingsMasterPaneV583{display:block!important}
+</style>
+<script id="yardivo-v583-settings-ordinary-visible-master-isolated-js">
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+function getRole(){
+ try{if(typeof currentSession!=='undefined'&&currentSession?.role)return String(currentSession.role).toLowerCase()}catch(_){}
+ return String(window.currentSession?.role||window.currentUser?.role||'').toLowerCase();
+}
+function fix(){
+ const settings=$('settings'),grid=settings?.querySelector('.settings-grid');if(!grid)return;
+ const admin=getRole()==='admin';
+ document.body.classList.toggle('yv-v583-admin',admin);document.body.classList.toggle('yv-v583-nonadmin',!admin);
+
+ let shell=$('yardivoSettingsExactV583');
+ if(!shell){shell=document.createElement('div');shell.id='yardivoSettingsExactV583'}
+ const launch=$('yardivoMasterPopupLaunchV583');
+ if(launch&&launch.parentElement!==grid)grid.prepend(launch);
+ if(shell.parentElement!==grid){if(launch)launch.insertAdjacentElement('afterend',shell);else grid.prepend(shell)}
+ if(launch){launch.hidden=!admin;launch.style.setProperty('display',admin?'flex':'none','important')}
+
+ /* Ordinary settings always live on Settings page, never in Master popup. */
+ const ordinary=['yardivoFontSettings','yardivoThemeSettingExactV583','yardivoNonWorkingDaysSettings','yardivoVoiceSettingsV583','yardivoVoicePlaceholderExactV583','yardivoSmartToggleCardExactV583'];
+ ordinary.forEach(id=>{const x=$(id);if(x){shell.appendChild(x);x.hidden=false;x.style.setProperty('display','block','important')}});
+
+ /* Master pane is physically kept in popup body. */
+ const pane=$('yardivoSettingsMasterPaneV583'),pb=$('yardivoMasterPopupBodyV583');
+ if(pane&&pb&&pane.parentElement!==pb)pb.appendChild(pane);
+}
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('[data-home-target="settings"],[data-view="settings"],[data-target="settings"],#navSettings'))setTimeout(fix,0);
+},true);
+['yardivo:login','yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(fix,30)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(fix,1400),{once:true});else setTimeout(fix,800);
+window.YardivoSettingsOrdinaryVisibleV583={fix};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-settings-ordinary-visible-master-isolated-final';
+})();
+</script>
+
+
+<style id="yardivo-v583-master-close-x-fix-style">
+/* Closed means closed. Prevent older patches from forcing the Master popup visible. */
+#yardivoMasterPopupV583.yv-master-force-closed-v583{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+</style>
+<script id="yardivo-v583-master-close-x-fix-js">
+(()=>{'use strict';
+const ID='yardivoMasterPopupV583';
+function popup(){return document.getElementById(ID)}
+function closeMaster(){
+ const p=popup();if(!p)return;
+ p.classList.add('yv-master-force-closed-v583');
+ p.classList.remove('open','show','active','is-open','visible');
+ p.hidden=true;p.setAttribute('aria-hidden','true');
+ p.style.setProperty('display','none','important');
+ document.documentElement.classList.remove('master-open','modal-open');
+ document.body.classList.remove('master-open','modal-open');
+ document.body.style.removeProperty('overflow');
+}
+function openMaster(){
+ const p=popup();if(!p)return;
+ p.classList.remove('yv-master-force-closed-v583');
+ p.hidden=false;p.removeAttribute('hidden');p.setAttribute('aria-hidden','false');
+ p.style.removeProperty('display');
+}
+function isCloseControl(t){
+ if(!t)return false;
+ const explicit=t.closest?.('#yardivoMasterPopupCloseV583,[data-master-close],[data-close-master],[aria-label="Zatvori"],[aria-label="Close"]');
+ if(explicit)return true;
+ const b=t.closest?.('button');if(!b||!b.closest?.('#'+ID))return false;
+ const tx=String(b.textContent||'').trim();
+ return tx==='×'||tx==='✕'||tx==='X'||tx==='x';
+}
+document.addEventListener('click',e=>{
+ if(isCloseControl(e.target)){e.preventDefault();e.stopImmediatePropagation();closeMaster();return}
+ if(e.target?.closest?.('#yardivoMasterPopupLaunchV583')){openMaster();return}
+ if(e.target===popup()){closeMaster()}
+},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&popup()&&!popup().hidden){e.preventDefault();closeMaster()}},true);
+window.YardivoMasterCloseV583={close:closeMaster,open:openMaster};
+})();
+</script>
+
+
+<script id="yardivo-v583-login-always-home-menu-final-js">
+(()=>{'use strict';
+let lastAuth=false, forcing=false;
+const homeTargets=['home','welcome','start'];
+function authenticated(){
+ try{if(typeof currentSession!=='undefined'&&currentSession)return true}catch(_){}
+ return !!(window.currentSession||window.currentUser);
+}
+function goHome(){
+ if(forcing)return;forcing=true;
+ try{
+   /* Prefer the app's own navigation controls so all existing view state is updated. */
+   const btn=document.querySelector('[data-home-target="home"],[data-view="home"],[data-target="home"],#navHome,[onclick*="showHome"],[onclick*="homeView"]');
+   if(btn){btn.click()}
+   else if(typeof window.showView==='function'){window.showView('home')}
+   else if(typeof window.navigateTo==='function'){window.navigateTo('home')}
+   else{
+     document.querySelectorAll('.page,.view,[data-page]').forEach(x=>x.classList.remove('active','show'));
+     const h=document.getElementById('home')||document.getElementById('homeView')||document.querySelector('[data-page="home"]');
+     if(h){h.classList.add('active','show');h.hidden=false}
+   }
+   try{sessionStorage.setItem('yardivo_v583_login_landing','home')}catch(_){}
+ }finally{setTimeout(()=>forcing=false,100)}
+}
+function check(){
+ const now=authenticated();
+ if(now&&!lastAuth){setTimeout(goHome,40);setTimeout(goHome,350)}
+ lastAuth=now;
+}
+['yardivo:login','yardivo:authenticated','yardivo:session-ready','yardivo:data-synced'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{lastAuth=false;check()},0)));
+document.addEventListener('submit',e=>{if(e.target?.closest?.('#loginForm,.login-form,[data-login-form]'))setTimeout(check,250)},true);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(check,900),{once:true});else setTimeout(check,500);
+window.YardivoLoginLandingV583={goHome,check};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-login-always-home-menu-final';
+})();
+</script>
+
 </body>
 </html>
