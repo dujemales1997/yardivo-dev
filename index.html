@@ -50872,5 +50872,149 @@ window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-master-single-owner-smart-settings
 })();
 </script>
 
+
+<style id="yardivo-v583-settings-master-exact-contract-style">
+/* ================= YARDIVO DEV V5.8.3 — FINAL SETTINGS CONTRACT =================
+   ORDINARY SETTINGS (all roles): Font, Theme, Non-working days, Voice ON/OFF, SMART ON/OFF.
+   MASTER DATA (Admin only): Location, Warehouse, Warehouse/Ramps config, Dwell,
+   SMART recommendation rules, Supplier, Responsible person, Factory Reset, Accounts.
+   ============================================================================== */
+#yardivoSettingsExactV583{display:grid;gap:14px}
+#yardivoSettingsExactV583 .yv-exact-card{border:1px solid #d9e4ee;border-radius:14px;padding:16px;background:#fff;color:#10233f}
+#yardivoSettingsExactV583 .yv-exact-head{display:flex;align-items:center;justify-content:space-between;gap:18px}
+#yardivoSettingsExactV583 h3{margin:0;font-size:14px;color:inherit}
+#yardivoSettingsExactV583 p{margin:4px 0 0;font-size:10px;color:#71849a}
+#yardivoSettingsExactV583 .yv-switch{min-width:92px;border:1px solid #c8d6e4;border-radius:999px;padding:9px 14px;background:#eef3f8;color:#28445f;font-weight:950;cursor:pointer}
+#yardivoSettingsExactV583 .yv-switch.on{background:#e8f8ef;color:#116d3b;border-color:#a9ddbf}
+#yardivoSettingsExactV583 #yardivoFontSettings,
+#yardivoSettingsExactV583 #yardivoNonWorkingDaysSettings{display:block!important;margin:0!important}
+#yardivoSettingsExactV583 #yardivoVoiceSettingsV583{display:block!important;margin:0!important}
+#yardivoSettingsExactV583 #yardivoVoiceSettingsV583 .yv-sub,
+#yardivoSettingsExactV583 #yardivoVoiceSettingsV583 .yv-row:not(:first-of-type){display:none!important}
+#yardivoSettingsExactV583 #yardivoVoiceSettingsV583 .yv-row:first-of-type{border:0!important}
+#yardivoSettingsExactV583 #yardivoVoiceSettingsV583 .yv-title{font-size:14px!important}
+#yardivoSettingsExactV583 #yardivoVoiceSettingsV583 label{font-size:10px!important}
+
+/* Hide every legacy/direct Settings child; exact shell is the only ordinary Settings owner. */
+#settings > .settings-grid > :not(#yardivoSettingsExactV583):not(#yardivoMasterPopupV583),
+#settings .settings-grid > #qrMobileSettingsPanel{display:none!important}
+
+/* MASTER entry exists only for Admin and is first. */
+#yardivoMasterPopupLaunchV583{order:-100;display:flex!important;width:100%!important;min-height:76px!important;margin:0 0 16px!important;padding:18px 22px!important;background:#0b1f3a!important;color:#fff!important;border:1px solid #1f4d7b!important;border-radius:12px!important;font-weight:950!important}
+body:not(.yv-admin-exact-v583) #yardivoMasterPopupLaunchV583{display:none!important}
+
+/* Master popup: canonical content only. */
+#yardivoMasterPopupV583 #yardivoSettingsMasterPaneV583{display:block!important}
+#yardivoMasterPopupV583 #yardivoSmartEngineSettingsV583{display:block!important;margin-top:16px!important}
+#yardivoMasterPopupV583 #yardivoSettingsAdminPaneV583{display:block!important;margin-top:16px!important}
+#yardivoMasterPopupV583 .danger-zone{display:block!important;margin-top:16px!important}
+
+/* Retire duplicate Master owners everywhere. */
+#yardivoMasterDataRegistryV583,#yardivoMasterSystemAuthorityV583,#yardivoMasterFoundationV583,
+#yardivoMasterOperationalConfigV583,#yardivoMasterAdminSettingsV583,#masterUserAdmin,
+#adminCapacitySettings,#receptionRampSettings{display:none!important}
+
+html[data-yardivo-main-theme="dark"] #yardivoSettingsExactV583 .yv-exact-card,
+body.dark-mode #yardivoSettingsExactV583 .yv-exact-card{background:#0d1d2d;color:#eef6ff;border-color:#29435b}
+@media(max-width:760px){#yardivoSettingsExactV583 .yv-exact-head{align-items:flex-start;flex-direction:column}}
+</style>
+<script id="yardivo-v583-settings-master-exact-contract-js">
+(()=>{'use strict';
+const $=id=>document.getElementById(id), SMART='yardivo_auto_replan_cfg_v1';
+function j(k,d){try{return {...d,...JSON.parse(localStorage.getItem(k)||'{}')}}catch(_){return {...d}}}
+function role(){
+ const a=[window.currentSession?.role,window.currentUser?.role,document.documentElement.dataset.yardivoRole,document.body.dataset.yardivoRole];
+ return String(a.find(Boolean)||'').trim().toLowerCase();
+}
+function admin(){return role()==='admin'}
+function grid(){return $('settings')?.querySelector('.settings-grid')}
+function smart(){return j(SMART,{enabled:false,mode:'PAUSED'})}
+function saveSmart(on){
+ const c=smart();c.enabled=!!on;c.mode=on?(c.mode==='PAUSED'?'ASSIST':(c.mode||'ASSIST')):'PAUSED';
+ localStorage.setItem(SMART,JSON.stringify(c));
+ try{if(typeof putCloudState==='function')putCloudState(SMART,JSON.stringify(c))}catch(_){}
+ try{window.YardivoSmartReplanning?.applyState?.()}catch(_){}
+ try{window.YardivoSmartEngineSettingsV583?.save?.(c)}catch(_){}
+ renderToggles();
+}
+function themeDark(){
+ return document.documentElement.getAttribute('data-yardivo-main-theme')==='dark'||
+        document.documentElement.getAttribute('data-theme')==='dark'||document.body.classList.contains('dark-mode');
+}
+function toggleTheme(){
+ const b=document.querySelector('.topbar .theme-switch-wrap button,.topbar .theme-switch-wrap input,.theme-switch-wrap button,.theme-switch-wrap input');
+ if(b){b.click();setTimeout(renderToggles,40);return}
+ const dark=!themeDark();document.documentElement.setAttribute('data-yardivo-main-theme',dark?'dark':'light');
+ document.documentElement.setAttribute('data-theme',dark?'dark':'light');document.body.classList.toggle('dark-mode',dark);document.body.classList.toggle('light-mode',!dark);
+ try{localStorage.setItem('yardivo_main_theme_v583',dark?'dark':'light')}catch(_){}
+ renderToggles();
+}
+function makeCard(id,title,sub,buttonId){
+ const x=document.createElement('section');x.id=id;x.className='yv-exact-card';
+ x.innerHTML=`<div class="yv-exact-head"><div><h3>${title}</h3><p>${sub}</p></div><button type="button" class="yv-switch" id="${buttonId}">OFF</button></div>`;return x;
+}
+function ensureOrdinary(){
+ const g=grid();if(!g)return;
+ let shell=$('yardivoSettingsExactV583');if(!shell){shell=document.createElement('div');shell.id='yardivoSettingsExactV583';g.prepend(shell)}
+ const launch=$('yardivoMasterPopupLaunchV583');if(launch&&launch.parentElement!==g)g.insertBefore(launch,shell);else if(launch)g.insertBefore(launch,shell);
+
+ const font=$('yardivoFontSettings');if(font&&font.parentElement!==shell)shell.appendChild(font);
+ if(!$('yardivoThemeSettingExactV583'))shell.appendChild(makeCard('yardivoThemeSettingExactV583','IZGLED APLIKACIJE','Original / Dark mode','yardivoThemeToggleExactV583'));
+ const days=$('yardivoNonWorkingDaysSettings');if(days&&days.parentElement!==shell)shell.appendChild(days);
+
+ const voice=$('yardivoVoiceSettingsV583');
+ if(voice&&voice.parentElement!==shell)shell.appendChild(voice);
+ if(!voice&&!$('yardivoVoicePlaceholderExactV583'))shell.appendChild(makeCard('yardivoVoicePlaceholderExactV583','GLASOVNE NOTIFIKACIJE','Uključi ili isključi glasovne notifikacije.','yardivoVoiceToggleFallbackExactV583'));
+
+ if(!$('yardivoSmartToggleExactV583'))shell.appendChild(makeCard('yardivoSmartToggleCardExactV583','YARDIVO SMART','U običnim Postavkama dostupan je samo glavni ON / OFF switch.','yardivoSmartToggleExactV583'));
+
+ shell.querySelectorAll(':scope > *').forEach(x=>x.style.setProperty('display','block','important'));
+}
+function ensureMaster(){
+ const popupBody=$('yardivoMasterPopupBodyV583'),pane=$('yardivoSettingsMasterPaneV583');if(!popupBody||!pane)return;
+ if(pane.parentElement!==popupBody)popupBody.appendChild(pane);
+
+ /* one canonical Master owner; duplicate engines are physically removed */
+ ['yardivoMasterDataRegistryV583','yardivoMasterSystemAuthorityV583','yardivoMasterFoundationV583','yardivoMasterOperationalConfigV583','yardivoMasterAdminSettingsV583','masterUserAdmin','adminCapacitySettings','receptionRampSettings'].forEach(id=>$(id)?.remove());
+
+ const stable=$('yardivoStableMasterEditorV583'),dwell=$('yardivoMasterDwellV583'),smartPanel=$('yardivoSmartEngineSettingsV583'),
+       supplier=$('yardivoMasterSuppliersV583'),people=$('yardivoResponsiblePeopleV583'),accounts=$('yardivoSettingsAdminPaneV583');
+ if(stable&&stable.parentElement!==pane)pane.appendChild(stable);
+ if(dwell&&dwell.parentElement!==pane)pane.appendChild(dwell);
+ if(smartPanel&&smartPanel.parentElement!==pane)pane.appendChild(smartPanel);
+ if(supplier&&supplier.parentElement!==pane)pane.appendChild(supplier);
+ if(people&&people.parentElement!==pane)pane.appendChild(people);
+
+ /* Factory reset and accounts belong to Master for Admin, per final contract. */
+ const danger=[...document.querySelectorAll('#settings .danger-zone,.danger-zone')].find(x=>/OBRIŠI SVE PODATKE|OPASNA ZONA/i.test(x.textContent||''));
+ if(danger&&danger.parentElement!==pane)pane.appendChild(danger);
+ if(accounts&&accounts.parentElement!==pane)pane.appendChild(accounts);
+
+ /* QR is explicitly not part of final Settings/Master contract. */
+ $('qrMobileSettingsPanel')?.remove();
+}
+function renderToggles(){
+ document.body.classList.toggle('yv-admin-exact-v583',admin());
+ const launch=$('yardivoMasterPopupLaunchV583');if(launch){launch.hidden=!admin();launch.style.display=admin()?'flex':'none'}
+ const tb=$('yardivoThemeToggleExactV583');if(tb){tb.textContent=themeDark()?'DARK':'ORIGINAL';tb.classList.toggle('on',themeDark())}
+ const sb=$('yardivoSmartToggleExactV583'),on=!!smart().enabled&&smart().mode!=='PAUSED';
+ if(sb){sb.textContent=on?'ON':'OFF';sb.classList.toggle('on',on);sb.setAttribute('aria-pressed',String(on))}
+ const vb=$('yardivoVoiceToggleV583');if(vb)vb.classList.toggle('on',vb.textContent.trim()==='ON');
+}
+function apply(){
+ ensureOrdinary();ensureMaster();renderToggles();
+}
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('#yardivoThemeToggleExactV583')){e.preventDefault();toggleTheme();return}
+ if(e.target?.closest?.('#yardivoSmartToggleExactV583')){e.preventDefault();saveSmart(!(smart().enabled&&smart().mode!=='PAUSED'));return}
+ if(e.target?.closest?.('[data-home-target="settings"],[data-view="settings"],[data-target="settings"],#navSettings,#yardivoMasterPopupLaunchV583'))setTimeout(apply,0);
+},true);
+['yardivo:login','yardivo:data-synced','yardivo:master-data-ready','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(apply,30)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,1200),{once:true});else setTimeout(apply,600);
+window.YardivoSettingsExactV583={apply,admin,smart};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-settings-master-exact-admin-qa-final';
+})();
+</script>
+
 </body>
 </html>
