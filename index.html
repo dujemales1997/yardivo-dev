@@ -50370,7 +50370,7 @@ window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-master-data-cleanup-fix-final';
 </script>
 
 
-<style id="yardivo-v583-settings-master-deep-structure-final-style">
+<style id="yardivo-v583-settings-master-deep-structure-final-style" media="not all">
 /* SETTINGS CONTRACT:
    - MASTER PODACI = one large Admin-only launch button + popup.
    - ordinary settings stay on Settings page for every role.
@@ -50421,7 +50421,7 @@ body:not(.yardivo-settings-admin-v583) #settings #yardivoSettingsAdminPaneV583{d
 body.yardivo-settings-admin-v583 #settings #yardivoSettingsAdminPaneV583{display:block!important}
 </style>
 
-<script id="yardivo-v583-settings-master-deep-structure-final-js">
+<script id="yardivo-v583-settings-master-deep-structure-final-js" type="application/x-yardivo-disabled">
 (()=>{'use strict';
 const $=id=>document.getElementById(id);
 const norm=v=>String(v||'').trim().toLowerCase();
@@ -50512,6 +50512,230 @@ else setTimeout(enforceSettings,0);
 
 window.YardivoSettingsStructureV583={refresh:enforceSettings,isAdmin};
 window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-settings-master-deep-structure-fix-final';
+})();
+</script>
+
+
+<style id="yardivo-v583-master-access-settings-repair-final-style">
+/* Canonical Settings layout: Master button on top; ordinary settings below. */
+#yardivoMasterPopupLaunchV583{
+ display:block;width:100%;min-height:72px;margin:0 0 18px;padding:18px 22px;
+ background:#0b1f3a;color:#fff;border:1px solid #1f4d7b;border-radius:12px;
+ font-size:16px;font-weight:900;text-align:left
+}
+#yardivoMasterPopupLaunchV583:hover{background:#12345d}
+body:not(.yardivo-is-admin-v583) #yardivoMasterPopupLaunchV583{display:none!important}
+
+/* Master pane lives only inside its popup. */
+#settings #yardivoSettingsMasterPaneV583{display:none!important}
+#yardivoMasterPopupV583 #yardivoSettingsMasterPaneV583{display:block!important}
+
+/* Dwell/SLA belongs to Master; never show its duplicate on ordinary Settings. */
+#settings #yardivoDetentionSettings,
+#settings #dwellSettings,
+#settings [data-settings-kind="dwell"],
+#settings [data-settings-kind="detention"]{display:none!important}
+
+/* Old duplicate Master owners stay retired. */
+#settings #masterUserAdmin,
+#settings #adminCapacitySettings,
+#settings #receptionRampSettings{display:none!important}
+
+/* Admin account administration is separate from Master. */
+body:not(.yardivo-is-admin-v583) #yardivoSettingsAdminPaneV583{display:none!important}
+</style>
+<script id="yardivo-v583-master-access-settings-repair-final-js">
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+function getRole(){
+ try{
+  const candidates=[
+   window.currentSession?.role, window.currentUser?.role, window.YARDIVO_CURRENT_USER?.role,
+   JSON.parse(localStorage.getItem('yardivo_current_session')||'null')?.role,
+   JSON.parse(localStorage.getItem('yardivo_session')||'null')?.role
+  ];
+  return String(candidates.find(Boolean)||'').trim().toLowerCase();
+ }catch(_){return ''}
+}
+function admin(){return getRole()==='admin'}
+function ensurePopupAccess(){
+ const launch=$('yardivoMasterPopupLaunchV583'), popup=$('yardivoMasterPopupV583'),
+       body=$('yardivoMasterPopupBodyV583'), pane=$('yardivoSettingsMasterPaneV583');
+ document.body.classList.toggle('yardivo-is-admin-v583',admin());
+ if(launch){
+   launch.hidden=!admin();
+   launch.style.display=admin()?'block':'none';
+   launch.textContent='MASTER PODACI';
+   launch.type='button';
+ }
+ if(body&&pane&&pane.parentElement!==body)body.appendChild(pane);
+ if(popup&&!admin()){popup.style.display='none';popup.classList.remove('open','show','active')}
+}
+function openMaster(e){
+ if(!admin())return;
+ const popup=$('yardivoMasterPopupV583'),pane=$('yardivoSettingsMasterPaneV583');
+ if(!popup||!pane)return;
+ e?.preventDefault?.();e?.stopPropagation?.();
+ popup.hidden=false;popup.style.display='flex';popup.classList.add('open','show','active');
+ popup.setAttribute('aria-hidden','false');
+ pane.hidden=false;pane.style.display='block';
+ try{window.YardivoMasterDataV583?.refresh?.()}catch(_){}
+ try{window.YardivoResponsiblePeopleV583?.refresh?.()}catch(_){}
+}
+document.addEventListener('click',e=>{
+ const b=e.target?.closest?.('#yardivoMasterPopupLaunchV583');
+ if(b){openMaster(e);return}
+ if(e.target?.closest?.('[data-home-target="settings"],[data-view="settings"],[data-target="settings"],#navSettings'))
+   setTimeout(ensurePopupAccess,0);
+},true);
+['yardivo:login','yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(ensurePopupAccess,20)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(ensurePopupAccess,150),{once:true});else setTimeout(ensurePopupAccess,0);
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-master-access-settings-repair-final';
+})();
+</script>
+
+
+<style id="yardivo-v583-master-ordinary-strict-separation-style">
+/* STRICT SEPARATION:
+   MASTER PODACI popup = only business/master configuration.
+   POSTAVKE page = only ordinary/user settings + Admin accounts.
+*/
+#settings #yardivoSettingsMasterPaneV583,
+#settings #yardivoStableMasterEditorV583,
+#settings #yardivoMasterDataRegistryV583,
+#settings #yardivoMasterOperationalConfigV583,
+#settings #yardivoProductionMasterFlowV583,
+#settings #yardivoMasterSuppliersV583,
+#settings #yardivoResponsiblePeopleV583,
+#settings #yardivoMasterFoundationV583,
+#settings #yardivoDetentionSettings,
+#settings #dwellSettings,
+#settings [data-settings-kind="dwell"],
+#settings [data-settings-kind="detention"],
+#settings #adminCapacitySettings,
+#settings #receptionRampSettings,
+#settings #masterUserAdmin{display:none!important}
+
+/* Popup is allowed to show Master content, including dwell/detention. */
+#yardivoMasterPopupV583 #yardivoSettingsMasterPaneV583,
+#yardivoMasterPopupV583 #yardivoStableMasterEditorV583,
+#yardivoMasterPopupV583 #yardivoMasterDataRegistryV583,
+#yardivoMasterPopupV583 #yardivoMasterOperationalConfigV583,
+#yardivoMasterPopupV583 #yardivoProductionMasterFlowV583,
+#yardivoMasterPopupV583 #yardivoMasterSuppliersV583,
+#yardivoMasterPopupV583 #yardivoResponsiblePeopleV583,
+#yardivoMasterPopupV583 #yardivoMasterFoundationV583{display:block!important}
+
+/* Ordinary settings always remain on the Settings page. */
+#settings #yardivoFontSettings,
+#settings #yardivoNonWorkingDaysSettings,
+#settings #yardivoVoiceSettingsV583,
+#settings #qrMobileSettingsPanel,
+#settings [data-yv-ordinary-setting="1"]{display:block!important}
+
+/* Admin-only account section is ordinary administration, never part of Master popup. */
+#yardivoMasterPopupV583 #yardivoSettingsAdminPaneV583{display:none!important}
+body:not(.yardivo-is-admin-v583) #settings #yardivoSettingsAdminPaneV583{display:none!important}
+</style>
+<script id="yardivo-v583-master-ordinary-strict-separation-js">
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+const norm=s=>String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
+function role(){
+ try{
+  return norm(window.currentSession?.role||window.currentUser?.role||JSON.parse(localStorage.getItem('yardivo_current_session')||'null')?.role||JSON.parse(localStorage.getItem('yardivo_session')||'null')?.role);
+ }catch(_){return ''}
+}
+function isAdmin(){return role()==='admin'}
+function ordinary(panel){
+ const t=norm(panel?.textContent);
+ return t.includes('veličina teksta')||t.includes('neradni dan')||t.includes('radni dan')||
+        t.includes('glasovn')||t.includes('voice')||t.includes('yardivo smart')||
+        t.includes('smart opc')||t.includes('qr / mobile')||t.includes('qr & mobile')||
+        t.includes('qr scanner')||t.includes('mobilni skener');
+}
+function masterish(panel){
+ const t=norm(panel?.textContent);
+ return t.includes('master')||t.includes('lokacij')||t.includes('skladišt')||t.includes('ramp')||
+        t.includes('dobavljač')||t.includes('odgovorn')||t.includes('dwell')||t.includes('detention')||
+        t.includes('kapacitet')||t.includes('prijem robe')||t.includes('reception');
+}
+function separate(){
+ const settings=$('settings'), popupBody=$('yardivoMasterPopupBodyV583'), pane=$('yardivoSettingsMasterPaneV583');
+ document.body.classList.toggle('yardivo-is-admin-v583',isAdmin());
+ if(popupBody&&pane&&pane.parentElement!==popupBody)popupBody.appendChild(pane);
+
+ /* Dynamic settings owners are classified only at direct-card level.
+    Ordinary settings never move to Master. Master business panels never remain in Settings. */
+ if(settings){
+  settings.querySelectorAll('.settings-grid > .panel,.settings-grid > .danger-zone').forEach(p=>{
+    if(ordinary(p)){
+      p.dataset.yvOrdinarySetting='1';p.hidden=false;p.style.setProperty('display','block','important');
+    }else if(masterish(p) && !p.closest('#yardivoSettingsAdminPaneV583')){
+      /* Do not move arbitrary legacy panels: retire duplicates. Canonical Master pane is the owner. */
+      p.hidden=true;p.style.setProperty('display','none','important');
+    }
+  });
+ }
+ const launch=$('yardivoMasterPopupLaunchV583');
+ if(launch){launch.hidden=!isAdmin();launch.style.display=isAdmin()?'block':'none';launch.textContent='MASTER PODACI'}
+ const admin=$('yardivoSettingsAdminPaneV583');
+ if(admin){
+   if(admin.closest('#yardivoMasterPopupV583')&&settings)settings.querySelector('.settings-grid')?.appendChild(admin);
+   admin.hidden=!isAdmin();admin.style.setProperty('display',isAdmin()?'block':'none','important');
+ }
+}
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('[data-home-target="settings"],[data-view="settings"],[data-target="settings"],#navSettings,#yardivoMasterPopupLaunchV583'))setTimeout(separate,0);
+},true);
+['yardivo:login','yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(separate,20)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(separate,200),{once:true});else setTimeout(separate,0);
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-master-ordinary-settings-strict-separation-final';
+})();
+</script>
+
+
+<style id="yardivo-v583-master-dwell-single-section-final-style">
+/* Dwell/Detention has exactly one owner: dedicated Master Data section.
+   Remove legacy wait/dock SLA fields from the initial warehouse/ramp configuration. */
+#yardivoMasterPopupV583 [data-yma-wh-wait],
+#yardivoMasterPopupV583 [data-yma-wh-dock],
+#yardivoMasterPopupV583 [data-yma-wait],
+#yardivoMasterPopupV583 [data-yma-dock],
+#yardivoMasterPopupV583 [data-master-wait],
+#yardivoMasterPopupV583 [data-master-dock]{display:none!important}
+</style>
+<script id="yardivo-v583-master-dwell-single-section-final-js">
+(()=>{'use strict';
+const root=()=>document.getElementById('yardivoMasterPopupV583');
+const txt=e=>String(e?.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
+function removeLegacyDwellInputs(){
+ const r=root();if(!r)return;
+ /* Explicit technical selectors first. */
+ r.querySelectorAll('[data-yma-wh-wait],[data-yma-wh-dock],[data-yma-wait],[data-yma-dock],[data-master-wait],[data-master-dock]').forEach(el=>{
+   const row=el.closest('label,.field,.form-group,.setting-row,.control-row,.ymd-field')||el;
+   row.hidden=true;row.style.setProperty('display','none','important');
+ });
+ /* Compatibility for the two old warehouse fields only.
+    Never touch the dedicated Dwell/Detention panel itself. */
+ r.querySelectorAll('label,.field,.form-group,.setting-row,.control-row,.ymd-field').forEach(row=>{
+   if(row.closest('#yardivoDetentionSettings,#dwellSettings,[data-settings-kind="dwell"],[data-settings-kind="detention"]'))return;
+   const t=txt(row);
+   const isOld=(t.includes('čekanje na rampi')||t.includes('cekanje na rampi')||
+                t.includes('čekanje prije rampe')||t.includes('cekanje prije rampe')||
+                t.includes('dopušteno čekanje')||t.includes('dopusteno cekanje')||
+                t.includes('vrijeme na rampi'));
+   if(isOld && row.querySelector('input,select')){
+     row.hidden=true;row.style.setProperty('display','none','important');
+   }
+ });
+}
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('#yardivoMasterPopupLaunchV583'))setTimeout(removeLegacyDwellInputs,0);
+},true);
+['yardivo:master-data-ready','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(removeLegacyDwellInputs,20)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(removeLegacyDwellInputs,250),{once:true});else setTimeout(removeLegacyDwellInputs,0);
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-master-dwell-single-section-fix-final';
 })();
 </script>
 
