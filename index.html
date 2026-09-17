@@ -6712,19 +6712,6 @@ html[data-theme="light"] body.light-mode #yardivoMasterSuppliersV583{
 }
 </style>
 
-<style id="yardivo-v583-light-full-home-final">
-/* Light Mode: complete white application/home. Left section bar remains dark blue. */
-body.light-mode,html[data-theme="light"] body,html[data-yardivo-main-theme="light"] body{background:#fff!important;background-image:none!important;color:#10233f!important}
-body.light-mode :is(#homeScreen,#home-screen,#homeView,#home-view,.home-screen,.home-view,.home-page,.start-screen,.start-menu,.welcome-menu,.main-menu,.module-menu,.module-grid,.home-grid,.home-content,.welcome-content),
-html[data-theme="light"] body :is(#homeScreen,#home-screen,#homeView,#home-view,.home-screen,.home-view,.home-page,.start-screen,.start-menu,.welcome-menu,.main-menu,.module-menu,.module-grid,.home-grid,.home-content,.welcome-content),
-html[data-yardivo-main-theme="light"] body :is(#homeScreen,#home-screen,#homeView,#home-view,.home-screen,.home-view,.home-page,.start-screen,.start-menu,.welcome-menu,.main-menu,.module-menu,.module-grid,.home-grid,.home-content,.welcome-content){background:#fff!important;background-image:none!important;color:#10233f!important}
-body.light-mode :is(.home-card,.menu-card,.module-card,.tile,.home-tile,.module-tile,.quick-card),
-html[data-theme="light"] body :is(.home-card,.menu-card,.module-card,.tile,.home-tile,.module-tile,.quick-card){background:#fff!important;background-image:none!important;color:#10233f!important;border-color:#dce5ee!important}
-body.light-mode .sidebar,html[data-theme="light"] body .sidebar,html[data-yardivo-main-theme="light"] body .sidebar{background:#0b1f3a!important;background-image:linear-gradient(180deg,#0b1f3a 0%,#081a31 100%)!important;color:#eef5ff!important;border-right:1px solid #16395f!important}
-body.light-mode .sidebar .nav-btn,html[data-theme="light"] body .sidebar .nav-btn{background:transparent!important;color:#e7f0fb!important}
-body.light-mode .sidebar .nav-btn:hover,html[data-theme="light"] body .sidebar .nav-btn:hover{background:#132e50!important;color:#fff!important}
-body.light-mode .sidebar .nav-btn.active,html[data-theme="light"] body .sidebar .nav-btn.active{background:#174a80!important;color:#fff!important}
-</style>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -50193,7 +50180,7 @@ async function importFull(f,im){const st=$('ysiStatusV583');if(!f||!window.XLSX)
 function supplierAccountUI(){const sel=$('yufSupplierSelect');if(!sel)return;let d=md();sel.innerHTML='<option value="">— ODABERI DOBAVLJAČA —</option>'+d.suppliers.filter(x=>x.active!==false).sort((a,b)=>String(a.name).localeCompare(String(b.name),'hr')).map(x=>`<option value="${esc(x.id)}">${esc(x.supplier_code||'')} · ${esc(x.name)}</option>`).join('');const sf=$('yufSupplierContactFields'),scope=$('yufScopeSection'),name=$('yufName');if(sf)sf.style.display='none';if(scope)scope.style.display='none';if(name?.closest('label'))name.closest('label').style.display='none';const title=$('yufBasicStepTitle');if(title)title.textContent='2 · USERNAME I LOZINKA';sel.onchange=()=>{d=md();const x=d.suppliers.find(v=>String(v.id)===String(sel.value));if(!x)return;name.value=x.name||'';$('yufContactName').value=x.contact_name||'N/A';$('yufContactEmail').value=x.contact_email||'supplier@yardivo.local';$('yufContactPhone').value=x.contact_phone||'';const loc=$('yufLocation');if(loc){loc.innerHTML='<option value="ALL">SVE LOKACIJE</option>';loc.value='ALL'}const aw=$('yufAllWarehouses');if(aw)aw.checked=true;};}
 document.addEventListener('click',e=>{if(e.target.closest?.('#yvAddSupplierPopupV583,#ymdAddSupplier,[data-spec-sup-add]'))setTimeout(()=>{installSupplierModal();resetSupplierModal()},0);if(e.target.closest?.('[data-yucr-role="supplier"]'))setTimeout(supplierAccountUI,0)},true);
 ['yardivo:master-data-changed','yardivo:master-data-ready','yardivo:data-synced'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{patchList();installSupplierModal();installImport()},0)));
-setTimeout(()=>{installSupplierModal();installImport();patchList()},0);window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-light-mode-full-home-dark-blue-sidebar-final';
+setTimeout(()=>{installSupplierModal();installImport();patchList()},0);window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-light-white-dark-blue-sidebar-css-audit-final';
 })();
 </script>
 
@@ -50241,114 +50228,5 @@ setTimeout(()=>{installSupplierModal();installImport();patchList()},0);window.YA
  window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-master-popup-only-fix-final';
 })();
 </script>
-
-<!-- YARDIVO DEV V5.8.3 · SETTINGS MASTER BOUNDARY + LOGIN HOME + HEADER STABILITY -->
-<style id="yardivo-v583-settings-master-login-home-header-stability-style">
-/* Master popup owns ONLY canonical system Master Data. Ordinary Settings stay on Settings page. */
-#yardivoMasterPopupBodyV583>#masterUserAdmin,
-#yardivoMasterPopupBodyV583>#yardivoFontSettings{display:none!important}
-
-/* Header warehouse context: never expose transient/internal text while canonical name is reconciling. */
-body:not(.home-menu-mode) .topbar .warehouse-toolbar select{
-  transition:none!important;
-}
-</style>
-<script id="yardivo-v583-settings-master-login-home-header-stability">
-(()=>{'use strict';
-if(window.__YARDIVO_SETTINGS_MASTER_LOGIN_HOME_HEADER_STABILITY__)return;
-window.__YARDIVO_SETTINGS_MASTER_LOGIN_HOME_HEADER_STABILITY__=true;
-
-const MASTER_IDS=new Set([
- 'yardivoSettingsMasterPaneV583',
- 'yardivoStableMasterEditorV583',
- 'yardivoMasterDataRegistryV583',
- 'yardivoMasterOperationalConfigV583'
-]);
-
-function repairSettingsBoundary(){
- const settings=document.getElementById('settings');
- const body=document.getElementById('yardivoMasterPopupBodyV583');
- if(!settings||!body)return;
- const grid=settings.querySelector('.settings-grid');
- const font=document.getElementById('yardivoFontSettings');
-
- /* Canonical Master pane remains in popup. */
- let pane=document.getElementById('yardivoSettingsMasterPaneV583');
- if(pane&&pane.parentElement!==body)body.appendChild(pane);
-
- /* Undo the old broad "everything before font" move. */
- [...body.children].forEach(el=>{
-   if(MASTER_IDS.has(el.id))return;
-   if(el.id==='yardivoMasterPopupLaunchV583')return;
-   if(grid){
-     if(font&&font.parentElement===grid)grid.insertBefore(el,font);
-     else grid.appendChild(el);
-   }
- });
-
- /* Ensure the canonical Master owners themselves are in the Master pane. */
- if(pane){
-   ['yardivoStableMasterEditorV583','yardivoMasterDataRegistryV583','yardivoMasterOperationalConfigV583'].forEach(id=>{
-     const el=document.getElementById(id);if(el&&el.parentElement!==pane)pane.appendChild(el);
-   });
-   pane.classList.add('active');
-   pane.style.setProperty('display','block','important');
- }
-}
-
-/* Login contract: authenticated users always land on Početni izbornik, never Dashboard. */
-function forceHomeAfterLogin(){
- try{
-   if(typeof openAppView==='function'){openAppView('homeMenu');return}
- }catch(_){}
- const home=document.getElementById('homeMenu');if(!home)return;
- document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
- home.classList.add('active');
- document.body.classList.add('home-menu-mode');
- document.querySelectorAll('[data-view]').forEach(b=>b.classList.remove('active'));
-}
-
-/* Header warehouse label is rendered from Master name only; no internal Wxxx flash. */
-function stabilizeWarehouseLabel(){
- const sel=document.getElementById('globalWarehouse')||
-           document.querySelector('.topbar .warehouse-toolbar select');
- if(!sel)return;
- let master={warehouses:[]};
- try{
-   master=window.YardivoStableMasterV583?.get?.()||
-          window.YardivoMasterDataV583?.get?.()||
-          JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');
- }catch(_){}
- const whs=Array.isArray(master?.warehouses)?master.warehouses.filter(w=>w&&w.active!==false):[];
- const value=String(sel.value||'');
- [...sel.options].forEach(o=>{
-   if(!o.value)return;
-   const w=whs.find(x=>String(x.id)===String(o.value));
-   if(w?.name&&o.textContent!==String(w.name))o.textContent=String(w.name);
- });
- if(value)sel.value=value;
-}
-
-document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{repairSettingsBoundary();stabilizeWarehouseLabel()},260));
-window.addEventListener('load',()=>setTimeout(()=>{repairSettingsBoundary();stabilizeWarehouseLabel()},520),{once:true});
-window.addEventListener('yardivo:login',()=>{
- requestAnimationFrame(forceHomeAfterLogin);
- setTimeout(forceHomeAfterLogin,90);
- setTimeout(stabilizeWarehouseLabel,140);
-});
-['yardivo:data-synced','yardivo:master-data-changed','yardivo:context-changed'].forEach(ev=>
- window.addEventListener(ev,()=>setTimeout(stabilizeWarehouseLabel,40))
-);
-document.addEventListener('click',e=>{
- if(e.target?.closest?.('#yardivoMasterPopupLaunchV583,[data-view="settings"],[data-home-target="settings"]'))
-   setTimeout(repairSettingsBoundary,0);
- if(e.target?.closest?.('[data-view="dashboard"],[data-home-target="dashboard"]'))
-   requestAnimationFrame(stabilizeWarehouseLabel);
-},true);
-setTimeout(repairSettingsBoundary,100);
-window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-settings-master-login-home-header-stability-final';
-})();
-</script>
-
 </body>
 </html>
