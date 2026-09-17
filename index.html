@@ -46312,15 +46312,12 @@ function saveWarehouseOps(id){
  c[id].warehousePallets=capValue;c[id].ramps=c[id].ramps||{};jset(CAP,c);
  const from=document.querySelector(`[data-sm-wh-from="${id}"]`)?.value||'',to=document.querySelector(`[data-sm-wh-to="${id}"]`)?.value||'';
  const h=jget(HOURS,{});h[id]={from,to};jset(HOURS,h);
- const waitValue=String(document.querySelector(`[data-sm-det-wait="${id}"]`)?.value||'').trim()===''?null:Math.max(0,Math.floor(Number(document.querySelector(`[data-sm-det-wait="${id}"]`)?.value)||0));
- const dockValue=String(document.querySelector(`[data-sm-det-dock="${id}"]`)?.value||'').trim()===''?null:Math.max(0,Math.floor(Number(document.querySelector(`[data-sm-det-dock="${id}"]`)?.value)||0));
- const de=jget(DET,{});de[id]={waitMin:waitValue,dockMin:dockValue};jset(DET,de);
  const ep=jget(EPAL,{});const eTxt=String(document.querySelector(`[data-sm-epal="${id}"]`)?.value||'').trim();const epalValue=eTxt===''?null:Math.max(0,Math.floor(Number(eTxt)||0));ep[id]=epalValue;jset(EPAL,ep);
  const md=master(),mw=md.warehouses.find(x=>String(x.id)===String(id));
- if(mw){mw.daily_pallet_capacity=capValue;mw.reception_from=from;mw.reception_to=to;mw.detention_wait_min=waitValue;mw.detention_dock_min=dockValue;mw.epal_initial=epalValue;mw.ramp_settings=Array.isArray(mw.ramp_settings)?mw.ramp_settings:[];mw.ramp_settings.forEach(rr=>{if(rr){rr.from=from;rr.to=to}});commit(md,'warehouse.operational');}
+ if(mw){mw.daily_pallet_capacity=capValue;mw.reception_from=from;mw.reception_to=to;mw.epal_initial=epalValue;mw.ramp_settings=Array.isArray(mw.ramp_settings)?mw.ramp_settings:[];mw.ramp_settings.forEach(rr=>{if(rr){rr.from=from;rr.to=to}});commit(md,'warehouse.operational');}
  try{window.YardivoSupabase?.flushQueue?.()}catch(_){}
  refreshOperational();
- try{showYmsToast?.('success','SKLADIŠTE SPREMLJENO','Kapacitet, radno vrijeme, Detention i EPAL su spremljeni.')}catch(_){}
+ try{showYmsToast?.('success','SKLADIŠTE SPREMLJENO','Kapacitet, radno vrijeme i EPAL su spremljeni.')}catch(_){}
 }
 function changeRampCount(id,delta){
  const d=master(),w=d.warehouses.find(x=>x.id===id);if(!w)return;
@@ -46431,8 +46428,6 @@ function render(force=false){
         <label>POČETNO STANJE EPAL<input data-sm-epal="${esc(w.id)}" type="number" min="0" placeholder="0 / NEPOZNAT" value="${ep}"></label>
         <label>RADNO VRIJEME PRIJAMA OD<input data-sm-wh-from="${esc(w.id)}" type="time" value="${esc(hr.from)}"><small>Primjenjuje se na svaku rampu ovog skladišta.</small></label>
         <label>RADNO VRIJEME PRIJAMA DO<input data-sm-wh-to="${esc(w.id)}" type="time" value="${esc(hr.to)}"><small>Primjenjuje se na svaku rampu ovog skladišta.</small></label>
-        <label>DETENTION ČEKANJE MIN<input data-sm-det-wait="${esc(w.id)}" type="number" min="0" placeholder="NEPOZNAT" value="${esc(de.wait)}"></label>
-        <label>DETENTION NA RAMPI MIN<input data-sm-det-dock="${esc(w.id)}" type="number" min="0" placeholder="NEPOZNAT" value="${esc(de.dock)}"></label>
        </div><button class="primary" data-sm-save-ops="${esc(w.id)}">SPREMI PODATKE SKLADIŠTA</button></div>
        <div class="ysm-sector ysm-ramp-management"><h4>UPRAVLJANJE RAMPAMA — ${esc(w.name)}</h4><p class="ysm-sector-help">Rampe koriste zajedničko <b>RADNO VRIJEME PRIJAMA SKLADIŠTA</b>. Za rampu uređuješ naziv, ON/OFF, palete/sat i maksimalni kapacitet; nema zasebnog radnog vremena po rampi.</p>
         <div class="ysm-ramp-tools"><button class="primary" data-sm-add-ramp="${esc(w.id)}">+ DODAJ RAMPU</button><button data-sm-rem-ramp="${esc(w.id)}" ${n?'':'disabled'}>− OBRIŠI ZADNJU RAMPU</button><span class="ysm-unknown">${n} ${n===1?'RAMPA':'RAMPI'}</span></div>
@@ -50736,6 +50731,144 @@ document.addEventListener('click',e=>{
 ['yardivo:master-data-ready','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(removeLegacyDwellInputs,20)));
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(removeLegacyDwellInputs,250),{once:true});else setTimeout(removeLegacyDwellInputs,0);
 window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-master-dwell-single-section-fix-final';
+})();
+</script>
+
+
+<style id="yardivo-v583-master-single-owner-smart-settings-final-style">
+/* MASTER has ONE entry point and ONE popup. */
+#yardivoSettingsTabsFinal,#yardivoSettingsNavFinal{display:none!important}
+#settings #yardivoSettingsMasterPaneV583{display:none!important}
+#yardivoMasterPopupV583 #yardivoSettingsMasterPaneV583{display:block!important}
+#yardivoMasterPopupLaunchV583{
+ display:flex!important;width:100%!important;min-height:76px!important;margin:0 0 20px!important;
+ padding:18px 22px!important;align-items:center!important;justify-content:space-between!important;
+ background:#0b1f3a!important;color:#fff!important;border:1px solid #1f4d7b!important;
+ border-radius:12px!important;font-weight:900!important
+}
+body:not(.yardivo-master-admin-role-v583) #yardivoMasterPopupLaunchV583{display:none!important}
+
+/* Exact retired duplicate Master owners. */
+#yardivoMasterDataRegistryV583,
+#yardivoMasterSystemAuthorityV583,
+#yardivoMasterFoundationV583,
+#yardivoMasterOperationalConfigV583,
+#yardivoMasterAdminSettingsV583{display:none!important}
+
+/* Dedicated Dwell owner. */
+#yardivoMasterDwellV583{margin-top:16px}
+#yardivoMasterDwellV583 .yvd-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#yardivoMasterDwellV583 .yvd-wh{border:1px solid var(--line,#dce5ee);border-radius:12px;padding:14px}
+#yardivoMasterDwellV583 .yvd-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+#yardivoMasterDwellV583 input{width:100%}
+
+/* Ordinary settings stay ordinary and readable. */
+#settings #yardivoSmartEngineSettingsV583,
+#settings #yardivoVoiceSettingsV583,
+#settings #qrMobileSettingsPanel,
+#settings #yardivoNonWorkingDaysSettings,
+#settings #yardivoFontSettings{display:block!important}
+body.light-mode #yardivoSmartEngineSettingsV583,
+body.light-mode #yardivoVoiceSettingsV583{background:#fff!important;color:#10233f!important}
+
+/* Account administration is never inside Master. */
+#yardivoMasterPopupV583 #yardivoSettingsAdminPaneV583{display:none!important}
+body:not(.yardivo-master-admin-role-v583) #settings #yardivoSettingsAdminPaneV583{display:none!important}
+@media(max-width:800px){#yardivoMasterDwellV583 .yvd-grid,#yardivoMasterDwellV583 .yvd-fields{grid-template-columns:1fr}}
+</style>
+<script id="yardivo-v583-master-single-owner-smart-settings-final-js">
+(()=>{'use strict';
+const MASTER='yardivo_master_data_registry_v583',DET='yardivo_detention_settings_v1';
+const $=id=>document.getElementById(id), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function json(k,d){try{return JSON.parse(localStorage.getItem(k)||'null')??d}catch(_){return d}}
+function role(){try{return String(window.currentSession?.role||window.currentUser?.role||'').trim().toLowerCase()}catch(_){return''}}
+function admin(){return role()==='admin'}
+function master(){const d=json(MASTER,{});return{...d,locations:Array.isArray(d.locations)?d.locations:[],warehouses:Array.isArray(d.warehouses)?d.warehouses:[],suppliers:Array.isArray(d.suppliers)?d.suppliers:[],responsible_people:Array.isArray(d.responsible_people)?d.responsible_people:[]}}
+function settingsGrid(){return $('settings')?.querySelector('.settings-grid')||null}
+function ordinary(el){
+ const t=String(el?.textContent||'').replace(/\s+/g,' ').toLowerCase();
+ return t.includes('veličina teksta')||t.includes('neradni dan')||t.includes('radni dan')||
+        t.includes('glasovn')||t.includes('voice')||t.includes('yardivo smart')||
+        t.includes('smart ·')||t.includes('qr / mobile')||t.includes('qr scanner')||t.includes('mobilno qr');
+}
+function restoreOrdinary(){
+ const grid=settingsGrid(),popup=$('yardivoMasterPopupV583');if(!grid)return;
+ ['qrMobileSettingsPanel','yardivoNonWorkingDaysSettings','yardivoFontSettings','yardivoVoiceSettingsV583','yardivoSmartEngineSettingsV583'].forEach(id=>{
+   const x=$(id);if(x&&x.parentElement!==grid)grid.appendChild(x);
+ });
+ /* Previous boundary code may have moved ordinary panels into the Master popup. Move only known ordinary headings back. */
+ popup?.querySelectorAll('.panel,section').forEach(x=>{
+   if(ordinary(x)&&!x.closest('#yardivoStableMasterEditorV583')&&!x.closest('#yardivoMasterDwellV583')&&x.parentElement!==grid)grid.appendChild(x);
+ });
+}
+function canonicalMaster(){
+ const pane=$('yardivoSettingsMasterPaneV583'),body=$('yardivoMasterPopupBodyV583');if(!pane||!body)return;
+ if(pane.parentElement!==body)body.appendChild(pane);
+
+ /* Remove duplicate Master renderers from the DOM, not just visually. */
+ ['yardivoMasterDataRegistryV583','yardivoMasterSystemAuthorityV583','yardivoMasterFoundationV583','yardivoMasterOperationalConfigV583','yardivoMasterAdminSettingsV583'].forEach(id=>$(id)?.remove());
+
+ const keep=new Set(['yardivoStableMasterEditorV583','yardivoMasterDwellV583','yardivoMasterSuppliersV583','yardivoResponsiblePeopleV583','yardivoProductionMasterFlowV583']);
+ [...pane.children].forEach(x=>{
+   if(x.id&&!keep.has(x.id)){
+     if(ordinary(x))settingsGrid()?.appendChild(x);
+     else if(x.id!=='yardivoSettingsAdminPaneV583')x.remove();
+   }
+ });
+
+ const stable=$('yardivoStableMasterEditorV583'),sup=$('yardivoMasterSuppliersV583'),rp=$('yardivoResponsiblePeopleV583');
+ if(stable&&stable.parentElement!==pane)pane.appendChild(stable);
+ renderDwell();
+ const dwell=$('yardivoMasterDwellV583');
+ if(dwell&&stable)dwell.insertAdjacentElement('afterend',sup||document.createComment('supplier'));
+ if(sup&&sup.parentElement!==pane)pane.appendChild(sup);
+ if(rp&&rp.parentElement!==pane)pane.appendChild(rp);
+}
+function renderDwell(){
+ const pane=$('yardivoSettingsMasterPaneV583');if(!pane)return;
+ let host=$('yardivoMasterDwellV583');if(!host){host=document.createElement('section');host.id='yardivoMasterDwellV583'}
+ const d=master(),de=json(DET,{});
+ host.innerHTML=`<div class="panel-head"><div><h2>DWELL / DETENTION SLA</h2><p>Jedino mjesto za pragove čekanja i vremena na rampi. Vrijednosti su vezane uz skladište i koriste ih operativa, upozorenja i analitika.</p></div></div>
+ <div class="panel-body"><div class="yvd-grid">${d.warehouses.filter(w=>w&&w.active!==false).map(w=>{
+   const loc=d.locations.find(l=>String(l.id)===String(w.location_id));
+   const wait=w.detention_wait_min??de?.[w.id]?.waitMin??'',dock=w.detention_dock_min??de?.[w.id]?.dockMin??'';
+   return `<article class="yvd-wh"><strong>${esc(w.name)}</strong><small>${esc(loc?.name||'')}</small><div class="yvd-fields">
+    <label>ČEKANJE PRIJE RAMPE · MIN<input type="number" min="0" data-yvd-wait="${esc(w.id)}" value="${esc(wait)}" placeholder="NEPOZNAT"></label>
+    <label>VRIJEME NA RAMPI · MIN<input type="number" min="0" data-yvd-dock="${esc(w.id)}" value="${esc(dock)}" placeholder="NEPOZNAT"></label>
+   </div><button type="button" class="primary" data-yvd-save="${esc(w.id)}">SPREMI DWELL</button></article>`}).join('')||'<div>Nema aktivnih skladišta.</div>'}</div></div>`;
+ const stable=$('yardivoStableMasterEditorV583');if(stable)stable.insertAdjacentElement('afterend',host);else pane.appendChild(host);
+}
+async function saveDwell(id){
+ const d=master(),w=d.warehouses.find(x=>String(x.id)===String(id));if(!w)return;
+ const val=sel=>{const t=String(document.querySelector(sel)?.value||'').trim();return t===''?null:Math.max(0,Math.floor(Number(t)||0))};
+ const wait=val(`[data-yvd-wait="${CSS.escape(String(id))}"]`),dock=val(`[data-yvd-dock="${CSS.escape(String(id))}"]`);
+ w.detention_wait_min=wait;w.detention_dock_min=dock;
+ const de=json(DET,{});de[id]={waitMin:wait,dockMin:dock};localStorage.setItem(DET,JSON.stringify(de));
+ localStorage.setItem(MASTER,JSON.stringify(d));
+ try{await Promise.resolve(window.YardivoMasterDataV583?.save?.(d))}catch(e){console.error(e);alert('Spremanje Dwell podataka nije uspjelo.');return}
+ try{window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{reason:'dwell.update'}}))}catch(_){}
+ try{window.showYmsToast?.('success','DWELL SPREMLJEN',w.name)}catch(_){}
+}
+function layout(){
+ document.body.classList.toggle('yardivo-master-admin-role-v583',admin());
+ const launch=$('yardivoMasterPopupLaunchV583');
+ if(launch){launch.hidden=!admin();launch.style.display=admin()?'flex':'none';launch.onclick=null}
+ restoreOrdinary();canonicalMaster();
+
+ /* Account pane belongs below ordinary Settings, Admin only. */
+ const ap=$('yardivoSettingsAdminPaneV583'),grid=settingsGrid();
+ if(ap&&grid&&ap.parentElement!==grid)grid.appendChild(ap);
+ if(ap){ap.hidden=!admin();ap.style.display=admin()?'block':'none'}
+}
+document.addEventListener('click',e=>{
+ const save=e.target?.closest?.('[data-yvd-save]');if(save){e.preventDefault();saveDwell(save.dataset.yvdSave);return}
+ if(e.target?.closest?.('#yardivoMasterPopupLaunchV583'))setTimeout(()=>{layout();renderDwell()},0);
+ if(e.target?.closest?.('[data-home-target="settings"],[data-view="settings"],[data-target="settings"],#navSettings'))setTimeout(layout,0);
+},true);
+['yardivo:login','yardivo:data-synced','yardivo:master-data-ready','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(layout,30)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(layout,350),{once:true});else setTimeout(layout,0);
+window.YardivoMasterSingleOwnerV583={refresh:layout,renderDwell};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-master-single-owner-smart-settings-final';
 })();
 </script>
 
