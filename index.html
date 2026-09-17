@@ -51214,5 +51214,91 @@ window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-login-always-home-menu-final';
 })();
 </script>
 
+
+<style id="yardivo-v583-settings-single-page-master-first-style">
+/* FINAL SETTINGS PAGE — one visible column, Master entry first for Admin, ordinary settings below for everyone. */
+#settings .settings-grid{display:flex!important;flex-direction:column!important;gap:14px!important}
+#settings #yardivoMasterPopupLaunchV583{order:0!important;display:flex!important;position:static!important;width:100%!important;margin:0!important}
+body.yv-settings-nonadmin-v583 #settings #yardivoMasterPopupLaunchV583{display:none!important}
+#settings #yardivoSettingsVisibleFinalV583{order:1!important;display:flex!important;flex-direction:column!important;gap:14px!important;width:100%!important}
+#yardivoSettingsVisibleFinalV583 > *{display:block!important;visibility:visible!important;opacity:1!important;position:static!important}
+#yardivoSettingsVisibleFinalV583 .yv-setting-card-v583{background:#fff;color:#10233f;border:1px solid #d9e4ee;border-radius:14px;padding:16px}
+#yardivoSettingsVisibleFinalV583 .yv-setting-row-v583{display:flex;align-items:center;justify-content:space-between;gap:18px}
+#yardivoSettingsVisibleFinalV583 h3{margin:0;font-size:14px}
+#yardivoSettingsVisibleFinalV583 p{margin:4px 0 0;font-size:10px;color:#71849a}
+#yardivoSettingsVisibleFinalV583 button.yv-switch-v583{border:1px solid #c8d6e4;border-radius:999px;padding:9px 14px;min-width:92px;font-weight:950}
+#yardivoSettingsVisibleFinalV583 button.yv-switch-v583.on{background:#e8f8ef;color:#116d3b;border-color:#a9ddbf}
+body.dark-mode #yardivoSettingsVisibleFinalV583 .yv-setting-card-v583{background:#0d1d2d;color:#eef6ff;border-color:#29435b}
+
+/* Master is never rendered inline on Settings. */
+#settings #yardivoSettingsMasterPaneV583,
+#settings #yardivoStableMasterEditorV583,
+#settings #yardivoMasterDwellV583,
+#settings #yardivoSmartEngineSettingsV583,
+#settings #yardivoMasterSuppliersV583,
+#settings #yardivoResponsiblePeopleV583,
+#settings #yardivoSettingsAdminPaneV583{display:none!important}
+#yardivoMasterPopupV583 #yardivoSettingsMasterPaneV583{display:block!important}
+
+/* Hide all legacy direct Settings cards: the final shell below is authoritative. */
+#settings .settings-grid > :not(#yardivoMasterPopupLaunchV583):not(#yardivoSettingsVisibleFinalV583):not(#yardivoMasterPopupV583){display:none!important}
+</style>
+<script id="yardivo-v583-settings-single-page-master-first-js">
+(()=>{'use strict';
+const $=id=>document.getElementById(id), SMART='yardivo_auto_replan_cfg_v1';
+function role(){try{if(typeof currentSession!=='undefined'&&currentSession)return String(currentSession.app_role||currentSession.role||'').toLowerCase()}catch(_){}return String(window.currentSession?.app_role||window.currentSession?.role||window.currentUser?.role||'').toLowerCase()}
+function admin(){return role()==='admin'}
+function smart(){try{return {...{enabled:false,mode:'PAUSED'},...JSON.parse(localStorage.getItem(SMART)||'{}')}}catch(_){return{enabled:false,mode:'PAUSED'}}}
+function isDark(){return document.body.classList.contains('dark-mode')||document.documentElement.getAttribute('data-theme')==='dark'||document.documentElement.getAttribute('data-yardivo-main-theme')==='dark'}
+function card(id,title,desc,btn){
+ const x=document.createElement('section');x.id=id;x.className='yv-setting-card-v583';
+ x.innerHTML=`<div class="yv-setting-row-v583"><div><h3>${title}</h3><p>${desc}</p></div>${btn?`<button type="button" class="yv-switch-v583" id="${btn}">OFF</button>`:''}</div>`;return x
+}
+function ensure(){
+ const g=$('settings')?.querySelector('.settings-grid');if(!g)return;
+ document.body.classList.toggle('yv-settings-admin-v583',admin());document.body.classList.toggle('yv-settings-nonadmin-v583',!admin());
+ const master=$('yardivoMasterPopupLaunchV583');if(master){if(master.parentElement!==g)g.prepend(master);master.hidden=!admin();master.style.setProperty('display',admin()?'flex':'none','important')}
+ let shell=$('yardivoSettingsVisibleFinalV583');if(!shell){shell=document.createElement('div');shell.id='yardivoSettingsVisibleFinalV583';if(master)master.insertAdjacentElement('afterend',shell);else g.prepend(shell)}
+ if(shell.parentElement!==g){if(master)master.insertAdjacentElement('afterend',shell);else g.prepend(shell)}
+
+ const font=$('yardivoFontSettings');if(font)shell.appendChild(font);
+ if(!$('yardivoThemeVisibleFinalV583'))shell.appendChild(card('yardivoThemeVisibleFinalV583','IZGLED APLIKACIJE','Original / Dark mode','yardivoThemeVisibleSwitchV583'));
+ const days=$('yardivoNonWorkingDaysSettings');if(days)shell.appendChild(days);
+ const voice=$('yardivoVoiceSettingsV583');if(voice)shell.appendChild(voice);
+ else if(!$('yardivoVoiceVisibleFinalV583'))shell.appendChild(card('yardivoVoiceVisibleFinalV583','GLASOVNE NOTIFIKACIJE','Uključi ili isključi glasovne notifikacije.','yardivoVoiceVisibleSwitchV583'));
+ if(!$('yardivoSmartVisibleFinalV583'))shell.appendChild(card('yardivoSmartVisibleFinalV583','YARDIVO SMART','Glavni YARDIVO SMART ON / OFF. Detaljna pravila su u MASTER PODACI.','yardivoSmartVisibleSwitchV583'));
+
+ /* Master workspace owns all admin-only configuration. */
+ const pane=$('yardivoSettingsMasterPaneV583'),pb=$('yardivoMasterPopupBodyV583');
+ if(pane&&pb&&pane.parentElement!==pb)pb.appendChild(pane);
+ ['yardivoStableMasterEditorV583','yardivoMasterDwellV583','yardivoSmartEngineSettingsV583','yardivoMasterSuppliersV583','yardivoResponsiblePeopleV583','yardivoSettingsAdminPaneV583'].forEach(id=>{const x=$(id);if(x&&pane&&x.parentElement!==pane)pane.appendChild(x)});
+ const reset=[...document.querySelectorAll('.danger-zone')].find(x=>/OBRIŠI SVE PODATKE|RESET YARDIVO/i.test(x.textContent||''));if(reset&&pane&&reset.parentElement!==pane)pane.appendChild(reset);
+ render();
+}
+function render(){
+ const t=$('yardivoThemeVisibleSwitchV583');if(t){t.textContent=isDark()?'DARK':'ORIGINAL';t.classList.toggle('on',isDark())}
+ const cfg=smart(),on=!!cfg.enabled&&cfg.mode!=='PAUSED',b=$('yardivoSmartVisibleSwitchV583');if(b){b.textContent=on?'ON':'OFF';b.classList.toggle('on',on)}
+}
+function theme(){
+ const b=document.querySelector('.theme-switch-wrap button,.theme-switch-wrap input');if(b){b.click();setTimeout(render,50);return}
+ const d=!isDark();document.body.classList.toggle('dark-mode',d);document.body.classList.toggle('light-mode',!d);document.documentElement.setAttribute('data-theme',d?'dark':'light');render()
+}
+function smartToggle(){
+ const c=smart(),on=!!c.enabled&&c.mode!=='PAUSED';c.enabled=!on;c.mode=!on?'ASSIST':'PAUSED';localStorage.setItem(SMART,JSON.stringify(c));
+ try{if(typeof putCloudState==='function')putCloudState(SMART,JSON.stringify(c))}catch(_){}
+ render()
+}
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('#yardivoThemeVisibleSwitchV583')){e.preventDefault();theme()}
+ if(e.target?.closest?.('#yardivoSmartVisibleSwitchV583')){e.preventDefault();smartToggle()}
+ if(e.target?.closest?.('[data-home-target="settings"],[data-view="settings"],[data-target="settings"],#navSettings'))setTimeout(ensure,0)
+},true);
+['yardivo:login','yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(ensure,40)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(ensure,1500),{once:true});else setTimeout(ensure,800);
+window.YardivoSettingsSinglePageV583={ensure,admin};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-settings-single-page-master-first-final';
+})();
+</script>
+
 </body>
 </html>
