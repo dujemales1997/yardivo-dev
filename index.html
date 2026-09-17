@@ -51584,5 +51584,40 @@ window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-supplier-announcement-exact-daily-
 })();
 </script>
 
+
+<style id="yardivo-v583-supplier-assigned-warehouse-flow-style">
+#ysnWarehouse:disabled{opacity:1!important;cursor:not-allowed}
+#ysnWarehouse option{display:block}
+#ysnMap{margin-top:14px!important}
+</style>
+<script id="yardivo-v583-supplier-assigned-warehouse-flow-js">
+(()=>{'use strict';const $=id=>document.getElementById(id);
+function scope(){return window.YardivoServerScopeV583||window.YardivoAccountScopeEnforcedV583?.get?.()||null}
+function master(){try{return JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{}}catch(_){return{}}}
+function whName(w){return w?.name||w?.code||w?.warehouse_name||w?.warehouse_code||w?.id||''}
+function populate(){
+ const sel=$('ysnWarehouse'),S=scope();if(!sel||!S||String(S.app_role).toLowerCase()!=='supplier')return;
+ const ids=(S.warehouses||[]).map(String),m=master(),all=Array.isArray(m.warehouses)?m.warehouses:[];
+ const allowed=all.filter(w=>ids.includes(String(w.id)));
+ const prev=sel.value;
+ sel.innerHTML='<option value="">ODABERI SKLADIŠTE</option>'+allowed.map(w=>`<option value="${String(w.id).replace(/"/g,'&quot;')}">${String(whName(w)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}</option>`).join('');
+ sel.disabled=!allowed.length;
+ if(ids.includes(prev))sel.value=prev;else if(allowed.length===1)sel.value=String(allowed[0].id);
+ if(sel.value){sel.dispatchEvent(new Event('change',{bubbles:true}));window.YardivoSupplierAnnouncementMapAuthorityV583?.update?.()}
+}
+function afterDate(){
+ const sel=$('ysnWarehouse');if(!sel?.value)return;
+ const a=window.YardivoSupplierAnnouncementMapAuthorityV583;if(!a)return;
+ a.renderMap();setTimeout(()=>{const map=$('ysnMap');if(map){map.style.setProperty('display','block','important');map.scrollIntoView({behavior:'smooth',block:'start'})}},20)
+}
+window.addEventListener('yardivo:server-scope-ready',()=>setTimeout(populate,20));
+['yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(populate,50)));
+document.addEventListener('click',e=>{if(e.target?.closest?.('.ysn-day:not(.blank)'))setTimeout(afterDate,20)},false);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(populate,900),{once:true});else setTimeout(populate,500);
+window.YardivoSupplierAssignedWarehouseFlowV583={populate,afterDate};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-supplier-assigned-warehouse-booking-flow-final';
+})();
+</script>
+
 </body>
 </html>
