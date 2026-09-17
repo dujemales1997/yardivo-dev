@@ -49410,7 +49410,7 @@ async function send(){update();if($('ysnSend').disabled)return;const w=W(),btn=$
 function clearAll(){const L=locs();if(L.length!==1)$('ysnLocation').value='';['ysnPallets','ysnSku','ysnOrder','ysnReference','ysnPlate','ysnTrailer','ysnDriver','ysnDriverContact','ysnNote'].forEach(i=>$(i).value='');window.__YSN_PDF_V583=null;if($('ysnPdf'))$('ysnPdf').value='';if($('ysnPdfName'))$('ysnPdfName').textContent='Nije odabran dokument';$('ysnPdfBtn')?.classList.remove('has-file');chosenDate='';chosen=null;$('ysnDateText').textContent='Odaberi datum dostave';fillWarehouses();renderMap()}
 function bind(){if(!$('ysnRoot')||$('ysnRoot').dataset.bound)return;$('ysnRoot').dataset.bound='1';$('ysnLocation').onchange=fillWarehouses;$('ysnWarehouse').onchange=()=>{chosenDate='';$('ysnDateText').textContent='Odaberi datum dostave';renderMap()};$('ysnPallets').oninput=()=>{chosen=null;renderMap()};$('ysnSku').oninput=update;$('ysnDateBtn').onclick=openCal;$('ysnConfirm').onclick=()=>{if(chosen){$('ysnChoice').innerHTML='<strong>POTVRĐENO · '+chosen.dock+' · '+chosen.time+'</strong><span>Termin je spreman za slanje najave.</span>';update()}};$('ysnPdfBtn').onclick=()=>$('ysnPdf').click();$('ysnPdf').onchange=e=>{const f=e.target.files?.[0];if(!f)return;if((f.type!=='application/pdf'&&!/\.pdf$/i.test(f.name))||f.size>1572864){alert('PDF mora biti PDF datoteka do 1.5 MB.');e.target.value='';return}const r=new FileReader();r.onload=()=>{window.__YSN_PDF_V583={name:f.name,mime:'application/pdf',base64:String(r.result||'').split(',').pop()||''};$('ysnPdfName').textContent=f.name+' · '+Math.ceil(f.size/1024)+' KB';$('ysnPdfBtn').classList.add('has-file')};r.readAsDataURL(f)};$('ysnClear').onclick=clearAll;$('ysnSend').onclick=send}
 function init(){if(!$('ysnRoot'))return;hydrate();bind();update()}
-window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>{if(!chosenDate&&!$('ysnWarehouse')?.value)init()},60));window.addEventListener('yardivo:login',()=>setTimeout(init,250));document.addEventListener('click',e=>{if(e.target.closest?.('[data-ysp-view="new"]'))setTimeout(init,30)},true);setTimeout(init,100);window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-map-pdf-vehicle-backend-final';})();
+window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>{if(!chosenDate&&!$('ysnWarehouse')?.value)init()},60));window.addEventListener('yardivo:login',()=>setTimeout(init,250));document.addEventListener('click',e=>{if(e.target.closest?.('[data-ysp-view="new"]'))setTimeout(init,30)},true);setTimeout(init,100);window.YardivoSupplierAnnouncementMapAuthorityV583={renderMap,update,init,getDate:()=>chosenDate,getWarehouse:()=>W()};window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-supplier-map-pdf-vehicle-backend-final';})();
 </script>
 <style id="yardivo-v583-capacity-visible-all-sections-style">
 .yv-cap-strip{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 2px}.yv-cap-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #cfe0ed;background:#f6fbff;color:#214762;border-radius:999px;padding:6px 10px;font-size:10px;font-weight:900}.yv-cap-pill b{color:#0e6fce}.yv-cap-pill.ok{background:#eef9f3;border-color:#bfe4ce;color:#176a42}.yv-cap-pill.warn{background:#fff8e8;border-color:#edd9a3;color:#805d12}
@@ -51528,6 +51528,59 @@ document.addEventListener('click',e=>{if(e.target?.closest?.('#yardivoAccountAdm
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(authoritativeRefresh,2200),{once:true});else setTimeout(authoritativeRefresh,1300);
 window.YardivoUserListAuthoritativeV583={refresh:authoritativeRefresh};
 window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-user-center-premium-ui-list-fix-final';
+})();
+</script>
+
+
+<style id="yardivo-v583-supplier-exact-daily-map-style">
+#ysnMap{display:block!important;visibility:visible!important;opacity:1!important;margin-top:6px!important;border:1px solid #c9dce9!important;border-radius:18px!important}
+#ysnMap .ysn-map-head{background:#f4f9fd!important}
+#ysnBoard{display:block!important;min-height:230px!important}
+#ysnBoard .ysn-slot{min-width:74px!important;height:48px!important;border-radius:8px!important;font-size:0!important;position:relative!important}
+#ysnBoard .ysn-slot.free{background:#24a35a!important;border:2px solid #188448!important;color:#fff!important}
+#ysnBoard .ysn-slot.busy{background:#d84949!important;border:2px solid #b93232!important;color:#fff!important;opacity:1!important}
+#ysnBoard .ysn-slot.free::after{content:"SLOBODNO";font-size:8px;font-weight:950;color:#fff}
+#ysnBoard .ysn-slot.busy::after{content:"ZAUZETO";font-size:8px;font-weight:950;color:#fff}
+#ysnBoard .ysn-slot.selected{background:#1677df!important;border-color:#0e61bd!important}
+#ysnBoard .ysn-slot.selected::after{content:"ODABRANO"!important}
+#ysnBoard .ysn-slot.ysn-best{box-shadow:0 0 0 4px #f3b126!important;outline:2px solid #fff!important}
+#ysnMapSub{font-weight:800!important;color:#48677f!important}
+body.dark-mode #ysnMap .ysn-map-head{background:#10283c!important}
+</style>
+<script id="yardivo-v583-supplier-exact-daily-map-js">
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+function recommend(){
+ const b=$('ysnBoard');if(!b)return;
+ b.querySelectorAll('.ysn-best').forEach(x=>x.classList.remove('ysn-best'));
+ const free=b.querySelector('.ysn-slot.free:not(:disabled)');
+ if(!free)return;
+ free.classList.add('ysn-best');
+ const td=free.closest('td'),tr=free.closest('tr'),table=free.closest('table');
+ const idx=td?[...tr.children].indexOf(td):-1;
+ const time=idx>0?table?.querySelector(`thead tr th:nth-child(${idx+1})`)?.textContent?.trim():'';
+ const ramp=tr?.querySelector('th.ramp')?.childNodes?.[0]?.textContent?.trim()||'';
+ const sub=$('ysnMapSub');
+ if(sub&&!/PREPORUČENI TERMIN/.test(sub.textContent||''))sub.textContent+=(time?' · PREPORUČENI TERMIN '+ramp+' '+time:'');
+}
+function exactRender(){
+ const a=window.YardivoSupplierAnnouncementMapAuthorityV583;
+ if(!a)return;
+ const map=$('ysnMap');if(map){map.style.setProperty('display','block','important');map.style.setProperty('visibility','visible','important')}
+ a.renderMap();
+ setTimeout(recommend,30);
+}
+document.addEventListener('click',e=>{
+ const d=e.target?.closest?.('.ysn-day:not(.blank)');
+ if(d&&!d.disabled)setTimeout(()=>{exactRender();$('ysnMap')?.scrollIntoView({behavior:'smooth',block:'start'})},10)
+},false);
+document.addEventListener('change',e=>{
+ if(['ysnWarehouse','ysnPallets','ysnSku'].includes(e.target?.id))setTimeout(exactRender,10)
+},false);
+window.addEventListener('yardivo:supplier-request-updated',()=>setTimeout(exactRender,80));
+window.addEventListener('yardivo:data-synced',()=>setTimeout(exactRender,100));
+window.YardivoSupplierExactDailyMapV583={render:exactRender};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-supplier-announcement-exact-daily-map-final';
 })();
 </script>
 
