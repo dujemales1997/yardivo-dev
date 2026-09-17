@@ -12332,8 +12332,8 @@ function yardivoLoadDynamicWarehousesIntoSystem(){
       d.warehouses.filter(x=>x&&x.active!==false).forEach(w=>{
         const l=(d.locations||[]).find(x=>String(x.id)===String(w.location_id));
         WAREHOUSES[w.id]={
-          code:w.id,location_id:w.location_id,location:l?.name||w.location_id,
-          name:String(w.name||w.id),ramps:Math.max(0,Number(w.ramps)||0),
+          code:w.id,location_id:w.location_id,location:l?.name||'Lokacija',
+          name:String(w.name||'Skladište'),ramps:Math.max(0,Number(w.ramps)||0),
           receptionStart:String(w.reception_from||w.receptionStart||''),
           receptionEnd:String(w.reception_to||w.receptionEnd||'')
         };
@@ -12413,7 +12413,7 @@ function yardivoRefreshAllWarehouseUi(){
   const activeRows=(d.warehouses||[]).filter(w=>w&&w.active!==false);
   const rowsFor=loc=>activeRows.filter(w=>!loc||String(w.location_id)===String(loc));
   const esc=v=>String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
-  const label=w=>`${w.name||w.id}`;
+  const label=w=>`${w.name||'Skladište'}`;
   function refill(sel,{location=null,includeAll=null,includePlaceholder=null}={}){
     if(!sel)return;
     const old=sel.value;
@@ -34187,7 +34187,7 @@ function renderWh(){
   const host=document.getElementById('yufWarehouseGrid');if(!host)return;
   let d={locations:[],warehouses:[]};try{d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){}
   const rows=(d.warehouses||[]).filter(w=>w&&w.active!==false&&(loc==='ALL'||String(w.location_id)===String(loc)));
-  host.innerHTML=rows.length?rows.map(w=>{const place=(d.locations||[]).find(x=>String(x.id)===String(w.location_id))?.name||'';return `<label><input type="checkbox" name="yufWarehouse" value="${esc(w.id)}"><span><strong>${esc(w.name||w.id)}</strong>${place?`<br><small>${esc(place)}</small>`:''}</span></label>`}).join(''):'<div style="padding:10px;color:#879daf">Nema skladišta za odabranu lokaciju.</div>';
+  host.innerHTML=rows.length?rows.map(w=>{const place=(d.locations||[]).find(x=>String(x.id)===String(w.location_id))?.name||'';return `<label><input type="checkbox" name="yufWarehouse" value="${esc(w.id)}"><span><strong>${esc(w.name||'Skladište')}</strong>${place?`<br><small>${esc(place)}</small>`:''}</span></label>`}).join(''):'<div style="padding:10px;color:#879daf">Nema skladišta za odabranu lokaciju.</div>';
   const all=document.getElementById('yufAllWarehouses');if(all){all.checked=false;all.onchange=()=>{host.querySelectorAll('input[name="yufWarehouse"]').forEach(x=>{x.checked=false;x.disabled=all.checked})};}
   const lab=document.getElementById('yufAllWarehousesLabel');if(lab)lab.textContent=loc==='ALL'?'SVA SKLADIŠTA NA SVIM LOKACIJAMA':'SVA SKLADIŠTA U ODABRANOJ LOKACIJI';
 }
@@ -35164,7 +35164,7 @@ function whMeta(code){
   try{
     const rows=window.YardivoAppStateV583?.warehouses?.()||[];
     const w=rows.find(x=>String(x.id)===String(code));
-    if(w)return {code:String(w.id),name:String(w.name||w.id),location:locLabel(w.location_id||locCode()),ramps:Number(w.ramps||0)};
+    if(w)return {code:String(w.id),name:String(w.name||'Skladište'),location:locLabel(w.location_id||locCode()),ramps:Number(w.ramps||0)};
   }catch(_){}
   try{
     const w=(typeof WAREHOUSES!=='undefined'?WAREHOUSES?.[code]:null)||{};
@@ -38588,7 +38588,7 @@ function syncRuntime(d=load()){
    d.warehouses.filter(x=>x.active!==false).forEach(w=>{
     const l=d.locations.find(x=>x.id===w.location_id);
     WAREHOUSES[w.id]={
-      code:w.id,location:l?.name||w.location_id,location_id:w.location_id,name:w.name,
+      code:w.id,location:l?.name||'Lokacija',location_id:w.location_id,name:w.name,
       ramps:Number(w.ramps)||0,receptionStart:'06:00',receptionEnd:'13:00'
     };
    });
@@ -40585,7 +40585,7 @@ function consolidateRampSettings(){
 function stripLegacyWarehouseCodesFromSettings(){
   const d=master();
   const validIds=new Set(d.warehouses.map(w=>String(w.id)));
-  const nameById=new Map(d.warehouses.map(w=>[String(w.id),String(w.name||w.id)]));
+  const nameById=new Map(d.warehouses.map(w=>[String(w.id),String(w.name||'Skladište')]));
 
   document.querySelectorAll('#settings select').forEach(sel=>{
     [...sel.options].forEach(o=>{
@@ -40971,7 +40971,7 @@ function paintNotificationBadges(){
 /* Remove legacy technical identifiers from visible UI only; never rewrite persisted business records. */
 function shieldLegacyDisplay(root=document){
   const d=master();
-  const names=new Map(d.warehouses.map(w=>[String(w.id),String(w.name||w.id)]));
+  const names=new Map(d.warehouses.map(w=>[String(w.id),String(w.name||'Skladište')]));
   root.querySelectorAll?.('option').forEach(o=>{
     const v=String(o.value||'');
     if(names.has(v))o.textContent=names.get(v);
@@ -41075,7 +41075,7 @@ function locationState(){
   const d=master();
   const id=String(window.currentSession?.location||'').trim();
   const x=d.locations.find(v=>v&&v.active!==false&&String(v.id)===id);
-  return x?{id:String(x.id),name:String(x.name||x.id)}:{id:'',name:''};
+  return x?{id:String(x.id),name:String(x.name||'Lokacija')}:{id:'',name:''};
 }
 function unannouncedRows(){
   try{
@@ -41490,7 +41490,7 @@ function master(){
 }
 function whName(w,d=master()){
   const loc=d.locations.find(x=>String(x.id)===String(w.location_id));
-  return {name:String(w.name||w.id),location:String(loc?.name||w.location_id||'')};
+  return {name:String(w.name||'Skladište'),location:String(loc?.name||'Lokacija'||'')};
 }
 function warehouseCapacity(code){
   return Number(getJson(CAPACITY_KEY)?.[code]?.warehousePallets||0);
@@ -46185,7 +46185,7 @@ function render(force=false){
     <div class="ysm-list">${whs.length?whs.map(w=>`<div class="ysm-row"><div><input data-sm-wh-name="${esc(w.id)}" value="${esc(w.name)}"><small>${esc(locName(w.location_id,d))}</small></div><div><button data-sm-config-wh="${esc(w.id)}">KONFIGURIRAJ</button> <button data-sm-save-wh="${esc(w.id)}">SPREMI</button> <button class="danger" data-sm-del-wh="${esc(w.id)}">OBRIŠI</button></div></div>`).join(''):'<div class="ysm-empty">Nema skladišta. Prvo dodaj lokaciju, zatim skladište.</div>'}</div>
     <div class="ysm-warehouse-create">
       <label class="ysm-wh-name-field"><span>1 · NAZIV SKLADIŠTA</span><input id="smNewWarehouse" placeholder="npr. Glavno skladište" value="${esc(draftWarehouseName)}"></label>
-      <label class="ysm-wh-location-field"><span>2 · ODABERI LOKACIJU <b>*</b></span><select id="smNewWarehouseLocation" ${locs.length?'':'disabled'} aria-label="Odaberi lokaciju za novo skladište"><option value="" ${draftWarehouseLocation?'':'selected'} disabled>— ODABERI LOKACIJU —</option>${locs.map(x=>`<option value="${esc(x.id)}" ${String(x.id)===String(draftWarehouseLocation)?'selected':''}>${esc(x.name)}</option>`).join('')}</select><small>${locs.length?`Odaberi jednu od ${locs.length} kreiranih lokacija. Skladište će biti vezano na taj location_id.`:'Prvo kreiraj lokaciju u Koraku 1.'}</small></label>
+      <label class="ysm-wh-location-field"><span>2 · ODABERI LOKACIJU <b>*</b></span><select id="smNewWarehouseLocation" ${locs.length?'':'disabled'} aria-label="Odaberi lokaciju za novo skladište"><option value="" ${draftWarehouseLocation?'':'selected'} disabled>— ODABERI LOKACIJU —</option>${locs.map(x=>`<option value="${esc(x.id)}" ${String(x.id)===String(draftWarehouseLocation)?'selected':''}>${esc(x.name)}</option>`).join('')}</select><small>${locs.length?`Odaberi jednu od ${locs.length} kreiranih lokacija. Skladište će biti vezano na odabranu lokaciju.`:'Prvo kreiraj lokaciju u Koraku 1.'}</small></label>
       <button class="primary" data-sm-add-wh ${draftWarehouseLocation?'':'disabled'}>DODAJ SKLADIŠTE</button>
     </div>
     ${locs.length?'<div class="ysm-hint">Skladište će biti trajno povezano s lokacijom koju ovdje odabereš.</div>':'<div class="ysm-hint warn">Za dodavanje skladišta prvo napravi barem jednu lokaciju u Koraku 1.</div>'}
@@ -46630,7 +46630,7 @@ function syncRuntimeMaster(){
    for(const w of d.warehouses.filter(x=>x&&x.active!==false)){
     const h=hours[w.id]||{};
     WAREHOUSES[w.id]={
-     code:String(w.id),name:String(w.name||w.id),location:String(d.locations.find(l=>l.id===w.location_id)?.name||''),
+     code:String(w.id),name:String(w.name||'Skladište'),location:String(d.locations.find(l=>l.id===w.location_id)?.name||''),
      location_id:String(w.location_id||''),ramps:Math.max(0,Number(w.ramps)||0),
      receptionStart:String(h.from||''),receptionEnd:String(h.to||''),
      capacity:caps?.[w.id]?.warehousePallets??null
@@ -46944,7 +46944,7 @@ function rows(){
   return loc?all.filter(w=>String(w.location_id)===loc):all;
 }
 function esc(v){return String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]))}
-function label(w){return `${w.name||w.id}`;}
+function label(w){return `${w.name||'Skladište'}`;}
 function rebuild(sel){
   if(!sel)return;
   const d=master();
@@ -47023,7 +47023,7 @@ function stock(){try{return JSON.parse(localStorage.getItem(EPAL)||'{}')||{}}cat
 function locName(id,d=md()){return String(d.locations.find(x=>String(x.id)===String(id))?.name||id||'')}
 function visibleRows(){const d=md(),lf=document.getElementById('epalLocationFilter')?.value||'CURRENT',wf=document.getElementById('epalWarehouseFilter')?.value||'ALL';let loc=lf;if(loc==='CURRENT'){try{loc=String(window.YardivoAppStateV583?.location?.()||currentSession?.location||'ALL')}catch(_){loc='ALL'};if(!d.locations.some(x=>String(x.id)===loc))loc='ALL'}return d.warehouses.filter(w=>w&&w.active!==false&&(loc==='ALL'||String(w.location_id)===String(loc))&&(wf==='ALL'||String(w.id)===String(wf)))}
 function renderBreakdown(){const ep=document.getElementById('epal');if(!ep)return;let box=document.getElementById('epalMasterInitialBreakdownV583');if(!box){box=document.createElement('div');box.id='epalMasterInitialBreakdownV583';const k=ep.querySelector('.performance-kpis');k?.insertAdjacentElement('afterend',box)}if(!box)return;const d=md(),st=stock(),rows=visibleRows();box.innerHTML='<h3>POČETNO STANJE EPAL PO SKLADIŠTU</h3><div class="yeib-grid">'+(rows.length?rows.map(w=>`<div class="yeib-item"><small>${locName(w.location_id,d)} · ${w.name}</small><strong>${Math.max(0,Number(st[w.id]||0))} EPAL</strong></div>`).join(''):'<div class="yeib-item"><small>Nema skladišta u odabranom području</small><strong>0 EPAL</strong></div>')+'</div>'}
-function cleanWarehouseLabels(){const d=md(),names=new Map(d.warehouses.map(w=>[String(w.id),String(w.name||w.id)]));document.querySelectorAll('#epalWarehouseFilter option,#epalWarehouse option').forEach(o=>{if(names.has(String(o.value)))o.textContent=names.get(String(o.value))});}
+function cleanWarehouseLabels(){const d=md(),names=new Map(d.warehouses.map(w=>[String(w.id),String(w.name||'Skladište')]));document.querySelectorAll('#epalWarehouseFilter option,#epalWarehouse option').forEach(o=>{if(names.has(String(o.value)))o.textContent=names.get(String(o.value))});}
 function refresh(){cleanWarehouseLabels();renderBreakdown();try{window.YardivoEPALInitial?.totalAll?.()}catch(_){}}
 ['yardivo:master-data-changed','yardivo:context-changed','yardivo:login'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(refresh,50)));
 document.addEventListener('change',e=>{if(e.target?.matches?.('#epalLocationFilter,#epalWarehouseFilter'))setTimeout(refresh,20)},true);
@@ -47137,7 +47137,7 @@ function sanitizeSelect(sel){
  }
 }
 function replaceTechnicalText(root){
- const map=new Map(warehouses().map(w=>[String(w.id),String(w.name||w.id)]));
+ const map=new Map(warehouses().map(w=>[String(w.id),String(w.name||'Skladište')]));
  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(n){
   const p=n.parentElement;if(!p||p.closest('script,style,textarea,option'))return NodeFilter.FILTER_REJECT;
   return /\\bW\\d{3,}\\b/i.test(n.nodeValue||'')?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;
@@ -51616,6 +51616,96 @@ document.addEventListener('click',e=>{if(e.target?.closest?.('.ysn-day:not(.blan
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(populate,900),{once:true});else setTimeout(populate,500);
 window.YardivoSupplierAssignedWarehouseFlowV583={populate,afterDate};
 window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-supplier-assigned-warehouse-booking-flow-final';
+})();
+</script>
+
+
+<script id="yardivo-v583-business-names-only-no-tech-ids-js">
+(()=>{'use strict';
+const MASTER_KEY='yardivo_master_data_registry_v583';
+const escRx=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+
+function master(){
+  try{
+    const api=window.YardivoAppStateV583?.master?.();
+    if(api&&typeof api==='object') return api;
+  }catch(_){}
+  try{return JSON.parse(localStorage.getItem(MASTER_KEY)||'{}')||{}}catch(_){return{}}
+}
+function labels(){
+  const m=master(), out=[];
+  for(const x of (m.locations||[])){
+    const id=String(x?.id||'').trim(), name=String(x?.name||'').trim();
+    if(id&&name&&id!==name) out.push([id,name]);
+  }
+  for(const x of (m.warehouses||[])){
+    const id=String(x?.id||'').trim(), name=String(x?.name||'').trim();
+    if(id&&name&&id!==name) out.push([id,name]);
+  }
+  for(const x of (m.suppliers||[])){
+    const id=String(x?.id||'').trim(), name=String(x?.name||x?.supplier_code||'').trim();
+    if(id&&name&&id!==name) out.push([id,name]);
+  }
+  for(const x of (m.responsible_people||[])){
+    const id=String(x?.id||'').trim();
+    const name=[x?.first_name,x?.last_name].map(v=>String(v||'').trim()).filter(Boolean).join(' ');
+    if(id&&name&&id!==name) out.push([id,name]);
+  }
+  out.sort((a,b)=>b[0].length-a[0].length);
+  return out;
+}
+function replaceVisibleText(text,map){
+  let out=String(text??'');
+  for(const [id,name] of map){
+    // Replace only standalone technical tokens; internal form values/data attributes stay untouched.
+    const rx=new RegExp(`(^|[^A-Za-z0-9_])${escRx(id)}(?=$|[^A-Za-z0-9_])`,'g');
+    out=out.replace(rx,(m,p)=>p+name);
+  }
+  return out;
+}
+function sanitize(root=document.body){
+  if(!root)return;
+  const map=labels(); if(!map.length)return;
+
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{
+    acceptNode(n){
+      const p=n.parentElement;if(!p)return NodeFilter.FILTER_REJECT;
+      if(['SCRIPT','STYLE','NOSCRIPT','TEMPLATE'].includes(p.tagName))return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  const nodes=[]; while(walker.nextNode())nodes.push(walker.currentNode);
+  for(const n of nodes){
+    const old=n.nodeValue||'', neu=replaceVisibleText(old,map);
+    if(neu!==old)n.nodeValue=neu;
+  }
+
+  // User-facing accessibility/tooltips only. Never touch value/data/id/name attributes.
+  for(const el of root.querySelectorAll('[title],[aria-label]')){
+    for(const a of ['title','aria-label']){
+      if(!el.hasAttribute(a))continue;
+      const old=el.getAttribute(a)||'', neu=replaceVisibleText(old,map);
+      if(neu!==old)el.setAttribute(a,neu);
+    }
+  }
+}
+let scheduled=false;
+function schedule(ms=0){
+  if(scheduled)return;
+  scheduled=true;
+  setTimeout(()=>{scheduled=false;sanitize(document.body)},ms);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{schedule(0);setTimeout(()=>sanitize(document.body),600)},{once:true});
+else {schedule(0);setTimeout(()=>sanitize(document.body),600)}
+['yardivo:data-synced','yardivo:master-data-ready','yardivo:session-ready','yardivo:authenticated','yardivo:users-changed','yardivo:supplier-request-updated']
+  .forEach(ev=>window.addEventListener(ev,()=>schedule(10)));
+document.addEventListener('click',()=>schedule(30),true);
+document.addEventListener('change',()=>schedule(30),true);
+
+window.YardivoBusinessLabelsV583={sanitize,resolve(id){
+  const x=labels().find(a=>a[0]===String(id||''));return x?x[1]:String(id||'');
+}};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-business-names-only-no-tech-ids-final';
 })();
 </script>
 
