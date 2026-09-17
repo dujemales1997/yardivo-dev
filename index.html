@@ -113,7 +113,7 @@ html.yardivo-booting #loginScreen,
 html.yardivo-booting .login-screen,
 html.yardivo-booting .login-overlay{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 </style>
-<meta content="PROD-PROFESSIONAL-UX-V2-2026-08-31" name="yardivo-build">
+<meta content="PROD-PROFESSIONAL-UX-V2-2026-08-31" name="yardivo-build"/>
 <script id="yardivo-rbac-session-migration">
 (function(){
   try{
@@ -127,7 +127,7 @@ html.yardivo-booting .login-overlay{visibility:hidden!important;opacity:0!import
   }catch(e){}
 })();
 </script>
-<meta charset="utf-8"/>
+<meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>YARDIVO DEV - YARD MANAGEMENT SYSTEM</title>
 <style>
@@ -5475,13 +5475,13 @@ html[data-theme="light"] .yam-busy{background:#fde7ea;color:#94404b;border-color
 #yardivoAvailabilityPrint h1{margin:0;font-size:27px}
 #yardivoAvailabilityPrint .sub{color:#8da7b5;font-size:11px}
 </style>
-<link href="favicon-32.png" rel="icon" sizes="32x32" type="image/png">
-<link href="icon-192.png" rel="icon" sizes="192x192" type="image/png"/>
+<link href="favicon-32.png" rel="icon" sizes="32x32" type="image/png"/>
+<link href="icon-192.png" rel="icon" sizes="192x192" type="image/png">
 <link href="apple-touch-icon.png" rel="apple-touch-icon" sizes="180x180"/>
 <link href="manifest.webmanifest" rel="manifest"/>
 <meta content="#071925" name="theme-color"/>
-<meta content="yes" name="apple-mobile-web-app-capable">
-<meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>
+<meta content="yes" name="apple-mobile-web-app-capable"/>
+<meta content="black-translucent" name="apple-mobile-web-app-status-bar-style">
 <meta content="YARDIVO" name="apple-mobile-web-app-title"/>
 <style id="yardivo-theme-final-v233">
 html[data-theme="dark"][data-theme-preset="greeny"] body,html[data-theme="dark"][data-theme-preset="greeny"] main,html[data-theme="dark"][data-theme-preset="greeny"] .app-shell,html[data-theme="dark"][data-theme-preset="greeny"] .view{background:#111513!important;color:#e8efeb!important}
@@ -7389,8 +7389,8 @@ var currentSession=null;
 <div class="panel-body">
 <div class="order-search-box">
 <label>Broj narudžbe
-          <input autocomplete="off" id="orderSearchInput" placeholder="Upiši broj ili tekst narudžbe..." type="text">
-</input></label>
+          <input autocomplete="off" id="orderSearchInput" placeholder="Upiši broj ili tekst narudžbe..." type="text"/>
+</label>
 <button class="primary" id="orderSearchBtn" type="button">TRAŽI</button>
 </div>
 <div class="ann-help">Upiši cijeli broj ili samo dio teksta narudžbe, npr. 6W203992, ABC-123 ili 203992.</div>
@@ -7485,8 +7485,8 @@ var currentSession=null;
 </select>
 </label>
 <label>Napomena
-                    <input id="changeNote" placeholder="Kratko pojašnjenje promjene">
-</input></label>
+                    <input id="changeNote" placeholder="Kratko pojašnjenje promjene"/>
+</label>
 </div>
 <div class="ann-help">Ako je promjena evidentirana prije originalnog termina, ne računa se kao kašnjenje. Ako se mijenja nakon propuštenog termina, zadržava se NO-SHOW/kašnjenje u povijesti.</div>
 </div>
@@ -8104,8 +8104,8 @@ AUTOMATSKA PREPORUKA</small>
 </div>
 <div>
 <label>DOBAVLJAČ
-        <input id="epalSupplierSearch" placeholder="Pretraži dobavljača...">
-</input></label>
+        <input id="epalSupplierSearch" placeholder="Pretraži dobavljača..."/>
+</label>
 </div>
 <button class="primary" id="epalNewTransactionBtn" type="button">+ NOVI EPAL ZAPIS</button>
 </div>
@@ -8271,10 +8271,10 @@ AUTOMATSKA PREPORUKA</small>
 <small>Kada je uključeno, koristi se JEDAN YARDIVO QR za cijeli dolazak. Porta istim QR-om evidentira ULAZ, a Prijam istim QR-om evidentira NA RAMPI. Kada je isključeno, Prijam/Admin ih unose ručno u Prijam robe.</small>
 </div>
 <label class="qr-mobile-toggle">
-<input id="qrMobileEnabledToggle" type="checkbox">
+<input id="qrMobileEnabledToggle" type="checkbox"/>
 <span aria-hidden="true" class="qr-mobile-switch"></span>
 <span class="qr-mobile-toggle-label" id="qrMobileToggleLabel">—</span>
-</input></label>
+</label>
 </div>
 <div class="qr-mobile-mode" id="qrMobileModeInfo">—</div>
 </div>
@@ -50807,7 +50807,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&popup()&&!popup().h
 window.YardivoMasterCloseV583={close:closeMaster,open:openMaster};
 })();
 </script>
-<script id="yardivo-v583-login-always-home-menu-final-js">
+<script id="yardivo-v583-login-always-home-menu-final-js" type="application/x-yardivo-disabled">
 (()=>{'use strict';
 let lastAuth=false, forcing=false;
 const homeTargets=['home','welcome','start'];
@@ -50927,7 +50927,6 @@ window.YardivoSettingsSinglePageV583={ensure,admin};
 window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-settings-single-page-master-first-final';
 })();
 </script>
-
 <style id="yardivo-v583-settings-unified-single-section-rebuild-style">
 /* ONE SETTINGS PAGE. No Master popup/button. Permissions will be added later. */
 #yardivoMasterPopupLaunchV583,#yardivoMasterPopupV583,#yardivoSettingsTabsFinal,#yardivoSettingsNavFinal{display:none!important}
@@ -51028,8 +51027,6 @@ window.YardivoUnifiedSettingsV583={build,render};
 window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-settings-unified-single-section-rebuild-final';
 })();
 </script>
-
-
 <style id="yardivo-v583-smart-suppliers-accounts-fix-style">
 /* Supplier editor/list: high contrast in both themes. */
 #yardivoUnifiedSettingsV583 #yardivoMasterSuppliersV583,
@@ -51102,8 +51099,6 @@ window.YardivoSmartSupplierAccountsFixV583={ensure,toggleSmart};
 window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-settings-smart-suppliers-accounts-fix-final';
 })();
 </script>
-
-
 <style id="yardivo-v583-add-user-smart-system-toggle-style">
 /* Account administration is an explicit visible Settings section. */
 #yardivoUnifiedSettingsV583 #yardivoAccountAdminRestoredV583{display:block!important;width:100%!important}
@@ -51160,6 +51155,131 @@ window.addEventListener('yardivo:smart-system-state',()=>{},false);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{accounts();applySmart()},1700),{once:true});else setTimeout(()=>{accounts();applySmart()},900);
 window.YardivoAccountSmartSystemV583={accounts,applySmart};
 window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-add-user-smart-system-toggle-final';
+})();
+</script>
+
+<style id="yardivo-v583-login-home-no-flicker-style">
+/* During authenticated bootstrap, never expose an intermediate operational page. */
+html.yv-login-home-boot-v583 body .page,
+html.yv-login-home-boot-v583 body .view,
+html.yv-login-home-boot-v583 body [data-page]{visibility:hidden!important}
+html.yv-login-home-boot-v583 body #home,
+html.yv-login-home-boot-v583 body #homeView,
+html.yv-login-home-boot-v583 body [data-page="home"]{visibility:visible!important}
+</style>
+<script id="yardivo-v583-login-home-no-flicker-js">
+(()=>{'use strict';
+let handled=false;
+function session(){
+ try{if(typeof currentSession!=='undefined'&&currentSession)return currentSession}catch(_){}
+ return window.currentSession||window.currentUser||null;
+}
+function homeEl(){return document.getElementById('home')||document.getElementById('homeView')||document.querySelector('[data-page="home"]')}
+function activateHome(){
+ const h=homeEl();
+ /* Use the native router when available, otherwise switch the view atomically. */
+ try{
+   if(typeof window.showView==='function'){window.showView('home')}
+   else if(typeof window.navigateTo==='function'){window.navigateTo('home')}
+   else if(typeof window.showPage==='function'){window.showPage('home')}
+   else{
+     document.querySelectorAll('.page.active,.view.active,[data-page].active,.page.show,.view.show,[data-page].show').forEach(x=>x.classList.remove('active','show'));
+     if(h){h.hidden=false;h.classList.add('active','show')}
+   }
+ }catch(_){
+   if(h){h.hidden=false;h.classList.add('active','show')}
+ }
+ try{sessionStorage.setItem('yardivo_v583_login_landing','home')}catch(_){}
+}
+function finish(){
+ activateHome();
+ requestAnimationFrame(()=>requestAnimationFrame(()=>document.documentElement.classList.remove('yv-login-home-boot-v583')));
+}
+function authReady(){
+ if(!session())return;
+ if(handled)return;
+ handled=true;finish();
+}
+function arm(){
+ handled=false;
+ document.documentElement.classList.add('yv-login-home-boot-v583');
+}
+document.addEventListener('submit',e=>{
+ if(e.target?.closest?.('#loginForm,.login-form,[data-login-form]'))arm();
+},true);
+['yardivo:login','yardivo:authenticated','yardivo:session-ready'].forEach(ev=>window.addEventListener(ev,authReady));
+/* Data sync may finish after auth; it must not redirect away from Home. */
+['yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>window.addEventListener(ev,()=>{if(session())activateHome()}));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{if(session()){arm();authReady()}},{once:true});
+else if(session()){arm();authReady()}
+window.YardivoLoginHomeNoFlickerV583={arm,activateHome,authReady};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-login-home-no-flicker-final';
+})();
+</script>
+
+
+<style id="yardivo-v583-account-create-restored-style">
+#yardivoAccountCreateRestoredV583{display:none;position:fixed;inset:0;z-index:100500;background:rgba(5,15,28,.62);align-items:center;justify-content:center;padding:20px}
+#yardivoAccountCreateRestoredV583.open{display:flex}
+#yardivoAccountCreateRestoredV583 .box{width:min(620px,96vw);max-height:90vh;overflow:auto;background:#fff;color:#10233f;border-radius:16px;padding:20px;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+#yardivoAccountCreateRestoredV583 label{display:block;font-size:11px;font-weight:900;margin:12px 0 5px}
+#yardivoAccountCreateRestoredV583 input,#yardivoAccountCreateRestoredV583 select{width:100%;box-sizing:border-box;background:#fff;color:#10233f;border:1px solid #bfd0df;border-radius:9px;padding:10px}
+#yardivoAccountCreateRestoredV583 .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+#yardivoAccountCreateRestoredV583 .scope-note{font-size:10px;color:#71849a;margin-top:5px}
+body.dark-mode #yardivoAccountCreateRestoredV583 .box{background:#0d1d2d;color:#eef6ff}
+body.dark-mode #yardivoAccountCreateRestoredV583 input,body.dark-mode #yardivoAccountCreateRestoredV583 select{background:#13283b;color:#eef6ff;border-color:#35536e}
+</style>
+<script id="yardivo-v583-account-create-restored-js">
+(()=>{'use strict';
+const $=id=>document.getElementById(id),MASTER='yardivo_master_data_registry_v583';
+const roles=[['admin','ADMIN'],['manager','VODITELJ'],['inventory','INVENTORY'],['reception','PRIJAM'],['gate','GATE'],['supplier','DOBAVLJAČ']];
+function master(){try{return JSON.parse(localStorage.getItem(MASTER)||'{}')||{}}catch(_){return{}}}
+function ensure(){
+ if($('yardivoAccountCreateRestoredV583'))return;
+ const x=document.createElement('div');x.id='yardivoAccountCreateRestoredV583';
+ x.innerHTML=`<div class="box"><h2>DODAJ KORISNIKA</h2>
+ <label>ROLA</label><select id="yvAccRole">${roles.map(r=>`<option value="${r[0]}">${r[1]}</option>`).join('')}</select>
+ <div id="yvAccSupplierWrap" hidden><label>DOBAVLJAČ IZ MASTER PODATAKA</label><select id="yvAccSupplier"></select><div class="scope-note">Lokacije, skladišta i kontakt preuzimaju se automatski iz Master dobavljača.</div></div>
+ <div id="yvAccScopeWrap"><label>LOKACIJA</label><select id="yvAccLocation"></select><label>SKLADIŠTE</label><select id="yvAccWarehouse"></select></div>
+ <label>KORISNIČKO IME</label><input id="yvAccUsername" autocomplete="off">
+ <label>LOZINKA</label><input id="yvAccPassword" type="password" autocomplete="new-password">
+ <div class="actions"><button type="button" id="yvAccCancel">ODUSTANI</button><button type="button" class="btn btn-primary" id="yvAccSave">KREIRAJ KORISNIKA</button></div></div>`;
+ document.body.appendChild(x);fill();render();
+}
+function fill(){
+ const m=master(),L=$('yvAccLocation'),S=$('yvAccSupplier');
+ if(L)L.innerHTML='<option value="">ODABERI LOKACIJU</option>'+(m.locations||[]).filter(x=>x.active!==false).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+ if(S)S.innerHTML='<option value="">ODABERI DOBAVLJAČA</option>'+(m.suppliers||[]).filter(x=>x.active!==false).map(x=>`<option value="${x.id}">${esc(x.supplier_code||'')} — ${esc(x.name||'')}</option>`).join('');
+ warehouses()
+}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function warehouses(){const m=master(),loc=$('yvAccLocation')?.value,W=$('yvAccWarehouse');if(W)W.innerHTML='<option value="">ODABERI SKLADIŠTE</option>'+(m.warehouses||[]).filter(x=>x.active!==false&&String(x.location_id)===loc).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
+function render(){const r=$('yvAccRole')?.value,sup=r==='supplier',adm=r==='admin';$('yvAccSupplierWrap').hidden=!sup;$('yvAccScopeWrap').hidden=sup||adm}
+function token(){try{const keys=Object.keys(localStorage).filter(k=>/^sb-.*-auth-token$/.test(k));for(const k of keys){const j=JSON.parse(localStorage.getItem(k)||'{}'),t=j.access_token||j.currentSession?.access_token;if(t)return t}}catch(_){};try{return window.supabaseSession?.access_token||window.currentSession?.access_token||''}catch(_){return''}}
+async function save(){
+ const r=$('yvAccRole').value,u=$('yvAccUsername').value.trim(),p=$('yvAccPassword').value;
+ const body={action:'create',role:r,username:u,password:p};
+ if(r==='supplier')body.supplier_id=$('yvAccSupplier').value;
+ else if(r!=='admin'){body.location=$('yvAccLocation').value;body.warehouses=[$('yvAccWarehouse').value].filter(Boolean)}
+ const t=token();if(!t){alert('Aktivna Admin prijava nije pronađena.');return}
+ const url='https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-admin-users';
+ const b=$('yvAccSave');b.disabled=true;
+ try{const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify(body)}),j=await res.json().catch(()=>({}));if(!res.ok||!j.ok)throw new Error(j.error||'Korisnik nije kreiran.');close();window.dispatchEvent(new CustomEvent('yardivo:users-changed'));alert('Korisnik je uspješno kreiran.')}
+ catch(e){alert(e.message||String(e))}finally{b.disabled=false}
+}
+function open(){ensure();fill();render();$('yardivoAccountCreateRestoredV583').classList.add('open');$('yvAccUsername').focus()}
+function close(){$('yardivoAccountCreateRestoredV583')?.classList.remove('open')}
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('#yardivoAddUserRestoredBtnV583')){e.preventDefault();e.stopImmediatePropagation();open();return}
+ if(e.target?.closest?.('#yvAccCancel'))close();
+ if(e.target?.closest?.('#yvAccSave'))save();
+ if(e.target===$('yardivoAccountCreateRestoredV583'))close();
+},true);
+document.addEventListener('change',e=>{if(e.target?.id==='yvAccRole')render();if(e.target?.id==='yvAccLocation')warehouses()},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('yardivoAccountCreateRestoredV583')?.classList.contains('open'))close()});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensure,{once:true});else ensure();
+window.YardivoAccountCreateRestoredV583={open,close};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-account-role-supplier-create-restored-final';
 })();
 </script>
 
