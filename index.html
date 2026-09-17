@@ -51378,5 +51378,113 @@ window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-user-list-password-delete-bulk-res
 })();
 </script>
 
+
+<style id="yardivo-v583-account-scope-enforced-style">
+/* Non-admin selectors only expose server-authorized Master scope. */
+body.yv-scope-locked-v583 option[data-yv-scope-denied="1"]{display:none!important}
+</style>
+<script id="yardivo-v583-account-scope-enforced-js">
+(()=>{'use strict';
+const URL='https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-user-scope',MASTER='yardivo_master_data_registry_v583';
+let S=null,busy=false;
+function token(){try{for(const k of Object.keys(localStorage).filter(k=>/^sb-.*-auth-token$/.test(k))){const j=JSON.parse(localStorage.getItem(k)||'{}'),t=j.access_token||j.currentSession?.access_token;if(t)return t}}catch(_){};try{return window.supabaseSession?.access_token||window.currentSession?.access_token||''}catch(_){return''}}
+function master(){try{return JSON.parse(localStorage.getItem(MASTER)||'{}')||{}}catch(_){return{}}}
+function isAdmin(){return String(S?.app_role||'').toLowerCase()==='admin'}
+function allowedLoc(id){return isAdmin()||S?.all_locations||String(id)===String(S?.location)}
+function allowedWh(id){return isAdmin()||S?.all_warehouses||(S?.warehouses||[]).map(String).includes(String(id))}
+function enforceSelect(sel){
+ if(!S||isAdmin()||!sel)return;
+ const txt=((sel.id||'')+' '+(sel.name||'')+' '+(sel.getAttribute('aria-label')||'')).toLowerCase();
+ const isWh=/warehouse|skladi/.test(txt),isLoc=/location|lokacij/.test(txt);if(!isWh&&!isLoc)return;
+ [...sel.options].forEach(o=>{if(!o.value)return;const ok=isWh?allowedWh(o.value):allowedLoc(o.value);o.disabled=!ok;o.dataset.yvScopeDenied=ok?'0':'1'});
+ if(sel.value&&((isWh&&!allowedWh(sel.value))||(isLoc&&!allowedLoc(sel.value))))sel.value='';
+}
+function enforce(){
+ if(!S)return;document.body.classList.toggle('yv-scope-locked-v583',!isAdmin());
+ document.querySelectorAll('select').forEach(enforceSelect);
+ /* Keep global header context inside assigned scope. */
+ if(!isAdmin()){
+   const m=master(),loc=S.location,wh=(S.warehouses||[])[0]||'';
+   document.querySelectorAll('#locationSelect,#headerLocationSelect,#globalLocationSelect,header select[id*="location" i],.topbar select[id*="location" i]').forEach(x=>{enforceSelect(x);if(loc&&[...x.options].some(o=>String(o.value)===String(loc)))x.value=loc});
+   document.querySelectorAll('#warehouseSelect,#headerWarehouseSelect,#globalWarehouseSelect,header select[id*="warehouse" i],.topbar select[id*="warehouse" i]').forEach(x=>{enforceSelect(x);if(wh&&[...x.options].some(o=>String(o.value)===String(wh)))x.value=wh});
+ }
+ window.YardivoServerScopeV583=S;window.dispatchEvent(new CustomEvent('yardivo:server-scope-ready',{detail:S}));
+}
+async function load(){
+ if(busy)return;const t=token();if(!t)return;busy=true;
+ try{const r=await fetch(URL,{method:'POST',headers:{'Authorization':'Bearer '+t,'Content-Type':'application/json'},body:'{}'}),j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'Scope error');S=j.data;enforce()}catch(e){console.error('YARDIVO server scope',e)}finally{busy=false}
+}
+document.addEventListener('change',e=>{const x=e.target;if(!S||isAdmin()||!x?.matches?.('select'))return;const txt=((x.id||'')+' '+(x.name||'')).toLowerCase();if(/warehouse|skladi/.test(txt)&&x.value&&!allowedWh(x.value)){e.preventDefault();x.value=(S.warehouses||[])[0]||'';enforce()}if(/location|lokacij/.test(txt)&&x.value&&!allowedLoc(x.value)){e.preventDefault();x.value=S.location||'';enforce()}},true);
+['yardivo:login','yardivo:authenticated','yardivo:session-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(load,0)));
+['yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(enforce,0)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(load,500),{once:true});else setTimeout(load,300);
+window.YardivoAccountScopeEnforcedV583={load,enforce,get:()=>S,allowedLoc,allowedWh};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-backend-account-scope-enforced-final';
+})();
+</script>
+
+
+<style id="yardivo-v583-users-role-cards-supplier-map-style">
+#yvRolePickerV583{display:none;position:fixed;inset:0;z-index:100700;background:rgba(4,17,31,.68);backdrop-filter:blur(7px);align-items:center;justify-content:center;padding:20px}
+#yvRolePickerV583.open{display:flex}
+#yvRolePickerV583 .rp-box{width:min(820px,96vw);background:#fff;color:#132f49;border-radius:20px;padding:22px;box-shadow:0 30px 90px rgba(0,0,0,.35)}
+#yvRolePickerV583 .rp-top{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:16px}
+#yvRolePickerV583 .rp-top h2{margin:0;font-size:20px}.rp-close{width:38px;height:38px;border:1px solid #d6e2ec;background:#f7fafc;border-radius:10px;font-size:21px;cursor:pointer}
+#yvRolePickerV583 .rp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+#yvRolePickerV583 .rp-role{min-height:126px;border:1px solid #d6e3ed;border-radius:15px;background:#f8fbfe;color:#173653;padding:16px;text-align:left;cursor:pointer;transition:.15s}
+#yvRolePickerV583 .rp-role:hover{transform:translateY(-2px);border-color:#1683f3;box-shadow:0 10px 25px rgba(20,93,155,.12)}
+#yvRolePickerV583 .rp-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#e9f4ff;font-size:22px;margin-bottom:10px}
+#yvRolePickerV583 .rp-role strong{display:block;font-size:12px}.rp-role small{display:block;margin-top:5px;color:#70869a;font-size:10px;line-height:1.4}
+#yardivoUserManagementRestoredV583{border:1px solid #d8e5ef;border-radius:15px;padding:16px;background:#fff}
+#ysnMap{display:block!important}
+#ysnMap.ysn-date-active{border:2px solid #1683f3!important;box-shadow:0 14px 34px rgba(22,131,243,.12)!important}
+.ysn-recommended{outline:3px solid #f0a51b!important;box-shadow:0 0 0 4px rgba(240,165,27,.15)!important;position:relative}
+.ysn-recommended::after{content:"PREPORUČENO";position:absolute;left:3px;right:3px;bottom:2px;font-size:6px;line-height:1;color:#805400}
+@media(max-width:700px){#yvRolePickerV583 .rp-grid{grid-template-columns:1fr 1fr}}
+body.dark-mode #yvRolePickerV583 .rp-box,body.dark-mode #yardivoUserManagementRestoredV583{background:#0d1d2d;color:#eef6ff}
+body.dark-mode #yvRolePickerV583 .rp-role{background:#13283b;color:#eef6ff;border-color:#35536e}
+</style>
+<script id="yardivo-v583-users-role-cards-supplier-map-js">
+(()=>{'use strict';const $=id=>document.getElementById(id);
+const roles=[
+ ['admin','🛡️','ADMIN','Globalni pristup cijelom YARDIVO sustavu.'],
+ ['manager','📊','VODITELJ','Upravljanje dodijeljenom lokacijom i skladištem.'],
+ ['inventory','📦','INVENTORY','Zalihe i operativa dodijeljenog skladišta.'],
+ ['reception','🚚','PRIJAM','Prijam vozila i rad u dodijeljenom skladištu.'],
+ ['gate','🚧','GATE','Ulaz/izlaz i gate operacije.'],
+ ['supplier','🏭','DOBAVLJAČ','Portal dobavljača prema Master Supplier dodjeli.']
+];
+function picker(){
+ let p=$('yvRolePickerV583');if(p)return p;p=document.createElement('div');p.id='yvRolePickerV583';
+ p.innerHTML='<div class="rp-box"><div class="rp-top"><div><h2>DODAJ KORISNIKA</h2><small>Prvo odaberi rolu korisničkog računa.</small></div><button class="rp-close" type="button">×</button></div><div class="rp-grid">'+roles.map(r=>`<button type="button" class="rp-role" data-yv-role="${r[0]}"><span class="rp-icon">${r[1]}</span><strong>${r[2]}</strong><small>${r[3]}</small></button>`).join('')+'</div></div>';document.body.appendChild(p);return p
+}
+function openPicker(){picker().classList.add('open')}
+function closePicker(){picker().classList.remove('open')}
+function openForm(role){closePicker();window.YardivoAccountCreateRestoredV583?.open?.();setTimeout(()=>{const r=$('yvAccRole');if(r){r.value=role;r.dispatchEvent(new Event('change',{bubbles:true}))}},0)}
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('#yardivoAddUserRestoredBtnV583')){e.preventDefault();e.stopImmediatePropagation();openPicker();return}
+ const r=e.target?.closest?.('[data-yv-role]');if(r){e.preventDefault();openForm(r.dataset.yvRole);return}
+ if(e.target?.closest?.('#yvRolePickerV583 .rp-close')||e.target===$('yvRolePickerV583'))closePicker()
+},true);
+
+/* Supplier: selected date MUST immediately reveal the daily map and mark the first free slot as recommendation. */
+function supplierMapAfterDate(){
+ const map=$('ysnMap'),board=$('ysnBoard');if(!map||!board)return;
+ map.style.setProperty('display','block','important');map.classList.add('ysn-date-active');
+ const p=$('ysnPallets');if(p?.value)p.dispatchEvent(new Event('input',{bubbles:false}));
+ setTimeout(()=>{
+   const free=board.querySelector('.ysn-slot.free:not(:disabled)');
+   board.querySelectorAll('.ysn-recommended').forEach(x=>x.classList.remove('ysn-recommended'));
+   if(free){free.classList.add('ysn-recommended');const sub=$('ysnMapSub');if(sub)sub.textContent=(sub.textContent||'')+' · PREPORUČENI TERMIN '+(free.textContent||'').trim().replace('SLOBODNO','').trim()}
+   map.scrollIntoView({behavior:'smooth',block:'center'});
+ },80)
+}
+document.addEventListener('click',e=>{const d=e.target?.closest?.('.ysn-day:not(.blank)');if(d&&!d.disabled)setTimeout(supplierMapAfterDate,35)},true);
+document.addEventListener('change',e=>{if(e.target?.id==='yspDate'||e.target?.id==='ysnDate')setTimeout(supplierMapAfterDate,20)},true);
+window.YardivoSupplierDateMapRequiredV583={refresh:supplierMapAfterDate};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-users-role-cards-supplier-daily-map-recommendation-final';
+})();
+</script>
+
 </body>
 </html>
