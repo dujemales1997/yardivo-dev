@@ -16580,7 +16580,7 @@ window.addEventListener('load',()=>setTimeout(()=>{clearLoginOnce();updateDailyM
 setInterval(()=>{
   clearLoginOnce();
   if(!loginVisible())updateDailyMessage();
-},1200);
+},4000);
 })();
 </script>
 <style id="yardivo-home-overview-stability-style">
@@ -17039,6 +17039,7 @@ function init(){
   const items=[...stage.querySelectorAll('.yardivo-mini-preview')];
   let group=0;
   function show(){
+    if(getComputedStyle(splash).display==='none'||getComputedStyle(splash).visibility==='hidden'){if(window.__yvWelcomeMiniTimer)clearInterval(window.__yvWelcomeMiniTimer);return}
     items.forEach(x=>{x.classList.remove('active','fade')});
     const indexes=group%2===0?[0,2,4]:[1,3,5];
     indexes.forEach((i,k)=>setTimeout(()=>items[i]?.classList.add('active'),k*90));
@@ -17046,8 +17047,8 @@ function init(){
     group++;
   }
   show();
-  const timer=setInterval(show,980);
-  setTimeout(()=>clearInterval(timer),5600);
+  const timer=window.__yvWelcomeMiniTimer=setInterval(show,1200);
+  setTimeout(()=>{clearInterval(timer);window.__yvWelcomeMiniTimer=null},5200);
 }
 document.addEventListener('DOMContentLoaded',init);
 window.addEventListener('load',init);
@@ -17603,9 +17604,10 @@ window.addEventListener('load',()=>{
 });
 setInterval(()=>{
   setPhaseClasses();
+  if(prelogin())return;
   const now=fingerprint();
   if(now!==fp){render();checkNew()}else syncBadges();
-},1200);
+},2500);
 
 window.addEventListener('yardivo:warehouse-changed',()=>{
   panel?.classList.remove('open');
@@ -31298,7 +31300,7 @@ document.addEventListener('click',e=>{
     setTimeout(sync,60);setTimeout(sync,250);
   }
 },true);
-setInterval(sync,700);
+setInterval(()=>{if(document.getElementById('settings')?.classList.contains('active'))sync()},3000);
 
 window.YardivoCreateProfileV548={sync,invoke};
 })();
@@ -31489,7 +31491,7 @@ function start(){
 window.addEventListener('load',()=>setTimeout(start,1200));
 window.addEventListener('yardivo:login',()=>setTimeout(start,150));
 window.addEventListener('yardivo:data-synced',()=>setTimeout(scan,100));
-setInterval(scan,650);
+setInterval(scan,2500);
 
 window.YardivoFullOperationalNotificationsV548={
   scan,seed,targets:[...TARGETS]
@@ -32603,8 +32605,10 @@ window.addEventListener('yardivo:context-changed',()=>setTimeout(syncNow,60));
    refresh while the tab is visible. Planner editing remains protected. */
 window.__yardivoSupplierLiveSyncTimer&&clearInterval(window.__yardivoSupplierLiveSyncTimer);
 window.__yardivoSupplierLiveSyncTimer=setInterval(()=>{
+  let r='';try{r=String(window.currentSession?.role||currentSession?.role||'').toLowerCase()}catch(_){}
+  if(!r)return;
   if(!document.getElementById('ysrPlannerOverlay')?.classList.contains('open'))syncNow();
-},2300);
+},3000);
 })();
 </script>
 <style id="yardivo-v561-supplier-pro-style">
@@ -36324,7 +36328,10 @@ function install(){
  bind();
 }
 function bind(){const e=document.getElementById('yardivoExportFullDataBtn'),r=document.getElementById('yardivoRestoreFullDataBtn'),f=document.getElementById('yardivoRestoreFullDataFile');if(e&&!e.dataset.b){e.dataset.b=1;e.onclick=async()=>{e.disabled=true;try{await exp()}catch(x){stat('EXPORT NIJE USPIO · '+(x.message||x),'e');alert(x.message||x)}finally{e.disabled=false}}}if(r&&!r.dataset.b){r.dataset.b=1;r.onclick=()=>f?.click()}if(f&&!f.dataset.b){f.dataset.b=1;f.onchange=async()=>{const z=f.files?.[0];if(!z)return;r.disabled=true;try{await restore(z)}catch(x){stat('RESTORE NIJE USPIO · '+(x.message||x),'e');alert(x.message||x)}finally{r.disabled=false;f.value=''}}}}
-new MutationObserver(install).observe(document.documentElement,{childList:true,subtree:true});document.addEventListener('DOMContentLoaded',install);install();window.YardivoFullDataV583={export:exp,verify,restore};
+document.addEventListener('DOMContentLoaded',()=>setTimeout(install,250),{once:true});
+document.addEventListener('click',e=>{if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(install,60)},true);
+window.addEventListener('yardivo:login',()=>setTimeout(install,500));
+window.YardivoFullDataV583={export:exp,verify,restore};
 })();</script>
 <style id="yardivo-v583-settings-export-supplier-hard-fix-style">
 /* FULL DATA must never become a floating/top-level application card. */
@@ -36656,14 +36663,13 @@ async function deleteAllSuppliers(){
 
 /* Re-mount after legacy Settings renderers modify DOM. */
 let timer=0;
-new MutationObserver(()=>{
- clearTimeout(timer);
- timer=setTimeout(ensureInitial,50);
-}).observe(document.documentElement,{childList:true,subtree:true});
-
-document.addEventListener('DOMContentLoaded',()=>setTimeout(ensureInitial,100));
-window.addEventListener('load',()=>setTimeout(ensureInitial,600));
-window.addEventListener('yardivo:login',()=>setTimeout(ensureInitial,250));
+function queueEnsure(ms=60){clearTimeout(timer);timer=setTimeout(ensureInitial,ms)}
+document.addEventListener('DOMContentLoaded',()=>queueEnsure(300),{once:true});
+window.addEventListener('yardivo:login',()=>queueEnsure(500));
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"],#settings'))queueEnsure(60);
+},true);
+window.addEventListener('yardivo:master-data-changed',()=>{if(document.getElementById('settings')?.classList.contains('active'))queueEnsure(80)});
 
 /* Also expose the final controller for diagnostics. */
 window.YardivoSettingsHardFixV583={
@@ -47171,11 +47177,17 @@ function removeLegacyGhosts(root){
 }
 function paintContext(){
  syncRegistry();
- const root=document.querySelector('.view.active')||document.querySelector('.view[style*="block"]')||document.body;
- document.querySelectorAll('select').forEach(sanitizeSelect);
+ const login=document.getElementById('loginOverlay');
+ const prelogin=document.body?.classList.contains('yardivo-prelogin')||
+   (login&&getComputedStyle(login).display!=='none'&&getComputedStyle(login).visibility!=='hidden');
+ if(prelogin)return;
+ const root=document.querySelector('.view.active')||document.querySelector('.view[style*="block"]');
+ if(!root)return;
+ root.querySelectorAll('select').forEach(sanitizeSelect);
  removeLegacyGhosts(root);
  replaceTechnicalText(root);
- const top=document.querySelector('.topbar');if(top)replaceTechnicalText(top);
+ const top=document.querySelector('.topbar');
+ if(top){top.querySelectorAll('select').forEach(sanitizeSelect);replaceTechnicalText(top)}
  const a=activeWarehouseId(),l=activeLocationId();
  document.documentElement.dataset.yardivoWarehouse=a;
  document.documentElement.dataset.yardivoLocation=l;
@@ -47423,7 +47435,11 @@ function installFontSettings(){
  }
  let v='normal';try{v=localStorage.getItem(fontKey())||'normal'}catch(_){}setFont(v);
 }
-function refresh(){installFontSettings();enforceMapScope();setTimeout(()=>{enforceMapScope();translateExact(portal())},40)}
+function refresh(){
+ const r=String(sess()?.role||sess()?.app_role||'').toLowerCase();
+ if(r!=='supplier')return;
+ installFontSettings();enforceMapScope();setTimeout(()=>{enforceMapScope();translateExact(portal())},40)
+}
 document.addEventListener('click',e=>{
  const f=e.target.closest?.('#yardivoSupplierPortal [data-ysp-font-choice]');if(f){setFont(f.dataset.yspFontChoice);setTimeout(()=>translateExact(portal()),0);return}
  if(e.target.closest?.('#yardivoSupplierPortal [data-ysp-view],#yardivoSupplierPortal [data-lang]'))setTimeout(refresh,60);
@@ -49639,7 +49655,8 @@ function renderAll(){renderGlobal();renderDaily();renderSupplier()}
 ['globalWarehouse','dailyMapWarehouseSelect','weeklyMapWarehouse','annWarehouse','ysnWarehouse'].forEach(id=>document.addEventListener('change',e=>{if(e.target?.id===id)setTimeout(renderAll,0)},true));
 ['yardivo:master-data-changed','yardivo:data-synced','yardivo:login','yardivo:supplier-request-updated'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(renderAll,80)));
 document.addEventListener('click',e=>{if(e.target.closest?.('[data-ysp-view="new"],.nav-item,[data-view]'))setTimeout(renderAll,80)},true);
-setInterval(renderAll,1500);setTimeout(renderAll,120);window.YARDIVO_DEV_BUILD='20260915-dev-v5.8.3-capacity-visible-all-sections-final';
+setInterval(()=>{try{if(document.body.classList.contains('yardivo-prelogin'))return}catch(_){};renderAll()},4000);
+setTimeout(renderAll,220);window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-capacity-performance';
 })();
 </script>
 
@@ -51842,89 +51859,63 @@ window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-supplier-assigned-warehouse-bookin
 <script id="yardivo-v583-business-names-only-no-tech-ids-js">
 (()=>{'use strict';
 const MASTER_KEY='yardivo_master_data_registry_v583';
-const escRx=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+let cacheRaw='',cacheMap=new Map();
 
-function master(){
-  try{
-    const api=window.YardivoAppStateV583?.master?.();
-    if(api&&typeof api==='object') return api;
-  }catch(_){}
-  try{return JSON.parse(localStorage.getItem(MASTER_KEY)||'{}')||{}}catch(_){return{}}
+function masterRaw(){
+  try{return localStorage.getItem(MASTER_KEY)||''}catch(_){return''}
 }
-function labels(){
-  const m=master(), out=[];
+function rebuild(){
+  const raw=masterRaw();
+  if(raw===cacheRaw&&cacheMap.size)return;
+  cacheRaw=raw;cacheMap=new Map();
+  let m={};try{m=JSON.parse(raw||'{}')||{}}catch(_){}
   for(const x of (m.locations||[])){
-    const id=String(x?.id||'').trim(), name=String(x?.name||'').trim();
-    if(id&&name&&id!==name) out.push([id,name]);
+    const id=String(x?.id||''),name=String(x?.name||'').trim();
+    if(id&&name)cacheMap.set(id,name);
   }
   for(const x of (m.warehouses||[])){
-    const id=String(x?.id||'').trim(), name=String(x?.name||'').trim();
-    if(id&&name&&id!==name) out.push([id,name]);
+    const id=String(x?.id||''),name=String(x?.name||'').trim();
+    if(id&&name)cacheMap.set(id,name);
   }
   for(const x of (m.suppliers||[])){
-    const id=String(x?.id||'').trim(), name=String(x?.name||x?.supplier_code||'').trim();
-    if(id&&name&&id!==name) out.push([id,name]);
+    const id=String(x?.id||''),name=String(x?.name||x?.supplier_code||'').trim();
+    if(id&&name)cacheMap.set(id,name);
   }
   for(const x of (m.responsible_people||[])){
-    const id=String(x?.id||'').trim();
+    const id=String(x?.id||'');
     const name=[x?.first_name,x?.last_name].map(v=>String(v||'').trim()).filter(Boolean).join(' ');
-    if(id&&name&&id!==name) out.push([id,name]);
+    if(id&&name)cacheMap.set(id,name);
   }
-  out.sort((a,b)=>b[0].length-a[0].length);
-  return out;
 }
-function replaceVisibleText(text,map){
-  let out=String(text??'');
-  for(const [id,name] of map){
-    // Replace only standalone technical tokens; internal form values/data attributes stay untouched.
-    const rx=new RegExp(`(^|[^A-Za-z0-9_])${escRx(id)}(?=$|[^A-Za-z0-9_])`,'g');
-    out=out.replace(rx,(m,p)=>p+name);
+function resolve(id){
+  rebuild();
+  const key=String(id||'');
+  return cacheMap.get(key)||key;
+}
+/* Lightweight targeted safety pass only on known selectors.
+   No TreeWalker, no document.body querySelectorAll, no click/change global scan. */
+function sanitize(){
+  rebuild();
+  const sels=[
+    '#homeLocationSelect option','#globalLocation option','#globalWarehouse option',
+    '#locationSelect option','#warehouseSelect option',
+    '#dailyMapWarehouseSelect option','#weeklyMapWarehouse option','#annWarehouse option',
+    '#ysnLocation option','#ysnWarehouse option','#yvAccLocation option','#yvAccWarehouse option'
+  ];
+  for(const el of document.querySelectorAll(sels.join(','))){
+    const v=String(el.value||'');
+    if(v&&cacheMap.has(v))el.textContent=cacheMap.get(v);
   }
-  return out;
 }
-function sanitize(root=document.body){
-  if(!root)return;
-  const map=labels(); if(!map.length)return;
+let t=0;
+function schedule(ms=40){clearTimeout(t);t=setTimeout(sanitize,ms)}
+['yardivo:master-data-changed','yardivo:master-data-ready','yardivo:context-changed','yardivo:login']
+  .forEach(ev=>window.addEventListener(ev,()=>schedule(60)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>schedule(120),{once:true});
+else schedule(120);
 
-  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{
-    acceptNode(n){
-      const p=n.parentElement;if(!p)return NodeFilter.FILTER_REJECT;
-      if(['SCRIPT','STYLE','NOSCRIPT','TEMPLATE'].includes(p.tagName))return NodeFilter.FILTER_REJECT;
-      return NodeFilter.FILTER_ACCEPT;
-    }
-  });
-  const nodes=[]; while(walker.nextNode())nodes.push(walker.currentNode);
-  for(const n of nodes){
-    const old=n.nodeValue||'', neu=replaceVisibleText(old,map);
-    if(neu!==old)n.nodeValue=neu;
-  }
-
-  // User-facing accessibility/tooltips only. Never touch value/data/id/name attributes.
-  for(const el of root.querySelectorAll('[title],[aria-label]')){
-    for(const a of ['title','aria-label']){
-      if(!el.hasAttribute(a))continue;
-      const old=el.getAttribute(a)||'', neu=replaceVisibleText(old,map);
-      if(neu!==old)el.setAttribute(a,neu);
-    }
-  }
-}
-let scheduled=false;
-function schedule(ms=0){
-  if(scheduled)return;
-  scheduled=true;
-  setTimeout(()=>{scheduled=false;sanitize(document.body)},ms);
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{schedule(0);setTimeout(()=>sanitize(document.body),600)},{once:true});
-else {schedule(0);setTimeout(()=>sanitize(document.body),600)}
-['yardivo:data-synced','yardivo:master-data-ready','yardivo:session-ready','yardivo:authenticated','yardivo:users-changed','yardivo:supplier-request-updated']
-  .forEach(ev=>window.addEventListener(ev,()=>schedule(10)));
-document.addEventListener('click',()=>schedule(30),true);
-document.addEventListener('change',()=>schedule(30),true);
-
-window.YardivoBusinessLabelsV583={sanitize,resolve(id){
-  const x=labels().find(a=>a[0]===String(id||''));return x?x[1]:String(id||'');
-}};
-window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-business-names-only-no-tech-ids-final';
+window.YardivoBusinessLabelsV583={sanitize,resolve,rebuild};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-business-labels-fast';
 })();
 </script>
 
@@ -51956,11 +51947,29 @@ body.light-mode #ysnBoard .ysn-inventory-map .ramp{background:#fff!important;col
 (()=>{'use strict';
 function refresh(){
   try{window.YardivoHeaderMasterWarehouseAuthorityV583?.sync?.()}catch(_){}
-  try{window.YardivoBusinessLabelsV583?.sanitize?.(document.body)}catch(_){}
+  try{window.YardivoBusinessLabelsV583?.sanitize?.()}catch(_){}
 }
 ['yardivo:context-changed','yardivo:master-data-changed','yardivo:data-synced','yardivo:login'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(refresh,20)));
 document.addEventListener('click',e=>{if(e.target?.closest?.('[data-home-target],[data-view]'))setTimeout(refresh,30)},true);
 window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-header-inventory-smart-supplier-map-fix-final';
+})();
+</script>
+
+
+<style id="yardivo-v583-login-performance-style">
+#loginOverlay,#loginForm,#loginForm *{backface-visibility:hidden}
+#loginForm input,#loginForm select,#loginForm button{will-change:auto!important}
+html.yardivo-login-processing #loginOverlay *{transition-duration:.08s!important;animation-duration:.08s!important}
+</style>
+<script id="yardivo-v583-login-performance-runtime">
+(()=>{'use strict';
+const form=document.getElementById('loginForm');
+if(form&&!form.dataset.yvPerf){
+ form.dataset.yvPerf='1';
+ form.addEventListener('submit',()=>{document.documentElement.classList.add('yardivo-login-processing')},{capture:true});
+}
+['yardivo:login','yardivo:authenticated','yardivo:session-ready'].forEach(ev=>window.addEventListener(ev,()=>document.documentElement.classList.remove('yardivo-login-processing')));
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-performance-login-smooth-final';
 })();
 </script>
 
