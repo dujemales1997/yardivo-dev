@@ -13886,7 +13886,7 @@ async function loadServerProfile(c){
   const role=normRole(p.app_role);
   if(!['admin','manager','inventory','reception','gate','supplier'].includes(role))throw new Error('Račun nema valjanu YARDIVO rolu.');
   const warehouses=Array.isArray(p.warehouses)?p.warehouses.map(x=>String(x).trim().toUpperCase()).filter(Boolean):[];
-  return {username:String(p.username||''),role,location:String(p.location||'VG'),warehouses};
+  return {username:String(p.username||''),role,location:String(p.location||''),warehouses};
 }
 async function authoritativeLogin(){
   const username=(document.getElementById('loginUser')?.value||'').trim().toLowerCase();
@@ -24290,9 +24290,7 @@ window.addEventListener('yardivo:welcome-complete',()=>{
 /* Independent fallback: after Welcome duration, unlock if the Login is present.
    This deliberately does not depend on a body class being correct. */
 window.addEventListener('load',()=>{
-  setTimeout(forceInteractive,5700);
-  setTimeout(forceInteractive,6200);
-  setTimeout(forceInteractive,7000);
+  setTimeout(forceInteractive,5450);
 },{once:true});
 
 window.YardivoLoginSafeIsolation={forceInteractive};
@@ -24323,6 +24321,7 @@ let done=false;
 
 function finalizeLogin(){
   if(done)return true;
+  try{if(window.currentSession?.serverAuthorized){done=true;return true}}catch(_){}
   const overlay=document.getElementById('loginOverlay');
   if(!overlay)return false;
 
@@ -25067,7 +25066,7 @@ async function authenticate(){
     user:String(p.username||username),
     username:String(p.username||username),
     role:assignedRole,
-    location:String(p.location||'VG'),
+    location:String(p.location||''),
     warehouses:Array.isArray(p.warehouses)?p.warehouses.map(x=>String(x).trim().toUpperCase()).filter(Boolean):[],
     authUserId:auth.user?.id||'',
     loginAt:new Date().toISOString(),
@@ -25078,19 +25077,30 @@ async function authenticate(){
 
   /* V5.7.6: bind the raw REST login tokens into the Supabase auth client for EVERY role,
      including Supplier. Supplier Edge Functions read this authenticated session. */
+  window.__yardivoSupplierAccessToken=auth.access_token;
   try{
     const authClient=await window.YardivoAuth?.client?.();
     if(authClient?.auth?.setSession){
-      const {error:setSessionError}=await authClient.auth.setSession({
+      const bind=authClient.auth.setSession({
         access_token:auth.access_token,
         refresh_token:auth.refresh_token
       });
-      if(setSessionError)throw setSessionError;
+      /* Supplier needs the authenticated Edge session immediately.
+         Other roles enter the UI first and finish client-session binding asynchronously. */
+      if(assignedRole==='supplier'){
+        const {error:setSessionError}=await bind;
+        if(setSessionError)throw setSessionError;
+      }else{
+        Promise.resolve(bind).then(({error})=>{
+          if(error)console.error('[YARDIVO AUTH SESSION BIND]',error);
+        }).catch(err=>console.error('[YARDIVO AUTH SESSION BIND]',err));
+      }
     }
-    window.__yardivoSupplierAccessToken=auth.access_token;
   }catch(setSessionErr){
-    console.error('YARDIVO V5.7.6 auth session bind',setSessionErr);
-    throw new Error('ONLINE PRIJAVA NIJE POVEZANA. Odjavite se i ponovno prijavite.');
+    if(assignedRole==='supplier'){
+      console.error('YARDIVO supplier auth session bind',setSessionErr);
+      throw new Error('ONLINE PRIJAVA NIJE POVEZANA. Odjavite se i ponovno prijavite.');
+    }
   }
 
   /* Canonical online bootstrap: login is complete only when the database session is valid.
@@ -25120,7 +25130,7 @@ async function login(){
   try{
     const session=await authenticate();
 
-    try{window.dispatchEvent(new CustomEvent('yardivo:login',{detail:{session}}))}catch(_){}
+    /* Paint authenticated Home FIRST. Heavy listeners/sync come after first paint. */
     try{
       if(window.YardivoPostAuthTransition?.open){
         window.YardivoPostAuthTransition.open();
@@ -25132,13 +25142,22 @@ async function login(){
       throw new Error('PRIJAVA JE USPJELA, ALI APLIKACIJA SE NIJE OTVORILA.');
     }
 
-    try{window.YardivoRoleStableFinal?.apply?.()}catch(_){}
-    try{window.YardivoExactRBAC?.apply?.()}catch(_){}
-    if(session.role==='supplier'){
-      try{window.YardivoSupplierPortal?.open?.()}catch(_){}
-    }else{
-      try{window.yardivoRefreshAllWarehouseUi?.()}catch(_){}
-    }
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        try{window.dispatchEvent(new CustomEvent('yardivo:login',{detail:{session}}))}catch(_){}
+        const later=()=>{
+          try{window.YardivoRoleStableFinal?.apply?.()}catch(_){}
+          try{window.YardivoExactRBAC?.apply?.()}catch(_){}
+          if(session.role==='supplier'){
+            try{window.YardivoSupplierPortal?.open?.()}catch(_){}
+          }else{
+            try{window.yardivoRefreshAllWarehouseUi?.()}catch(_){}
+          }
+        };
+        if('requestIdleCallback' in window)requestIdleCallback(later,{timeout:800});
+        else setTimeout(later,120);
+      });
+    });
     return true;
   }catch(e){
     let msg=String(e?.message||'PRIJAVA NIJE USPJELA.');
@@ -25208,72 +25227,57 @@ html.yardivo-app-authenticated body .view.active{
 <script id="yardivo-post-auth-transition-fix-v1-20260901-js">
 (function(){
 'use strict';
+let opening=false;
 
 function openAuthenticatedApp(){
-  /* Clear every pre-login state that earlier startup fixes intentionally set. */
-  document.documentElement.classList.remove(
-    'yardivo-booting',
-    'yardivo-login-ready'
-  );
-  document.documentElement.classList.add(
-    'yardivo-welcome-complete',
-    'yardivo-app-authenticated'
-  );
-  document.body.classList.remove(
-    'yardivo-prelogin',
-    'yardivo-welcome-active'
-  );
-
-  const splash=document.getElementById('yardivoWelcomeSplash');
-  if(splash){
-    splash.style.setProperty('display','none','important');
-    splash.style.setProperty('pointer-events','none','important');
-  }
-
-  const overlay=document.getElementById('loginOverlay');
-  if(overlay){
-    overlay.setAttribute('aria-hidden','true');
-    overlay.style.setProperty('display','none','important');
-    overlay.style.setProperty('visibility','hidden','important');
-    overlay.style.setProperty('opacity','0','important');
-    overlay.style.setProperty('pointer-events','none','important');
-  }
-
-  /* Use the application's own entry routine first. */
+  if(opening)return true;
+  opening=true;
   try{
-    if(typeof enterApp==='function')enterApp();
-  }catch(e){
-    console.error('YARDIVO enterApp failed',e);
+    const html=document.documentElement, body=document.body;
+    html.classList.remove('yardivo-booting','yardivo-login-ready','yv-login-home-boot-v583');
+    html.classList.add('yardivo-welcome-complete','yardivo-app-authenticated');
+    body.classList.remove('yardivo-prelogin','yardivo-welcome-active');
+
+    const splash=document.getElementById('yardivoWelcomeSplash');
+    if(splash){
+      splash.style.setProperty('display','none','important');
+      splash.style.setProperty('visibility','hidden','important');
+      splash.style.setProperty('opacity','0','important');
+      splash.style.setProperty('pointer-events','none','important');
+    }
+
+    const overlay=document.getElementById('loginOverlay');
+    if(overlay){
+      overlay.setAttribute('aria-hidden','true');
+      overlay.style.setProperty('display','none','important');
+      overlay.style.setProperty('visibility','hidden','important');
+      overlay.style.setProperty('opacity','0','important');
+      overlay.style.setProperty('pointer-events','none','important');
+    }
+
+    /* One authoritative entry only. No double render/RBAC pass. */
+    if(typeof enterApp==='function'){
+      enterApp();
+    }else{
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      const home=document.getElementById('homeMenu');
+      if(home)home.classList.add('active');
+      body.classList.add('home-menu-mode');
+    }
+
+    /* Explicitly guarantee canonical Home; never target old #home/#homeView. */
+    const home=document.getElementById('homeMenu');
+    if(home && !home.classList.contains('active')){
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      home.classList.add('active');
+      body.classList.add('home-menu-mode');
+    }
+
+    body.classList.remove('yardivo-prelogin','yardivo-welcome-active');
+    return true;
+  }finally{
+    requestAnimationFrame(()=>{opening=false});
   }
-
-  /* Re-clear prelogin because older render/access routines may touch body classes. */
-  document.body.classList.remove('yardivo-prelogin','yardivo-welcome-active');
-
-  /* Guarantee a visible starting view if a legacy view routine failed. */
-  let active=document.querySelector('.view.active');
-  const home=document.getElementById('homeMenu');
-  if(!active && home){
-    document.querySelectorAll('.view').forEach(v=>{
-      v.classList.remove('active');
-      v.style.removeProperty('display');
-      v.style.removeProperty('visibility');
-      v.style.removeProperty('opacity');
-      v.style.removeProperty('pointer-events');
-    });
-    home.classList.add('active');
-    active=home;
-  }
-
-  try{YardivoRoleAccessFinal?.apply?.()}catch(_){}
-  try{window.YardivoExactRBAC?.apply?.()}catch(_){}
-  try{if(typeof render==='function')render()}catch(_){}
-
-  /* render() may recreate view state; enforce Home only if nothing is active. */
-  if(!document.querySelector('.view.active') && home){
-    home.classList.add('active');
-  }
-
-  return true;
 }
 
 window.YardivoPostAuthTransition={open:openAuthenticatedApp};
@@ -51400,7 +51404,7 @@ html.yv-login-home-boot-v583 body #home,
 html.yv-login-home-boot-v583 body #homeView,
 html.yv-login-home-boot-v583 body [data-page="home"]{visibility:visible!important}
 </style>
-<script id="yardivo-v583-login-home-no-flicker-js">
+<script type="application/x-yardivo-disabled" id="yardivo-v583-login-home-no-flicker-js">
 (()=>{'use strict';
 let handled=false;
 function session(){
@@ -51970,6 +51974,41 @@ if(form&&!form.dataset.yvPerf){
 }
 ['yardivo:login','yardivo:authenticated','yardivo:session-ready'].forEach(ev=>window.addEventListener(ev,()=>document.documentElement.classList.remove('yardivo-login-processing')));
 window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-performance-login-smooth-final';
+})();
+</script>
+
+
+<style id="yardivo-v583-auth-home-visibility-root-fix-style">
+html.yardivo-app-authenticated body:not(.yardivo-prelogin) #homeMenu.view.active{
+  visibility:visible!important;opacity:1!important;pointer-events:auto!important;
+}
+</style>
+<script id="yardivo-v583-auth-home-visibility-root-fix-js">
+(()=>{'use strict';
+let armed=false;
+function ensure(){
+  const s=window.currentSession;
+  if(!s?.serverAuthorized)return;
+  const body=document.body, html=document.documentElement;
+  html.classList.add('yardivo-app-authenticated');
+  html.classList.remove('yardivo-booting','yardivo-login-ready','yv-login-home-boot-v583');
+  body.classList.remove('yardivo-prelogin','yardivo-welcome-active');
+  const overlay=document.getElementById('loginOverlay');
+  if(overlay){
+    overlay.style.setProperty('display','none','important');
+    overlay.style.setProperty('visibility','hidden','important');
+    overlay.style.setProperty('opacity','0','important');
+    overlay.style.setProperty('pointer-events','none','important');
+  }
+  if(!document.querySelector('.view.active')){
+    const h=document.getElementById('homeMenu');
+    if(h){h.classList.add('active');body.classList.add('home-menu-mode')}
+  }
+}
+['yardivo:login','yardivo:authenticated','yardivo:session-ready','yardivo:data-synced']
+ .forEach(ev=>window.addEventListener(ev,()=>requestAnimationFrame(ensure)));
+window.YardivoAuthHomeVisibilityRootFixV583={ensure};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-login-blank-speed-root-fix-final';
 })();
 </script>
 
