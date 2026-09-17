@@ -50228,5 +50228,292 @@ setTimeout(()=>{installSupplierModal();installImport();patchList()},0);window.YA
  window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-master-popup-only-fix-final';
 })();
 </script>
+
+<style id="yardivo-v583-master-data-cleanup-final-style">
+/* Master forms: readable white inputs in Light Mode. */
+body.light-mode #yardivoMasterPopupV583 input,
+body.light-mode #yardivoMasterPopupV583 select,
+body.light-mode #yardivoMasterPopupV583 textarea,
+html[data-yardivo-main-theme="light"] #yardivoMasterPopupV583 input,
+html[data-yardivo-main-theme="light"] #yardivoMasterPopupV583 select,
+html[data-yardivo-main-theme="light"] #yardivoMasterPopupV583 textarea{
+ background:#fff!important;color:#10233f!important;-webkit-text-fill-color:#10233f!important;
+ border-color:#c7d4e1!important;caret-color:#10233f!important
+}
+body.light-mode #yardivoMasterPopupV583 input::placeholder,
+html[data-yardivo-main-theme="light"] #yardivoMasterPopupV583 input::placeholder{
+ color:#71849a!important;-webkit-text-fill-color:#71849a!important;opacity:1!important
+}
+/* Responsible person now has user code + name + surname. */
+#yardivoResponsiblePeopleV583 .yrp-add{grid-template-columns:1fr 1fr 1fr auto!important}
+/* Explicit 24h working-time selectors. */
+.yv-time24{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center}
+.yv-time24 select{min-width:0;width:100%}
+.yv-time24 b{font-size:15px;color:#60758d}
+/* Retire old duplicate Master owners; canonical popup remains the only Master UI. */
+#settings #adminCapacitySettings,
+#settings #receptionRampSettings,
+#settings #masterUserAdmin{display:none!important}
+@media(max-width:760px){#yardivoResponsiblePeopleV583 .yrp-add{grid-template-columns:1fr!important}}
+</style>
+<script id="yardivo-v583-master-data-cleanup-final-js">
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+const MASTER='yardivo_master_data_registry_v583';
+function md(){try{const d=JSON.parse(localStorage.getItem(MASTER)||'{}');d.locations=Array.isArray(d.locations)?d.locations:[];d.warehouses=Array.isArray(d.warehouses)?d.warehouses:[];d.suppliers=Array.isArray(d.suppliers)?d.suppliers:[];d.responsible_people=Array.isArray(d.responsible_people)?d.responsible_people:[];return d}catch(_){return{locations:[],warehouses:[],suppliers:[],responsible_people:[]}}}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function persist(d,reason){
+ localStorage.setItem(MASTER,JSON.stringify(d));
+ try{await Promise.resolve(window.YardivoMasterDataV583?.save?.(d))}catch(e){console.error(e);throw e}
+ try{window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{reason}}))}catch(_){}
+}
+function nextRpId(a){let n=0;(a||[]).forEach(x=>{const m=String(x.id||'').match(/^RP(\d+)$/);if(m)n=Math.max(n,+m[1])});return 'RP'+String(n+1).padStart(3,'0')}
+
+/* OD and DO use the exact same 24-hour dropdown control. */
+function timeControl(value){
+ const [h='00',m='00']=String(value||'00:00').split(':');
+ const hs=Array.from({length:24},(_,i)=>String(i).padStart(2,'0'));
+ const ms=Array.from({length:60},(_,i)=>String(i).padStart(2,'0'));
+ return `<span class="yv-time24"><select data-yv-hour>${hs.map(x=>`<option ${x===h?'selected':''}>${x}</option>`).join('')}</select><b>:</b><select data-yv-minute>${ms.map(x=>`<option ${x===m?'selected':''}>${x}</option>`).join('')}</select></span>`;
+}
+function upgradeTimeInput(inp){
+ if(!inp||inp.dataset.yvTimeUpgraded)return;
+ const wrap=document.createElement('span');wrap.innerHTML=timeControl(inp.value||'00:00');
+ const ui=wrap.firstElementChild;inp.dataset.yvTimeUpgraded='1';inp.hidden=true;inp.insertAdjacentElement('afterend',ui);
+ const sync=()=>{inp.value=ui.querySelector('[data-yv-hour]').value+':'+ui.querySelector('[data-yv-minute]').value;inp.dispatchEvent(new Event('change',{bubbles:true}))};
+ ui.querySelectorAll('select').forEach(x=>x.addEventListener('change',sync));
+}
+function upgradeWorkingTimes(){
+ document.querySelectorAll('#yardivoMasterPopupV583 [data-yma-wh-from],#yardivoMasterPopupV583 [data-yma-wh-to]').forEach(upgradeTimeInput);
+ /* Ramp custom working-time rows are legacy: warehouse reception hours are canonical. */
+ document.querySelectorAll('#yardivoMasterPopupV583 [data-yma-ramp-from],#yardivoMasterPopupV583 [data-yma-ramp-to]').forEach(x=>{
+   const lab=x.closest('label');if(lab)lab.style.display='none';
+ });
+ const h=$('yardivoMasterOperationalConfigV583')?.querySelector('.ymd-ramp-list h4');
+ if(h)h.textContent='RAMPE · KAPACITET I STATUS';
+}
+
+/* Responsible person = user code + first name + last name. */
+function upgradeResponsible(){
+ const sec=$('yardivoResponsiblePeopleV583');if(!sec)return;
+ const add=sec.querySelector('.yrp-add');if(add&&!$('yrpUserCode')){
+   const lab=document.createElement('label');lab.innerHTML='ŠIFRA KORISNIKA *<input id="yrpUserCode" autocomplete="off" placeholder="Šifra korisnika" maxlength="60">';
+   add.insertBefore(lab,add.firstChild);
+ }
+ const btn=$('yrpAddBtn');
+ if(btn&&!btn.dataset.yvCodeOwner){
+   btn.dataset.yvCodeOwner='1';
+   const clone=btn.cloneNode(true);btn.replaceWith(clone);
+   clone.addEventListener('click',async e=>{
+     e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+     const code=String($('yrpUserCode')?.value||'').trim(),first=String($('yrpFirstName')?.value||'').trim(),last=String($('yrpLastName')?.value||'').trim();
+     if(!code||!first||!last)return alert('Šifra korisnika, ime i prezime su obavezni.');
+     const d=md(),key=code.toLocaleLowerCase('hr');
+     if(d.responsible_people.some(x=>String(x.user_code||'').trim().toLocaleLowerCase('hr')===key))return alert('Ta šifra korisnika već postoji.');
+     if(d.responsible_people.some(x=>(String(x.first_name||'')+' '+String(x.last_name||'')).trim().toLocaleLowerCase('hr')===(first+' '+last).toLocaleLowerCase('hr')))return alert('Ta odgovorna osoba već postoji.');
+     d.responsible_people.push({id:nextRpId(d.responsible_people),user_code:code,first_name:first,last_name:last,active:true,account_username:null,auth_user_id:null});
+     try{await persist(d,'responsible-person.add-with-code');['yrpUserCode','yrpFirstName','yrpLastName'].forEach(id=>{if($(id))$(id).value=''});try{window.YardivoResponsiblePeopleV583?.refresh?.()}catch(_){}}catch(err){alert('Spremanje nije uspjelo: '+String(err?.message||err))}
+   },true);
+ }
+ /* Show business/user code in list, never technical RP id. */
+ const d=md();
+ sec.querySelectorAll('[data-yrp-delete]').forEach(del=>{
+   const row=del.closest('.yrp-row'),p=d.responsible_people.find(x=>String(x.id)===String(del.dataset.yrpDelete));if(!row||!p)return;
+   let meta=row.querySelector('.yv-rp-user-code');if(!meta){meta=document.createElement('small');meta.className='yv-rp-user-code';row.querySelector('strong')?.insertAdjacentElement('afterend',meta)}
+   if(meta)meta.textContent='ŠIFRA KORISNIKA: '+String(p.user_code||'—');
+ });
+}
+
+/* Supplier Master is the only place where supplier code and warehouse scope are edited. */
+function supplierAuthority(){
+ const card=$('yardivoMasterSuppliersV583');if(card){
+   const d=md();card.querySelectorAll('[data-spec-sup-name]').forEach(inp=>{
+     const x=d.suppliers.find(v=>String(v.id)===String(inp.dataset.specSupName));if(!x)return;
+     let meta=inp.parentElement.querySelector('.yv-supplier-meta');if(!meta){meta=document.createElement('div');meta.className='yv-supplier-meta';inp.insertAdjacentElement('afterend',meta)}
+     const wh=x.all_warehouses?'SVA SKLADIŠTA':(x.warehouses||[]).map(id=>d.warehouses.find(w=>String(w.id)===String(id))?.name).filter(Boolean).join(', ');
+     meta.textContent='ŠIFRA: '+String(x.supplier_code||x.code||'—')+' · SKLADIŠTA: '+(wh||'—');
+   });
+ }
+ const scope=$('yufScopeSection'),contact=$('yufSupplierContactFields');
+ if(scope)scope.style.display='none';if(contact)contact.style.display='none';
+}
+
+/* Canonical order: Location → Warehouse → Ramp management → Suppliers → Responsible people.
+   Accounts begin below Master Data in normal Settings; no duplicate Master panels there. */
+function orderMaster(){
+ const pane=$('yardivoSettingsMasterPaneV583'),popup=$('yardivoMasterPopupBodyV583');if(!pane||!popup)return;
+ if(pane.parentElement!==popup)popup.appendChild(pane);
+ const stable=$('yardivoStableMasterEditorV583'),registry=$('yardivoMasterDataRegistryV583'),ops=$('yardivoMasterOperationalConfigV583');
+ if(stable&&stable.parentElement!==pane)pane.appendChild(stable);
+ if(registry&&registry.parentElement!==pane)pane.appendChild(registry);
+ if(ops&&ops.parentElement!==pane)pane.appendChild(ops);
+ /* Existing production flow already owns supplier + people ordering; keep one instance only. */
+ const flow=$('yardivoProductionMasterFlowV583'),sup=$('yardivoMasterSuppliersV583'),rp=$('yardivoResponsiblePeopleV583');
+ if(flow){
+   let people=$('yardivoProductionMasterPeopleV583');if(!people){people=document.createElement('section');people.id='yardivoProductionMasterPeopleV583';flow.appendChild(people)}
+   if(sup&&sup.parentElement!==people)people.appendChild(sup);
+   if(rp&&rp.parentElement!==people)people.appendChild(rp);
+ }
+ ['adminCapacitySettings','receptionRampSettings','masterUserAdmin'].forEach(id=>{const x=$(id);if(x)x.style.setProperty('display','none','important')});
+ const admin=$('yardivoSettingsAdminPaneV583');if(admin){admin.style.setProperty('display','block','important');admin.classList.add('active')}
+}
+function refresh(){
+ orderMaster();upgradeWorkingTimes();upgradeResponsible();supplierAuthority();
+}
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('#yardivoMasterPopupLaunchV583,#yvAddSupplierPopupV583,#ymdAddSupplier,[data-spec-sup-add],[data-yucr-role="supplier"]'))setTimeout(refresh,0);
+},true);
+['yardivo:master-data-changed','yardivo:master-data-ready','yardivo:data-synced','yardivo:login'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(refresh,30)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(refresh,150),{once:true});else setTimeout(refresh,0);
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-master-data-cleanup-fix-final';
+})();
+</script>
+
+
+<style id="yardivo-v583-settings-master-deep-structure-final-style">
+/* SETTINGS CONTRACT:
+   - MASTER PODACI = one large Admin-only launch button + popup.
+   - ordinary settings stay on Settings page for every role.
+   - account administration stays outside Master and Admin-only.
+*/
+#settings #yardivoSettingsMasterPaneV583{display:none!important}
+#yardivoMasterPopupV583 #yardivoSettingsMasterPaneV583{display:block!important}
+#settings #yardivoMasterAdminSettingsV583,
+#settings #yardivoSettingsTabsFinal,
+#settings #yardivoSettingsNavFinal{display:none!important}
+
+/* Large Master launch at top, Admin only. */
+#yardivoMasterPopupLaunchV583{
+ width:100%!important;min-height:74px!important;margin:0 0 18px!important;padding:18px 22px!important;
+ border-radius:12px!important;background:#0b1f3a!important;color:#fff!important;border:1px solid #1f4d7b!important;
+ font-size:16px!important;font-weight:950!important;letter-spacing:.8px!important;text-align:left!important
+}
+#yardivoMasterPopupLaunchV583:hover{background:#12345d!important}
+body:not(.yardivo-settings-admin-v583) #yardivoMasterPopupLaunchV583{display:none!important}
+
+/* Ordinary settings are white/readable in Light Mode. */
+body.light-mode #settings .panel,
+body.light-mode #settings .danger-zone{background:#fff!important;color:#10233f!important;border-color:#dce5ee!important}
+body.light-mode #settings .panel :is(h2,h3,strong,label){color:#10233f!important}
+
+/* These are ordinary settings and must remain visible regardless of role/category tabs. */
+#settings #yardivoFontSettings,
+#settings #yardivoNonWorkingDaysSettings,
+#settings #qrMobileSettingsPanel,
+#settings #yardivoVoiceSettingsV583,
+#settings [data-yardivo-ordinary-settings-v583="1"]{display:block!important}
+
+/* Canonical Master owners never appear again below the popup. */
+#settings #yardivoStableMasterEditorV583,
+#settings #yardivoMasterDataRegistryV583,
+#settings #yardivoMasterOperationalConfigV583,
+#settings #yardivoProductionMasterFlowV583,
+#settings #yardivoMasterSuppliersV583,
+#settings #yardivoResponsiblePeopleV583,
+#settings #yardivoMasterFoundationV583,
+#settings #yardivoSettingsMasterPaneV583{display:none!important}
+
+/* Legacy duplicated Master/account block is retired. Canonical Supabase admin pane remains separate. */
+#settings #masterUserAdmin,
+#settings #adminCapacitySettings,
+#settings #receptionRampSettings{display:none!important}
+body:not(.yardivo-settings-admin-v583) #settings #yardivoSettingsAdminPaneV583{display:none!important}
+body.yardivo-settings-admin-v583 #settings #yardivoSettingsAdminPaneV583{display:block!important}
+</style>
+
+<script id="yardivo-v583-settings-master-deep-structure-final-js">
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+const norm=v=>String(v||'').trim().toLowerCase();
+function role(){
+ try{return norm((window.currentSession||currentSession)?.role)}catch(_){return norm(window.currentSession?.role)}
+}
+function isAdmin(){return role()==='admin'}
+function heading(panel){return norm(panel?.querySelector?.('h1,h2,h3,.panel-head')?.textContent||'')}
+
+/* Ordinary Settings: explicitly NOT Master Data. These stay on the page for all roles.
+   We tag by stable ids first and by existing headings only as compatibility for dynamic legacy installers. */
+function tagOrdinary(){
+ const settings=$('settings');if(!settings)return;
+ const exact=['yardivoFontSettings','yardivoNonWorkingDaysSettings','qrMobileSettingsPanel','yardivoVoiceSettingsV583'];
+ exact.forEach(id=>$(id)?.setAttribute('data-yardivo-ordinary-settings-v583','1'));
+ settings.querySelectorAll('.settings-grid > .panel,.settings-grid > .danger-zone').forEach(p=>{
+   const h=heading(p);
+   if(
+     h.includes('veličina teksta')||
+     h.includes('neradni dan')||
+     h.includes('radni dan')||
+     h.includes('glasovn')||
+     h.includes('voice')||
+     h.includes('qr / mobile')||
+     h.includes('qr & mobile')||
+     h.includes('qr / mobil')||
+     h.includes('yardivo smart')||
+     h.includes('smart opc')||
+     h.includes('smart engine')
+   )p.setAttribute('data-yardivo-ordinary-settings-v583','1');
+ });
+}
+
+/* Master Data popup contains only canonical Master business configuration:
+   locations → warehouses → ramps/working hours/capacity → suppliers → responsible people.
+   It does NOT absorb font, calendar, voice, Smart, QR or account administration. */
+function enforceMasterPopup(){
+ const popup=$('yardivoMasterPopupV583'),body=$('yardivoMasterPopupBodyV583'),pane=$('yardivoSettingsMasterPaneV583');
+ if(body&&pane&&pane.parentElement!==body)body.appendChild(pane);
+ const launch=$('yardivoMasterPopupLaunchV583');
+ if(launch){
+   launch.textContent='MASTER PODACI';
+   launch.title='Lokacije, skladišta, rampe, dobavljači i odgovorne osobe';
+   launch.hidden=!isAdmin();
+   launch.style.display=isAdmin()?'':'none';
+ }
+ if(!isAdmin()&&popup){
+   popup.classList.remove('open','show','active');
+   popup.setAttribute('aria-hidden','true');
+   popup.style.display='none';
+ }
+}
+
+/* Remove duplicate Master owners from the normal Settings flow.
+   Keep canonical account administration outside Master and only for Admin. */
+function enforceSettings(){
+ const settings=$('settings');if(!settings)return;
+ document.body.classList.toggle('yardivo-settings-admin-v583',isAdmin());
+ tagOrdinary();
+ enforceMasterPopup();
+
+ ['masterUserAdmin','adminCapacitySettings','receptionRampSettings'].forEach(id=>{
+   const x=$(id);if(x){x.hidden=true;x.style.setProperty('display','none','important')}
+ });
+
+ const adminPane=$('yardivoSettingsAdminPaneV583');
+ if(adminPane){
+   adminPane.hidden=!isAdmin();
+   adminPane.style.setProperty('display',isAdmin()?'block':'none','important');
+   adminPane.style.setProperty('margin-top','22px','important');
+ }
+ /* Ordinary settings must not be suppressed by old tab/category scripts. */
+ settings.querySelectorAll('[data-yardivo-ordinary-settings-v583="1"]').forEach(p=>{
+   p.hidden=false;p.removeAttribute('aria-hidden');p.style.setProperty('display','block','important');
+ });
+}
+
+/* Settings entry and known app lifecycle events are sufficient; no broad MutationObserver. */
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('[data-home-target="settings"],[data-view="settings"],[data-target="settings"],#navSettings,#yardivoMasterPopupLaunchV583'))
+   setTimeout(enforceSettings,0);
+},true);
+['yardivo:login','yardivo:role-changed','yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>
+ window.addEventListener(ev,()=>setTimeout(enforceSettings,20))
+);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(enforceSettings,250),{once:true});
+else setTimeout(enforceSettings,0);
+
+window.YardivoSettingsStructureV583={refresh:enforceSettings,isAdmin};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-settings-master-deep-structure-fix-final';
+})();
+</script>
+
 </body>
 </html>
