@@ -51016,5 +51016,67 @@ window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-settings-master-exact-admin-qa-fin
 })();
 </script>
 
+
+<style id="yardivo-v583-admin-role-master-entry-authoritative-style">
+/* Authoritative final layout: Admin Master button FIRST, ordinary settings immediately below. */
+#settings .settings-grid{display:grid!important}
+#settings #yardivoMasterPopupLaunchV583{grid-row:1!important;display:flex;width:100%;min-height:76px;margin:0 0 16px;padding:18px 22px;background:#0b1f3a;color:#fff;border:1px solid #1f4d7b;border-radius:12px;font-weight:950;align-items:center}
+#settings #yardivoSettingsExactV583{grid-row:2!important;display:grid!important;gap:14px!important}
+body.yv-v583-nonadmin #settings #yardivoMasterPopupLaunchV583{display:none!important}
+body.yv-v583-admin #settings #yardivoMasterPopupLaunchV583{display:flex!important}
+
+/* Exact ordinary settings list only. */
+#yardivoSettingsExactV583 > :not(#yardivoFontSettings):not(#yardivoThemeSettingExactV583):not(#yardivoNonWorkingDaysSettings):not(#yardivoVoiceSettingsV583):not(#yardivoVoicePlaceholderExactV583):not(#yardivoSmartToggleCardExactV583){display:none!important}
+
+/* Master popup is a separate workspace; no ordinary setting cards inside. */
+#yardivoMasterPopupV583 #yardivoFontSettings,
+#yardivoMasterPopupV583 #yardivoThemeSettingExactV583,
+#yardivoMasterPopupV583 #yardivoNonWorkingDaysSettings,
+#yardivoMasterPopupV583 #yardivoVoiceSettingsV583,
+#yardivoMasterPopupV583 #yardivoVoicePlaceholderExactV583,
+#yardivoMasterPopupV583 #yardivoSmartToggleCardExactV583{display:none!important}
+</style>
+<script id="yardivo-v583-admin-role-master-entry-authoritative-js">
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+function session(){
+ try{if(typeof currentSession!=='undefined'&&currentSession)return currentSession}catch(_){}
+ return window.currentSession||window.currentUser||null;
+}
+function role(){const x=session();return String(x?.app_role||x?.role||'').trim().toLowerCase()}
+function isAdmin(){return role()==='admin'}
+function applyRole(){
+ const a=isAdmin();document.body.classList.toggle('yv-v583-admin',a);document.body.classList.toggle('yv-v583-nonadmin',!a);
+ const b=$('yardivoMasterPopupLaunchV583');if(b){b.hidden=!a;b.style.setProperty('display',a?'flex':'none','important');b.textContent='MASTER PODACI'}
+ if(!a){const p=$('yardivoMasterPopupV583');if(p){p.style.display='none';p.classList.remove('open','show','active');p.setAttribute('aria-hidden','true')}}
+}
+function exactOrder(){
+ const g=$('settings')?.querySelector('.settings-grid'),shell=$('yardivoSettingsExactV583'),b=$('yardivoMasterPopupLaunchV583');if(!g)return;
+ if(b&&b.parentElement!==g)g.prepend(b);
+ if(shell&&shell.parentElement!==g)g.appendChild(shell);
+ if(b&&shell){g.insertBefore(b,g.firstElementChild);if(b.nextElementSibling!==shell)g.insertBefore(shell,b.nextSibling)}
+ const order=['yardivoFontSettings','yardivoThemeSettingExactV583','yardivoNonWorkingDaysSettings','yardivoVoiceSettingsV583','yardivoVoicePlaceholderExactV583','yardivoSmartToggleCardExactV583'];
+ order.forEach(id=>{const x=$(id);if(x&&shell&&x.parentElement!==shell)shell.appendChild(x)});
+}
+function ensureMasterContent(){
+ const pane=$('yardivoSettingsMasterPaneV583'),body=$('yardivoMasterPopupBodyV583');if(pane&&body&&pane.parentElement!==body)body.appendChild(pane);
+ /* Required Admin Master sections are owned here. */
+ ['yardivoStableMasterEditorV583','yardivoMasterDwellV583','yardivoSmartEngineSettingsV583','yardivoMasterSuppliersV583','yardivoResponsiblePeopleV583','yardivoSettingsAdminPaneV583'].forEach(id=>{
+   const x=$(id);if(x&&pane&&x.parentElement!==pane)pane.appendChild(x);
+ });
+ const reset=[...document.querySelectorAll('.danger-zone')].find(x=>/OBRIŠI SVE PODATKE|RESET YARDIVO/i.test(x.textContent||''));
+ if(reset&&pane&&reset.parentElement!==pane)pane.appendChild(reset);
+}
+function apply(){try{window.YardivoSettingsExactV583?.apply?.()}catch(_){} exactOrder();ensureMasterContent();applyRole()}
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('[data-home-target="settings"],[data-view="settings"],[data-target="settings"],#navSettings,#yardivoMasterPopupLaunchV583'))setTimeout(apply,0);
+},true);
+['yardivo:login','yardivo:data-synced','yardivo:master-data-ready','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(apply,30)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,1300),{once:true});else setTimeout(apply,700);
+window.YardivoSettingsAdminRoleFixV583={apply,isAdmin,role};
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-settings-master-admin-role-fix-qa-final';
+})();
+</script>
+
 </body>
 </html>
