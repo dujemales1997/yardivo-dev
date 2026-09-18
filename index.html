@@ -8293,7 +8293,7 @@ AUTOMATSKA PREPORUKA</small>
 <section class="danger-zone">
 <div class="panel-head"><div><h2>OPASNA ZONA</h2><small>Samo Admin</small></div></div>
 <div class="danger-body">
-<p><strong>OBRIŠI SVE PODATKE</strong> radi potpuni reset YARDIVO-a: briše <strong>apsolutno sve podatke i postavke</strong> — najave, incidente, Supplier podatke, nenajavljene dolaske, EPAL, kamione, termine, rampe i konfiguracije, Smart odluke i logove, KPI/povijesti, notifikacije, audit podatke, neradne dane, cacheve i ostalo poslovno stanje. <strong>Jedino korisnički računi/profili i autentikacija ostaju sačuvani.</strong></p>
+<p><strong>RESET YARDIVO</strong> vraća sustav u apsolutni Factory Zero. Brišu se svi poslovni podaci, konfiguracija, povijest, QR/Gate podaci, notifikacije, audit i svi drugi korisnički računi. <strong>Ostaje samo Admin dujemales.</strong></p>
 <button class="delete-all-btn" id="deleteAllDataBtn" type="button">OBRIŠI SVE PODATKE</button>
 </div>
 </section>
@@ -12332,8 +12332,8 @@ function yardivoLoadDynamicWarehousesIntoSystem(){
       d.warehouses.filter(x=>x&&x.active!==false).forEach(w=>{
         const l=(d.locations||[]).find(x=>String(x.id)===String(w.location_id));
         WAREHOUSES[w.id]={
-          code:w.id,location_id:w.location_id,location:l?.name||'Lokacija',
-          name:String(w.name||'Skladište'),ramps:Math.max(0,Number(w.ramps)||0),
+          code:w.id,location_id:w.location_id,location:l?.name||w.location_id,
+          name:String(w.name||w.id),ramps:Math.max(0,Number(w.ramps)||0),
           receptionStart:String(w.reception_from||w.receptionStart||''),
           receptionEnd:String(w.reception_to||w.receptionEnd||'')
         };
@@ -12413,7 +12413,7 @@ function yardivoRefreshAllWarehouseUi(){
   const activeRows=(d.warehouses||[]).filter(w=>w&&w.active!==false);
   const rowsFor=loc=>activeRows.filter(w=>!loc||String(w.location_id)===String(loc));
   const esc=v=>String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
-  const label=w=>`${w.name||'Skladište'}`;
+  const label=w=>`${w.name||w.id}`;
   function refill(sel,{location=null,includeAll=null,includePlaceholder=null}={}){
     if(!sel)return;
     const old=sel.value;
@@ -14430,14 +14430,13 @@ window.YardivoCleanCore={load,save,role,applyHome,driverOpen,driverSave,gateFind
  }
  window.YardivoDailyForecast={show:()=>showForecast(true),data:forecast};
 
- // Login/session changes can be implemented differently in this single-file app; detect an authenticated Admin/Reception once.
+ // Forecast remains available through window.YardivoDailyForecast.show(),
+ // but never blocks or interrupts the login/Home transition automatically.
  let last='';
- setInterval(()=>{
-   const r=role();let u='';try{u=String(currentSession?.username||currentSession?.user||currentSession?.name||'')}catch(e){}
-   const sig=r+'|'+u;
-   if(sig!==last){last=sig;if(['admin','reception'].includes(r))setTimeout(()=>showForecast(false),250)}
- },700);
- window.addEventListener('load',()=>setTimeout(()=>showForecast(false),500));
+ window.addEventListener('yardivo:login',()=>{
+   let u='';try{u=String(currentSession?.username||currentSession?.user||currentSession?.name||'')}catch(e){}
+   last=role()+'|'+u;
+ });
 })();
 </script>
 <style id="yardivo-map-announcement-info-style">
@@ -32959,7 +32958,7 @@ function render(){
       <td><span class="ysr-status ${escapeY(x.status)}">${escapeY(statusLabelY(x.status))}</span></td>
       <td><div class="ysr-note">${escapeY(x.review_note||x.note||'—')}</div></td>
       <td><div class="ysr-actions">
-        ${x.status==='pending'||x.status==='revision_requested'?`<button class="primary" data-a="accept" data-id="${x.id}">PRIHVATI TERMIN</button><button data-a="proposal" data-id="${x.id}">PREDLOŽI NOVI TERMIN</button>`:''}
+        ${x.status==='pending'||x.status==='revision_requested'?`<button class="primary" data-a="proposal" data-id="${x.id}">PREDLOŽI TERMIN + RAMPU</button>`:''}
         ${x.status==='proposal_sent'?`<button data-a="proposal" data-id="${x.id}">IZMIJENI PRIJEDLOG</button>`:''}
         ${editable?`<button data-a="transport" data-id="${x.id}">TRANSPORT</button>`:''}
         ${x.status==='pending'?`<button class="warn" data-a="revision" data-id="${x.id}">VRATI NA DORADU</button>`:''}
@@ -32981,10 +32980,6 @@ async function handleAction(e){
   const b=e.target.closest('button[data-a]');if(!b)return;
   const x=cache.find(r=>String(r.id)===String(b.dataset.id));if(!x)return;
   try{
-    if(b.dataset.a==='accept'){
-      if(!confirm('Prihvatiti termin koji je dobavljač odabrao?'))return;
-      await update(x.id,{status:'confirmed',review_note:'Termin je prihvaćen od Upravljanja zalihama.'});
-    }
     if(b.dataset.a==='proposal'){
       const date=prompt('Datum dostave (YYYY-MM-DD):',x.delivery_date||'');if(date===null)return;
       const time=prompt('Predloženi termin (HH:MM):',String(x.requested_time||'').slice(0,5)||'08:00');if(time===null)return;
@@ -33152,7 +33147,7 @@ async function acceptProposal(clientId){
 async function requestAlternative(clientId){
   const note=prompt('Napišite koji drugi termin vam odgovara (ili razlog):','');if(note===null)return;
   if(!note.trim()){alert('Upišite željeni drugi termin ili napomenu.');return;}
-  try{await window.YardivoSupplierLiveSync.call('supplier_request_alternative',{client_id:clientId,note:note.trim()});await window.YardivoSupplierLiveSync.pullSupplier();alert('Zahtjev za drugim terminom poslan je Upravljanju zalihama.');}
+  try{await window.YardivoSupplierLiveSync.call('supplier_alternative',{client_id:clientId,note:note.trim()});await window.YardivoSupplierLiveSync.pullSupplier();alert('Zahtjev za drugim terminom poslan je Upravljanju zalihama.');}
   catch(e){alert('Zahtjev nije poslan:\n'+(e?.message||e));}
 }
 document.addEventListener('click',e=>{
@@ -34192,7 +34187,7 @@ function renderWh(){
   const host=document.getElementById('yufWarehouseGrid');if(!host)return;
   let d={locations:[],warehouses:[]};try{d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){}
   const rows=(d.warehouses||[]).filter(w=>w&&w.active!==false&&(loc==='ALL'||String(w.location_id)===String(loc)));
-  host.innerHTML=rows.length?rows.map(w=>{const place=(d.locations||[]).find(x=>String(x.id)===String(w.location_id))?.name||'';return `<label><input type="checkbox" name="yufWarehouse" value="${esc(w.id)}"><span><strong>${esc(w.name||'Skladište')}</strong>${place?`<br><small>${esc(place)}</small>`:''}</span></label>`}).join(''):'<div style="padding:10px;color:#879daf">Nema skladišta za odabranu lokaciju.</div>';
+  host.innerHTML=rows.length?rows.map(w=>{const place=(d.locations||[]).find(x=>String(x.id)===String(w.location_id))?.name||'';return `<label><input type="checkbox" name="yufWarehouse" value="${esc(w.id)}"><span><strong>${esc(w.name||w.id)}</strong>${place?`<br><small>${esc(place)}</small>`:''}</span></label>`}).join(''):'<div style="padding:10px;color:#879daf">Nema skladišta za odabranu lokaciju.</div>';
   const all=document.getElementById('yufAllWarehouses');if(all){all.checked=false;all.onchange=()=>{host.querySelectorAll('input[name="yufWarehouse"]').forEach(x=>{x.checked=false;x.disabled=all.checked})};}
   const lab=document.getElementById('yufAllWarehousesLabel');if(lab)lab.textContent=loc==='ALL'?'SVA SKLADIŠTA NA SVIM LOKACIJAMA':'SVA SKLADIŠTA U ODABRANOJ LOKACIJI';
 }
@@ -35169,7 +35164,7 @@ function whMeta(code){
   try{
     const rows=window.YardivoAppStateV583?.warehouses?.()||[];
     const w=rows.find(x=>String(x.id)===String(code));
-    if(w)return {code:String(w.id),name:String(w.name||'Skladište'),location:locLabel(w.location_id||locCode()),ramps:Number(w.ramps||0)};
+    if(w)return {code:String(w.id),name:String(w.name||w.id),location:locLabel(w.location_id||locCode()),ramps:Number(w.ramps||0)};
   }catch(_){}
   try{
     const w=(typeof WAREHOUSES!=='undefined'?WAREHOUSES?.[code]:null)||{};
@@ -38593,7 +38588,7 @@ function syncRuntime(d=load()){
    d.warehouses.filter(x=>x.active!==false).forEach(w=>{
     const l=d.locations.find(x=>x.id===w.location_id);
     WAREHOUSES[w.id]={
-      code:w.id,location:l?.name||'Lokacija',location_id:w.location_id,name:w.name,
+      code:w.id,location:l?.name||w.location_id,location_id:w.location_id,name:w.name,
       ramps:Number(w.ramps)||0,receptionStart:'06:00',receptionEnd:'13:00'
     };
    });
@@ -40590,7 +40585,7 @@ function consolidateRampSettings(){
 function stripLegacyWarehouseCodesFromSettings(){
   const d=master();
   const validIds=new Set(d.warehouses.map(w=>String(w.id)));
-  const nameById=new Map(d.warehouses.map(w=>[String(w.id),String(w.name||'Skladište')]));
+  const nameById=new Map(d.warehouses.map(w=>[String(w.id),String(w.name||w.id)]));
 
   document.querySelectorAll('#settings select').forEach(sel=>{
     [...sel.options].forEach(o=>{
@@ -40976,7 +40971,7 @@ function paintNotificationBadges(){
 /* Remove legacy technical identifiers from visible UI only; never rewrite persisted business records. */
 function shieldLegacyDisplay(root=document){
   const d=master();
-  const names=new Map(d.warehouses.map(w=>[String(w.id),String(w.name||'Skladište')]));
+  const names=new Map(d.warehouses.map(w=>[String(w.id),String(w.name||w.id)]));
   root.querySelectorAll?.('option').forEach(o=>{
     const v=String(o.value||'');
     if(names.has(v))o.textContent=names.get(v);
@@ -41080,7 +41075,7 @@ function locationState(){
   const d=master();
   const id=String(window.currentSession?.location||'').trim();
   const x=d.locations.find(v=>v&&v.active!==false&&String(v.id)===id);
-  return x?{id:String(x.id),name:String(x.name||'Lokacija')}:{id:'',name:''};
+  return x?{id:String(x.id),name:String(x.name||x.id)}:{id:'',name:''};
 }
 function unannouncedRows(){
   try{
@@ -41495,7 +41490,7 @@ function master(){
 }
 function whName(w,d=master()){
   const loc=d.locations.find(x=>String(x.id)===String(w.location_id));
-  return {name:String(w.name||'Skladište'),location:String(loc?.name||'Lokacija'||'')};
+  return {name:String(w.name||w.id),location:String(loc?.name||w.location_id||'')};
 }
 function warehouseCapacity(code){
   return Number(getJson(CAPACITY_KEY)?.[code]?.warehousePallets||0);
@@ -41778,11 +41773,12 @@ function supplierButtons(x){
   return `<div class="yardivo-supplier-qr-actions"><button type="button" class="btn-primary" data-yardivo-open-gate-qr="${esc(x.id)}">OPEN QR</button><button type="button" class="btn-secondary" data-yardivo-print-gate-qr="${esc(x.id)}">ISPRINTAJ QR · PDF</button></div>`;
 }
 async function accessToken(){
+  const raw=String(window.__yardivoSupplierAccessToken||'').trim();if(raw)return raw;
   const c=await window.YardivoAuth?.client?.();if(!c)throw new Error('YARDIVO Auth nije dostupan.');
-  let s=(await c.auth.getSession())?.data?.session||null;
-  if(!s?.access_token)s=(await c.auth.refreshSession())?.data?.session||null;
-  if(!s?.access_token)throw new Error('ONLINE PRIJAVA NIJE AKTIVNA. Ponovno se prijavi.');
-  return s.access_token;
+  let ss=null;try{ss=(await c.auth.getSession())?.data?.session||null}catch(_){}
+  if(!ss?.access_token){try{ss=(await c.auth.refreshSession())?.data?.session||null}catch(_){}}
+  if(!ss?.access_token)throw new Error('ONLINE PRIJAVA NIJE AKTIVNA. Ponovno se prijavi.');
+  return ss.access_token;
 }
 async function edge(action,payload={}){
   const token=await accessToken();
@@ -45672,16 +45668,126 @@ function mount(){
 }
 function preserveAuthStorage(){const out={local:{},session:{}};for(const [name,st] of [['local',localStorage],['session',sessionStorage]]){try{for(let i=0;i<st.length;i++){const k=st.key(i);if(k&&(/^sb-[a-z0-9_-]+-auth-token$/i.test(k)||/^supabase\.auth\./i.test(k)))out[name][k]=st.getItem(k)}}catch(_){}}return out}
 function restoreAuthStorage(saved){for(const [name,vals] of Object.entries(saved||{})){const st=name==='session'?sessionStorage:localStorage;for(const [k,v] of Object.entries(vals||{})){try{if(v!=null)st.setItem(k,v)}catch(_){}}}}
-function emptyMaster(){return {suppliers:[],locations:[],warehouses:[],smart:{enabled:false,mode:'PAUSED'},__factoryZeroV583:true,__cleanMasterFoundationV583:true,__resetYardivoV583:true,__masterUpdatedAtV583:new Date().toISOString()}}
+function emptyMaster(){return {suppliers:[],locations:[],warehouses:[],responsible_people:[],smart:{enabled:false,mode:'PAUSED'},__factoryZeroV583:true,__cleanMasterFoundationV583:true,__resetYardivoV583:true,__masterUpdatedAtV583:new Date().toISOString()}}
 function resetRuntimeArrays(){for(const n of ['announcements','incidents','notifications','notificationHistory','trucks','unannounced'])try{if(Array.isArray(window[n]))window[n].length=0}catch(_){};try{if(typeof announcements!=='undefined'&&Array.isArray(announcements))announcements.length=0;if(typeof incidents!=='undefined'&&Array.isArray(incidents))incidents.length=0;if(typeof notifications!=='undefined'&&Array.isArray(notifications))notifications.length=0}catch(_){}}
-function localHardReset(keep){const auth=preserveAuthStorage(),session={...(window.currentSession||{}),user:keep,username:keep,role:'admin',location:'ALL',warehouses:[],serverAuthorized:true};EMPTY_ARRAY_KEYS.forEach(k=>{try{localStorage.setItem(k,'[]')}catch(_){}});REMOVE_KEYS.forEach(k=>{try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(_){}});try{localStorage.setItem(MASTER,JSON.stringify(emptyMaster()));localStorage.setItem('yardivo_auto_replan_cfg_v1',JSON.stringify({enabled:false,mode:'PAUSED'}));localStorage.setItem(CLEAN_EPOCH,new Date().toISOString())}catch(_){};['yardivo_master_users_v1','yardivo_users','yardivo_yms_users','yardivo_custom_session','yardivo_remembered_session','yardivo_session','studenac_demo_session'].forEach(k=>{try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(_){}});restoreAuthStorage(auth);window.currentSession=session;try{if(typeof currentSession!=='undefined')currentSession=session}catch(_){ }try{window.activeWarehouse='';if(typeof activeWarehouse!=='undefined')activeWarehouse=''}catch(_){};resetRuntimeArrays();try{window.YardivoNotificationsV583?.clear?.()}catch(_){}}
+function localHardReset(keep){
+ const auth=preserveAuthStorage();
+ const session={...(window.currentSession||{}),user:keep,username:keep,role:'admin',app_role:'admin',location:'ALL',locations:[],warehouses:[],all_locations:true,all_warehouses:true,serverAuthorized:true};
+
+ /* Scrub every YARDIVO business/config/history key known to the browserless
+    storage layer. Theme/auth are not business history; Supabase auth is restored below. */
+ try{
+   const virtual=window.YardivoBrowserlessStorageV583?.businessKeys?.()||[];
+   virtual.forEach(k=>{try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(_){}});
+ }catch(_){}
+ for(const st of [localStorage,sessionStorage]){
+   let keys=[];try{for(let i=0;i<st.length;i++){const k=st.key(i);if(k)keys.push(k)}}catch(_){}
+   for(const k of keys){
+     if(/^sb-[a-z0-9_-]+-auth-token$/i.test(k)||/^supabase\.auth\./i.test(k))continue;
+     if(/^(yardivo|studenac|yms)_/i.test(k)||/^yardivo/i.test(k)){
+       try{st.removeItem(k)}catch(_){}
+     }
+   }
+ }
+
+ const master=emptyMaster();
+ try{
+   localStorage.setItem(MASTER,JSON.stringify(master));
+   localStorage.setItem('yardivo_master_boot_cache_v583',JSON.stringify(master));
+   localStorage.setItem('yardivo_auto_replan_cfg_v1',JSON.stringify({enabled:false,mode:'PAUSED'}));
+   localStorage.setItem('yardivo_qr_scan_cfg_v583',JSON.stringify({enabled:false}));
+   localStorage.setItem('yardivo_ramp_qr_mobile_v1','0');
+   localStorage.setItem(CLEAN_EPOCH,new Date().toISOString());
+   EMPTY_ARRAY_KEYS.forEach(k=>localStorage.setItem(k,'[]'));
+ }catch(_){}
+
+ restoreAuthStorage(auth);
+ window.currentSession=session;
+ try{if(typeof currentSession!=='undefined')currentSession=session}catch(_){}
+ try{window.activeWarehouse='';if(typeof activeWarehouse!=='undefined')activeWarehouse=''}catch(_){}
+ resetRuntimeArrays();
+ try{window.YardivoNotificationsV583?.clear?.()}catch(_){}
+}
 async function client(){const c=await window.YardivoAuth?.client?.();if(!c)throw new Error('ONLINE AUTH NIJE SPREMAN.');return c}
 async function adminInvoke(action,payload={}){if(window.YardivoAdminUsersServerV583?.invoke)return await window.YardivoAdminUsersServerV583.invoke(action,payload);const c=await client(),{data,error}=await c.functions.invoke('yardivo-admin-users',{body:{action,...payload}});if(error)throw error;if(data?.error)throw new Error(data.error);return data?.data??data}
 async function factoryResetServer(){const c=await client(),{data,error}=await c.functions.invoke('yardivo-factory-reset',{body:{confirm:'RESET YARDIVO'}});if(error)throw error;if(!data?.ok)throw new Error(data?.error||'Server Factory Zero nije uspio.');return data}
 async function deleteOtherUsers(keep){const res=await adminInvoke('list',{}),users=Array.isArray(res)?res:(Array.isArray(res?.users)?res.users:[]),k=users.find(u=>norm(u?.username)===keep&&norm(u?.app_role)==='admin'&&u?.active!==false);if(!k)throw new Error('Trenutni Admin nije pronađen na serveru.');const failed=[];let deleted=0;for(const u of users){if(!u?.auth_user_id||u.auth_user_id===k.auth_user_id)continue;try{await adminInvoke('delete',{auth_user_id:u.auth_user_id});deleted++}catch(e){failed.push(`${u.username||u.auth_user_id}: ${e?.message||e}`)}}if(failed.length)throw new Error('Nisu obrisani svi drugi korisnici: '+failed.join(' | '));return {deleted,keeper:k}}
 function rerenderEmpty(){for(const n of ['render','renderAnnouncements','renderAnnouncementSchedule','renderDailyMap','renderWeeklyMap','renderReceiving','renderOverview','renderDashboard','renderRampe','renderDockOverview','renderCheckinPro','renderPlannerPro','renderSupplierProfiles'])try{if(typeof window[n]==='function')window[n]()}catch(_){};try{window.YardivoMasterFoundationV583?.render?.();window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{source:'reset-yardivo'}}));window.dispatchEvent(new CustomEvent('yardivo:context-changed',{detail:{location:'',warehouse:''}}))}catch(_){}}
-async function verifyEmpty(keep){const checks={localAnnouncements:-1,localIncidents:-1,locations:-1,warehouses:-1,suppliers:-1,users:null};try{checks.localAnnouncements=JSON.parse(localStorage.getItem('yardivo_yms_announcements_v1')||'[]').length;checks.localIncidents=JSON.parse(localStorage.getItem('yardivo_yms_incidents_v1')||'[]').length;const m=JSON.parse(localStorage.getItem(MASTER)||'{}');checks.locations=(m.locations||[]).length;checks.warehouses=(m.warehouses||[]).length;checks.suppliers=(m.suppliers||[]).length}catch(_){};try{const r=await adminInvoke('list',{}),u=Array.isArray(r)?r:(r?.users||[]);checks.users=u.map(x=>({username:norm(x.username),role:norm(x.app_role),active:x.active!==false}))}catch(_){};const userOk=Array.isArray(checks.users)&&checks.users.length===1&&checks.users[0].username===keep&&checks.users[0].role==='admin'&&checks.users[0].active;const dataOk=checks.localAnnouncements===0&&checks.localIncidents===0&&checks.locations===0&&checks.warehouses===0&&checks.suppliers===0;return {ok:dataOk&&userOk,dataOk,userOk,checks}}
-async function resetYardivo(){if(busy)return;let keep;try{keep=keeper()}catch(e){alert(e.message);return}if(!confirm(`RESET YARDIVO — POTPUNI FACTORY ZERO\n\nBrišu se svi poslovni podaci i svi korisnici osim Admina dujemales.\n\nNastaviti?`))return;const typed=prompt('Za konačnu potvrdu upiši točno:\nRESET YARDIVO');if(String(typed||'').trim().toUpperCase()!=='RESET YARDIVO')return;const btn=document.getElementById('yardivoResetYardivoBtn');busy=true;if(btn){btn.disabled=true;btn.textContent='RESETIRAM YARDIVO…'}try{status('1/6 · Provjeravam trenutno prijavljenog Admina…');const before=await adminInvoke('list',{}),users=Array.isArray(before)?before:(before?.users||[]);if(!users.some(u=>norm(u.username)===keep&&norm(u.app_role)==='admin'&&u.active!==false))throw new Error('Aktivni Admin profil nije pronađen. Ništa nije obrisano.');status('2/6 · Server Factory Zero: poslovni podaci, Supplier i Gate…');await factoryResetServer();status('3/6 · Brišem sve druge korisnike…');await deleteOtherUsers(keep);status('4/6 · Završni server scrub nakon brisanja korisnika…');await factoryResetServer();status('5/6 · Čistim lokalni runtime i Master cache…');localHardReset(keep);rerenderEmpty();status('6/6 · Verificiram prazni sustav…');const v=await verifyEmpty(keep);if(!v.ok)throw new Error('Reset je izvršen, ali završna lokalna/user verifikacija nije čista.');status(`✓ FACTORY ZERO · OSTAO JE SAMO ${keep} ADMIN`,'ok');try{showYmsToast?.('success','YARDIVO RESETIRAN','Sustav je prazan i spreman za Master Data.')}catch(_){};alert(`YARDIVO DEV je resetiran.\n\nOstao je samo ${keep} Admin.\nPrvi korak: dodaj Lokaciju u Master Data.`)}catch(e){console.error('[RESET YARDIVO]',e);status('RESET NIJE ZAVRŠIO 100%: '+String(e?.message||e),'error');alert('RESET YARDIVO nije završio 100%:\n\n'+String(e?.message||e))}finally{busy=false;if(btn){btn.disabled=false;btn.textContent='RESET YARDIVO — VRATI SVE NA 0'}}}
+async function verifyEmpty(keep){
+ const checks={localAnnouncements:-1,localIncidents:-1,locations:-1,warehouses:-1,suppliers:-1,responsible_people:-1,smartOff:false,qrOff:false,users:null};
+ try{
+   checks.localAnnouncements=JSON.parse(localStorage.getItem('yardivo_yms_announcements_v1')||'[]').length;
+   checks.localIncidents=JSON.parse(localStorage.getItem('yardivo_yms_incidents_v1')||'[]').length;
+   const m=JSON.parse(localStorage.getItem(MASTER)||'{}');
+   checks.locations=(m.locations||[]).length;
+   checks.warehouses=(m.warehouses||[]).length;
+   checks.suppliers=(m.suppliers||[]).length;
+   checks.responsible_people=(m.responsible_people||[]).length;
+   checks.smartOff=m?.smart?.enabled===false&&String(m?.smart?.mode||'').toUpperCase()==='PAUSED';
+   const q=JSON.parse(localStorage.getItem('yardivo_qr_scan_cfg_v583')||'{"enabled":false}');
+   checks.qrOff=q.enabled===false;
+ }catch(_){}
+ try{
+   const r=await adminInvoke('list',{}),u=Array.isArray(r)?r:(r?.users||[]);
+   checks.users=u.map(x=>({username:norm(x.username),role:norm(x.app_role),active:x.active!==false}));
+ }catch(_){}
+ const userOk=Array.isArray(checks.users)&&checks.users.length===1&&checks.users[0].username===keep&&checks.users[0].role==='admin'&&checks.users[0].active;
+ const dataOk=checks.localAnnouncements===0&&checks.localIncidents===0&&checks.locations===0&&checks.warehouses===0&&checks.suppliers===0&&checks.responsible_people===0&&checks.smartOff&&checks.qrOff;
+ return {ok:dataOk&&userOk,dataOk,userOk,checks};
+}
+async function resetYardivo(){
+ if(busy)return;
+ let keep;try{keep=keeper()}catch(e){alert(e.message);return}
+ if(!confirm(`RESET YARDIVO — APSOLUTNI FACTORY ZERO
+
+Brišu se SVE lokacije, skladišta, rampe, dobavljači, odgovorne osobe, najave, Supplier najave, incidenti, QR/Gate podaci, scanovi, notifikacije, audit/povijest, Smart stanje i svi drugi korisnički računi.
+
+OSTAJE SAMO ADMIN dujemales.
+
+Nastaviti?`))return;
+ const typed=prompt('Za konačnu potvrdu upiši točno:\nRESET YARDIVO');
+ if(String(typed||'').trim().toUpperCase()!=='RESET YARDIVO')return;
+ const btn=document.getElementById('yardivoResetYardivoBtn');
+ busy=true;if(btn){btn.disabled=true;btn.textContent='RESETIRAM YARDIVO…'}
+ try{
+   status('1/4 · Provjeravam canonical Admin račun…');
+   const before=await adminInvoke('list',{}),users=Array.isArray(before)?before:(before?.users||[]);
+   if(!users.some(u=>norm(u.username)===keep&&norm(u.app_role)==='admin'&&u.active!==false))throw new Error('Aktivni Admin dujemales nije pronađen. Ništa nije obrisano.');
+
+   status('2/4 · Server Factory Zero: brišem sve podatke, povijest i druge korisnike…');
+   const server=await factoryResetServer();
+   if(!server?.factoryZero||Number(server?.users)!==1)throw new Error('Server nije potvrdio apsolutni Factory Zero.');
+
+   status('3/4 · Čistim lokalni runtime, cache i stare Master podatke…');
+   localHardReset(keep);rerenderEmpty();
+
+   status('4/4 · Verificiram prazni YARDIVO…');
+   const v=await verifyEmpty(keep);
+   if(!v.ok)throw new Error('Server je resetiran, ali lokalna završna verifikacija nije čista.');
+
+   status(`✓ FACTORY ZERO · 0 POVIJESTI · OSTAO JE SAMO ${keep}`,'ok');
+   try{showYmsToast?.('success','YARDIVO FACTORY ZERO','Sve je vraćeno na 0. Ostao je samo Admin dujemales.')}catch(_){}
+   alert(`YARDIVO DEV je vraćen na 0.
+
+0 lokacija
+0 skladišta
+0 dobavljača
+0 odgovornih osoba
+0 najava / incidenata / QR povijesti
+0 drugih korisnika
+SMART OFF
+QR SCAN OFF
+
+Ostao je samo Admin dujemales.
+Sada ponovno gradiš sustav kroz MASTER PODATKE.`);
+ }catch(e){
+   console.error('[RESET YARDIVO]',e);
+   status('RESET NIJE ZAVRŠIO 100%: '+String(e?.message||e),'error');
+   alert('RESET YARDIVO nije završio 100%:\n\n'+String(e?.message||e));
+ }finally{
+   busy=false;if(btn){btn.disabled=false;btn.textContent='RESET YARDIVO — VRATI SVE NA 0'}
+ }
+}
 function ensureBottom(){mount();const s=document.getElementById('settings'),c=document.getElementById('yardivoDevTotalResetV583');if(s&&c&&s.lastElementChild!==c)s.appendChild(c)}
 document.addEventListener('DOMContentLoaded',()=>setTimeout(ensureBottom,100));window.addEventListener('load',()=>setTimeout(ensureBottom,300),{once:true});['yardivo:login','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(ensureBottom,80)));document.addEventListener('click',e=>{if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(ensureBottom,40)},true);
 window.YardivoDevTotalResetV583={reset:resetYardivo,verify:()=>verifyEmpty(username()),mount:ensureBottom,keeper:()=>username(),build:BUILD};window.YARDIVO_DEV_BUILD=BUILD;
@@ -46190,7 +46296,7 @@ function render(force=false){
     <div class="ysm-list">${whs.length?whs.map(w=>`<div class="ysm-row"><div><input data-sm-wh-name="${esc(w.id)}" value="${esc(w.name)}"><small>${esc(locName(w.location_id,d))}</small></div><div><button data-sm-config-wh="${esc(w.id)}">KONFIGURIRAJ</button> <button data-sm-save-wh="${esc(w.id)}">SPREMI</button> <button class="danger" data-sm-del-wh="${esc(w.id)}">OBRIŠI</button></div></div>`).join(''):'<div class="ysm-empty">Nema skladišta. Prvo dodaj lokaciju, zatim skladište.</div>'}</div>
     <div class="ysm-warehouse-create">
       <label class="ysm-wh-name-field"><span>1 · NAZIV SKLADIŠTA</span><input id="smNewWarehouse" placeholder="npr. Glavno skladište" value="${esc(draftWarehouseName)}"></label>
-      <label class="ysm-wh-location-field"><span>2 · ODABERI LOKACIJU <b>*</b></span><select id="smNewWarehouseLocation" ${locs.length?'':'disabled'} aria-label="Odaberi lokaciju za novo skladište"><option value="" ${draftWarehouseLocation?'':'selected'} disabled>— ODABERI LOKACIJU —</option>${locs.map(x=>`<option value="${esc(x.id)}" ${String(x.id)===String(draftWarehouseLocation)?'selected':''}>${esc(x.name)}</option>`).join('')}</select><small>${locs.length?`Odaberi jednu od ${locs.length} kreiranih lokacija. Skladište će biti vezano na odabranu lokaciju.`:'Prvo kreiraj lokaciju u Koraku 1.'}</small></label>
+      <label class="ysm-wh-location-field"><span>2 · ODABERI LOKACIJU <b>*</b></span><select id="smNewWarehouseLocation" ${locs.length?'':'disabled'} aria-label="Odaberi lokaciju za novo skladište"><option value="" ${draftWarehouseLocation?'':'selected'} disabled>— ODABERI LOKACIJU —</option>${locs.map(x=>`<option value="${esc(x.id)}" ${String(x.id)===String(draftWarehouseLocation)?'selected':''}>${esc(x.name)}</option>`).join('')}</select><small>${locs.length?`Odaberi jednu od ${locs.length} kreiranih lokacija. Skladište će biti vezano na taj location_id.`:'Prvo kreiraj lokaciju u Koraku 1.'}</small></label>
       <button class="primary" data-sm-add-wh ${draftWarehouseLocation?'':'disabled'}>DODAJ SKLADIŠTE</button>
     </div>
     ${locs.length?'<div class="ysm-hint">Skladište će biti trajno povezano s lokacijom koju ovdje odabereš.</div>':'<div class="ysm-hint warn">Za dodavanje skladišta prvo napravi barem jednu lokaciju u Koraku 1.</div>'}
@@ -46635,7 +46741,7 @@ function syncRuntimeMaster(){
    for(const w of d.warehouses.filter(x=>x&&x.active!==false)){
     const h=hours[w.id]||{};
     WAREHOUSES[w.id]={
-     code:String(w.id),name:String(w.name||'Skladište'),location:String(d.locations.find(l=>l.id===w.location_id)?.name||''),
+     code:String(w.id),name:String(w.name||w.id),location:String(d.locations.find(l=>l.id===w.location_id)?.name||''),
      location_id:String(w.location_id||''),ramps:Math.max(0,Number(w.ramps)||0),
      receptionStart:String(h.from||''),receptionEnd:String(h.to||''),
      capacity:caps?.[w.id]?.warehousePallets??null
@@ -46949,7 +47055,7 @@ function rows(){
   return loc?all.filter(w=>String(w.location_id)===loc):all;
 }
 function esc(v){return String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]))}
-function label(w){return `${w.name||'Skladište'}`;}
+function label(w){return `${w.name||w.id}`;}
 function rebuild(sel){
   if(!sel)return;
   const d=master();
@@ -47028,7 +47134,7 @@ function stock(){try{return JSON.parse(localStorage.getItem(EPAL)||'{}')||{}}cat
 function locName(id,d=md()){return String(d.locations.find(x=>String(x.id)===String(id))?.name||id||'')}
 function visibleRows(){const d=md(),lf=document.getElementById('epalLocationFilter')?.value||'CURRENT',wf=document.getElementById('epalWarehouseFilter')?.value||'ALL';let loc=lf;if(loc==='CURRENT'){try{loc=String(window.YardivoAppStateV583?.location?.()||currentSession?.location||'ALL')}catch(_){loc='ALL'};if(!d.locations.some(x=>String(x.id)===loc))loc='ALL'}return d.warehouses.filter(w=>w&&w.active!==false&&(loc==='ALL'||String(w.location_id)===String(loc))&&(wf==='ALL'||String(w.id)===String(wf)))}
 function renderBreakdown(){const ep=document.getElementById('epal');if(!ep)return;let box=document.getElementById('epalMasterInitialBreakdownV583');if(!box){box=document.createElement('div');box.id='epalMasterInitialBreakdownV583';const k=ep.querySelector('.performance-kpis');k?.insertAdjacentElement('afterend',box)}if(!box)return;const d=md(),st=stock(),rows=visibleRows();box.innerHTML='<h3>POČETNO STANJE EPAL PO SKLADIŠTU</h3><div class="yeib-grid">'+(rows.length?rows.map(w=>`<div class="yeib-item"><small>${locName(w.location_id,d)} · ${w.name}</small><strong>${Math.max(0,Number(st[w.id]||0))} EPAL</strong></div>`).join(''):'<div class="yeib-item"><small>Nema skladišta u odabranom području</small><strong>0 EPAL</strong></div>')+'</div>'}
-function cleanWarehouseLabels(){const d=md(),names=new Map(d.warehouses.map(w=>[String(w.id),String(w.name||'Skladište')]));document.querySelectorAll('#epalWarehouseFilter option,#epalWarehouse option').forEach(o=>{if(names.has(String(o.value)))o.textContent=names.get(String(o.value))});}
+function cleanWarehouseLabels(){const d=md(),names=new Map(d.warehouses.map(w=>[String(w.id),String(w.name||w.id)]));document.querySelectorAll('#epalWarehouseFilter option,#epalWarehouse option').forEach(o=>{if(names.has(String(o.value)))o.textContent=names.get(String(o.value))});}
 function refresh(){cleanWarehouseLabels();renderBreakdown();try{window.YardivoEPALInitial?.totalAll?.()}catch(_){}}
 ['yardivo:master-data-changed','yardivo:context-changed','yardivo:login'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(refresh,50)));
 document.addEventListener('change',e=>{if(e.target?.matches?.('#epalLocationFilter,#epalWarehouseFilter'))setTimeout(refresh,20)},true);
@@ -47142,7 +47248,7 @@ function sanitizeSelect(sel){
  }
 }
 function replaceTechnicalText(root){
- const map=new Map(warehouses().map(w=>[String(w.id),String(w.name||'Skladište')]));
+ const map=new Map(warehouses().map(w=>[String(w.id),String(w.name||w.id)]));
  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(n){
   const p=n.parentElement;if(!p||p.closest('script,style,textarea,option'))return NodeFilter.FILTER_REJECT;
   return /\\bW\\d{3,}\\b/i.test(n.nodeValue||'')?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;
@@ -49404,10 +49510,17 @@ const AVAIL_EDGE=BASE+'/functions/v1/yardivo-supplier-availability';
 let supplierScope=null,chosenDate='',chosen=null,confirmedChoice=false,calMonth=new Date(),loadingMap=false;
 
 async function token(){
+  /* Stable login stores the verified JWT here immediately after /auth/v1/token.
+     Use it first so Supplier booking never depends on Supabase-client session timing. */
+  const raw=String(window.__yardivoSupplierAccessToken||'').trim();
+  if(raw)return raw;
   const c=await window.YardivoAuth?.client?.();
   if(!c)throw new Error('YARDIVO Auth nije dostupan.');
-  let ss=(await c.auth.getSession())?.data?.session||null;
-  if(!ss?.access_token)ss=(await c.auth.refreshSession())?.data?.session||null;
+  let ss=null;
+  try{ss=(await c.auth.getSession())?.data?.session||null}catch(_){}
+  if(!ss?.access_token){
+    try{ss=(await c.auth.refreshSession())?.data?.session||null}catch(_){}
+  }
   if(!ss?.access_token)throw new Error('ONLINE PRIJAVA NIJE AKTIVNA. Ponovno se prijavi.');
   return ss.access_token;
 }
@@ -49426,14 +49539,32 @@ function resetChoice(){chosen=null;confirmedChoice=false;if($('ysnConfirm'))$('y
 function emptyMap(title='Mapa termina još nije aktivna',text='Dovrši korake iznad i odaberi datum dostave.'){
   if($('ysnBoard'))$('ysnBoard').innerHTML=`<div class="ysn-empty"><strong>${title}</strong><span>${text}</span></div>`;
 }
+function localAssignedScope(){
+  const s=window.currentSession||{};
+  let m={};try{m=window.YardivoAppStateV583?.master?.()||JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{}}catch(_){}
+  const whIds=new Set((Array.isArray(s.warehouses)?s.warehouses:[]).map(String));
+  const warehouses=(Array.isArray(m.warehouses)?m.warehouses:[]).filter(w=>w&&w.active!==false&&whIds.has(String(w.id)));
+  const locIds=new Set(warehouses.map(w=>String(w.location_id||'')).filter(Boolean));
+  if(s.location&&String(s.location)!=='ALL')locIds.add(String(s.location));
+  const locations=(Array.isArray(m.locations)?m.locations:[]).filter(l=>l&&l.active!==false&&locIds.has(String(l.id)));
+  return {app_role:'supplier',locations,warehouses,location_ids:[...locIds],warehouse_ids:[...whIds]};
+}
 async function loadScope(force=false){
   if(supplierScope&&!force)return supplierScope;
-  const d=await edge(SCOPE_EDGE,{});
-  if(String(d?.app_role||'').toLowerCase()!=='supplier')throw new Error('Supplier scope nije dostupan za ovaj account.');
-  supplierScope=d;
-  window.__YARDIVO_SUPPLIER_CANONICAL_SCOPE_V583=d;
-  window.YardivoServerScopeV583=d;
-  return d;
+  try{
+    const d=await edge(SCOPE_EDGE,{});
+    if(String(d?.app_role||'').toLowerCase()!=='supplier')throw new Error('Supplier scope nije dostupan za ovaj account.');
+    supplierScope=d;
+  }catch(e){
+    /* Never fall back to all Master data. Only use the warehouse IDs returned by
+       the authenticated login profile while the Edge session is becoming ready. */
+    const f=localAssignedScope();
+    if(!f.warehouses.length)throw e;
+    supplierScope=f;
+  }
+  window.__YARDIVO_SUPPLIER_CANONICAL_SCOPE_V583=supplierScope;
+  window.YardivoServerScopeV583=supplierScope;
+  return supplierScope;
 }
 function hydrate(){
   if(!$('ysnRoot')||!supplierScope)return;
@@ -49477,26 +49608,29 @@ function renderAvailability(d){
   const slots=Array.isArray(d?.slots)?d.slots:[];
   const wname=d?.warehouse?.name||W()?.name||'Skladište';
   $('ysnMapSub').textContent=`${wname} · ${new Date(chosenDate+'T12:00:00').toLocaleDateString('hr-HR')} · ${Number($('ysnPallets').value||0)} paleta`;
-  if(!slots.length){emptyMap('Nema dostupnih termina','Admin treba provjeriti rampe, radno vrijeme i kapacitet skladišta.');return}
+  if(!slots.length){emptyMap('Nema dostupnih termina','Za odabrani datum nema termina ili Master konfiguracija skladišta nije potpuna.');return}
   const times=[...new Set(slots.map(x=>String(x.start||'')))].filter(Boolean).sort();
-  const ramps=[...new Map(slots.map(x=>[String(x.ramp_number),{n:x.ramp_number,name:x.ramp||('Rampa '+x.ramp_number)}])).values()].sort((a,b)=>Number(a.n)-Number(b.n));
+  const ramps=[...new Map(slots.map(x=>[String(x.ramp_number),{n:Number(x.ramp_number),name:String(x.ramp||('Rampa '+x.ramp_number))}])).values()].sort((a,b)=>a.n-b.n);
   const by=new Map(slots.map(x=>[String(x.ramp_number)+'|'+String(x.start),x]));
-  let h='<table class="ysn-grid"><thead><tr><th class="ramp">RAMPA</th>'+times.map(t=>'<th>'+t+'</th>').join('')+'</tr></thead><tbody>';
+  let h=`<div class="schedule-grid ysn-inventory-map" style="grid-template-columns:70px repeat(${times.length},minmax(29px,1fr))"><div class="head">RAMPA</div>`;
+  h+=times.map(t=>`<div class="head">${t}</div>`).join('');
   for(const r of ramps){
-    h+=`<tr><th class="ramp">${String(r.name)}</th>`;
+    h+=`<div class="ramp">${r.name}</div>`;
     for(const t of times){
       const x=by.get(String(r.n)+'|'+t);
-      if(!x){h+='<td><button type="button" class="ysn-slot unavailable" disabled>—</button></td>';continue}
-      const cl=x.occupied?'busy':'free';
-      const rec=x.recommended?' ysn-best':'';
-      const at=x.selectable?` data-ysn-time="${String(x.start)}" data-ysn-end="${String(x.end)}" data-ysn-dock="R${Number(x.ramp_number)}" data-ysn-ramp="${String(x.ramp||'')}"`:' disabled';
-      h+=`<td><button type="button" class="ysn-slot ${cl}${rec}"${at}>${x.occupied?'ZAUZETO':'SLOBODNO'}</button></td>`;
+      if(!x){h+='<div class="freecell ysn-na"></div>';continue}
+      if(x.occupied){
+        h+=`<div class="booked ysn-busy" title="ZAUZETO · ${r.name} · ${String(x.start)}">ZAUZETO</div>`;
+      }else{
+        const rec=x.recommended?' ysn-best':'';
+        h+=`<button type="button" class="freecell ysn-free${rec}" data-ysn-time="${String(x.start)}" data-ysn-end="${String(x.end)}" data-ysn-dock="R${r.n}" data-ysn-ramp="${r.name}" title="SLOBODNO · ${r.name} · ${String(x.start)}–${String(x.end)}"></button>`;
+      }
     }
-    h+='</tr>';
   }
-  h+='</tbody></table>';b.innerHTML=h;
+  h+='</div>';b.innerHTML=h;
   b.querySelectorAll('[data-ysn-time]').forEach(btn=>btn.onclick=()=>{
-    b.querySelectorAll('.selected').forEach(x=>x.classList.remove('selected'));btn.classList.add('selected');
+    b.querySelectorAll('.ysn-selected').forEach(x=>x.classList.remove('ysn-selected'));
+    btn.classList.add('ysn-selected');
     chosen={time:btn.dataset.ysnTime,end:btn.dataset.ysnEnd,dock:btn.dataset.ysnDock,ramp:btn.dataset.ysnRamp};
     confirmedChoice=false;
     $('ysnChoice').innerHTML=`<strong>ODABRANO · ${chosen.ramp||chosen.dock} · ${chosen.time}–${chosen.end}</strong><span>Klikni POTVRDI TERMIN za nastavak.</span>`;
@@ -49510,7 +49644,13 @@ async function loadMap(){
   try{const d=await availability(chosenDate);renderAvailability(d)}
   catch(e){
     const msg=String(e?.message||e);
-    emptyMap('Dnevna mapa nije dostupna',msg);
+    if(/Vrijeme prijama nije potpuno|Vrijeme rada rampe nije potpuno|WAREHOUSE_SCHEDULE_INCOMPLETE/i.test(msg)){
+      emptyMap('RADNO VRIJEME NIJE POTPUNO','Admin mora u Master podacima postaviti završetak radnog vremena prijama / rampe za ovo skladište.');
+    }else if(/kapacitet|RAMPS_INCOMPLETE/i.test(msg)){
+      emptyMap('KONFIGURACIJA RAMPI NIJE POTPUNA','Admin mora postaviti aktivne rampe i kapacitet paleta po satu.');
+    }else{
+      emptyMap('Dnevna mapa nije dostupna',msg);
+    }
     $('ysnMapSub').textContent=W()?.name||'Skladište';
   }finally{loadingMap=false;update()}
 }
@@ -49591,19 +49731,38 @@ function bind(){
   $('ysnPdf').onchange=e=>{const f=e.target.files?.[0];if(!f)return;if((f.type!=='application/pdf'&&!/\.pdf$/i.test(f.name))||f.size>1572864){alert('PDF mora biti PDF datoteka do 1.5 MB.');e.target.value='';return}const r=new FileReader();r.onload=()=>{window.__YSN_PDF_V583={name:f.name,mime:'application/pdf',base64:String(r.result||'').split(',').pop()||''};$('ysnPdfName').textContent=f.name+' · '+Math.ceil(f.size/1024)+' KB';$('ysnPdfBtn').classList.add('has-file')};r.readAsDataURL(f)};
   $('ysnClear').onclick=clearAll;$('ysnSend').onclick=send;
 }
-async function init(force=false){
-  if(!$('ysnRoot'))return;
-  try{await loadScope(force);hydrate();bind();update()}
-  catch(e){emptyMap('Supplier dodjela nije dostupna',String(e?.message||e));if($('ysnStatus'))$('ysnStatus').textContent='SCOPE ERROR'}
+function supplierRole(){
+  try{return String(window.currentSession?.role||window.currentSession?.app_role||'').toLowerCase()==='supplier'}catch(_){return false}
 }
-window.addEventListener('yardivo:login',()=>setTimeout(()=>init(true),180));
-window.addEventListener('yardivo:authenticated',()=>setTimeout(()=>init(true),180));
-window.addEventListener('yardivo:session-ready',()=>setTimeout(()=>init(true),180));
-window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>init(false),80));
-document.addEventListener('click',e=>{if(e.target.closest?.('[data-ysp-view="new"]'))setTimeout(()=>init(false),30)},true);
-setTimeout(()=>init(false),120);
+let initRetry=0;
+async function init(force=false){
+  if(!$('ysnRoot')||!supplierRole())return;
+  try{
+    await loadScope(force);hydrate();bind();update();
+    initRetry=0;
+    if($('ysnStatus'))$('ysnStatus').textContent='SPREMNO ZA UNOS';
+  }catch(e){
+    const msg=String(e?.message||e);
+    emptyMap('Supplier dodjela nije dostupna',msg);
+    if($('ysnStatus'))$('ysnStatus').textContent='PROVJERA DODJELE';
+    if(initRetry<1 && /ONLINE PRIJAVA|AUTH|PRIJAVA/i.test(msg)){
+      initRetry++;setTimeout(()=>init(true),500);
+    }
+  }
+}
+window.addEventListener('yardivo:login',e=>{
+  const r=String(e?.detail?.session?.role||window.currentSession?.role||'').toLowerCase();
+  if(r==='supplier')setTimeout(()=>init(true),260);
+});
+window.addEventListener('yardivo:authenticated',()=>{if(supplierRole())setTimeout(()=>init(true),260)});
+window.addEventListener('yardivo:session-ready',()=>{if(supplierRole())setTimeout(()=>init(true),260)});
+window.addEventListener('yardivo:data-synced',()=>{if(supplierRole())setTimeout(()=>init(false),140)});
+document.addEventListener('click',e=>{
+  if(supplierRole()&&e.target.closest?.('[data-ysp-view="new"]'))setTimeout(()=>init(false),40)
+},true);
+/* Deliberately no boot-time Edge call: stable Welcome/Login remains untouched. */
 window.YardivoSupplierAnnouncementMapAuthorityV583={renderMap:loadMap,update,init,getDate:()=>chosenDate,getWarehouse:()=>W(),getScope:()=>supplierScope};
-window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-supplier-booking-approval-qr-flow-final';
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-stable-login-supplier-booking-fixed-final';
 })();
 </script>
 <style id="yardivo-v583-capacity-visible-all-sections-style">
@@ -51357,558 +51516,296 @@ window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-add-user-smart-system-toggle-final
 html.yv-login-home-boot-v583 body .page,
 html.yv-login-home-boot-v583 body .view,
 html.yv-login-home-boot-v583 body [data-page]{visibility:hidden!important}
-html.yv-login-home-boot-v583 body #home,
-html.yv-login-home-boot-v583 body #homeView,
-html.yv-login-home-boot-v583 body [data-page="home"]{visibility:visible!important}
+html.yv-login-home-boot-v583 body #homeMenu{visibility:visible!important}
 </style>
 <script id="yardivo-v583-login-home-no-flicker-js">
 (()=>{'use strict';
 let handled=false;
+
 function session(){
- try{if(typeof currentSession!=='undefined'&&currentSession)return currentSession}catch(_){}
- return window.currentSession||window.currentUser||null;
+  try{if(typeof currentSession!=='undefined'&&currentSession)return currentSession}catch(_){}
+  return window.currentSession||window.currentUser||null;
 }
-function homeEl(){return document.getElementById('home')||document.getElementById('homeView')||document.querySelector('[data-page="home"]')}
+function homeEl(){return document.getElementById('homeMenu')}
+
 function activateHome(){
- const h=homeEl();
- /* Use the native router when available, otherwise switch the view atomically. */
- try{
-   if(typeof window.showView==='function'){window.showView('home')}
-   else if(typeof window.navigateTo==='function'){window.navigateTo('home')}
-   else if(typeof window.showPage==='function'){window.showPage('home')}
-   else{
-     document.querySelectorAll('.page.active,.view.active,[data-page].active,.page.show,.view.show,[data-page].show').forEach(x=>x.classList.remove('active','show'));
-     if(h){h.hidden=false;h.classList.add('active','show')}
-   }
- }catch(_){
-   if(h){h.hidden=false;h.classList.add('active','show')}
- }
- try{sessionStorage.setItem('yardivo_v583_login_landing','home')}catch(_){}
+  const h=homeEl();
+  if(!h)return false;
+  try{
+    if(typeof openAppView==='function'){
+      openAppView('homeMenu');
+    }else{
+      document.body.classList.add('home-menu-mode');
+      document.querySelectorAll('.view.active').forEach(x=>x.classList.remove('active'));
+      h.hidden=false;
+      h.classList.add('active');
+      try{updateHomeLocationUI?.()}catch(_){}
+    }
+  }catch(_){
+    document.body.classList.add('home-menu-mode');
+    document.querySelectorAll('.view.active').forEach(x=>x.classList.remove('active'));
+    h.hidden=false;
+    h.classList.add('active');
+  }
+  try{sessionStorage.setItem('yardivo_v583_login_landing','homeMenu')}catch(_){}
+  return true;
 }
 function finish(){
- activateHome();
- requestAnimationFrame(()=>requestAnimationFrame(()=>document.documentElement.classList.remove('yv-login-home-boot-v583')));
+  activateHome();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    document.documentElement.classList.remove('yv-login-home-boot-v583');
+  }));
 }
 function authReady(){
- if(!session())return;
- if(handled)return;
- handled=true;finish();
+  if(!session()||handled)return;
+  handled=true;
+  finish();
 }
 function arm(){
- handled=false;
- document.documentElement.classList.add('yv-login-home-boot-v583');
+  handled=false;
+  document.documentElement.classList.add('yv-login-home-boot-v583');
 }
 document.addEventListener('submit',e=>{
- if(e.target?.closest?.('#loginForm,.login-form,[data-login-form]'))arm();
+  if(e.target?.closest?.('#loginForm,.login-form,[data-login-form]'))arm();
 },true);
 ['yardivo:login','yardivo:authenticated','yardivo:session-ready'].forEach(ev=>window.addEventListener(ev,authReady));
-/* Data sync may finish after auth; it must not redirect away from Home. */
-['yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>window.addEventListener(ev,()=>{if(session())activateHome()}));
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{if(session()){arm();authReady()}},{once:true});
-else if(session()){arm();authReady()}
+['yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>{
+  window.addEventListener(ev,()=>{if(session())activateHome()});
+});
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',()=>{if(session()){arm();authReady()}},{once:true});
+}else if(session()){arm();authReady()}
+
 window.YardivoLoginHomeNoFlickerV583={arm,activateHome,authReady};
-window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-login-home-no-flicker-final';
+window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-true-pre-big-update-stable-login-final';
 })();
 </script>
 
 
-<style id="yardivo-v583-account-create-restored-style">
-#yardivoAccountCreateRestoredV583{display:none;position:fixed;inset:0;z-index:100500;background:rgba(5,15,28,.62);align-items:center;justify-content:center;padding:20px}
-#yardivoAccountCreateRestoredV583.open{display:flex}
-#yardivoAccountCreateRestoredV583 .box{width:min(620px,96vw);max-height:90vh;overflow:auto;background:#fff;color:#10233f;border-radius:16px;padding:20px;box-shadow:0 24px 70px rgba(0,0,0,.35)}
-#yardivoAccountCreateRestoredV583 label{display:block;font-size:11px;font-weight:900;margin:12px 0 5px}
-#yardivoAccountCreateRestoredV583 input,#yardivoAccountCreateRestoredV583 select{width:100%;box-sizing:border-box;background:#fff;color:#10233f;border:1px solid #bfd0df;border-radius:9px;padding:10px}
-#yardivoAccountCreateRestoredV583 .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
-#yardivoAccountCreateRestoredV583 .scope-note{font-size:10px;color:#71849a;margin-top:5px}
-body.dark-mode #yardivoAccountCreateRestoredV583 .box{background:#0d1d2d;color:#eef6ff}
-body.dark-mode #yardivoAccountCreateRestoredV583 input,body.dark-mode #yardivoAccountCreateRestoredV583 select{background:#13283b;color:#eef6ff;border-color:#35536e}
-</style>
-<script id="yardivo-v583-account-create-restored-js">
+<script id="yardivo-v583-stable-home-guard-js">
 (()=>{'use strict';
-const $=id=>document.getElementById(id),MASTER='yardivo_master_data_registry_v583';
-const roles=[['admin','ADMIN'],['manager','VODITELJ'],['inventory','INVENTORY'],['reception','PRIJAM'],['gate','GATE'],['supplier','DOBAVLJAČ']];
-function master(){try{return JSON.parse(localStorage.getItem(MASTER)||'{}')||{}}catch(_){return{}}}
-function ensure(){
- if($('yardivoAccountCreateRestoredV583'))return;
- const x=document.createElement('div');x.id='yardivoAccountCreateRestoredV583';
- x.innerHTML=`<div class="box"><h2>DODAJ KORISNIKA</h2>
- <label>ROLA</label><select id="yvAccRole">${roles.map(r=>`<option value="${r[0]}">${r[1]}</option>`).join('')}</select>
- <div id="yvAccSupplierWrap" hidden><label>DOBAVLJAČ IZ MASTER PODATAKA</label><select id="yvAccSupplier"></select><div class="scope-note">Lokacije, skladišta i kontakt preuzimaju se automatski iz Master dobavljača.</div></div>
- <div id="yvAccScopeWrap"><label>LOKACIJA</label><select id="yvAccLocation"></select><label>SKLADIŠTE</label><select id="yvAccWarehouse"></select></div>
- <label>KORISNIČKO IME</label><input id="yvAccUsername" autocomplete="off">
- <label>LOZINKA</label><input id="yvAccPassword" type="password" autocomplete="new-password">
- <div class="actions"><button type="button" id="yvAccCancel">ODUSTANI</button><button type="button" class="btn btn-primary" id="yvAccSave">KREIRAJ KORISNIKA</button></div></div>`;
- document.body.appendChild(x);fill();render();
+function ensureHome(){
+  let sess=null;try{sess=typeof currentSession!=='undefined'?currentSession:window.currentSession}catch(_){}
+  if(!sess)return;
+  const active=document.querySelector('.view.active');
+  if(active)return;
+  const h=document.getElementById('homeMenu');
+  if(!h)return;
+  document.body.classList.add('home-menu-mode');
+  h.classList.add('active');
 }
-function fill(){
- const m=master(),L=$('yvAccLocation'),S=$('yvAccSupplier');
- if(L)L.innerHTML='<option value="">ODABERI LOKACIJU</option>'+(m.locations||[]).filter(x=>x.active!==false).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
- if(S)S.innerHTML='<option value="">ODABERI DOBAVLJAČA</option>'+(m.suppliers||[]).filter(x=>x.active!==false).map(x=>`<option value="${x.id}">${esc(x.supplier_code||'')} — ${esc(x.name||'')}</option>`).join('');
- warehouses()
-}
-function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function warehouses(){const m=master(),loc=$('yvAccLocation')?.value,W=$('yvAccWarehouse');if(W)W.innerHTML='<option value="">ODABERI SKLADIŠTE</option>'+(m.warehouses||[]).filter(x=>x.active!==false&&String(x.location_id)===loc).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
-function render(){const r=$('yvAccRole')?.value,sup=r==='supplier',adm=r==='admin';$('yvAccSupplierWrap').hidden=!sup;$('yvAccScopeWrap').hidden=sup||adm}
-function token(){try{const keys=Object.keys(localStorage).filter(k=>/^sb-.*-auth-token$/.test(k));for(const k of keys){const j=JSON.parse(localStorage.getItem(k)||'{}'),t=j.access_token||j.currentSession?.access_token;if(t)return t}}catch(_){};try{return window.supabaseSession?.access_token||window.currentSession?.access_token||''}catch(_){return''}}
-async function save(){
- const r=$('yvAccRole').value,u=$('yvAccUsername').value.trim(),p=$('yvAccPassword').value;
- const body={action:'create',role:r,username:u,password:p};
- if(r==='supplier')body.supplier_id=$('yvAccSupplier').value;
- else if(r!=='admin'){body.location=$('yvAccLocation').value;body.warehouses=[$('yvAccWarehouse').value].filter(Boolean)}
- const t=token();if(!t){alert('Aktivna Admin prijava nije pronađena.');return}
- const url='https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-admin-users';
- const b=$('yvAccSave');b.disabled=true;
- try{const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify(body)}),j=await res.json().catch(()=>({}));if(!res.ok||!j.ok)throw new Error(j.error||'Korisnik nije kreiran.');close();window.dispatchEvent(new CustomEvent('yardivo:users-changed'));alert('Korisnik je uspješno kreiran.')}
- catch(e){alert(e.message||String(e))}finally{b.disabled=false}
-}
-function open(){ensure();fill();render();$('yardivoAccountCreateRestoredV583').classList.add('open');$('yvAccUsername').focus()}
-function close(){$('yardivoAccountCreateRestoredV583')?.classList.remove('open')}
-document.addEventListener('click',e=>{
- if(e.target?.closest?.('#yardivoAddUserRestoredBtnV583')){e.preventDefault();e.stopImmediatePropagation();open();return}
- if(e.target?.closest?.('#yvAccCancel'))close();
- if(e.target?.closest?.('#yvAccSave'))save();
- if(e.target===$('yardivoAccountCreateRestoredV583'))close();
-},true);
-document.addEventListener('change',e=>{if(e.target?.id==='yvAccRole')render();if(e.target?.id==='yvAccLocation')warehouses()},true);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('yardivoAccountCreateRestoredV583')?.classList.contains('open'))close()});
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensure,{once:true});else ensure();
-window.YardivoAccountCreateRestoredV583={open,close};
-window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-account-role-supplier-create-restored-final';
+['yardivo:login','yardivo:authenticated','yardivo:session-ready','yardivo:data-synced']
+  .forEach(ev=>window.addEventListener(ev,()=>requestAnimationFrame(ensureHome)));
+window.YardivoStableHomeGuardV583={ensureHome};
 })();
 </script>
 
 
-<style id="yardivo-v583-maps-header-warehouse-only-style">
-/* Daily/Weekly maps use the warehouse selected in the global header only. */
-#dailyMap select[id*="warehouse" i],#dailyMap select[name*="warehouse" i],
-#weeklyMap select[id*="warehouse" i],#weeklyMap select[name*="warehouse" i],
-#daily-map select[id*="warehouse" i],#weekly-map select[id*="warehouse" i],
-#dailyMap .warehouse-selector,#weeklyMap .warehouse-selector,
-#daily-map .warehouse-selector,#weekly-map .warehouse-selector{display:none!important}
+<style id="yardivo-v583-stable-supplier-booking-map-style">
+#ysnBoard{overflow:auto!important;padding:0 12px 14px!important}
+#ysnBoard .ysn-inventory-map{min-width:920px!important}
+#ysnBoard .ysn-inventory-map>button{border-right:1px solid #173047!important;border-bottom:1px solid #173047!important;border-top:0!important;border-left:0!important;border-radius:0!important;min-width:29px!important;cursor:pointer!important}
+#ysnBoard .ysn-free{background:#24a35a!important}
+#ysnBoard .ysn-free:hover{background:#2fba69!important}
+#ysnBoard .ysn-busy{background:#d84949!important;color:#fff!important;margin:0!important;border-radius:0!important;padding:0 2px!important;font-size:7px!important;justify-content:center!important;cursor:not-allowed!important}
+#ysnBoard .ysn-na{background:#10212c!important}
+#ysnBoard .ysn-selected{background:#1677df!important;box-shadow:inset 0 0 0 3px #9dccff!important}
+#ysnBoard .ysn-best{outline:3px solid #f3b126!important;outline-offset:-3px!important}
+body.light-mode #ysnBoard .ysn-na{background:#edf2f5!important}
+body.light-mode #ysnBoard .ysn-inventory-map .head,
+body.light-mode #ysnBoard .ysn-inventory-map .ramp{background:#fff!important;color:#26343e!important}
 </style>
-<script id="yardivo-v583-maps-header-warehouse-only-js">
+<script id="yardivo-v583-stable-supplier-booking-marker">
+(()=>{'use strict';window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-stable-login-supplier-booking-fixed-final';})();
+</script>
+
+
+<style id="yardivo-v583-settings-smart-qr-master-polish-style">
+/* One authoritative SMART control */
+#yardivoUnifiedSmartDbCardV583,#yardivoSmartVisibleFinalV583{display:none!important}
+#yardivoSmartEngineSettingsV583{border:1px solid #d9e4ef!important;border-radius:16px!important;background:#fff!important;box-shadow:0 8px 24px rgba(22,48,78,.06)!important;padding:18px!important}
+body.dark-mode #yardivoSmartEngineSettingsV583{background:#09151d!important;border-color:#274052!important}
+#yardivoSmartEngineSettingsV583 .yse-head{align-items:center!important}
+#yardivoSmartEngineSettingsV583 .yse-head>div{flex:1}
+#yardivoSmartMainToggleV583{min-width:108px;border:1px solid #c7d5e3;border-radius:999px;background:#eef3f7;color:#526579;padding:9px 14px;font-size:10px;font-weight:1000;cursor:pointer}
+#yardivoSmartMainToggleV583.on{background:#e8f9ef;border-color:#8ed3a9;color:#13723d}
+body.dark-mode #yardivoSmartMainToggleV583{background:#172630;border-color:#365062;color:#9fb2bf}
+body.dark-mode #yardivoSmartMainToggleV583.on{background:#0d2d1b;border-color:#2b8350;color:#70e29b}
+#yseStatus{display:none!important}
+
+/* QR switch: cleaner, explicit ON/OFF */
+#qrMobileSettingsPanel{border:1px solid #d9e4ef!important;border-radius:16px!important;box-shadow:0 8px 24px rgba(22,48,78,.06)!important;overflow:hidden}
+#qrMobileSettingsPanel .panel-head{padding:16px 18px!important}
+#qrMobileSettingsPanel .qr-mobile-setting-body{padding:18px!important}
+#qrMobileSettingsPanel .qr-mobile-setting-row{border-radius:14px!important;padding:16px!important}
+#qrMobileToggleLabel{min-width:42px!important;font-size:10px!important}
+#qrMobileSettingsBadge{font-size:9px!important}
+
+/* MASTER PODACI — visual consolidation only, no controller changes */
+#yardivoStableMasterEditorV583{display:grid!important;gap:16px!important}
+#yardivoStableMasterEditorV583>.ysm-head,
+#yardivoStableMasterEditorV583>.ysm-section,
+#yardivoStableMasterEditorV583>.ysm-wh,
+#yardivoStableMasterEditorV583 article.ysm-wh{
+ border-radius:16px!important;
+ border:1px solid #d8e3ed!important;
+ background:#fff!important;
+ box-shadow:0 8px 24px rgba(22,48,78,.055)!important;
+}
+#yardivoStableMasterEditorV583 .ysm-head{padding:18px 20px!important}
+#yardivoStableMasterEditorV583 .ysm-section{padding:18px!important}
+#yardivoStableMasterEditorV583 .ysm-wh{padding:18px!important;margin:0!important}
+#yardivoStableMasterEditorV583 .ysm-wh-head{padding-bottom:12px!important;margin-bottom:14px!important;border-bottom:1px solid #e6edf4!important}
+#yardivoStableMasterEditorV583 .ysm-sector{padding-top:16px!important;margin-top:16px!important;border-top:1px solid #e6edf4!important}
+#yardivoStableMasterEditorV583 .ysm-fields{gap:12px!important}
+#yardivoStableMasterEditorV583 input,
+#yardivoStableMasterEditorV583 select{min-height:42px!important;border-radius:10px!important;background:#fff!important;color:#15273a!important;border-color:#cfdce7!important}
+#yardivoStableMasterEditorV583 button{min-height:38px!important;border-radius:10px!important}
+#yardivoStableMasterEditorV583 .ysm-ramp{border-radius:13px!important;border:1px solid #dbe6ef!important;background:#f8fbfd!important;padding:14px!important;margin-top:10px!important}
+#yardivoStableMasterEditorV583 .ysm-ramp.off{opacity:.68!important}
+#yardivoStableMasterEditorV583 .ysm-config-path{border-radius:10px!important;background:#f2f7fb!important;padding:10px 12px!important}
+#yardivoStableMasterEditorV583 .ysm-sector-help{line-height:1.55!important}
+body.dark-mode #yardivoStableMasterEditorV583>.ysm-head,
+body.dark-mode #yardivoStableMasterEditorV583>.ysm-section,
+body.dark-mode #yardivoStableMasterEditorV583>.ysm-wh,
+body.dark-mode #yardivoStableMasterEditorV583 article.ysm-wh{background:#081722!important;border-color:#29465a!important}
+body.dark-mode #yardivoStableMasterEditorV583 input,
+body.dark-mode #yardivoStableMasterEditorV583 select{background:#06131e!important;color:#fff!important;border-color:#29485e!important}
+body.dark-mode #yardivoStableMasterEditorV583 .ysm-ramp{background:#0a1923!important;border-color:#29465a!important}
+body.dark-mode #yardivoStableMasterEditorV583 .ysm-config-path{background:#0c2230!important}
+
+/* One reset button in the actual danger zone */
+#deleteAllDataBtn{display:none!important}
+#yardivoDevTotalResetV583{margin:0!important;border:1px solid #efb3b8!important;border-radius:16px!important;background:#fff7f8!important;box-shadow:none!important}
+body.dark-mode #yardivoDevTotalResetV583{background:#241114!important;border-color:#6d3138!important}
+#yardivoResetYardivoBtn{border-radius:11px!important;min-height:44px!important;font-weight:1000!important}
+</style>
+<script id="yardivo-v583-settings-smart-qr-master-polish-js">
 (()=>{'use strict';
-const MAPS=['dailyMap','weeklyMap','daily-map','weekly-map'];
-function headerWarehouse(){
- const sels=[
-  '#warehouseSelect','#headerWarehouseSelect','#globalWarehouseSelect',
-  '[data-header-warehouse] select','header select[id*="warehouse" i]',
-  '.topbar select[id*="warehouse" i]','.app-header select[id*="warehouse" i]'
- ];
- for(const q of sels){const x=document.querySelector(q);if(x?.value)return x.value}
- try{return window.currentWarehouse||window.selectedWarehouse||localStorage.getItem('yardivo_selected_warehouse_v583')||''}catch(_){return''}
+const MASTER='yardivo_master_data_registry_v583';
+const SMART='yardivo_auto_replan_cfg_v1';
+const QR='yardivo_qr_scan_cfg_v583';
+const OLD_QR='yardivo_ramp_qr_mobile_v1';
+const BASE='https://rskticdbiovvgyocpzoc.supabase.co';
+const APIKEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
+const EDGE=BASE+'/functions/v1/yardivo-sync';
+
+function role(){try{return String(window.currentSession?.role||window.currentSession?.app_role||'').toLowerCase()}catch(_){return''}}
+function admin(){return role()==='admin'}
+async function token(){
+ const raw=String(window.__yardivoSupplierAccessToken||'').trim();if(raw)return raw;
+ const c=await window.YardivoAuth?.client?.();if(!c)throw new Error('ONLINE AUTH NIJE SPREMAN.');
+ const s=(await c.auth.getSession())?.data?.session;
+ if(!s?.access_token)throw new Error('ONLINE PRIJAVA NIJE AKTIVNA.');
+ return s.access_token;
 }
-function syncMap(root){
- if(!root)return;
- const wh=headerWarehouse();
- const selects=[...root.querySelectorAll('select')].filter(x=>/warehouse|skladi/i.test((x.id||'')+' '+(x.name||'')+' '+(x.getAttribute('aria-label')||'')));
- selects.forEach(x=>{
-   if(wh&&[...x.options].some(o=>String(o.value)===String(wh))){x.value=wh;x.dispatchEvent(new Event('change',{bubbles:true}))}
-   const row=x.closest('.field,.form-group,.filter,.control,.select-wrap')||x;
-   row.style.setProperty('display','none','important');
- });
- /* Remove only the standalone warehouse label/control in map filters. */
- [...root.querySelectorAll('label')].filter(x=>/^\s*odaberi\s+skladište\s*:?\s*$/i.test(x.textContent||'')).forEach(l=>{
-   const row=l.closest('.field,.form-group,.filter,.control')||l;
-   row.style.setProperty('display','none','important');
- });
- root.dataset.warehouseSource='header';
- root.dataset.warehouseId=wh;
+async function setState(key,value){
+ const t=await token();
+ const r=await fetch(EDGE,{method:'POST',headers:{apikey:APIKEY,Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({action:'set_state',key,value:JSON.stringify(value),clientId:'settings-v583'})});
+ const d=await r.json().catch(()=>({}));
+ if(!r.ok||d?.ok===false)throw new Error(d?.error||('HTTP '+r.status));
+ return d;
 }
-function sync(){MAPS.forEach(id=>syncMap(document.getElementById(id)))}
-document.addEventListener('change',e=>{
- const t=e.target;if(t?.matches?.('#warehouseSelect,#headerWarehouseSelect,#globalWarehouseSelect,[data-header-warehouse] select,header select[id*="warehouse" i],.topbar select[id*="warehouse" i],.app-header select[id*="warehouse" i]'))setTimeout(sync,0);
-},true);
-['yardivo:warehouse-changed','yardivo:context-changed','yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(sync,0)));
-document.addEventListener('click',e=>{if(e.target?.closest?.('[data-view="dailyMap"],[data-view="weeklyMap"],[data-target="dailyMap"],[data-target="weeklyMap"]'))setTimeout(sync,0)},true);
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(sync,1200),{once:true});else setTimeout(sync,600);
-window.YardivoMapsHeaderWarehouseOnlyV583={sync,headerWarehouse};
-window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-maps-header-warehouse-only-final';
-})();
-</script>
-
-
-<style id="yardivo-v583-user-management-restored-style">
-#yardivoUserManagementRestoredV583{margin-top:14px}
-#yardivoUserManagementRestoredV583 .head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-#yardivoUserManagementRestoredV583 table{width:100%;border-collapse:collapse;margin-top:10px}
-#yardivoUserManagementRestoredV583 th,#yardivoUserManagementRestoredV583 td{padding:9px;border-bottom:1px solid #d9e3ec;text-align:left;font-size:12px}
-#yardivoUserManagementRestoredV583 .acts{display:flex;gap:6px;flex-wrap:wrap}
-#yardivoUserManagementRestoredV583 button{cursor:pointer}
-#yardivoUserPasswordModalV583{display:none;position:fixed;inset:0;z-index:100600;background:rgba(5,15,28,.62);align-items:center;justify-content:center}
-#yardivoUserPasswordModalV583.open{display:flex}
-#yardivoUserPasswordModalV583 .box{width:min(430px,94vw);background:#fff;color:#10233f;padding:20px;border-radius:15px}
-#yardivoUserPasswordModalV583 input{width:100%;box-sizing:border-box;padding:10px;margin:8px 0 14px;border:1px solid #bfd0df;border-radius:8px}
-#yardivoUserPasswordModalV583 .actions{display:flex;justify-content:flex-end;gap:8px}
-body.dark-mode #yardivoUserManagementRestoredV583 th,body.dark-mode #yardivoUserManagementRestoredV583 td{border-color:#30485d;color:#eef6ff}
-body.dark-mode #yardivoUserPasswordModalV583 .box{background:#0d1d2d;color:#eef6ff}
-body.dark-mode #yardivoUserPasswordModalV583 input{background:#13283b;color:#eef6ff;border-color:#35536e}
-</style>
-<script id="yardivo-v583-user-management-restored-js">
-(()=>{'use strict';
-const $=id=>document.getElementById(id),URL='https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-admin-users';
-let users=[],passId=null;
-function token(){try{for(const k of Object.keys(localStorage).filter(k=>/^sb-.*-auth-token$/.test(k))){const j=JSON.parse(localStorage.getItem(k)||'{}'),t=j.access_token||j.currentSession?.access_token;if(t)return t}}catch(_){};try{return window.supabaseSession?.access_token||window.currentSession?.access_token||''}catch(_){return''}}
-async function api(body){const t=token();if(!t)throw new Error('Aktivna Admin prijava nije pronađena.');const r=await fetch(URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify(body)}),j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||'Greška korisničkog servisa.');return j.data}
-function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function ensure(){
- const parent=$('yardivoAccountAdminRestoredV583')||$('yardivoUnifiedSettingsV583');if(!parent)return;
- if(!$('yardivoUserManagementRestoredV583')){const x=document.createElement('div');x.id='yardivoUserManagementRestoredV583';x.innerHTML='<div class="head"><div><h3>POPIS KORISNIKA</h3><div id="yvUserListStatus">Učitavanje...</div></div><button type="button" id="yvDeleteAllNonAdmin">OBRIŠI SVE OSIM ADMINA</button></div><div style="overflow:auto"><table><thead><tr><th>KORISNIK</th><th>ROLA</th><th>STATUS</th><th>AKCIJE</th></tr></thead><tbody id="yvUserRows"></tbody></table></div>';parent.appendChild(x)}
- if(!$('yardivoUserPasswordModalV583')){const m=document.createElement('div');m.id='yardivoUserPasswordModalV583';m.innerHTML='<div class="box"><h3>PROMIJENI LOZINKU</h3><div id="yvPassWho"></div><input id="yvNewPass" type="password" placeholder="Nova lozinka (min. 8 znakova)" autocomplete="new-password"><div class="actions"><button id="yvPassCancel" type="button">ODUSTANI</button><button id="yvPassSave" type="button" class="btn btn-primary">SPREMI LOZINKU</button></div></div>';document.body.appendChild(m)}
- load();
+function readMaster(){try{return JSON.parse(localStorage.getItem(MASTER)||'{}')||{}}catch(_){return{}}}
+function readEngine(){try{return JSON.parse(localStorage.getItem(SMART)||'{}')||{}}catch(_){return{}}}
+function smartOn(){
+ const m=readMaster(),s=m.smart||{};
+ if(Object.prototype.hasOwnProperty.call(s,'enabled'))return !!s.enabled&&String(s.mode||'').toUpperCase()!=='PAUSED';
+ const e=readEngine();return !!e.enabled&&String(e.mode||'').toUpperCase()!=='PAUSED';
 }
-async function load(){const st=$('yvUserListStatus');if(st)st.textContent='Učitavanje...';try{users=await api({action:'list'})||[];render()}catch(e){if(st)st.textContent=e.message}}
-function render(){const rows=$('yvUserRows'),st=$('yvUserListStatus');if(!rows)return;st.textContent=users.length+' korisnik(a)';rows.innerHTML=users.map(u=>{const admin=String(u.app_role).toLowerCase()==='admin';return `<tr><td>${esc(u.username)}</td><td>${esc(u.app_role)}</td><td>${u.active?'AKTIVAN':'NEAKTIVAN'}</td><td><div class="acts"><button type="button" data-pass="${esc(u.auth_user_id)}" data-name="${esc(u.username)}">PROMIJENI LOZINKU</button>${admin?'':'<button type="button" data-del="'+esc(u.auth_user_id)+'" data-name="'+esc(u.username)+'">OBRIŠI</button>'}</div></td></tr>`}).join('')}
-function passOpen(id,name){passId=id;$('yvPassWho').textContent=name;$('yvNewPass').value='';$('yardivoUserPasswordModalV583').classList.add('open');$('yvNewPass').focus()}
-function passClose(){passId=null;$('yardivoUserPasswordModalV583')?.classList.remove('open')}
-async function changePass(){const p=$('yvNewPass').value;if(p.length<8){alert('Lozinka mora imati najmanje 8 znakova.');return}try{await api({action:'password',auth_user_id:passId,password:p});passClose();alert('Lozinka je promijenjena.')}catch(e){alert(e.message)}}
-async function del(id,name){if(!confirm('Obrisati korisnika "'+name+'"?'))return;try{await api({action:'delete',auth_user_id:id});await load()}catch(e){alert(e.message)}}
-async function delAll(){const list=users.filter(u=>String(u.app_role).toLowerCase()!=='admin');if(!list.length){alert('Nema korisnika za brisanje. Admin ostaje sačuvan.');return}if(!confirm('Obrisati SVE korisnike osim Admin računa?'))return;let failed=[];for(const u of list){try{await api({action:'delete',auth_user_id:u.auth_user_id})}catch(e){failed.push(u.username+': '+e.message)}}await load();alert(failed.length?'Završeno uz greške:\\n'+failed.join('\\n'):'Svi korisnici osim Admina su obrisani.')}
-document.addEventListener('click',e=>{const p=e.target?.closest?.('[data-pass]'),d=e.target?.closest?.('[data-del]');if(p)passOpen(p.dataset.pass,p.dataset.name);if(d)del(d.dataset.del,d.dataset.name);if(e.target?.closest?.('#yvDeleteAllNonAdmin'))delAll();if(e.target?.closest?.('#yvPassCancel'))passClose();if(e.target?.closest?.('#yvPassSave'))changePass()},true);
-window.addEventListener('yardivo:users-changed',()=>setTimeout(load,100));
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(ensure,1800),{once:true});else setTimeout(ensure,900);
-window.YardivoUserManagementRestoredV583={load};
-window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-user-list-password-delete-bulk-restored-final';
-})();
-</script>
-
-
-<style id="yardivo-v583-account-scope-enforced-style">
-/* Non-admin selectors only expose server-authorized Master scope. */
-body.yv-scope-locked-v583 option[data-yv-scope-denied="1"]{display:none!important}
-</style>
-<script id="yardivo-v583-account-scope-enforced-js">
-(()=>{'use strict';
-const URL='https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-user-scope',MASTER='yardivo_master_data_registry_v583';
-let S=null,busy=false;
-function token(){try{for(const k of Object.keys(localStorage).filter(k=>/^sb-.*-auth-token$/.test(k))){const j=JSON.parse(localStorage.getItem(k)||'{}'),t=j.access_token||j.currentSession?.access_token;if(t)return t}}catch(_){};try{return window.supabaseSession?.access_token||window.currentSession?.access_token||''}catch(_){return''}}
-function master(){try{return JSON.parse(localStorage.getItem(MASTER)||'{}')||{}}catch(_){return{}}}
-function isAdmin(){return String(S?.app_role||'').toLowerCase()==='admin'}
-function allowedLoc(id){return isAdmin()||S?.all_locations||String(id)===String(S?.location)}
-function allowedWh(id){return isAdmin()||S?.all_warehouses||(S?.warehouses||[]).map(String).includes(String(id))}
-function enforceSelect(sel){
- if(!S||isAdmin()||!sel)return;
- const txt=((sel.id||'')+' '+(sel.name||'')+' '+(sel.getAttribute('aria-label')||'')).toLowerCase();
- const isWh=/warehouse|skladi/.test(txt),isLoc=/location|lokacij/.test(txt);if(!isWh&&!isLoc)return;
- [...sel.options].forEach(o=>{if(!o.value)return;const ok=isWh?allowedWh(o.value):allowedLoc(o.value);o.disabled=!ok;o.dataset.yvScopeDenied=ok?'0':'1'});
- if(sel.value&&((isWh&&!allowedWh(sel.value))||(isLoc&&!allowedLoc(sel.value))))sel.value='';
-}
-function enforce(){
- if(!S)return;document.body.classList.toggle('yv-scope-locked-v583',!isAdmin());
- document.querySelectorAll('select').forEach(enforceSelect);
- /* Keep global header context inside assigned scope. */
- if(!isAdmin()){
-   const m=master(),loc=S.location,wh=(S.warehouses||[])[0]||'';
-   document.querySelectorAll('#locationSelect,#headerLocationSelect,#globalLocationSelect,header select[id*="location" i],.topbar select[id*="location" i]').forEach(x=>{enforceSelect(x);if(loc&&[...x.options].some(o=>String(o.value)===String(loc)))x.value=loc});
-   document.querySelectorAll('#warehouseSelect,#headerWarehouseSelect,#globalWarehouseSelect,header select[id*="warehouse" i],.topbar select[id*="warehouse" i]').forEach(x=>{enforceSelect(x);if(wh&&[...x.options].some(o=>String(o.value)===String(wh)))x.value=wh});
- }
- window.YardivoServerScopeV583=S;window.dispatchEvent(new CustomEvent('yardivo:server-scope-ready',{detail:S}));
-}
-async function load(){
- if(busy)return;const t=token();if(!t)return;busy=true;
- try{const r=await fetch(URL,{method:'POST',headers:{'Authorization':'Bearer '+t,'Content-Type':'application/json'},body:'{}'}),j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'Scope error');S=j.data;enforce()}catch(e){console.error('YARDIVO server scope',e)}finally{busy=false}
-}
-document.addEventListener('change',e=>{const x=e.target;if(!S||isAdmin()||!x?.matches?.('select'))return;const txt=((x.id||'')+' '+(x.name||'')).toLowerCase();if(/warehouse|skladi/.test(txt)&&x.value&&!allowedWh(x.value)){e.preventDefault();x.value=(S.warehouses||[])[0]||'';enforce()}if(/location|lokacij/.test(txt)&&x.value&&!allowedLoc(x.value)){e.preventDefault();x.value=S.location||'';enforce()}},true);
-['yardivo:login','yardivo:authenticated','yardivo:session-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(load,0)));
-['yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(enforce,0)));
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(load,500),{once:true});else setTimeout(load,300);
-window.YardivoAccountScopeEnforcedV583={load,enforce,get:()=>S,allowedLoc,allowedWh};
-window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-backend-account-scope-enforced-final';
-})();
-</script>
-
-
-<style id="yardivo-v583-users-role-cards-supplier-map-style">
-#yvRolePickerV583{display:none;position:fixed;inset:0;z-index:100700;background:rgba(4,17,31,.68);backdrop-filter:blur(7px);align-items:center;justify-content:center;padding:20px}
-#yvRolePickerV583.open{display:flex}
-#yvRolePickerV583 .rp-box{width:min(820px,96vw);background:#fff;color:#132f49;border-radius:20px;padding:22px;box-shadow:0 30px 90px rgba(0,0,0,.35)}
-#yvRolePickerV583 .rp-top{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:16px}
-#yvRolePickerV583 .rp-top h2{margin:0;font-size:20px}.rp-close{width:38px;height:38px;border:1px solid #d6e2ec;background:#f7fafc;border-radius:10px;font-size:21px;cursor:pointer}
-#yvRolePickerV583 .rp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-#yvRolePickerV583 .rp-role{min-height:126px;border:1px solid #d6e3ed;border-radius:15px;background:#f8fbfe;color:#173653;padding:16px;text-align:left;cursor:pointer;transition:.15s}
-#yvRolePickerV583 .rp-role:hover{transform:translateY(-2px);border-color:#1683f3;box-shadow:0 10px 25px rgba(20,93,155,.12)}
-#yvRolePickerV583 .rp-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#e9f4ff;font-size:22px;margin-bottom:10px}
-#yvRolePickerV583 .rp-role strong{display:block;font-size:12px}.rp-role small{display:block;margin-top:5px;color:#70869a;font-size:10px;line-height:1.4}
-#yardivoUserManagementRestoredV583{border:1px solid #d8e5ef;border-radius:15px;padding:16px;background:#fff}
-#ysnMap{display:block!important}
-#ysnMap.ysn-date-active{border:2px solid #1683f3!important;box-shadow:0 14px 34px rgba(22,131,243,.12)!important}
-.ysn-recommended{outline:3px solid #f0a51b!important;box-shadow:0 0 0 4px rgba(240,165,27,.15)!important;position:relative}
-.ysn-recommended::after{content:"PREPORUČENO";position:absolute;left:3px;right:3px;bottom:2px;font-size:6px;line-height:1;color:#805400}
-@media(max-width:700px){#yvRolePickerV583 .rp-grid{grid-template-columns:1fr 1fr}}
-body.dark-mode #yvRolePickerV583 .rp-box,body.dark-mode #yardivoUserManagementRestoredV583{background:#0d1d2d;color:#eef6ff}
-body.dark-mode #yvRolePickerV583 .rp-role{background:#13283b;color:#eef6ff;border-color:#35536e}
-</style>
-<script type="application/x-yardivo-disabled" id="yardivo-v583-users-role-cards-supplier-map-js">
-(()=>{'use strict';const $=id=>document.getElementById(id);
-const roles=[
- ['admin','🛡️','ADMIN','Globalni pristup cijelom YARDIVO sustavu.'],
- ['manager','📊','VODITELJ','Upravljanje dodijeljenom lokacijom i skladištem.'],
- ['inventory','📦','INVENTORY','Zalihe i operativa dodijeljenog skladišta.'],
- ['reception','🚚','PRIJAM','Prijam vozila i rad u dodijeljenom skladištu.'],
- ['gate','🚧','GATE','Ulaz/izlaz i gate operacije.'],
- ['supplier','🏭','DOBAVLJAČ','Portal dobavljača prema Master Supplier dodjeli.']
-];
-function picker(){
- let p=$('yvRolePickerV583');if(p)return p;p=document.createElement('div');p.id='yvRolePickerV583';
- p.innerHTML='<div class="rp-box"><div class="rp-top"><div><h2>DODAJ KORISNIKA</h2><small>Prvo odaberi rolu korisničkog računa.</small></div><button class="rp-close" type="button">×</button></div><div class="rp-grid">'+roles.map(r=>`<button type="button" class="rp-role" data-yv-role="${r[0]}"><span class="rp-icon">${r[1]}</span><strong>${r[2]}</strong><small>${r[3]}</small></button>`).join('')+'</div></div>';document.body.appendChild(p);return p
-}
-function openPicker(){picker().classList.add('open')}
-function closePicker(){picker().classList.remove('open')}
-function openForm(role){closePicker();window.YardivoAccountCreateRestoredV583?.open?.();setTimeout(()=>{const r=$('yvAccRole');if(r){r.value=role;r.dispatchEvent(new Event('change',{bubbles:true}))}},0)}
-document.addEventListener('click',e=>{
- if(e.target?.closest?.('#yardivoAddUserRestoredBtnV583')){e.preventDefault();e.stopImmediatePropagation();openPicker();return}
- const r=e.target?.closest?.('[data-yv-role]');if(r){e.preventDefault();openForm(r.dataset.yvRole);return}
- if(e.target?.closest?.('#yvRolePickerV583 .rp-close')||e.target===$('yvRolePickerV583'))closePicker()
-},true);
-
-/* Supplier: selected date MUST immediately reveal the daily map and mark the first free slot as recommendation. */
-function supplierMapAfterDate(){
- const map=$('ysnMap'),board=$('ysnBoard');if(!map||!board)return;
- map.style.setProperty('display','block','important');map.classList.add('ysn-date-active');
- const p=$('ysnPallets');if(p?.value)p.dispatchEvent(new Event('input',{bubbles:false}));
- setTimeout(()=>{
-   const free=board.querySelector('.ysn-slot.free:not(:disabled)');
-   board.querySelectorAll('.ysn-recommended').forEach(x=>x.classList.remove('ysn-recommended'));
-   if(free){free.classList.add('ysn-recommended');const sub=$('ysnMapSub');if(sub)sub.textContent=(sub.textContent||'')+' · PREPORUČENI TERMIN '+(free.textContent||'').trim().replace('SLOBODNO','').trim()}
-   map.scrollIntoView({behavior:'smooth',block:'center'});
- },80)
-}
-document.addEventListener('click',e=>{const d=e.target?.closest?.('.ysn-day:not(.blank)');if(d&&!d.disabled)setTimeout(supplierMapAfterDate,35)},true);
-document.addEventListener('change',e=>{if(e.target?.id==='yspDate'||e.target?.id==='ysnDate')setTimeout(supplierMapAfterDate,20)},true);
-window.YardivoSupplierDateMapRequiredV583={refresh:supplierMapAfterDate};
-window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-users-role-cards-supplier-daily-map-recommendation-final';
-})();
-</script>
-
-
-<style id="yardivo-v583-user-center-premium-style">
-#yardivoAccountAdminRestoredV583{background:linear-gradient(145deg,#f7fbff,#eef6fc)!important;border:1px solid #d7e5f0!important;border-radius:22px!important;padding:22px!important;box-shadow:0 18px 50px rgba(20,55,85,.08)!important}
-#yardivoAccountAdminRestoredV583>h3,#yardivoAccountAdminRestoredV583>h2{font-size:20px!important;letter-spacing:-.02em}
-#yardivoAddUserRestoredBtnV583{border:0!important;border-radius:12px!important;padding:12px 18px!important;background:#147ee8!important;color:white!important;font-weight:900!important;box-shadow:0 8px 22px rgba(20,126,232,.22)!important}
-#yardivoUserManagementRestoredV583{margin-top:18px!important;background:#fff!important;border:1px solid #dbe8f2!important;border-radius:18px!important;padding:18px!important;box-shadow:0 10px 30px rgba(26,62,91,.06)!important}
-#yardivoUserManagementRestoredV583 .head h3{margin:0 0 4px!important;font-size:15px!important}
-#yardivoUserManagementRestoredV583 table{border-spacing:0 7px!important;border-collapse:separate!important}
-#yardivoUserManagementRestoredV583 thead th{border:0!important;color:#70869a!important;font-size:9px!important;letter-spacing:.09em!important}
-#yardivoUserManagementRestoredV583 tbody tr{background:#f7fafc!important}
-#yardivoUserManagementRestoredV583 tbody td{border-top:1px solid #e1ebf3!important;border-bottom:1px solid #e1ebf3!important;padding:12px 10px!important}
-#yardivoUserManagementRestoredV583 tbody td:first-child{border-left:1px solid #e1ebf3!important;border-radius:11px 0 0 11px!important;font-weight:850!important}
-#yardivoUserManagementRestoredV583 tbody td:last-child{border-right:1px solid #e1ebf3!important;border-radius:0 11px 11px 0!important}
-#yardivoUserManagementRestoredV583 .acts button,#yvDeleteAllNonAdmin{border:1px solid #cfdeea!important;background:#fff!important;color:#25445f!important;border-radius:9px!important;padding:7px 10px!important;font-weight:800!important;font-size:9px!important}
-#yvDeleteAllNonAdmin{color:#b42318!important;border-color:#f1c9c5!important}
-#yvUserListStatus{font-size:10px!important;color:#75899b!important}
-#yardivoAccountCreateRestoredV583 .box{border-radius:22px!important;padding:24px!important;box-shadow:0 30px 90px rgba(0,0,0,.28)!important}
-#yardivoAccountCreateRestoredV583 .box h2{margin-top:0!important}
-#yardivoAccountCreateRestoredV583 input,#yardivoAccountCreateRestoredV583 select{min-height:44px!important;border-radius:11px!important}
-body.dark-mode #yardivoAccountAdminRestoredV583{background:#0b1b2b!important;border-color:#29445c!important}
-body.dark-mode #yardivoUserManagementRestoredV583{background:#102438!important;border-color:#29445c!important}
-body.dark-mode #yardivoUserManagementRestoredV583 tbody tr{background:#132b40!important}
-</style>
-<script id="yardivo-v583-user-list-visible-fix-js">
-(()=>{'use strict';
-const URL='https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-admin-users';
-function token(){try{for(const k of Object.keys(localStorage).filter(k=>/^sb-.*-auth-token$/.test(k))){const j=JSON.parse(localStorage.getItem(k)||'{}'),t=j.access_token||j.currentSession?.access_token;if(t)return t}}catch(_){};try{return window.supabaseSession?.access_token||window.currentSession?.access_token||''}catch(_){return''}}
-async function authoritativeRefresh(){
- const t=token(),rows=document.getElementById('yvUserRows'),st=document.getElementById('yvUserListStatus');if(!t||!rows)return;
+function qrOn(){
  try{
-  const r=await fetch(URL,{method:'POST',headers:{'Authorization':'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({action:'list'})}),j=await r.json();
-  if(!r.ok||!j.ok)throw new Error(j.error||'Popis korisnika nije učitan.');
-  const a=j.data||[];st.textContent=a.length+' korisnik(a) · SUPABASE';
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  rows.innerHTML=a.map(u=>{const adm=String(u.app_role).toLowerCase()==='admin';return `<tr><td>${esc(u.username)}</td><td>${esc(u.app_role)}</td><td>${u.active?'AKTIVAN':'NEAKTIVAN'}</td><td><div class="acts"><button type="button" data-pass="${esc(u.auth_user_id)}" data-name="${esc(u.username)}">PROMIJENI LOZINKU</button>${adm?'':'<button type="button" data-del="'+esc(u.auth_user_id)+'" data-name="'+esc(u.username)+'">OBRIŠI</button>'}</div></td></tr>`}).join('');
- }catch(e){st.textContent=e.message}
+   const q=JSON.parse(localStorage.getItem(QR)||'null');
+   if(q&&Object.prototype.hasOwnProperty.call(q,'enabled'))return !!q.enabled;
+ }catch(_){}
+ const old=localStorage.getItem(OLD_QR);
+ if(old===null||old==='')return true;
+ return old==='1'||old==='true'||old==='on';
 }
-['yardivo:login','yardivo:authenticated','yardivo:session-ready','yardivo:users-changed'].forEach(x=>window.addEventListener(x,()=>setTimeout(authoritativeRefresh,250)));
-document.addEventListener('click',e=>{if(e.target?.closest?.('#yardivoAccountAdminRestoredV583,#yardivoAddUserRestoredBtnV583'))setTimeout(authoritativeRefresh,250)},true);
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(authoritativeRefresh,2200),{once:true});else setTimeout(authoritativeRefresh,1300);
-window.YardivoUserListAuthoritativeV583={refresh:authoritativeRefresh};
-window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-user-center-premium-ui-list-fix-final';
-})();
-</script>
+async function setSmart(on){
+ if(!admin())throw new Error('Samo Admin može mijenjati YARDIVO SMART.');
+ const m=readMaster();m.smart={...(m.smart||{}),enabled:!!on,mode:on?'ASSIST':'PAUSED'};m.__masterUpdatedAtV583=new Date().toISOString();
+ const e={...readEngine(),enabled:!!on,mode:on?'ASSIST':'PAUSED'};
+ localStorage.setItem(MASTER,JSON.stringify(m));localStorage.setItem(SMART,JSON.stringify(e));
+ try{window.YardivoSmartReplanning?.applyState?.()}catch(_){}
+ await Promise.all([setState(MASTER,m),setState(SMART,e)]);
+ try{window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{reason:'smart.toggle',source:'settings'}}))}catch(_){}
+ paint();
+}
+async function setQr(on){
+ if(!admin())throw new Error('Samo Admin može mijenjati QR SCAN.');
+ const q={enabled:!!on,updated_at:new Date().toISOString()};
+ localStorage.setItem(QR,JSON.stringify(q));localStorage.setItem(OLD_QR,on?'1':'0');
+ await setState(QR,q);
+ paintQr();
+ try{if(typeof renderReceiving==='function')renderReceiving()}catch(_){}
+}
+function paintSmart(){
+ const p=document.getElementById('yardivoSmartEngineSettingsV583');if(!p)return;
+ let b=document.getElementById('yardivoSmartMainToggleV583');
+ if(!b){
+   b=document.createElement('button');b.type='button';b.id='yardivoSmartMainToggleV583';
+   const h=p.querySelector('.yse-head');if(h)h.appendChild(b);else p.prepend(b);
+   b.addEventListener('click',async()=>{
+     const next=!smartOn();b.disabled=true;
+     try{await setSmart(next)}catch(e){alert('SMART nije spremljen: '+(e?.message||e))}
+     finally{b.disabled=false}
+   });
+ }
+ const on=smartOn();b.textContent=on?'TURN OFF':'TURN ON';b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));
+}
+function paintQr(){
+ const on=qrOn(),toggle=document.getElementById('qrMobileEnabledToggle'),label=document.getElementById('qrMobileToggleLabel'),badge=document.getElementById('qrMobileSettingsBadge'),info=document.getElementById('qrMobileModeInfo');
+ if(toggle){toggle.checked=on;toggle.disabled=!admin()}
+ if(label)label.textContent=on?'ON':'OFF';
+ if(badge){badge.textContent=on?'QR SCAN ON':'QR SCAN OFF';badge.className='master-sync-state '+(on?'ok':'')}
+ if(info){
+   info.className='qr-mobile-mode '+(on?'on':'off');
+   info.innerHTML=on?'<strong>QR SCAN JE UKLJUČEN.</strong> ONE QR tok je aktivan za Portu i Prijam.':'<strong>QR SCAN JE ISKLJUČEN.</strong> Gate/Reception QR akcije su blokirane na backendu; koristi se ručni način.';
+ }
+}
+function moveSmartIntoSettings(){
+ const settings=document.getElementById('settings'),panel=document.getElementById('yardivoSmartEngineSettingsV583');if(!settings||!panel)return;
+ const shell=document.getElementById('yardivoSettingsVisibleFinalV583')||settings.querySelector('.settings-grid');
+ if(shell&&panel.parentElement!==shell)shell.appendChild(panel);
+}
+function moveResetIntoDanger(){
+ const settings=document.getElementById('settings'),reset=document.getElementById('yardivoDevTotalResetV583');if(!settings||!reset)return;
+ const danger=settings.querySelector('.danger-zone .danger-body,.danger-zone');
+ if(danger&&reset.parentElement!==danger)danger.appendChild(reset);
+}
+function polishMaster(){
+ const master=document.getElementById('yardivoStableMasterEditorV583');if(!master)return;
+ master.setAttribute('aria-label','Master podaci');
+}
+function paint(){moveSmartIntoSettings();moveResetIntoDanger();polishMaster();paintSmart();paintQr()}
 
+/* Override old QR helpers with the canonical server-backed switch. */
+window.yardivoQrMobileEnabled=qrOn;
+window.yardivoSetQrMobileEnabled=async enabled=>{
+ try{await setQr(!!enabled)}catch(e){alert('QR SCAN nije spremljen: '+(e?.message||e));paintQr()}
+};
 
-<style id="yardivo-v583-supplier-exact-daily-map-style">
-#ysnMap{display:block!important;visibility:visible!important;opacity:1!important;margin-top:6px!important;border:1px solid #c9dce9!important;border-radius:18px!important}
-#ysnMap .ysn-map-head{background:#f4f9fd!important}
-#ysnBoard{display:block!important;min-height:230px!important}
-#ysnBoard .ysn-slot{min-width:74px!important;height:48px!important;border-radius:8px!important;font-size:0!important;position:relative!important}
-#ysnBoard .ysn-slot.free{background:#24a35a!important;border:2px solid #188448!important;color:#fff!important}
-#ysnBoard .ysn-slot.busy{background:#d84949!important;border:2px solid #b93232!important;color:#fff!important;opacity:1!important}
-#ysnBoard .ysn-slot.free::after{content:"SLOBODNO";font-size:8px;font-weight:950;color:#fff}
-#ysnBoard .ysn-slot.busy::after{content:"ZAUZETO";font-size:8px;font-weight:950;color:#fff}
-#ysnBoard .ysn-slot.selected{background:#1677df!important;border-color:#0e61bd!important}
-#ysnBoard .ysn-slot.selected::after{content:"ODABRANO"!important}
-#ysnBoard .ysn-slot.ysn-best{box-shadow:0 0 0 4px #f3b126!important;outline:2px solid #fff!important}
-#ysnMapSub{font-weight:800!important;color:#48677f!important}
-body.dark-mode #ysnMap .ysn-map-head{background:#10283c!important}
-</style>
-<script type="application/x-yardivo-disabled" id="yardivo-v583-supplier-exact-daily-map-js">
-(()=>{'use strict';
-const $=id=>document.getElementById(id);
-function recommend(){
- const b=$('ysnBoard');if(!b)return;
- b.querySelectorAll('.ysn-best').forEach(x=>x.classList.remove('ysn-best'));
- const free=b.querySelector('.ysn-slot.free:not(:disabled)');
- if(!free)return;
- free.classList.add('ysn-best');
- const td=free.closest('td'),tr=free.closest('tr'),table=free.closest('table');
- const idx=td?[...tr.children].indexOf(td):-1;
- const time=idx>0?table?.querySelector(`thead tr th:nth-child(${idx+1})`)?.textContent?.trim():'';
- const ramp=tr?.querySelector('th.ramp')?.childNodes?.[0]?.textContent?.trim()||'';
- const sub=$('ysnMapSub');
- if(sub&&!/PREPORUČENI TERMIN/.test(sub.textContent||''))sub.textContent+=(time?' · PREPORUČENI TERMIN '+ramp+' '+time:'');
-}
-function exactRender(){
- const a=window.YardivoSupplierAnnouncementMapAuthorityV583;
- if(!a)return;
- const map=$('ysnMap');if(map){map.style.setProperty('display','block','important');map.style.setProperty('visibility','visible','important')}
- a.renderMap();
- setTimeout(recommend,30);
-}
-document.addEventListener('click',e=>{
- const d=e.target?.closest?.('.ysn-day:not(.blank)');
- if(d&&!d.disabled)setTimeout(()=>{exactRender();$('ysnMap')?.scrollIntoView({behavior:'smooth',block:'start'})},10)
-},false);
 document.addEventListener('change',e=>{
- if(['ysnWarehouse','ysnPallets','ysnSku'].includes(e.target?.id))setTimeout(exactRender,10)
-},false);
-window.addEventListener('yardivo:supplier-request-updated',()=>setTimeout(exactRender,80));
-window.addEventListener('yardivo:data-synced',()=>setTimeout(exactRender,100));
-window.YardivoSupplierExactDailyMapV583={render:exactRender};
-window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-supplier-announcement-exact-daily-map-final';
+ if(e.target?.id==='qrMobileEnabledToggle'){
+   e.stopImmediatePropagation();
+   const next=!!e.target.checked;
+   const msg=next?'Uključiti QR SCAN za Portu i Prijam?':'Isključiti QR SCAN i prijeći na ručni način?';
+   if(!confirm(msg)){e.target.checked=!next;return}
+   setQr(next).catch(err=>{alert('QR SCAN nije spremljen: '+(err?.message||err));paintQr()});
+ }
+},true);
+
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"],[data-target="settings"],#navSettings')){
+   setTimeout(paint,80);
+ }
+},true);
+
+window.YardivoSettingsSystemSwitchesV583={paint,setSmart,setQr,smartOn,qrOn};
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-settings-smart-qr-master-reset-factory-zero-final';
 })();
 </script>
-
-
-<style id="yardivo-v583-supplier-assigned-warehouse-flow-style">
-#ysnWarehouse:disabled{opacity:1!important;cursor:not-allowed}
-#ysnWarehouse option{display:block}
-#ysnMap{margin-top:14px!important}
-</style>
-<script type="application/x-yardivo-disabled" id="yardivo-v583-supplier-assigned-warehouse-flow-js">
-(()=>{'use strict';const $=id=>document.getElementById(id);
-function scope(){return window.YardivoServerScopeV583||window.YardivoAccountScopeEnforcedV583?.get?.()||null}
-function master(){try{return JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{}}catch(_){return{}}}
-function whName(w){return w?.name||w?.code||w?.warehouse_name||w?.warehouse_code||w?.id||''}
-function populate(){
- const sel=$('ysnWarehouse'),S=scope();if(!sel||!S||String(S.app_role).toLowerCase()!=='supplier')return;
- const ids=(S.warehouses||[]).map(String),m=master(),all=Array.isArray(m.warehouses)?m.warehouses:[];
- const allowed=all.filter(w=>ids.includes(String(w.id)));
- const prev=sel.value;
- sel.innerHTML='<option value="">ODABERI SKLADIŠTE</option>'+allowed.map(w=>`<option value="${String(w.id).replace(/"/g,'&quot;')}">${String(whName(w)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}</option>`).join('');
- sel.disabled=!allowed.length;
- if(ids.includes(prev))sel.value=prev;else if(allowed.length===1)sel.value=String(allowed[0].id);
- if(sel.value){sel.dispatchEvent(new Event('change',{bubbles:true}));window.YardivoSupplierAnnouncementMapAuthorityV583?.update?.()}
-}
-function afterDate(){
- const sel=$('ysnWarehouse');if(!sel?.value)return;
- const a=window.YardivoSupplierAnnouncementMapAuthorityV583;if(!a)return;
- a.renderMap();setTimeout(()=>{const map=$('ysnMap');if(map){map.style.setProperty('display','block','important');map.scrollIntoView({behavior:'smooth',block:'start'})}},20)
-}
-window.addEventListener('yardivo:server-scope-ready',()=>setTimeout(populate,20));
-['yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(populate,50)));
-document.addEventListener('click',e=>{if(e.target?.closest?.('.ysn-day:not(.blank)'))setTimeout(afterDate,20)},false);
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(populate,900),{once:true});else setTimeout(populate,500);
-window.YardivoSupplierAssignedWarehouseFlowV583={populate,afterDate};
-window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-supplier-assigned-warehouse-booking-flow-final';
-})();
-</script>
-
-
-<script id="yardivo-v583-business-names-only-no-tech-ids-js">
-(()=>{'use strict';
-const MASTER_KEY='yardivo_master_data_registry_v583';
-const escRx=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-
-function master(){
-  try{
-    const api=window.YardivoAppStateV583?.master?.();
-    if(api&&typeof api==='object') return api;
-  }catch(_){}
-  try{return JSON.parse(localStorage.getItem(MASTER_KEY)||'{}')||{}}catch(_){return{}}
-}
-function labels(){
-  const m=master(), out=[];
-  for(const x of (m.locations||[])){
-    const id=String(x?.id||'').trim(), name=String(x?.name||'').trim();
-    if(id&&name&&id!==name) out.push([id,name]);
-  }
-  for(const x of (m.warehouses||[])){
-    const id=String(x?.id||'').trim(), name=String(x?.name||'').trim();
-    if(id&&name&&id!==name) out.push([id,name]);
-  }
-  for(const x of (m.suppliers||[])){
-    const id=String(x?.id||'').trim(), name=String(x?.name||x?.supplier_code||'').trim();
-    if(id&&name&&id!==name) out.push([id,name]);
-  }
-  for(const x of (m.responsible_people||[])){
-    const id=String(x?.id||'').trim();
-    const name=[x?.first_name,x?.last_name].map(v=>String(v||'').trim()).filter(Boolean).join(' ');
-    if(id&&name&&id!==name) out.push([id,name]);
-  }
-  out.sort((a,b)=>b[0].length-a[0].length);
-  return out;
-}
-function replaceVisibleText(text,map){
-  let out=String(text??'');
-  for(const [id,name] of map){
-    // Replace only standalone technical tokens; internal form values/data attributes stay untouched.
-    const rx=new RegExp(`(^|[^A-Za-z0-9_])${escRx(id)}(?=$|[^A-Za-z0-9_])`,'g');
-    out=out.replace(rx,(m,p)=>p+name);
-  }
-  return out;
-}
-function sanitize(root=document.body){
-  if(!root)return;
-  const map=labels(); if(!map.length)return;
-
-  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{
-    acceptNode(n){
-      const p=n.parentElement;if(!p)return NodeFilter.FILTER_REJECT;
-      if(['SCRIPT','STYLE','NOSCRIPT','TEMPLATE'].includes(p.tagName))return NodeFilter.FILTER_REJECT;
-      return NodeFilter.FILTER_ACCEPT;
-    }
-  });
-  const nodes=[]; while(walker.nextNode())nodes.push(walker.currentNode);
-  for(const n of nodes){
-    const old=n.nodeValue||'', neu=replaceVisibleText(old,map);
-    if(neu!==old)n.nodeValue=neu;
-  }
-
-  // User-facing accessibility/tooltips only. Never touch value/data/id/name attributes.
-  for(const el of root.querySelectorAll('[title],[aria-label]')){
-    for(const a of ['title','aria-label']){
-      if(!el.hasAttribute(a))continue;
-      const old=el.getAttribute(a)||'', neu=replaceVisibleText(old,map);
-      if(neu!==old)el.setAttribute(a,neu);
-    }
-  }
-}
-let scheduled=false;
-function schedule(ms=0){
-  if(scheduled)return;
-  scheduled=true;
-  setTimeout(()=>{scheduled=false;sanitize(document.body)},ms);
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{schedule(0);setTimeout(()=>sanitize(document.body),600)},{once:true});
-else {schedule(0);setTimeout(()=>sanitize(document.body),600)}
-['yardivo:data-synced','yardivo:master-data-ready','yardivo:session-ready','yardivo:authenticated','yardivo:users-changed','yardivo:supplier-request-updated']
-  .forEach(ev=>window.addEventListener(ev,()=>schedule(10)));
-document.addEventListener('click',()=>schedule(30),true);
-document.addEventListener('change',()=>schedule(30),true);
-
-window.YardivoBusinessLabelsV583={sanitize,resolve(id){
-  const x=labels().find(a=>a[0]===String(id||''));return x?x[1]:String(id||'');
-}};
-window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-business-names-only-no-tech-ids-final';
-})();
-</script>
-
-
-<style id="yardivo-v583-supplier-booking-authority-style">
-#ysnBoard .ysn-slot.unavailable{background:#e6edf1!important;border:1px solid #cad6dd!important;color:#83939d!important;opacity:.65!important}
-#ysnBoard .ysn-slot.ysn-best{box-shadow:0 0 0 4px #f3b126!important;outline:2px solid #fff!important}
-body.dark-mode #ysnBoard .ysn-slot.unavailable{background:#233541!important;border-color:#385160!important;color:#718692!important}
-</style>
 
 </body>
 </html>
