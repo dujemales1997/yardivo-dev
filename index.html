@@ -52450,6 +52450,9 @@ window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-gate-canonical-fix-final'
 .ys2-scope select:disabled{opacity:.55;cursor:not-allowed}
 #ysnV2Root.ys2-scope-loading .ys2-cal-grid{opacity:.52;pointer-events:none}
 #ysnV2Root.ys2-scope-ready .ys2-cal-grid{opacity:1;pointer-events:auto}
+#ys2Location,#ys2Warehouse{pointer-events:auto!important;position:relative;z-index:4}
+#ys2Location:not(:disabled),#ys2Warehouse:not(:disabled){cursor:pointer!important;opacity:1!important}
+
 
 .ys2-cal-nav{padding:13px 16px;display:flex;justify-content:space-between;align-items:center;background:#f3f8fc;border-bottom:1px solid #e1ebf2}
 .ys2-cal-nav button{width:36px;height:36px;border:1px solid #cfdeea;border-radius:9px;background:#fff;color:#173a57;font-size:18px;cursor:pointer}.ys2-cal-nav b{text-transform:capitalize;font-size:14px;color:#173a57}
@@ -52562,19 +52565,38 @@ function validScope(s){
  return !!s&&String(s?.app_role||'').toLowerCase()==='supplier'&&Array.isArray(s?.locations)&&Array.isArray(s?.warehouses)&&s.locations.length>0&&s.warehouses.length>0;
 }
 function cachedScope(){
- const a=window.__YARDIVO_SUPPLIER_CANONICAL_SCOPE_V583,b=window.YardivoServerScopeV583;
- return validScope(a)?a:(validScope(b)?b:null);
+ const candidates=[window.__YARDIVO_SUPPLIER_CANONICAL_SCOPE_V583,window.YardivoServerScopeV583,window.__YARDIVO_SUPPLIER_SCOPE_V583__];
+ for(const x of candidates)if(validScope(x))return x;
+ return null;
+}
+function legacyScope(){
+ const ls=$('ysnLocation'),ws=$('ysnWarehouse');
+ if(!ls||!ws)return null;
+ const locs=[...ls.options].filter(o=>String(o.value||'').trim()).map(o=>({id:String(o.value),name:String(o.textContent||o.value).trim(),active:true}));
+ const locId=String(ls.value||locs[0]?.id||'');
+ const whs=[...ws.options].filter(o=>String(o.value||'').trim()).map(o=>({id:String(o.value),name:String(o.textContent||o.value).trim(),location_id:locId,active:true}));
+ if(!locs.length||!whs.length)return null;
+ return {app_role:'supplier',locations:locs,warehouses:whs,location_ids:locs.map(x=>x.id),warehouse_ids:whs.map(x=>x.id)};
 }
 function waitScope(ms){return new Promise(r=>setTimeout(r,ms))}
 async function resolveScope(){
- const cached=cachedScope();if(cached)return cached;
  let last=null;
- for(let i=0;i<12;i++){
-   try{const s=await edge(SCOPE,{});if(validScope(s))return s;last=new Error('Supplier nema dodijeljenu aktivnu lokaciju ili skladište.')}catch(e){last=e}
-   const c=cachedScope();if(c)return c;
-   await waitScope(i<3?250:500);
+ for(let i=0;i<16;i++){
+   const cached=cachedScope();if(cached)return cached;
+   const legacy=legacyScope();if(validScope(legacy))return legacy;
+   try{
+     const fresh=await edge(SCOPE,{});
+     if(validScope(fresh))return fresh;
+     last=new Error('Supplier nema dodijeljenu aktivnu lokaciju ili skladište.');
+   }catch(e){last=e}
+   const after=cachedScope()||legacyScope();if(validScope(after))return after;
+   await waitScope(i<4?200:400);
  }
  throw last||new Error('Supplier dodjela nije dostupna.');
+}
+function enableLocation(){
+ const l=$('ys2Location');if(!l)return;
+ l.disabled=false;l.removeAttribute('disabled');l.style.pointerEvents='auto';l.style.opacity='1';
 }
 async function init(){
  const root=$('ysnV2Root');root?.classList.add('ys2-scope-loading');root?.classList.remove('ys2-scope-ready');
@@ -52582,29 +52604,34 @@ async function init(){
  try{
    sc=await resolveScope();
    window.__YARDIVO_SUPPLIER_CANONICAL_SCOPE_V583=sc;window.YardivoServerScopeV583=sc;
-   hydrateScope();drawCalendar();
+   hydrateScope();
    root?.classList.remove('ys2-scope-loading');root?.classList.add('ys2-scope-ready');
-   setState('1 · ODABERI LOKACIJU');
+   enableLocation();drawCalendar();setState('1 · ODABERI LOKACIJU');
  }catch(e){
    root?.classList.remove('ys2-scope-loading');
+   enableLocation();
    setState('DODJELA NIJE DOSTUPNA');
    setEmpty('Supplier dodjela nije dostupna',String(e?.message||e));
  }
 }
 function hydrateScope(){
  const l=$('ys2Location'),w=$('ys2Warehouse'),L=locations();if(!l||!w)return;
+ const keep=String(l.value||'');
  l.innerHTML='<option value="">Odaberi lokaciju...</option>';
  L.forEach(x=>l.append(new Option(x.name||'Lokacija',x.id)));
- l.value='';
+ l.disabled=false;l.removeAttribute('disabled');l.style.pointerEvents='auto';l.style.opacity='1';
+ l.value=L.some(x=>String(x.id)===keep)?keep:'';
  w.innerHTML='<option value="">Odaberi skladište...</option>';
  w.value='';w.disabled=true;
  resetBooking(false);drawCalendar();
 }
 function fillWh(){
- const w=$('ys2Warehouse'),rows=whRows();if(!w)return;
+ const l=$('ys2Location'),w=$('ys2Warehouse'),rows=whRows();if(!l||!w)return;
+ l.disabled=false;l.removeAttribute('disabled');l.style.pointerEvents='auto';
  w.innerHTML='<option value="">Odaberi skladište...</option>';
  rows.forEach(x=>w.append(new Option(x.name||'Skladište',x.id)));
- w.value='';w.disabled=!selectedLoc();
+ w.value='';
+ if(selectedLoc()){w.disabled=false;w.removeAttribute('disabled');w.style.pointerEvents='auto';w.style.opacity='1'}else w.disabled=true;
  resetBooking(false);drawCalendar();
  setState(selectedLoc()?'2 · ODABERI SKLADIŠTE':'1 · ODABERI LOKACIJU');
 }
@@ -52752,20 +52779,30 @@ function resetBooking(redraw=true){
 function bind(){
  $('ys2Prev').onclick=()=>{viewMonth=new Date(viewMonth.getFullYear(),viewMonth.getMonth()-1,1);drawCalendar()};
  $('ys2Next').onclick=()=>{viewMonth=new Date(viewMonth.getFullYear(),viewMonth.getMonth()+1,1);drawCalendar()};
- $('ys2Location').onchange=()=>fillWh();
- $('ys2Warehouse').onchange=()=>{resetBooking(false);drawCalendar();setState(selectedWh()?'3 · ODABERI DATUM U KALENDARU':'2 · ODABERI SKLADIŠTE')};
+ const loc=$('ys2Location'),wh=$('ys2Warehouse');
+ loc.addEventListener('change',()=>{fillWh()},{capture:false});
+ wh.addEventListener('change',()=>{resetBooking(false);drawCalendar();setState(selectedWh()?'3 · ODABERI DATUM U KALENDARU':'2 · ODABERI SKLADIŠTE')},{capture:false});
  $('ys2Pallets').addEventListener('input',scheduleReload);$('ys2Sku').addEventListener('input',scheduleReload);
  $('ys2Clear').onclick=()=>resetBooking(true);$('ys2Send').onclick=send;
  $('ys2RecommendBtn').onclick=recommendTerm;$('ys2OtherBtn').onclick=chooseOther;bindPdf();
  $('ys2Expand').onclick=()=>{const w=$('ys2Work'),on=!w.classList.contains('fullscreen');w.classList.toggle('fullscreen',on);document.body.classList.toggle('ys2-map-lock',on);$('ys2Expand').textContent=on?'× ZATVORI PUNI EKRAN':'⛶ POVEĆAJ MAPU'};
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('ys2Work')?.classList.contains('fullscreen')){$('ys2Work').classList.remove('fullscreen');document.body.classList.remove('ys2-map-lock');$('ys2Expand').textContent='⛶ POVEĆAJ MAPU'}});
+ setInterval(()=>{
+   const l=$('ys2Location'),w=$('ys2Warehouse');if(!l||!w||!supplier())return;
+   if(sc&&locations().length){
+     if(l.options.length<=1)hydrateScope();
+     l.disabled=false;l.removeAttribute('disabled');l.style.pointerEvents='auto';
+     if(selectedLoc()&&w.options.length<=1)fillWh();
+     if(selectedLoc()){w.disabled=false;w.removeAttribute('disabled');w.style.pointerEvents='auto'}
+   }
+ },900);
 }
 function arm(){if(!supplier())return;mount()}
 ['yardivo:login','yardivo:authenticated','yardivo:session-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(arm,180)));
 document.addEventListener('click',e=>{if(e.target.closest?.('[data-ysp-view="new"]'))setTimeout(arm,40)},true);
 const mo=new MutationObserver(()=>{if(supplier()&&!$('ysnV2Root')&&$('ysnRoot'))arm()});mo.observe(document.documentElement,{subtree:true,childList:true});
 setTimeout(arm,300);
-window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-simple-flow-final';
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-booking-stabilized-final';
 })();
 </script>
 
