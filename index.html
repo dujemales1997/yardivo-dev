@@ -49717,7 +49717,7 @@ function drawCal(){
   $('ysnCalTitle').textContent=calMonth.toLocaleDateString('hr-HR',{month:'long',year:'numeric'});
   const first=(new Date(calMonth.getFullYear(),calMonth.getMonth(),1).getDay()+6)%7;
   for(let i=0;i<first;i++)g.insertAdjacentHTML('beforeend','<button class="ysn-day blank"></button>');
-  const today=new Date();today.setHours(0,0,0,0),n=new Date(calMonth.getFullYear(),calMonth.getMonth()+1,0).getDate();
+  const today=new Date();today.setHours(0,0,0,0);const n=new Date(calMonth.getFullYear(),calMonth.getMonth()+1,0).getDate();
   for(let d=1;d<=n;d++){
     const dt=new Date(calMonth.getFullYear(),calMonth.getMonth(),d),iso=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const b=document.createElement('button');b.className='ysn-day'+(dt.getTime()===today.getTime()?' today':'');b.textContent=d;b.disabled=dt<today;
@@ -52304,5 +52304,6 @@ window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-booking-wizard-calendar-f
 })();
 </script>
 
+<script id="yardivo-v583-supplier-calendar-strictmode-fix-marker">window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-calendar-daily-map-strictmode-fixed';</script>
 </body>
 </html>
