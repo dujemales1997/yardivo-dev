@@ -25007,7 +25007,7 @@ function online(){return ready}
 function pending(){return Number(dirtyAnn)+Number(dirtyInc)+dirtyState.size}
 
 clearLegacyErrors();
-window.YardivoSupabase={authenticate,syncNow,flushQueue:flush,pending,client:getClient,realtime:startRealtime,realtimeStatus:()=>realtimeStatus,broadcastChange,online,status:()=>({ready:!!ready,pending:pending(),realtime:realtimeStatus,tokenExp}),resetAllExceptUsers,fullDataSnapshot,restoreFullData,fastPull:pull};
+window.YardivoSupabase={authenticate,syncNow,flushQueue:flush,pending,client:getClient,realtime:startRealtime,realtimeStatus:()=>realtimeStatus,broadcastChange,online,status:()=>({ready:!!ready,pending:pending(),realtime:realtimeStatus,tokenExp}),recover:recoverCanonicalConnection,resetAllExceptUsers,fullDataSnapshot,restoreFullData,fastPull:pull};
 window.YardivoOnlineSync=window.YardivoSupabase;
 try{
   window.YardivoServerStorageStatusV583={
@@ -25023,10 +25023,28 @@ try{
   };
 }catch(_){}
 
-window.addEventListener('online',()=>setTimeout(()=>{if(ready){startRealtime().catch(()=>{});flush()}},250));
-window.addEventListener('focus',()=>setTimeout(()=>{if(ready){startRealtime().catch(()=>{});if(pending())flush();else pull()}},150));
+async function recoverCanonicalConnection(){
+  if(ready){
+    try{await startRealtime()}catch(_){}
+    return pending()?flush():pull();
+  }
+  try{
+    const c=await getClient();
+    let ss=(await c?.auth?.getSession?.())?.data?.session||null;
+    if(!ss?.access_token){
+      try{ss=(await c?.auth?.refreshSession?.())?.data?.session||null}catch(_){}
+    }
+    if(!ss?.access_token||!ss?.refresh_token)return false;
+    return await authenticate(ss.access_token,ss.refresh_token);
+  }catch(e){
+    showOnlineError('VEZA',e);
+    return false;
+  }
+}
+window.addEventListener('online',()=>setTimeout(()=>{recoverCanonicalConnection()},250));
+window.addEventListener('focus',()=>setTimeout(()=>{recoverCanonicalConnection()},150));
 window.addEventListener('pagehide',()=>{stopRealtime().catch(()=>{})},{once:true});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&ready)setTimeout(()=>{if(pending())flush();else pull()},180)});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(()=>{recoverCanonicalConnection()},180)});
 /* X10 FAST SAFETY SYNC
    Realtime/Broadcast is primary. This 2.2 s visible-tab pulse is the hard
    fallback for mobile/Edge/server writes when Realtime publication or a
@@ -25219,17 +25237,9 @@ async function authenticate(){
      The Edge sync receives this exact JWT; no stale or anonymous browser session can write. */
   if(assignedRole!=='supplier'){
     if(!window.YardivoSupabase?.authenticate)throw new Error('ONLINE BAZA NIJE SPREMNA.');
-    /* V5.8.3 FAST LOGIN:
-       Auth + assigned profile are already validated above. Do not block the UI on
-       health + bootstrap + realtime subscription. Start canonical DB bootstrap now,
-       but allow the authenticated user into YARDIVO immediately. */
-    window.__yardivoPostLoginBootstrapPromise=window.YardivoSupabase
-      .authenticate(auth.access_token,auth.refresh_token)
-      .catch(err=>{
-        console.error('[YARDIVO POST-LOGIN BOOTSTRAP]',err);
-        try{window.dispatchEvent(new CustomEvent('yardivo:online-bootstrap-error',{detail:{message:String(err?.message||err)}}))}catch(_){}
-        return false;
-      });
+    /* Canonical DB connection is part of login. Do not open the app in a half-connected state. */
+    const connected=await window.YardivoSupabase.authenticate(auth.access_token,auth.refresh_token);
+    if(!connected||!window.YardivoSupabase?.online?.())throw new Error('ONLINE BAZA NIJE SPOJENA.');
   }
 
   return session;
@@ -53688,7 +53698,7 @@ window.addEventListener('load',()=>setTimeout(()=>paint(),800));setTimeout(()=>p
 window.YardivoDisplayNamesV583={warehouseName:whName,locationName:locName,paint};
 window.yardivoWarehouseNameV583=whName;
 })();
-</script><script id="yardivo-v583-inventory-ui-master-names-final-marker">window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-inventory-ui-master-names-filters-notifs-final';</script><script id="yardivo-v583-supabase-connection-watchdog-final">
+</script><script id="yardivo-v583-inventory-ui-master-names-final-marker">window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-inventory-ui-master-names-filters-notifs-final';</script><script data-yardivo-retired-reason="Canonical yardivo-online-sync-v2 is sole connection authority" id="yardivo-v583-supabase-connection-watchdog-final" type="application/yardivo-retired">
 (()=>{'use strict';
 if(window.__YARDIVO_SUPABASE_CONNECTION_WATCHDOG_FINAL__)return;
 window.__YARDIVO_SUPABASE_CONNECTION_WATCHDOG_FINAL__=true;
@@ -53873,6 +53883,8 @@ body.yardivo-prelogin #yardivoDbStatus{display:none!important}
   border-color:#2d7b4a!important;
   background:#0b2517!important;
 }
+
+#yardivoDbStatus.ok::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#38d878;margin-right:6px;vertical-align:1px}
 </style><style id="yardivo-v583-qr-sent-state-final-style">
 .yardivo-inventory-qr-sent{
   display:inline-flex!important;
@@ -53900,7 +53912,7 @@ window.__YARDIVO_HARD_UI_STABILITY_FINAL__=true;
 
 function ensureDb(){
   try{window.YardivoDbStatusAuthorityV583?.ensureEl?.()}catch(_){}
-  try{window.YardivoSupabaseConnectionWatchdogV583?.ensureOnline?.(true)}catch(_){}
+  try{window.YardivoSupabase?.recover?.()}catch(_){}
 }
 function keepCurrentView(){
   const active=[...document.querySelectorAll('.view.active')];
@@ -53922,6 +53934,32 @@ setTimeout(ensureDb,250);
 
 window.YardivoHardUiStabilityV583={ensureDb,keepCurrentView};
 window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-ui-hard-stable-supabase-qr-final';
+})();
+</script><script id="yardivo-v583-supabase-canonical-green-final-authority">
+(()=>{'use strict';
+if(window.__YARDIVO_SUPABASE_CANONICAL_GREEN_FINAL__)return;
+window.__YARDIVO_SUPABASE_CANONICAL_GREEN_FINAL__=true;
+
+function paintFromCanonical(){
+  const S=window.YardivoSupabase;
+  if(!S)return;
+  const el=window.YardivoDbStatusAuthorityV583?.ensureEl?.();
+  if(S.online?.()){
+    window.YardivoDbStatusAuthorityV583?.set?.(
+      '● ONLINE BAZA · ONLINE','ok',
+      'Canonical Supabase sync je spojen i spreman.','sync'
+    );
+  }
+}
+['yardivo:data-synced','yardivo:supabase-online'].forEach(ev=>{
+  window.addEventListener(ev,()=>setTimeout(paintFromCanonical,0));
+});
+window.addEventListener('focus',()=>setTimeout(paintFromCanonical,220));
+window.addEventListener('load',()=>setTimeout(paintFromCanonical,900),{once:true});
+setInterval(()=>{if(!document.hidden)paintFromCanonical()},3000);
+
+window.YardivoSupabaseCanonicalGreenV583={paint:paintFromCanonical};
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supabase-canonical-green-final';
 })();
 </script></body>
 </html>
