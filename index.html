@@ -17493,8 +17493,14 @@ function eventAllowedForRole(n,r){
   // Zalihe: supplier requests + operational announcement flow + incidents/replanning.
   if(r==='inventory')return true;
 
-  // Prijam: operational arrival flow; supplier approval inbox is not a Reception responsibility.
-  if(r==='reception')return e!=='SUPPLIER_REQUEST';
+  // Prijam: ne prima supplier request koji čeka odluku Zaliha.
+  // Nakon odobrenja prima operativnu obavijest "NOVA NAJAVA".
+  if(r==='reception'){
+    const txt=String((n?.title||'')+' '+(n?.body||'')).toUpperCase();
+    if(e==='SUPPLIER_REQUEST')return false;
+    if(/ZAHTJEV ZA NAJAVU|NOVI ZAHTJEV DOBAVLJAČA|NOVI ZAHTJEV DOBAVLJACA/.test(txt))return false;
+    return true;
+  }
 
   // Porta notification center stays disabled by role UI.
   if(r==='gate')return false;
@@ -17669,14 +17675,25 @@ function closeReader(){document.getElementById('yardivoNotifReaderV5')?.classLis
 
 function renderBell(){
   const list=document.getElementById('notifList');if(!list)return;
-  if(prelogin()){list.innerHTML='';return}
+  if(prelogin()){
+    if(list.innerHTML!=='')list.innerHTML='';
+    list.dataset.y5BellFp='';
+    return;
+  }
   const a=unreadList().sort((x,y)=>String(y.at||y.createdAt||'').localeCompare(String(x.at||x.createdAt||''))).slice(0,20);
+  const bellFp=JSON.stringify(a.map(n=>[
+    String(n.id),String(n.title||''),String(n.body||''),resolvedWarehouse(n),String(n.at||n.createdAt||'')
+  ]));
+  if(list.dataset.y5BellFp===bellFp)return;
+
   list.innerHTML=a.length?a.map(n=>{const wh=resolvedWarehouse(n);return `<div class="notif-item y5-unread" data-y5-bell="${esc(n.id)}"><div class="notif-ico">🔔</div><div><strong>${esc(n.title||'Notifikacija')}</strong><p>${wh?`<span class="y5-notif-wh">${esc(wh)}</span> `:''}${esc(n.body||'')}</p></div><span class="notif-time">${fmt(n.at||n.createdAt)}</span></div>`}).join(''):'<div class="notif-empty">Nema novih notifikacija za odabrani kontekst.</div>';
+  list.dataset.y5BellFp=bellFp;
   list.querySelectorAll('[data-y5-bell]').forEach(el=>el.onclick=e=>{
     e.preventDefault();e.stopPropagation();
     const id=el.dataset.y5Bell;
-    openReader(id,true); // marks read, badge -1
-    renderBell();         // disappears from bell immediately
+    openReader(id,true);
+    list.dataset.y5BellFp='';
+    renderBell();
   });
 }
 
@@ -17687,10 +17704,22 @@ function renderHistory(){
   const r=operationsRoot();if(!r)return;
   let host=document.getElementById('yardivoNotificationHistory');
   if(!host){host=document.createElement('div');host.id='yardivoNotificationHistory';r.appendChild(host)}
-  if(prelogin()){host.innerHTML='';return}
+  if(prelogin()){
+    if(host.innerHTML!=='')host.innerHTML='';
+    host.dataset.y5HistoryFp='';
+    return;
+  }
   const a=all().sort((x,y)=>String(y.at||y.createdAt||'').localeCompare(String(x.at||x.createdAt||'')));
+  const historyFp=JSON.stringify(a.map(n=>[
+    String(n.id),String(n.title||''),String(n.body||''),String(n.event||''),
+    String(n.supplier||''),resolvedWarehouse(n),isRead(n),String(n.at||n.createdAt||'')
+  ]));
+  const summary=unreadCount()+'|'+a.length+'|'+historyFp;
+  if(host.dataset.y5HistoryFp===summary)return;
+
   host.innerHTML=`<div class="y5-notif-toolbar"><strong>${unreadCount()} nepročitanih · ${a.length} ukupno</strong><button type="button" class="action" data-y5-all>OZNAČI SVE PROČITANO</button></div>`+
     (a.length?a.map(n=>`<article class="y5-history-card ${isRead(n)?'read':'unread'}" data-y5-history="${esc(n.id)}"><div class="y5-history-head"><strong>${esc(n.title||'Notifikacija')}</strong><small>${fmt(n.at||n.createdAt)}</small></div><div class="y5-history-body">${esc(n.body||'')}</div><div class="y5-history-meta">${n.event?`<span class="y5-chip">${esc(n.event)}</span>`:''}${n.supplier?`<span class="y5-chip">Dobavljač: ${esc(n.supplier)}</span>`:''}${resolvedWarehouse(n)?`<span class="y5-chip">${esc(resolvedWarehouse(n))}</span>`:''}<span class="y5-chip">${isRead(n)?'PROČITANO':'NOVO'}</span></div></article>`).join(''):'<div class="notif-empty">Nema notifikacija.</div>');
+  host.dataset.y5HistoryFp=summary;
   host.querySelector('[data-y5-all]')?.addEventListener('click',markAll);
   host.querySelectorAll('[data-y5-history]').forEach(el=>el.onclick=()=>openReader(el.dataset.y5History,true));
 }
@@ -29021,7 +29050,7 @@ document.addEventListener('click',e=>{
 },true);
 
 window.addEventListener('load',()=>setTimeout(()=>{addClearButton();cleanupReadGlow()},900),{once:true});
-setInterval(()=>{addClearButton();cleanupReadGlow()},1200);
+/* retired: toolbar is updated by canonical render hooks only */
 
 window.YardivoNotificationAdmin={clearAll,cleanupReadGlow,clearNotificationsOnServer};
 })();
@@ -41050,6 +41079,10 @@ function isClearNotifButton(btn){
   );
 }
 async function clearAllNotifications(btn){
+  /* Canonical owner writes cutoff + yardivo_live_notifications_v1=[] to Supabase. */
+  if(window.YardivoNotificationAdmin?.clearAll){
+    return await window.YardivoNotificationAdmin.clearAll();
+  }
   if(btn?.dataset.yardivoClearing==='1')return;
   if(btn)btn.dataset.yardivoClearing='1';
 
@@ -53749,16 +53782,27 @@ function clean(list){
  });
 }
 function storage(){
+ let changed=false;
  for(const k of ['yardivo_live_notifications_v1','yardivo_notifications_v1','yardivoNotifications']){
-  try{const r=localStorage.getItem(k);if(!r)continue;const p=JSON.parse(r);if(!Array.isArray(p))continue;const c=clean(p);if(c.length!==p.length)localStorage.setItem(k,JSON.stringify(c))}catch(_){}
+  try{
+    const r=localStorage.getItem(k);if(!r)continue;
+    const p=JSON.parse(r);if(!Array.isArray(p))continue;
+    const c=clean(p);
+    if(c.length!==p.length){localStorage.setItem(k,JSON.stringify(c));changed=true}
+  }catch(_){}
  }
+ return changed;
 }
 function patch(){
  const N=window.YardivoNotifications;if(!N||N.__masterClean)return;N.__masterClean=true;
  if(typeof N.load==='function'){const o=N.load.bind(N);N.load=()=>clean(o())}
  if(typeof N.save==='function'){const o=N.save.bind(N);N.save=list=>o(clean(list))}
 }
-function run(){storage();patch();try{window.YardivoNotifications?.render?.()}catch(_){}}
+function run(){
+ const changed=storage();
+ patch();
+ if(changed){try{window.YardivoNotifications?.render?.()}catch(_){}}
+}
 ['yardivo:login','yardivo:data-synced','yardivo:master-data-changed','yardivo:notifications-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(run,20)));
 window.addEventListener('load',()=>setTimeout(run,700));setTimeout(run,100);
 })();
@@ -54407,5 +54451,73 @@ window.addEventListener('yardivo:login',ensure);
 window.YardivoSidebarV583={hide:()=>save(true),show:()=>save(false),toggle:()=>save(!document.body.classList.contains('yv-sidebar-hidden'))};
 })();
 </script>
-</body>
+
+<style id="yardivo-v583-sidebar-notification-smooth-final-css">
+/* Sidebar items stay visually stable; only color/background may change. */
+.sidebar .nav-btn,
+.sidebar [data-view],
+.sidebar [data-home-target]{
+  transform:none!important;
+  animation:none!important;
+  transition:background-color .12s ease,border-color .12s ease,color .12s ease!important;
+}
+
+/* Reception restrictions are authoritative before/without JS repaint. */
+body[data-yardivo-role="reception"] .sidebar [data-view="dashboard"],
+body[data-yardivo-role="reception"] .sidebar [data-view="controlTower"],
+body[data-yardivo-role="reception"] .sidebar [data-view="controltower"],
+body[data-yardivo-role="reception"] .sidebar [data-view="checkin"],
+body[data-yardivo-role="reception"] .sidebar [data-view="docks"],
+body[data-yardivo-role="reception"] .sidebar [data-view="suppliers"],
+body[data-yardivo-role="reception"] .sidebar [data-view="orderSearch"],
+body.yv-role-reception-v583 .sidebar [data-view="dashboard"],
+body.yv-role-reception-v583 .sidebar [data-view="controlTower"],
+body.yv-role-reception-v583 .sidebar [data-view="controltower"],
+body.yv-role-reception-v583 .sidebar [data-view="checkin"],
+body.yv-role-reception-v583 .sidebar [data-view="docks"],
+body.yv-role-reception-v583 .sidebar [data-view="suppliers"],
+body.yv-role-reception-v583 .sidebar [data-view="orderSearch"]{
+  display:none!important;
+  visibility:hidden!important;
+}
+
+/* Hidden sidebar removes its grid column and every view uses full available width. */
+body.yv-sidebar-hidden .app-shell{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+}
+body.yv-sidebar-hidden .main,
+body.yv-sidebar-hidden main,
+body.yv-sidebar-hidden .content,
+body.yv-sidebar-hidden .view,
+body.yv-sidebar-hidden .view.active{
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin-left:0!important;
+  margin-right:0!important;
+}
+body.yv-sidebar-hidden .topbar{
+  width:100%!important;
+  max-width:none!important;
+  left:0!important;
+}
+body.yv-sidebar-hidden #yardivoSidebarShowBtn{
+  z-index:2147482500!important;
+}
+
+/* Notification history: no transition/animation flicker on rerender. */
+#yardivoNotificationHistory,
+#yardivoNotificationHistory .y5-history-card,
+#yardivoNotificationHistory .y5-notif-toolbar,
+#notifList,
+#notifList .notif-item{
+  animation:none!important;
+  transition:none!important;
+}
+</style>
+<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-reception-notification-flow-fix';</script></body>
 </html>
