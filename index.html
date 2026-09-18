@@ -5482,7 +5482,7 @@ html[data-theme="light"] .yam-busy{background:#fde7ea;color:#94404b;border-color
 <meta content="#071925" name="theme-color"/>
 <meta content="yes" name="apple-mobile-web-app-capable"/>
 <meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>
-<meta content="YARDIVO" name="apple-mobile-web-app-title">
+<meta content="YARDIVO" name="apple-mobile-web-app-title"/>
 <style id="yardivo-theme-final-v233">
 html[data-theme="dark"][data-theme-preset="greeny"] body,html[data-theme="dark"][data-theme-preset="greeny"] main,html[data-theme="dark"][data-theme-preset="greeny"] .app-shell,html[data-theme="dark"][data-theme-preset="greeny"] .view{background:#111513!important;color:#e8efeb!important}
 html[data-theme="dark"][data-theme-preset="greeny"] header,html[data-theme="dark"][data-theme-preset="greeny"] .topbar,html[data-theme="dark"][data-theme-preset="greeny"] .sidebar,html[data-theme="dark"][data-theme-preset="greeny"] nav{background:#171c19!important;border-color:#33443a!important}
@@ -5962,7 +5962,7 @@ html.yardivo-welcome-complete #yardivoWelcomeBar{
   width:100%!important;
 }
 </style>
-<meta content="no-cache, no-store, must-revalidate" http-equiv="Cache-Control"/>
+<meta content="no-cache, no-store, must-revalidate" http-equiv="Cache-Control">
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <meta content="2026-09-02-online-v4-defensive-guard" name="yardivo-build"/>
@@ -31694,7 +31694,7 @@ window.YardivoFullOperationalNotificationsV548={
 <div class="sbn-calendar" id="sbnCalendar"></div>
 </section>
 <section class="sbn-step" hidden="" id="sbnScopeStep">
-<div class="sbn-step-title"><b>2</b><div><strong>LOKACIJA I SKLADIŠTE</strong><small>Prikazuju se samo opcije koje je Admin dodijelio ovom Supplier accountu.</small></div></div>
+<div class="sbn-step-title"><b>2</b><div><strong>LOKACIJA I SKLADIŠTE</strong><small>Prikazuju se samo opcije koje je Admin dodijelio ovom Supplier accountu.</small></div><span id="sbnScopeDiag" style="margin-left:auto;font-size:9px;font-weight:950;color:#1678df">scope...</span></div>
 <div class="sbn-pick-grid">
 <div><label>LOKACIJA</label><div class="sbn-picks" id="sbnLocations"></div></div>
 <div><label>SKLADIŠTE</label><div class="sbn-picks" id="sbnWarehouses"></div></div>
@@ -52526,7 +52526,8 @@ window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-sku-calendar-unlock-fixed
 .sbn-footer{padding:0 24px 22px;display:flex;justify-content:flex-end;gap:10px}.sbn-footer button{border:0;border-radius:10px;padding:12px 17px;font-size:10px;font-weight:950;cursor:pointer}.sbn-muted{background:#edf2f6;color:#36536d}.sbn-send{background:#1678df;color:#fff;min-width:230px}.sbn-send:disabled{opacity:.4;cursor:not-allowed}
 body.sbn-fullscreen{overflow:hidden!important}#sbnMapStep.fullscreen{position:fixed!important;inset:0!important;z-index:2147483000!important;margin:0!important;border-radius:0!important;background:#fff!important;display:flex!important;flex-direction:column!important}#sbnMapStep.fullscreen .sbn-map{flex:1 1 auto;min-height:0}#sbnMapStep.fullscreen .sbn-grid{min-width:max(1200px,100%)}
 @media(max-width:760px){.sbn-head,.sbn-rec{flex-direction:column;align-items:flex-start}.sbn-pick-grid,.sbn-input-grid,.sbn-extra-grid{grid-template-columns:1fr}.sbn-extra-grid .wide{grid-column:auto}.sbn-footer{flex-direction:column}.sbn-footer button{width:100%}}
-</style><script id="yardivo-v583-supplier-booking-rebuilt-clean-authority">
+
+.sbn-scope-warning{padding:11px 13px;border:1px dashed #d5a8a8;border-radius:10px;background:#fff6f6;color:#9b4545;font-size:9px;font-weight:850}</style><script id="yardivo-v583-supplier-booking-rebuilt-clean-authority">
 (()=>{'use strict';
 if(window.__YARDIVO_SUPPLIER_BOOKING_REBUILT_CLEAN__)return;window.__YARDIVO_SUPPLIER_BOOKING_REBUILT_CLEAN__=true;
 const $=id=>document.getElementById(id);
@@ -52535,7 +52536,7 @@ const KEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
 const SCOPE=BASE+'/functions/v1/yardivo-user-scope';
 const AVAIL=BASE+'/functions/v1/yardivo-supplier-availability';
 const DELIV=BASE+'/functions/v1/yardivo-supplier-deliveries';
-let scope=null,month=new Date(),date='',loc='',wh='',availability=null,choice=null,recommended=null,pdf=null,timer=0;
+let scope=null,scopeLocations=[],scopeWarehouses=[],month=new Date(),date='',loc='',wh='',availability=null,choice=null,recommended=null,pdf=null,timer=0;
 
 async function token(){
  const direct=String(window.__yardivoSupplierAccessToken||'').trim();if(direct)return direct;
@@ -52555,6 +52556,10 @@ async function edge(url,body){
 function status(t){if($('sbnStatus'))$('sbnStatus').textContent=t}
 function empty(title,text){$('sbnMap').innerHTML='<div class="sbn-empty"><strong>'+title+'</strong><span>'+text+'</span></div>'}
 function localScope(){
+ const cached=window.__YARDIVO_SUPPLIER_CANONICAL_SCOPE_V583||window.YardivoServerScopeV583;
+ if(cached&&String(cached.app_role||'').toLowerCase()==='supplier'){
+   const n=normalizeBookingScope(cached);if(n.locations.length&&n.warehouses.length)return n;
+ }
  const s=window.currentSession||window.__YARDIVO_SESSION__||{};
  let m={};try{m=window.YardivoAppStateV583?.master?.()||JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{}}catch(_){}
  const whIds=new Set();
@@ -52568,8 +52573,58 @@ function localScope(){
  const locs=(Array.isArray(m.locations)?m.locations:[]).filter(l=>l&&l.active!==false&&locIds.has(String(l.id)));
  return {app_role:'supplier',locations:locs,warehouses:whs};
 }
-function locations(){return Array.isArray(scope?.locations)?scope.locations:[]}
-function warehouses(){return Array.isArray(scope?.warehouses)?scope.warehouses:[]}
+function masterData(){
+ let m={};try{m=window.YardivoAppStateV583?.master?.()||JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{}}catch(_){}
+ return m&&typeof m==='object'?m:{};
+}
+function normalizeBookingScope(raw){
+ raw=raw||{};
+ const m=masterData(),ml=Array.isArray(m.locations)?m.locations:[],mw=Array.isArray(m.warehouses)?m.warehouses:[];
+ const whIds=new Set(),locIds=new Set(),whMap=new Map(),locMap=new Map();
+
+ (Array.isArray(raw.warehouses)?raw.warehouses:[]).forEach(x=>{
+   if(x&&typeof x==='object'){const id=String(x.id||'').trim();if(id){whIds.add(id);whMap.set(id,{id,name:String(x.name||id),location_id:String(x.location_id||''),active:x.active!==false})}}
+   else{const id=String(x||'').trim();if(id)whIds.add(id)}
+ });
+ (Array.isArray(raw.warehouse_ids)?raw.warehouse_ids:[]).forEach(x=>{const id=String(x||'').trim();if(id)whIds.add(id)});
+ const oneWh=String(raw.warehouse||raw.warehouse_id||'').trim();if(oneWh)whIds.add(oneWh);
+
+ (Array.isArray(raw.locations)?raw.locations:[]).forEach(x=>{
+   if(x&&typeof x==='object'){const id=String(x.id||'').trim();if(id){locIds.add(id);locMap.set(id,{id,name:String(x.name||id),active:x.active!==false})}}
+   else{const id=String(x||'').trim();if(id&&id!=='ALL')locIds.add(id)}
+ });
+ (Array.isArray(raw.location_ids)?raw.location_ids:[]).forEach(x=>{const id=String(x||'').trim();if(id&&id!=='ALL')locIds.add(id)});
+ const oneLoc=String(raw.location||raw.location_id||'').trim();if(oneLoc&&oneLoc!=='ALL')locIds.add(oneLoc);
+
+ whIds.forEach(id=>{
+   if(!whMap.has(id)){
+     const w=mw.find(x=>x&&x.active!==false&&String(x.id)===id);
+     if(w)whMap.set(id,{id,name:String(w.name||id),location_id:String(w.location_id||''),active:true});
+   }
+ });
+ whMap.forEach(w=>{if(w.location_id)locIds.add(String(w.location_id))});
+ locIds.forEach(id=>{
+   if(!locMap.has(id)){
+     const l=ml.find(x=>x&&x.active!==false&&String(x.id)===id);
+     locMap.set(id,{id,name:String(l?.name||id),active:l?.active!==false});
+   }
+ });
+
+ return {
+   ...raw,
+   app_role:String(raw.app_role||'supplier'),
+   locations:[...locMap.values()].filter(x=>x.active!==false),
+   warehouses:[...whMap.values()].filter(x=>x.active!==false)
+ };
+}
+function commitScope(raw){
+ scope=normalizeBookingScope(raw);
+ scopeLocations=Array.isArray(scope.locations)?scope.locations.slice():[];
+ scopeWarehouses=Array.isArray(scope.warehouses)?scope.warehouses.slice():[];
+ return scope;
+}
+function locations(){return scopeLocations}
+function warehouses(){return scopeWarehouses}
 function contextReady(){return !!date&&!!loc&&!!wh}
 function qtyReady(){return Number($('sbnPallets')?.value)>0&&Number($('sbnSku')?.value)>0}
 function hm(v){const [h,m]=String(v||'').slice(0,5).split(':').map(Number);return Number.isFinite(h)&&Number.isFinite(m)?h*60+m:NaN}
@@ -52594,17 +52649,21 @@ async function selectDate(iso){
  renderLocations();status('ODABERI LOKACIJU');
  setTimeout(()=>$('sbnScopeStep').scrollIntoView({behavior:'smooth',block:'center'}),50);
 }
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function renderLocations(){
- const box=$('sbnLocations');box.innerHTML='';
- const rows=locations();
- if(!rows.length){box.innerHTML='<span class="sbn-empty">Nema dodijeljenih lokacija.</span>';return}
- rows.forEach(x=>{const b=document.createElement('button');b.type='button';b.className='sbn-pick';b.textContent=String(x.name||x.id);b.onclick=()=>{loc=String(x.id);wh='';box.querySelectorAll('.sbn-pick').forEach(q=>q.classList.remove('active'));b.classList.add('active');renderWarehouses();status('ODABERI SKLADIŠTE')}}); 
+ const box=$('sbnLocations');if(!box)return;
+ const rows=locations().filter(x=>x&&String(x.id||'').trim());
+ box.innerHTML=rows.length
+   ? rows.map(x=>'<button type="button" class="sbn-pick" data-location="'+esc(x.id)+'">'+esc(x.name||x.id)+'</button>').join('')
+   : '<div class="sbn-scope-warning">Nema dodijeljenih lokacija u Supplier scopeu.</div>';
+ const title=$('sbnScopeDiag');if(title)title.textContent=rows.length+' lok. · '+warehouses().length+' skl.';
 }
 function renderWarehouses(){
- const box=$('sbnWarehouses');box.innerHTML='';
- const rows=warehouses().filter(x=>String(x.location_id)===loc);
- if(!rows.length){box.innerHTML='<span class="sbn-empty">Nema skladišta za ovu lokaciju.</span>';return}
- rows.forEach(x=>{const b=document.createElement('button');b.type='button';b.className='sbn-pick';b.textContent=String(x.name||x.id);b.onclick=()=>{wh=String(x.id);box.querySelectorAll('.sbn-pick').forEach(q=>q.classList.remove('active'));b.classList.add('active');$('sbnQtyStep').hidden=false;$('sbnMapStep').hidden=false;$('sbnExtra').hidden=false;status('UNESI PALETE I SKU');empty('Unesi broj paleta i SKU.','Nakon toga učitavamo stvarne slobodne termine.');setTimeout(()=>$('sbnQtyStep').scrollIntoView({behavior:'smooth',block:'center'}),50)}}); 
+ const box=$('sbnWarehouses');if(!box)return;
+ const rows=warehouses().filter(x=>x&&String(x.location_id||'')===String(loc));
+ box.innerHTML=rows.length
+   ? rows.map(x=>'<button type="button" class="sbn-pick" data-warehouse="'+esc(x.id)+'">'+esc(x.name||x.id)+'</button>').join('')
+   : '<div class="sbn-scope-warning">Nema skladišta za odabranu lokaciju.</div>';
 }
 async function loadAvailability(){
  clearTimeout(timer);resetChoice();recommended=null;$('sbnRecommend').disabled=true;
@@ -52658,24 +52717,38 @@ async function init(){
  drawCalendar();bindPdf();status('UČITAVAM DODJELU');
  let last=null;
  for(let i=0;i<5;i++){
-  try{scope=await edge(SCOPE,{});if(String(scope?.app_role||'').toLowerCase()==='supplier'&&locations().length&&warehouses().length)break}catch(e){last=e}
+  try{commitScope(await edge(SCOPE,{}));if(String(scope?.app_role||'').toLowerCase()==='supplier'&&locations().length&&warehouses().length)break}catch(e){last=e}
   await new Promise(r=>setTimeout(r,250+i*150));
  }
  if(!scope||!locations().length||!warehouses().length){
   const fallback=localScope();
-  if(fallback.locations.length&&fallback.warehouses.length)scope=fallback;
+  if(fallback.locations.length&&fallback.warehouses.length)commitScope(fallback);
  }
  if(!scope||!locations().length||!warehouses().length){status('DODJELA NIJE DOSTUPNA');alert(String(last?.message||'Admin nije dodijelio lokaciju/skladište.'));return}
  status('ODABERI DATUM');
 }
 $('sbnPrev').onclick=()=>{month=new Date(month.getFullYear(),month.getMonth()-1,1);drawCalendar()};
 $('sbnNext').onclick=()=>{month=new Date(month.getFullYear(),month.getMonth()+1,1);drawCalendar()};
+$('sbnLocations').addEventListener('click',e=>{
+ const b=e.target.closest?.('[data-location]');if(!b)return;
+ loc=String(b.dataset.location||'');wh='';
+ $('sbnLocations').querySelectorAll('.sbn-pick').forEach(q=>q.classList.toggle('active',q===b));
+ renderWarehouses();$('sbnQtyStep').hidden=true;$('sbnMapStep').hidden=true;$('sbnExtra').hidden=true;resetChoice();status('ODABERI SKLADIŠTE');
+});
+$('sbnWarehouses').addEventListener('click',e=>{
+ const b=e.target.closest?.('[data-warehouse]');if(!b)return;
+ wh=String(b.dataset.warehouse||'');
+ $('sbnWarehouses').querySelectorAll('.sbn-pick').forEach(q=>q.classList.toggle('active',q===b));
+ $('sbnQtyStep').hidden=false;$('sbnMapStep').hidden=false;$('sbnExtra').hidden=false;resetChoice();
+ status('UNESI PALETE I SKU');empty('Unesi broj paleta i SKU.','Nakon toga učitavamo stvarne slobodne termine.');
+ setTimeout(()=>$('sbnQtyStep').scrollIntoView({behavior:'smooth',block:'center'}),50);
+});
 $('sbnPallets').addEventListener('input',loadAvailability);$('sbnSku').addEventListener('input',loadAvailability);
 $('sbnRecommend').onclick=showRecommendation;$('sbnReset').onclick=resetAll;$('sbnSend').onclick=send;
 $('sbnFullscreen').onclick=()=>{const m=$('sbnMapStep'),on=!m.classList.contains('fullscreen');m.classList.toggle('fullscreen',on);document.body.classList.toggle('sbn-fullscreen',on);$('sbnFullscreen').textContent=on?'× ZATVORI':'⛶ POVEĆAJ MAPU'};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('sbnMapStep')?.classList.contains('fullscreen')){$('sbnMapStep').classList.remove('fullscreen');document.body.classList.remove('sbn-fullscreen');$('sbnFullscreen').textContent='⛶ POVEĆAJ MAPU'}});
 setTimeout(init,350);
-window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-booking-rebuilt-clean-final';
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-step2-scope-fixed-final';
 })();
 </script></body>
 </html>
