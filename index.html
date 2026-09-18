@@ -32343,7 +32343,15 @@ function upsertCanonicalYardivoFromSupplier(row){
       plannedDriver:row.driver||'',
       reference:row.reference||'',
       supplierNote:row.note||'',
-      status:row.status==='completed'?'Zaprimljeno':row.status==='confirmed'?'U dolasku':'Čeka potvrdu',
+      status:(()=>{
+        const s=String(row.status||'').toLowerCase();
+        if(s==='completed')return 'Zaprimljeno';
+        if(s==='rejected')return 'Odbijen';
+        if(s==='dock'||s==='receiving')return 'Na rampi';
+        if(s==='arrival')return 'U dvorištu';
+        if(s==='confirmed')return 'U dolasku';
+        return 'Čeka potvrdu';
+      })(),
       supplierRequestedAt:row.createdAt,
       updatedAt:new Date().toISOString()
     };
