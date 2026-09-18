@@ -24492,15 +24492,25 @@ window.YardivoLoginFinalizer={finalize:finalizeLogin};
 (()=>{'use strict';
 if(window.YardivoDbStatusAuthorityV583)return;
 let lastText='',lastCls='',lastOk=0;
+function ensureEl(){
+ let el=document.getElementById('yardivoDbStatus');
+ if(!el){
+   el=document.createElement('div');
+   el.id='yardivoDbStatus';
+   el.setAttribute('aria-live','polite');
+   document.body?.appendChild(el);
+ }
+ return el;
+}
 function set(text,cls='',detail='',source='sync'){
  const now=Date.now();if(cls==='ok')lastOk=now;
  if((cls==='warn'||cls==='bad')&&source!=='health'&&now-lastOk<12000)return;
- const el=document.getElementById('yardivoDbStatus');if(!el)return;
+ const el=ensureEl();if(!el)return;
  text=String(text||'');cls=String(cls||'');detail=String(detail||'');
  if(text===lastText&&cls===lastCls&&el.title===detail)return;
  lastText=text;lastCls=cls;el.className=cls;el.textContent=text;el.title=detail;
 }
-window.YardivoDbStatusAuthorityV583={set,lastOk:()=>lastOk};
+window.YardivoDbStatusAuthorityV583={set,ensureEl,lastOk:()=>lastOk};
 })();
 </script><script id="yardivo-online-sync-v2-20260902">
 (function(){
@@ -33093,9 +33103,8 @@ function applyAccess(){
   const b=document.querySelector('.nav-btn[data-view="supplierRequests"]');
   /* RoleStableFinal is the only visibility owner. Only enforce a deny here as a security fallback. */
   if(b&&!show){b.hidden=true;b.classList.add('role-hidden')}
-  if(!show && document.getElementById('supplierRequests')?.classList.contains('active')){
-    try{window.YardivoRoleStableFinal?.open?.('homeMenu')}catch(_){}
-  }
+  /* Never auto-navigate away from an open section during async auth/data refresh.
+     YardivoRoleStableFinal owns RBAC and navigation. */
 }
 async function load(){
   ensureUi();applyAccess();
@@ -42021,8 +42030,14 @@ function marker(meta){return '[[YARDIVO_GATE_QR_V583:'+b64urlText(JSON.stringify
 function qrMetaFromRow(x){return x?.gateQrUrl?{token:x.gateQrToken||'',qrUrl:x.gateQrUrl,issuedAt:x.gateQrIssuedAt||'',supplierDeliveryId:String(x.id||'')}:parseReviewNote(x?.review_note||x?.reviewNote||'')}
 function inventoryButton(x){
   if(!['inventory','admin'].includes(role())||String(x?.status||'').toLowerCase()!=='confirmed')return'';
-  const has=!!qrMetaFromRow(x)?.qrUrl;
-  return `<button class="primary yardivo-gate-qr-send" data-yardivo-send-gate-qr="${esc(x.id)}">${has?'POŠALJI NOVI QR · CHECK-IN':'POŠALJI QR · CHECK-IN'}</button>`;
+  const meta=qrMetaFromRow(x);
+  if(meta?.qrUrl){
+    return `<div class="yardivo-inventory-qr-sent" data-qr-sent="${esc(x.id)}">
+      <span class="yardivo-qr-sent-label">QR POSLAN</span>
+      <button type="button" class="primary" data-yardivo-open-inventory-gate-qr="${esc(x.id)}">OTVORI QR</button>
+    </div>`;
+  }
+  return `<button class="primary yardivo-gate-qr-send" data-yardivo-send-gate-qr="${esc(x.id)}">POŠALJI QR · CHECK-IN</button>`;
 }
 function supplierButtons(x){
   const m=qrMetaFromRow(x);if(!m?.qrUrl)return'';
@@ -42137,6 +42152,24 @@ async function issue(id){
     if(btn){btn.disabled=false;btn.textContent=qrMetaFromRow(row)?'POŠALJI NOVI QR · CHECK-IN':'POŠALJI QR · CHECK-IN'}
   }
 }
+
+function inventoryRow(id){
+  const rows=window.YardivoSupplierPlannerV580?.getRows?.()||[];
+  return rows.find(x=>String(x.id)===String(id))||null;
+}
+async function openInventoryQrById(id){
+  let row=inventoryRow(id);
+  if(!row){
+    try{
+      const a=await window.YardivoSupplierLiveSync.call('list_internal');
+      row=(a||[]).find(x=>String(x.id)===String(id))||null;
+    }catch(_){}
+  }
+  if(!row)return alert('Najava nije pronađena.');
+  const meta=qrMetaFromRow(row);
+  if(!meta?.qrUrl)return alert('QR još nije poslan dobavljaču.');
+  return openQr(row);
+}
 function supplierRows(){
   try{const s=window.currentSession||currentSession||{};const key='yardivo_supplier_portal_v549_'+String(s.authUserId||s.username||s.user||'supplier');const a=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(a)?a:[]}catch(_){return[]}
 }
@@ -42214,13 +42247,14 @@ function openPdf(row){
 async function openSupplierQrById(id,pdf=false){try{await window.YardivoSupplierLiveSync?.pullSupplier?.()}catch(_){}scanSupplierQrNotifications();let row=supplierRow(id);if(!row)return alert('Najava nije pronađena.');return pdf?openPdf(row):openQr(row)}
 document.addEventListener('click',e=>{
   const send=e.target.closest?.('[data-yardivo-send-gate-qr]');if(send){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();issue(send.dataset.yardivoSendGateQr);return}
+  const invOpen=e.target.closest?.('[data-yardivo-open-inventory-gate-qr]');if(invOpen){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openInventoryQrById(invOpen.dataset.yardivoOpenInventoryGateQr);return}
   const open=e.target.closest?.('[data-yardivo-open-gate-qr]');if(open){e.preventDefault();e.stopPropagation();openSupplierQrById(open.dataset.yardivoOpenGateQr,false);return}
   const print=e.target.closest?.('[data-yardivo-print-gate-qr]');if(print){e.preventDefault();e.stopPropagation();openSupplierQrById(print.dataset.yardivoPrintGateQr,true);return}
 },true);
 window.addEventListener('yardivo:login',()=>{if(role()==='supplier')setTimeout(async()=>{try{await window.YardivoSupplierLiveSync?.pullSupplier?.()}catch(_){}scanSupplierQrNotifications()},500)});
 window.addEventListener('yardivo:gate-qr-issued',()=>{if(role()==='supplier')setTimeout(async()=>{try{await window.YardivoSupplierLiveSync?.pullSupplier?.()}catch(_){}scanSupplierQrNotifications()},250)});
 setInterval(async()=>{if(role()!=='supplier'||document.hidden)return;try{await window.YardivoSupplierLiveSync?.pullSupplier?.()}catch(_){}scanSupplierQrNotifications()},5000);
-window.YardivoGateQrV583={cleanReviewNote,parseReviewNote,inventoryButton,supplierButtons,issue,confirmPreparedIssue,openQr,openPdf,openSupplierQrById,qrMetaFromRow,scanSupplierQrNotifications,warehouseBusinessName};
+window.YardivoGateQrV583={cleanReviewNote,parseReviewNote,inventoryButton,supplierButtons,issue,confirmPreparedIssue,openQr,openPdf,openSupplierQrById,openInventoryQrById,qrMetaFromRow,scanSupplierQrNotifications,warehouseBusinessName};
 window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-qr-preview-confirm-supplier-notify-final';
 })();
 </script>
@@ -51863,80 +51897,63 @@ html.yv-login-home-boot-v583 body #homeMenu{visibility:visible!important}
 </style>
 <script id="yardivo-v583-login-home-no-flicker-js">
 (()=>{'use strict';
+if(window.__YARDIVO_LOGIN_HOME_LANDING_FINAL__)return;
+window.__YARDIVO_LOGIN_HOME_LANDING_FINAL__=true;
 let handled=false;
 
 function session(){
   try{if(typeof currentSession!=='undefined'&&currentSession)return currentSession}catch(_){}
   return window.currentSession||window.currentUser||null;
 }
-function homeEl(){return document.getElementById('homeMenu')}
-
-function activateHome(){
-  const h=homeEl();
-  if(!h)return false;
+function openHomeOnce(){
+  if(!session()||handled)return false;
+  handled=true;
   try{
-    if(typeof openAppView==='function'){
+    if(window.YardivoRoleStableFinal?.open){
+      window.YardivoRoleStableFinal.open('homeMenu');
+    }else if(typeof openAppView==='function'){
       openAppView('homeMenu');
     }else{
-      document.body.classList.add('home-menu-mode');
+      const h=document.getElementById('homeMenu');
+      if(!h)return false;
       document.querySelectorAll('.view.active').forEach(x=>x.classList.remove('active'));
-      h.hidden=false;
       h.classList.add('active');
-      try{updateHomeLocationUI?.()}catch(_){}
+      document.body.classList.add('home-menu-mode');
     }
-  }catch(_){
-    document.body.classList.add('home-menu-mode');
-    document.querySelectorAll('.view.active').forEach(x=>x.classList.remove('active'));
-    h.hidden=false;
-    h.classList.add('active');
-  }
-  try{sessionStorage.setItem('yardivo_v583_login_landing','homeMenu')}catch(_){}
-  return true;
+    try{sessionStorage.setItem('yardivo_v583_login_landing','homeMenu')}catch(_){}
+    return true;
+  }catch(e){console.warn('[YARDIVO HOME LANDING]',e);return false}
 }
-function finish(){
-  activateHome();
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    document.documentElement.classList.remove('yv-login-home-boot-v583');
-  }));
-}
-function authReady(){
-  if(!session()||handled)return;
-  handled=true;
-  finish();
-}
-function arm(){
-  handled=false;
-  document.documentElement.classList.add('yv-login-home-boot-v583');
-}
+function arm(){handled=false}
 document.addEventListener('submit',e=>{
   if(e.target?.closest?.('#loginForm,.login-form,[data-login-form]'))arm();
 },true);
-['yardivo:login','yardivo:authenticated','yardivo:session-ready'].forEach(ev=>window.addEventListener(ev,authReady));
-['yardivo:data-synced','yardivo:master-data-ready'].forEach(ev=>{
-  window.addEventListener(ev,()=>{if(session())activateHome()});
-});
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',()=>{if(session()){arm();authReady()}},{once:true});
-}else if(session()){arm();authReady()}
 
-window.YardivoLoginHomeNoFlickerV583={arm,activateHome,authReady};
-window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-true-pre-big-update-stable-login-final';
+/* Home landing happens only on authentication lifecycle, NEVER on data/master sync. */
+['yardivo:login','yardivo:authenticated','yardivo:session-ready'].forEach(ev=>{
+  window.addEventListener(ev,()=>setTimeout(openHomeOnce,20));
+});
+
+window.YardivoLoginHomeNoFlickerV583={arm,activateHome:openHomeOnce,authReady:openHomeOnce};
 })();
 </script>
 <script id="yardivo-v583-stable-home-guard-js">
 (()=>{'use strict';
+if(window.__YARDIVO_STABLE_HOME_GUARD_FINAL__)return;
+window.__YARDIVO_STABLE_HOME_GUARD_FINAL__=true;
 function ensureHome(){
   let sess=null;try{sess=typeof currentSession!=='undefined'?currentSession:window.currentSession}catch(_){}
   if(!sess)return;
-  const active=document.querySelector('.view.active');
-  if(active)return;
-  const h=document.getElementById('homeMenu');
-  if(!h)return;
-  document.body.classList.add('home-menu-mode');
-  h.classList.add('active');
+  if(document.querySelector('.view.active'))return;
+  const h=document.getElementById('homeMenu');if(!h)return;
+  try{
+    if(window.YardivoRoleStableFinal?.open)window.YardivoRoleStableFinal.open('homeMenu');
+    else{document.body.classList.add('home-menu-mode');h.classList.add('active')}
+  }catch(_){}
 }
-['yardivo:login','yardivo:authenticated','yardivo:session-ready','yardivo:data-synced']
-  .forEach(ev=>window.addEventListener(ev,()=>requestAnimationFrame(ensureHome)));
+/* Only auth events may repair an empty view. Data refresh must preserve current section. */
+['yardivo:login','yardivo:authenticated','yardivo:session-ready']
+ .forEach(ev=>window.addEventListener(ev,()=>requestAnimationFrame(ensureHome)));
 window.YardivoStableHomeGuardV583={ensureHome};
 })();
 </script>
@@ -53410,7 +53427,9 @@ function ensureUi(){
  }
  return {nav,view};
 }
-function fp(rows){try{return JSON.stringify((rows||[]).map(x=>[x.id,x.status,x.updated_at,x.warehouse,x.delivery_date,x.requested_time]))}catch(_){return String(Date.now())}}
+function fp(rows){try{return JSON.stringify((rows||[]).map(x=>[
+ x.id,x.status,x.updated_at,x.warehouse,x.delivery_date,x.requested_time,x.review_note||x.reviewNote||''
+]))}catch(_){return String(Date.now())}}
 function paintBadge(rows){
  const n=(rows||[]).filter(x=>String(x.status||'').toLowerCase()==='pending').length;
  const b=document.getElementById('supplierRequestsBadge');
@@ -53503,8 +53522,11 @@ function bind(){
  const {nav}=ensureUi();
  if(nav&&!nav.dataset.yvStableFinal){nav.dataset.yvStableFinal='1';/* RoleStableFinal owns click/open/refresh. */}
 }
-['yardivo:login','yardivo:supplier-request-updated','yardivo:data-synced']
- .forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{bind();refresh(true);healOnline()},120)));
+window.addEventListener('yardivo:login',()=>setTimeout(()=>{bind();refresh(true);healOnline()},120));
+window.addEventListener('yardivo:supplier-request-updated',()=>setTimeout(()=>{bind();refresh(true);healOnline()},120));
+window.addEventListener('yardivo:gate-qr-issued',()=>setTimeout(()=>{bind();refresh(true);healOnline()},120));
+/* Global data sync may happen frequently. It must not repaint identical Supplier rows/buttons. */
+window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>{bind();refresh(false);healOnline()},120));
 window.addEventListener('focus',()=>setTimeout(()=>{refresh(false);healOnline()},120));
 window.addEventListener('load',()=>setTimeout(()=>{bind();refresh(true);healOnline()},900));
 setTimeout(()=>{bind();refresh(true);healOnline()},450);
@@ -53819,10 +53841,87 @@ window.YardivoSupplierFilterAuthorityV583={render,bind};
 body.yardivo-wh-switching main,body.yardivo-wh-switching .main,body.yardivo-wh-switching #main,.yardivo-wh-exit,.yardivo-wh-enter{
  opacity:1!important;transform:none!important;filter:none!important
 }
+
+#supplierRequests #ysrBody.ysr-refreshing,
+#supplierRequests #ysrBody,
+#supplierRequests .ysrp-row,
+#supplierRequests button{
+  opacity:1!important;
+  filter:none!important;
+  visibility:visible!important;
+}
+#supplierRequests button{transition:none!important}
 </style><script id="yardivo-v583-deep-ui-stability-final-authority">
 (()=>{'use strict';
 window.YardivoUiStabilityV583={build:'20260918-dev-v5.8.3-deep-ui-stability-final',owners:{views:'YardivoRoleStableFinal',supplierInbox:'YardivoSupplierInboxStableFinalV583',supplierPlanner:'YardivoSupplierPlannerV580',notificationBell:'YardivoHeaderBellFinalV583',databaseStatus:'YardivoDbStatusAuthorityV583',homeHeaderContext:'HomeHeaderMasterDwellFinal'}};
 window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-deep-ui-stability-final';
 })();
-</script><script id="yardivo-v583-deep-ui-stability-notif-delete-final-marker">window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-deep-ui-stability-notif-delete-final';</script></body>
+</script><script id="yardivo-v583-deep-ui-stability-notif-delete-final-marker">window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-deep-ui-stability-notif-delete-final';</script><style id="yardivo-v583-db-status-visible-final-style">
+#yardivoDbStatus{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  position:fixed!important;
+  right:18px!important;
+  bottom:16px!important;
+  z-index:2147483000!important;
+  pointer-events:auto!important;
+}
+body.yardivo-prelogin #yardivoDbStatus{display:none!important}
+#yardivoDbStatus.ok{
+  color:#82e6a2!important;
+  border-color:#2d7b4a!important;
+  background:#0b2517!important;
+}
+</style><style id="yardivo-v583-qr-sent-state-final-style">
+.yardivo-inventory-qr-sent{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  flex-wrap:wrap!important;
+}
+.yardivo-qr-sent-label{
+  display:inline-flex;
+  align-items:center;
+  min-height:30px;
+  padding:0 10px;
+  border:1px solid #2d7b4a;
+  border-radius:999px;
+  background:#0b2517;
+  color:#82e6a2;
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:.04em;
+}
+</style><script id="yardivo-v583-hard-ui-stability-final-authority">
+(()=>{'use strict';
+if(window.__YARDIVO_HARD_UI_STABILITY_FINAL__)return;
+window.__YARDIVO_HARD_UI_STABILITY_FINAL__=true;
+
+function ensureDb(){
+  try{window.YardivoDbStatusAuthorityV583?.ensureEl?.()}catch(_){}
+  try{window.YardivoSupabaseConnectionWatchdogV583?.ensureOnline?.(true)}catch(_){}
+}
+function keepCurrentView(){
+  const active=[...document.querySelectorAll('.view.active')];
+  if(active.length<=1)return;
+  /* If legacy code temporarily activates more than one, preserve the most recently opened canonical view. */
+  let wanted='';
+  try{wanted=sessionStorage.getItem('yardivo_v583_last_open_view')||''}catch(_){}
+  const keep=active.find(v=>v.id===wanted)||active[active.length-1];
+  active.forEach(v=>v.classList.toggle('active',v===keep));
+}
+window.addEventListener('yardivo:view-opened',e=>{
+  const v=String(e?.detail?.view||'');
+  if(v){try{sessionStorage.setItem('yardivo_v583_last_open_view',v)}catch(_){}}
+  keepCurrentView();
+});
+['yardivo:login','yardivo:supabase-online','online','focus'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(ensureDb,30)));
+window.addEventListener('load',()=>setTimeout(ensureDb,800),{once:true});
+setTimeout(ensureDb,250);
+
+window.YardivoHardUiStabilityV583={ensureDb,keepCurrentView};
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-ui-hard-stable-supabase-qr-final';
+})();
+</script></body>
 </html>
