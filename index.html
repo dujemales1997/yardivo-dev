@@ -52447,6 +52447,10 @@ window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-gate-canonical-fix-final'
 .ys2-calendar-top strong{font-size:14px;letter-spacing:.02em}.ys2-calendar-top small{display:block;margin-top:3px;color:#c7d7e5;font-size:10px}
 .ys2-scope{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.ys2-scope label{font-size:8px;font-weight:950;letter-spacing:.07em;color:#c7d7e5}
 .ys2-scope select{height:35px;min-width:150px;border:1px solid #42617c;border-radius:8px;background:#173c5d;color:#fff;padding:0 9px;font-size:10px;font-weight:850;outline:none}
+.ys2-scope select:disabled{opacity:.55;cursor:not-allowed}
+#ysnV2Root.ys2-scope-loading .ys2-cal-grid{opacity:.52;pointer-events:none}
+#ysnV2Root.ys2-scope-ready .ys2-cal-grid{opacity:1;pointer-events:auto}
+
 .ys2-cal-nav{padding:13px 16px;display:flex;justify-content:space-between;align-items:center;background:#f3f8fc;border-bottom:1px solid #e1ebf2}
 .ys2-cal-nav button{width:36px;height:36px;border:1px solid #cfdeea;border-radius:9px;background:#fff;color:#173a57;font-size:18px;cursor:pointer}.ys2-cal-nav b{text-transform:capitalize;font-size:14px;color:#173a57}
 .ys2-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;padding:15px 16px 18px}.ys2-dow{text-align:center;font-size:9px;font-weight:950;color:#788da0;padding:4px}
@@ -52532,17 +52536,17 @@ function mount(){
  if(!supplier())return;
  const old=$('ysnRoot');if(!old||$('ysnV2Root'))return;
  const root=document.createElement('section');root.id='ysnV2Root';
- root.innerHTML=`<div class="ys2-head"><div><span class="ys2-kicker">SUPPLIER · NOVA NAJAVA</span><h2>Odaberi dan, zatim termin</h2><p>Kalendar je prvi korak. Nakon datuma otvara se dnevna mapa, a količina određuje trajanje termina.</p></div><div class="ys2-state" id="ys2State">UČITAVAM DODJELU</div></div>
+ root.innerHTML=`<div class="ys2-head"><div><span class="ys2-kicker">SUPPLIER · NOVA NAJAVA</span><h2>Nova najava dostave</h2><p>Odaberi lokaciju i skladište, zatim datum. Dnevna mapa se odmah otvara; nakon paleta i SKU-a odaberi zeleni slobodni termin.</p></div><div class="ys2-state" id="ys2State">UČITAVAM DODJELU</div></div>
  <div class="ys2-calendar-card">
-   <div class="ys2-calendar-top"><div><strong>1 · ODABERI DATUM DOSTAVE</strong><small>Neradni dan možeš otvoriti za pregled; svi termini bit će crveni i nije ih moguće odabrati.</small></div>
-     <div class="ys2-scope"><div><label>LOKACIJA</label><select id="ys2Location"></select></div><div><label>SKLADIŠTE</label><select id="ys2Warehouse"></select></div></div>
+   <div class="ys2-calendar-top"><div><strong>3 · ODABERI DATUM U KALENDARU</strong><small>Neradni dan možeš otvoriti za pregled; svi termini bit će crveni i nije ih moguće odabrati.</small></div>
+     <div class="ys2-scope"><div><label>1 · ODABERI LOKACIJU</label><select id="ys2Location"></select></div><div><label>2 · ODABERI SKLADIŠTE</label><select id="ys2Warehouse"></select></div></div>
    </div>
    <div class="ys2-cal-nav"><button type="button" id="ys2Prev">‹</button><b id="ys2Month"></b><button type="button" id="ys2Next">›</button></div>
    <div class="ys2-cal-grid" id="ys2Calendar"></div>
  </div>
  <section class="ys2-work" id="ys2Work">
-   <div class="ys2-work-head"><div><div class="ys2-kicker">2 · DNEVNA MAPA</div><h3 id="ys2MapTitle">Termini dostave</h3><div class="ys2-work-sub" id="ys2MapSub"></div></div><button type="button" class="ys2-expand" id="ys2Expand">⛶ POVEĆAJ MAPU</button></div>
-   <div class="ys2-inputs"><div class="ys2-field"><label>3 · Broj paleta</label><input id="ys2Pallets" type="number" min="1" step="1" inputmode="numeric" placeholder="npr. 33"><small>Veći broj paleta automatski produljuje potreban termin.</small></div><div class="ys2-field"><label>4 · Broj SKU-a</label><input id="ys2Sku" type="number" min="1" step="1" inputmode="numeric" placeholder="npr. 8"><small>Nakon oba unosa računamo stvarno slobodne termine.</small></div></div>
+   <div class="ys2-work-head"><div><div class="ys2-kicker">4 · DNEVNA MAPA</div><h3 id="ys2MapTitle">Termini dostave</h3><div class="ys2-work-sub" id="ys2MapSub"></div></div><button type="button" class="ys2-expand" id="ys2Expand">⛶ POVEĆAJ MAPU</button></div>
+   <div class="ys2-inputs"><div class="ys2-field"><label>5 · UNESI BROJ PALETA</label><input id="ys2Pallets" type="number" min="1" step="1" inputmode="numeric" placeholder="npr. 33"><small>Veći broj paleta automatski produljuje potreban termin.</small></div><div class="ys2-field"><label>6 · UNESI BROJ SKU-A</label><input id="ys2Sku" type="number" min="1" step="1" inputmode="numeric" placeholder="npr. 8"><small>Nakon oba unosa računamo stvarno slobodne termine.</small></div></div>
    <div class="ys2-map-tools"><div class="ys2-legend"><span><i class="free"></i>SLOBODNO</span><span><i class="busy"></i>ZAUZETO</span><span><i class="sel"></i>ODABRANO</span></div><div class="ys2-duration" id="ys2Duration">Unesi palete i SKU za izračun trajanja.</div></div>
    <div class="ys2-board" id="ys2Board"></div>
    <div class="ys2-recommend" id="ys2Recommend"><strong>PREPORUČEN TERMIN</strong><span>Prikazat će se nakon unosa paleta i SKU-a.</span></div>
@@ -52554,24 +52558,55 @@ function mount(){
  old.parentNode.insertBefore(root,old);
  bind();init();
 }
+function validScope(s){
+ return !!s&&String(s?.app_role||'').toLowerCase()==='supplier'&&Array.isArray(s?.locations)&&Array.isArray(s?.warehouses)&&s.locations.length>0&&s.warehouses.length>0;
+}
+function cachedScope(){
+ const a=window.__YARDIVO_SUPPLIER_CANONICAL_SCOPE_V583,b=window.YardivoServerScopeV583;
+ return validScope(a)?a:(validScope(b)?b:null);
+}
+function waitScope(ms){return new Promise(r=>setTimeout(r,ms))}
+async function resolveScope(){
+ const cached=cachedScope();if(cached)return cached;
+ let last=null;
+ for(let i=0;i<12;i++){
+   try{const s=await edge(SCOPE,{});if(validScope(s))return s;last=new Error('Supplier nema dodijeljenu aktivnu lokaciju ili skladište.')}catch(e){last=e}
+   const c=cachedScope();if(c)return c;
+   await waitScope(i<3?250:500);
+ }
+ throw last||new Error('Supplier dodjela nije dostupna.');
+}
 async function init(){
+ const root=$('ysnV2Root');root?.classList.add('ys2-scope-loading');root?.classList.remove('ys2-scope-ready');
+ setState('UČITAVAM LOKACIJE I SKLADIŠTA');
  try{
-   sc=await edge(SCOPE,{});
-   if(String(sc?.app_role||'').toLowerCase()!=='supplier')throw new Error('Supplier dodjela nije dostupna.');
+   sc=await resolveScope();
    window.__YARDIVO_SUPPLIER_CANONICAL_SCOPE_V583=sc;window.YardivoServerScopeV583=sc;
-   hydrateScope();drawCalendar();setState('SPREMNO ZA ODABIR DATUMA');
- }catch(e){setState('DODJELA NIJE DOSTUPNA');setEmpty('Supplier dodjela nije dostupna',String(e?.message||e))}
+   hydrateScope();drawCalendar();
+   root?.classList.remove('ys2-scope-loading');root?.classList.add('ys2-scope-ready');
+   setState('1 · ODABERI LOKACIJU');
+ }catch(e){
+   root?.classList.remove('ys2-scope-loading');
+   setState('DODJELA NIJE DOSTUPNA');
+   setEmpty('Supplier dodjela nije dostupna',String(e?.message||e));
+ }
 }
 function hydrateScope(){
  const l=$('ys2Location'),w=$('ys2Warehouse'),L=locations();if(!l||!w)return;
- l.innerHTML='';if(L.length===1){l.append(new Option(L[0].name||'Lokacija',L[0].id));l.value=String(L[0].id)}else{l.append(new Option('Odaberi lokaciju...',''));L.forEach(x=>l.append(new Option(x.name||'Lokacija',x.id)))}
- fillWh();
+ l.innerHTML='<option value="">Odaberi lokaciju...</option>';
+ L.forEach(x=>l.append(new Option(x.name||'Lokacija',x.id)));
+ l.value='';
+ w.innerHTML='<option value="">Odaberi skladište...</option>';
+ w.value='';w.disabled=true;
+ resetBooking(false);drawCalendar();
 }
 function fillWh(){
- const w=$('ys2Warehouse'),rows=whRows(),keep=String(w?.value||'');if(!w)return;
- w.innerHTML='<option value="">Odaberi skladište...</option>';rows.forEach(x=>w.append(new Option(x.name||'Skladište',x.id)));
- if(rows.some(x=>String(x.id)===keep))w.value=keep;else if(rows.length===1)w.value=String(rows[0].id);else w.value='';
+ const w=$('ys2Warehouse'),rows=whRows();if(!w)return;
+ w.innerHTML='<option value="">Odaberi skladište...</option>';
+ rows.forEach(x=>w.append(new Option(x.name||'Skladište',x.id)));
+ w.value='';w.disabled=!selectedLoc();
  resetBooking(false);drawCalendar();
+ setState(selectedLoc()?'2 · ODABERI SKLADIŠTE':'1 · ODABERI LOKACIJU');
 }
 function drawCalendar(){
  const g=$('ys2Calendar'),title=$('ys2Month');if(!g||!title)return;
@@ -52583,11 +52618,11 @@ function drawCalendar(){
  for(let d=1;d<=days;d++){
    const dt=new Date(viewMonth.getFullYear(),viewMonth.getMonth(),d),iso=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
    const weekend=dt.getDay()===0||dt.getDay()===6,past=dt<today;
-   const b=document.createElement('button');b.type='button';b.className='ys2-day'+(dt.getTime()===today.getTime()?' today':'')+(weekend?' closed':'')+(iso===date?' selected':'');b.textContent=d;b.disabled=past;
+   const b=document.createElement('button');b.type='button';b.className='ys2-day'+(dt.getTime()===today.getTime()?' today':'')+(weekend?' closed':'')+(iso===date?' selected':'');b.textContent=d;b.disabled=past||!contextReady();
    if(weekend)b.title='Skladište ne radi subotom i nedjeljom.';
    b.onclick=async()=>{
      if(!contextReady()){alert('Odaberi lokaciju i skladište iz svoje dodjele.');return}
-     date=iso;choice=null;recommendedSlot=null;drawCalendar();openWork();prepareForDetails();
+     date=iso;choice=null;recommendedSlot=null;drawCalendar();openWork();prepareForDetails();await preview();
    };
    g.appendChild(b);
  }
@@ -52619,9 +52654,10 @@ function scheduleReload(){
  if($('ys2RecommendBtn'))$('ys2RecommendBtn').disabled=true;
  if($('ys2OtherBtn'))$('ys2OtherBtn').disabled=true;
  if(!detailsReady()){
-   $('ys2Recommend').innerHTML='<strong>PREPORUČEN TERMIN</strong><span>Unesi palete i SKU za preporuku.</span>';
-   $('ys2Duration').textContent='Unesi palete i SKU za izračun trajanja.';
-   setEmpty('DOVRŠI PODATKE','Za prikaz dnevne mape potreban je broj paleta i broj SKU-a.');
+   $('ys2Recommend').innerHTML='<strong>PREPORUČEN TERMIN</strong><span>Unesi palete i SKU za stvarno trajanje.</span>';
+   $('ys2Duration').textContent='Dnevna mapa je otvorena. Unesi palete, zatim SKU.';
+   if(availabilityData)renderMap(availabilityData,true);else if(date&&contextReady())preview();
+   setState(Number($('ys2Pallets')?.value)>0?'6 · UNESI BROJ SKU-A':'5 · UNESI BROJ PALETA');
    return;
  }
  reloadTimer=setTimeout(loadActual,250);
@@ -52631,7 +52667,7 @@ async function loadActual(){
  $('ys2Work')?.classList.add('open');
  setEmpty('OTVARAM DNEVNU MAPU…','Računam slobodne termine prema broju paleta i kapacitetu rampi.');
  try{
-   availabilityData=await availability(false);renderMap(availabilityData,false);setState('ODABERI ILI PREPORUČI TERMIN');
+   availabilityData=await availability(false);renderMap(availabilityData,false);setState('7 · ODABERI ZELENI SLOBODNI TERMIN');
    setTimeout(()=>{try{$('ys2Board')?.scrollIntoView({behavior:'smooth',block:'center'})}catch(_){}},80);
  }
  catch(e){handleMapError(e)}
@@ -52711,13 +52747,13 @@ async function send(){
 }
 function resetBooking(redraw=true){
  date='';availabilityData=null;choice=null;recommendedSlot=null;pdfData=null;['ys2Pallets','ys2Sku','ys2Order','ys2Reference','ys2Plate','ys2Trailer','ys2Driver','ys2DriverContact','ys2Note'].forEach(id=>{if($(id))$(id).value=''});
- $('ys2Work')?.classList.remove('open','fullscreen');document.body.classList.remove('ys2-map-lock');if($('ys2Send'))$('ys2Send').disabled=true;if($('ys2RecommendBtn'))$('ys2RecommendBtn').disabled=true;if($('ys2OtherBtn'))$('ys2OtherBtn').disabled=true;if($('ys2Pdf'))$('ys2Pdf').value='';if($('ys2PdfName')){$('ys2PdfName').textContent='Nije odabran dokument';$('ys2PdfName').classList.remove('has')}if(redraw)drawCalendar();setState('SPREMNO ZA ODABIR DATUMA');
+ $('ys2Work')?.classList.remove('open','fullscreen');document.body.classList.remove('ys2-map-lock');if($('ys2Send'))$('ys2Send').disabled=true;if($('ys2RecommendBtn'))$('ys2RecommendBtn').disabled=true;if($('ys2OtherBtn'))$('ys2OtherBtn').disabled=true;if($('ys2Pdf'))$('ys2Pdf').value='';if($('ys2PdfName')){$('ys2PdfName').textContent='Nije odabran dokument';$('ys2PdfName').classList.remove('has')}if(redraw)drawCalendar();setState(contextReady()?'3 · ODABERI DATUM U KALENDARU':(selectedLoc()?'2 · ODABERI SKLADIŠTE':'1 · ODABERI LOKACIJU'));
 }
 function bind(){
  $('ys2Prev').onclick=()=>{viewMonth=new Date(viewMonth.getFullYear(),viewMonth.getMonth()-1,1);drawCalendar()};
  $('ys2Next').onclick=()=>{viewMonth=new Date(viewMonth.getFullYear(),viewMonth.getMonth()+1,1);drawCalendar()};
  $('ys2Location').onchange=()=>fillWh();
- $('ys2Warehouse').onchange=()=>resetBooking(true);
+ $('ys2Warehouse').onchange=()=>{resetBooking(false);drawCalendar();setState(selectedWh()?'3 · ODABERI DATUM U KALENDARU':'2 · ODABERI SKLADIŠTE')};
  $('ys2Pallets').addEventListener('input',scheduleReload);$('ys2Sku').addEventListener('input',scheduleReload);
  $('ys2Clear').onclick=()=>resetBooking(true);$('ys2Send').onclick=send;
  $('ys2RecommendBtn').onclick=recommendTerm;$('ys2OtherBtn').onclick=chooseOther;bindPdf();
@@ -52729,7 +52765,7 @@ function arm(){if(!supplier())return;mount()}
 document.addEventListener('click',e=>{if(e.target.closest?.('[data-ysp-view="new"]'))setTimeout(arm,40)},true);
 const mo=new MutationObserver(()=>{if(supplier()&&!$('ysnV2Root')&&$('ysnRoot'))arm()});mo.observe(document.documentElement,{subtree:true,childList:true});
 setTimeout(arm,300);
-window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-map-pdf-closed-day-final';
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-simple-flow-final';
 })();
 </script>
 
