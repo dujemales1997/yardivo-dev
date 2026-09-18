@@ -5964,8 +5964,8 @@ html.yardivo-welcome-complete #yardivoWelcomeBar{
 </style>
 <meta content="no-cache, no-store, must-revalidate" http-equiv="Cache-Control"/>
 <meta content="no-cache" http-equiv="Pragma"/>
-<meta content="0" http-equiv="Expires">
-<meta content="2026-09-02-online-v4-defensive-guard" name="yardivo-build"/>
+<meta content="0" http-equiv="Expires"/>
+<meta content="2026-09-02-online-v4-defensive-guard" name="yardivo-build">
 <style id="yardivo-v537-location-lock-style">
 #homeLocationSelect:disabled{
   opacity:1!important;
@@ -52694,6 +52694,7 @@ function populateWarehouseSelect(){
  rows.forEach(x=>sel.add(new Option(String(x.name||x.id),String(x.id))));
  sel.disabled=!loc||!rows.length;
  if(loc&&rows.length){sel.removeAttribute('disabled');sel.style.pointerEvents='auto';sel.style.opacity='1'}
+ try{sbnSelectSyncLastWh=String(sel.value||'')}catch(_){}
 }
 function contextReady(){return !!date&&!!loc&&!!wh}
 function qtyReady(){return Number($('sbnPallets')?.value)>0&&Number($('sbnSku')?.value)>0}
@@ -52799,30 +52800,60 @@ async function init(){
  if(!scope||!locations().length||!warehouses().length){status('DODJELA NIJE DOSTUPNA');alert(String(last?.message||'Admin nije dodijelio lokaciju/skladište.'));return}
  status('ODABERI DATUM');
 }
-$('sbnPrev').onclick=()=>{month=new Date(month.getFullYear(),month.getMonth()-1,1);drawCalendar()};
-$('sbnNext').onclick=()=>{month=new Date(month.getFullYear(),month.getMonth()+1,1);drawCalendar()};
-$('sbnLocationSelect').addEventListener('change',()=>{
- loc=String($('sbnLocationSelect').value||'');wh='';resetChoice();
+
+function applyLocationSelection(){
+ const sel=$('sbnLocationSelect');if(!sel)return;
+ const next=String(sel.value||'');
+ if(next===loc&&next)return;
+ loc=next;wh='';resetChoice();
  $('sbnQtyStep').hidden=true;$('sbnMapStep').hidden=true;$('sbnExtra').hidden=true;
  populateWarehouseSelect();
  status(loc?'ODABERI SKLADIŠTE':'ODABERI LOKACIJU');
-});
-$('sbnWarehouseSelect').addEventListener('change',()=>{
- wh=String($('sbnWarehouseSelect').value||'');resetChoice();
+}
+function applyWarehouseSelection(){
+ const sel=$('sbnWarehouseSelect');if(!sel)return;
+ const next=String(sel.value||'');
+ wh=next;resetChoice();
  const ready=!!loc&&!!wh;
- $('sbnQtyStep').hidden=!ready;$('sbnMapStep').hidden=!ready;$('sbnExtra').hidden=!ready;
+ $('sbnQtyStep').hidden=!ready;
+ $('sbnMapStep').hidden=!ready;
+ $('sbnExtra').hidden=!ready;
  if(ready){
-   status('UNESI PALETE I SKU');
-   empty('Unesi broj paleta i SKU.','Nakon toga učitavamo stvarne slobodne termine.');
-   setTimeout(()=>$('sbnQtyStep').scrollIntoView({behavior:'smooth',block:'center'}),50);
- }else status('ODABERI SKLADIŠTE');
-});
+   status('SKLADIŠTE ODABRANO · UNESI PALETE I SKU');
+   empty('Dnevna mapa je spremna za izračun.','Unesi broj paleta i SKU, zatim će se prikazati slobodni zeleni termini.');
+   setTimeout(()=>{try{$('sbnQtyStep').scrollIntoView({behavior:'smooth',block:'center'});$('sbnPallets')?.focus()}catch(_){}},60);
+ }else{
+   status('ODABERI SKLADIŠTE');
+ }
+}
+$('sbnPrev').onclick=()=>{month=new Date(month.getFullYear(),month.getMonth()-1,1);drawCalendar()};
+$('sbnNext').onclick=()=>{month=new Date(month.getFullYear(),month.getMonth()+1,1);drawCalendar()};
+['input','change'].forEach(ev=>$('sbnLocationSelect').addEventListener(ev,applyLocationSelection));
+['input','change'].forEach(ev=>$('sbnWarehouseSelect').addEventListener(ev,applyWarehouseSelection));
+
+/* Native select events can behave differently across browser/OS pickers.
+   While Step 2 is visible, synchronize the actual selected values so the flow
+   advances even if a browser does not emit the expected event sequence. */
+let sbnSelectSyncLastLoc='',sbnSelectSyncLastWh='';
+setInterval(()=>{
+ const step=$('sbnScopeStep');if(!step||step.hidden)return;
+ const ls=$('sbnLocationSelect'),ws=$('sbnWarehouseSelect');if(!ls||!ws)return;
+ const lv=String(ls.value||''),wv=String(ws.value||'');
+ if(lv!==sbnSelectSyncLastLoc){
+   sbnSelectSyncLastLoc=lv;
+   if(lv!==loc)applyLocationSelection();
+ }
+ if(wv!==sbnSelectSyncLastWh){
+   sbnSelectSyncLastWh=wv;
+   if(wv!==wh)applyWarehouseSelection();
+ }
+},180);
 $('sbnPallets').addEventListener('input',loadAvailability);$('sbnSku').addEventListener('input',loadAvailability);
 $('sbnRecommend').onclick=showRecommendation;$('sbnReset').onclick=resetAll;$('sbnSend').onclick=send;
 $('sbnFullscreen').onclick=()=>{const m=$('sbnMapStep'),on=!m.classList.contains('fullscreen');m.classList.toggle('fullscreen',on);document.body.classList.toggle('sbn-fullscreen',on);$('sbnFullscreen').textContent=on?'× ZATVORI':'⛶ POVEĆAJ MAPU'};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('sbnMapStep')?.classList.contains('fullscreen')){$('sbnMapStep').classList.remove('fullscreen');document.body.classList.remove('sbn-fullscreen');$('sbnFullscreen').textContent='⛶ POVEĆAJ MAPU'}});
 setTimeout(init,350);
-window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-booking-step2-root-fix-final';
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-warehouse-selection-fixed-final';
 })();
 </script></body>
 </html>
