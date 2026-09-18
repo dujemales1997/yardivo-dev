@@ -45707,10 +45707,7 @@ function refreshEmptyClass(){
  document.body.classList.toggle('yardivo-production-empty',isEmpty);
  const el=document.getElementById('homeStorageStatus');
  if(el&&isEmpty)el.textContent='SPREMLJENO: 0 NAJAVA';
- if(isEmpty){
-   const b=document.getElementById('supplierRequestsBadge');
-   if(b){b.textContent='';b.style.setProperty('display','none','important')}
- }
+
 }
 function protectMasterFocus(){
  const editing=!!document.activeElement?.closest?.('#yardivoMasterFoundationV583');
@@ -46092,82 +46089,21 @@ function refreshOperational(){
  try{window.dispatchEvent(new CustomEvent('yardivo:context-changed',{detail:{source:'stable-master'}}))}catch(_){}
 }
 
-/* ---------------- Supplier hard quarantine ---------------- */
+/* Supplier inbox is server-authoritative. Legacy date-cutoff quarantine retired in V5.8.3 final. */
 (function installSupplierFetchQuarantine(){
- if(window.__YARDIVO_SUPPLIER_FETCH_QUARANTINE_V583__)return;
- window.__YARDIVO_SUPPLIER_FETCH_QUARANTINE_V583__=true;
- let cutoff=0;
- try{
-  const existing=localStorage.getItem(SUPPLIER_CUTOFF);
-  if(existing)cutoff=Number(existing)||Date.parse(existing)||0;
-  else{
-   cutoff=Date.now();
-   localStorage.setItem(SUPPLIER_CUTOFF,String(cutoff));
-  }
- }catch(_){cutoff=Date.now()}
- const nativeFetch=window.fetch.bind(window);
- window.fetch=async function(input,init){
-  const url=typeof input==='string'?input:String(input?.url||'');
-  const isSupplier=/\/yardivo-supplier-deliveries(?:$|\?)/i.test(url);
-  let action='';
-  if(isSupplier){
-   try{
-    const body=typeof init?.body==='string'?JSON.parse(init.body):init?.body;
-    action=String(body?.action||'');
-   }catch(_){}
-  }
-  const res=await nativeFetch(input,init);
-  if(!isSupplier||!['list_internal','list_mine'].includes(action))return res;
-  try{
-   const data=await res.clone().json();
-   const raw=Object.prototype.hasOwnProperty.call(data||{},'data')?data.data:data;
-   if(!Array.isArray(raw))return res;
-   const fresh=raw.filter(x=>{
-    const ts=Date.parse(x?.created_at||'')||0;
-    return ts>=cutoff;
-   });
-   const payload=Object.prototype.hasOwnProperty.call(data||{},'data')?{...data,data:fresh}:fresh;
-   const headers=new Headers(res.headers);headers.set('content-type','application/json');
-   return new Response(JSON.stringify(payload),{status:res.status,statusText:res.statusText,headers});
-  }catch(_){return res}
- };
- window.YardivoSupplierZeroV583={cutoff:()=>cutoff};
+  try{localStorage.removeItem(SUPPLIER_CUTOFF)}catch(_){}
+  window.__YARDIVO_SUPPLIER_FETCH_QUARANTINE_V583__=false;
+  window.YardivoSupplierZeroV583={cutoff:()=>0};
 })();
 
 function hardEmptySupplierUi(){
- const body=document.getElementById('ysrBody');
- if(body&&!body.dataset.hasFreshSupplierRows){
-  body.innerHTML='<tr><td colspan="9"><div class="ysr-empty">Nema novih najava dobavljača.</div></td></tr>';
- }
- ['ysrPending','ysrRevision','ysrApproved','ysrToday'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='0'});
- const b=document.getElementById('supplierRequestsBadge');
- if(b){b.textContent='';b.style.setProperty('display','none','important')}
- document.querySelectorAll('#yardivoLiveToasts>*').forEach(x=>x.remove());
- for(const k of ['yardivo_live_notifications_v1','yardivo_notifications_v583','yardivo_notifications_v2','yardivo_notifications_v1']){
-  try{localStorage.setItem(k,'[]')}catch(_){}
- }
- document.body.classList.add('yardivo-supplier-zero');
+  /* Retired: pending Supplier requests must never be inferred from local operational announcements. */
+  try{localStorage.removeItem(SUPPLIER_CUTOFF)}catch(_){}
+  document.body.classList.remove('yardivo-supplier-zero');
 }
 function observeFreshSupplierRows(){
- const body=document.getElementById('ysrBody');if(!body||body.__ysmFreshObserver)return;
- body.__ysmFreshObserver=true;
- const cutoff=window.YardivoSupplierZeroV583?.cutoff?.()||Date.now();
- const scan=()=>{
-   let fresh=false;
-   for(const tr of body.querySelectorAll('tr[data-ysr-detail]')){
-    const id=tr.dataset.ysrDetail;
-    if(id){fresh=true;break}
-   }
-   if(fresh){
-     body.dataset.hasFreshSupplierRows='1';
-     document.body.classList.remove('yardivo-supplier-zero');
-   }else{
-     body.removeAttribute('data-has-fresh-supplier-rows');
-     hardEmptySupplierUi();
-   }
- };
- new MutationObserver(()=>queueMicrotask(scan)).observe(body,{childList:true,subtree:true});
- scan();
+  /* Retired: Supabase list_internal is the only authority for Supplier inbox rows. */
+  document.body.classList.remove('yardivo-supplier-zero');
 }
 
 /* ---------------- Stable Master CRUD ---------------- */
@@ -52977,7 +52913,7 @@ window.YardivoSmartOperationalVisibilityV583={apply,enabled};
 #supplierRequests.yardivo-supplier-inbox-final{display:none}
 #supplierRequests.yardivo-supplier-inbox-final.active{display:block!important}
 #supplierRequests .ysr-scope-note{margin:0 0 12px;padding:10px 12px;border:1px solid #bed6e8;border-radius:10px;background:#eef7fd;color:#28516f;font-size:9px;font-weight:800}
-</style><script id="yardivo-v583-supplier-inbox-visibility-final-authority">
+</style><script id="yardivo-v583-supplier-inbox-visibility-final-authority" type="application/yardivo-retired">
 (()=>{'use strict';
 if(window.__YARDIVO_SUPPLIER_INBOX_VISIBILITY_FINAL__)return;
 window.__YARDIVO_SUPPLIER_INBOX_VISIBILITY_FINAL__=true;
@@ -53080,7 +53016,7 @@ body[data-role="inventory"] .nav-btn[data-view="supplierRequests"]{
   font-size:9px;
   font-weight:950;
 }
-</style><script id="yardivo-v583-inventory-supplier-inbox-notification-final-authority">
+</style><script id="yardivo-v583-inventory-supplier-inbox-notification-final-authority" type="application/yardivo-retired">
 (()=>{'use strict';
 if(window.__YARDIVO_INVENTORY_SUPPLIER_INBOX_NOTIFICATION_FINAL__)return;
 window.__YARDIVO_INVENTORY_SUPPLIER_INBOX_NOTIFICATION_FINAL__=true;
@@ -53260,6 +53196,157 @@ setTimeout(()=>refresh(true),650);
 
 window.YardivoSupplierInboxNotificationFinalV583={refresh,ensureNav,ensureView};
 window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-inventory-supplier-inbox-notifications-fixed-final';
+})();
+</script><style id="yardivo-v583-supplier-inbox-stable-health-final-style">
+#supplierRequests .ysr-flow-info,
+#supplierRequests .ysr-scope-note,
+#supplierRequests .yv583-live-scope-note{display:none!important}
+.nav-btn[data-view="supplierRequests"]{visibility:visible}
+body[data-yardivo-role="inventory"] .nav-btn[data-view="supplierRequests"],
+body.yardivo-role-inventory .nav-btn[data-view="supplierRequests"],
+body[data-role="inventory"] .nav-btn[data-view="supplierRequests"]{display:flex!important;visibility:visible!important}
+#supplierRequests.yv583-inbox-stable.active{display:block!important;visibility:visible!important}
+#supplierRequestsBadge{display:none}
+#supplierRequestsBadge.yv-has-pending{display:inline-flex!important}
+</style><script id="yardivo-v583-supplier-inbox-stable-health-final-authority">
+(()=>{'use strict';
+if(window.__YARDIVO_SUPPLIER_INBOX_STABLE_HEALTH_FINAL__)return;
+window.__YARDIVO_SUPPLIER_INBOX_STABLE_HEALTH_FINAL__=true;
+
+let busy=false,lastFp='',healBusy=false;
+
+function role(){
+ let r=String(window.currentSession?.role||window.currentSession?.app_role||'').toLowerCase().trim();
+ if(r==='zalihe'||r==='upravljanje zalihama')r='inventory';
+ if(r==='management'||r==='voditelj')r='manager';
+ return r;
+}
+function allowed(){return ['admin','inventory','manager'].includes(role())}
+function whName(id){
+ try{
+   const m=window.YardivoAppStateV583?.master?.()||JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{};
+   return String((m.warehouses||[]).find(x=>String(x.id)===String(id))?.name||id||'');
+ }catch(_){return String(id||'')}
+}
+function dateHr(v){try{return new Date(String(v)+'T12:00:00').toLocaleDateString('hr-HR')}catch(_){return String(v||'')}}
+function tm(v){return String(v||'').slice(0,5)}
+function ensureUi(){
+ try{window.YardivoSupplierRequests?.ensureUi?.()}catch(_){}
+ const nav=document.querySelector('.nav-btn[data-view="supplierRequests"]');
+ if(nav){
+   const show=allowed();
+   nav.hidden=!show;
+   nav.classList.toggle('role-hidden',!show);
+   nav.style.setProperty('display',show?'flex':'none','important');
+   nav.style.setProperty('visibility',show?'visible':'hidden','important');
+ }
+ const view=document.getElementById('supplierRequests');
+ if(view){
+   view.classList.add('yv583-inbox-stable');
+   view.querySelectorAll('.ysr-flow-info,.ysr-scope-note,.yv583-live-scope-note').forEach(x=>x.remove());
+ }
+ return {nav,view};
+}
+function fp(rows){try{return JSON.stringify((rows||[]).map(x=>[x.id,x.status,x.updated_at,x.warehouse,x.delivery_date,x.requested_time]))}catch(_){return String(Date.now())}}
+function paintBadge(rows){
+ const n=(rows||[]).filter(x=>String(x.status||'').toLowerCase()==='pending').length;
+ const b=document.getElementById('supplierRequestsBadge');
+ if(!b)return;
+ b.textContent=String(n);
+ b.classList.toggle('yv-has-pending',n>0);
+ b.style.setProperty('display',n?'inline-flex':'none','important');
+}
+function notify(rows){
+ if(!allowed())return;
+ const pending=(rows||[]).filter(x=>String(x.status||'').toLowerCase()==='pending');
+ let list=[];
+ try{
+   list=window.YardivoNotifications?.load?.()||JSON.parse(localStorage.getItem('yardivo_live_notifications_v1')||'[]');
+   if(!Array.isArray(list))list=[];
+ }catch(_){list=[]}
+ let changed=false;
+ for(const x of pending){
+   const id='SUPPLIER_REQUEST-'+String(x.id);
+   if(list.some(n=>String(n?.id)===id))continue;
+   list.unshift({
+     id,event:'SUPPLIER_REQUEST',type:'info',title:'NOVA NAJAVA DOBAVLJAČA',
+     body:`${x.supplier_name||x.supplier_username||'Dobavljač'} · ${whName(x.warehouse)} · ${dateHr(x.delivery_date)} ${tm(x.requested_time)} · ${Number(x.pallets||0)} pal. · ${Number(x.sku_count||0)} SKU`,
+     at:String(x.created_at||x.updated_at||new Date().toISOString()),
+     createdAt:String(x.created_at||x.updated_at||new Date().toISOString()),
+     roles:['admin','inventory'],warehouse:String(x.warehouse||''),location:String(x.location||''),
+     supplierDeliveryId:String(x.id),readBy:{}
+   });
+   changed=true;
+ }
+ if(changed){
+   list=list.slice(0,300);
+   try{
+     if(window.YardivoNotifications?.save)window.YardivoNotifications.save(list);
+     else localStorage.setItem('yardivo_live_notifications_v1',JSON.stringify(list));
+   }catch(_){}
+   try{window.YardivoNotifications?.render?.()}catch(_){}
+ }
+}
+async function loadRows(){
+ if(!window.YardivoSupplierLiveSync?.call)throw new Error('Supplier backend nije spreman.');
+ const rows=await window.YardivoSupplierLiveSync.call('list_internal',{});
+ return Array.isArray(rows)?rows:[];
+}
+async function refresh(force=false){
+ if(!allowed()||busy)return;
+ busy=true;
+ try{
+   ensureUi();
+   const rows=await loadRows();
+   const next=fp(rows);
+   if(force||next!==lastFp){
+     lastFp=next;
+     try{window.YardivoSupplierPlannerV580?.renderRows?.(rows,true)}catch(_){}
+     try{window.YardivoSupplierRequests?.render?.(rows)}catch(_){}
+     notify(rows);
+   }
+   paintBadge(rows);
+ }catch(e){
+   console.error('[YARDIVO Supplier Inbox]',e);
+ }finally{busy=false}
+}
+async function healOnline(){
+ if(role()==='supplier'||healBusy||!window.currentSession?.serverAuthorized)return;
+ const api=window.YardivoSupabase;
+ if(!api?.authenticate||!api?.status)return;
+ const st=api.status();
+ if(st?.ready)return;
+ healBusy=true;
+ try{
+   const c=await window.YardivoAuth?.client?.();
+   let s=(await c?.auth?.getSession?.())?.data?.session||null;
+   if(!s?.access_token)s=(await c?.auth?.refreshSession?.())?.data?.session||null;
+   if(s?.access_token&&s?.refresh_token){
+     await api.authenticate(s.access_token,s.refresh_token);
+   }
+ }catch(e){
+   console.warn('[YARDIVO ONLINE HEAL]',e);
+ }finally{healBusy=false}
+}
+function bind(){
+ const {nav}=ensureUi();
+ if(nav&&!nav.dataset.yvStableFinal){
+   nav.dataset.yvStableFinal='1';
+   nav.addEventListener('click',async()=>{
+     setTimeout(()=>refresh(true),30);
+   },true);
+ }
+}
+['yardivo:login','yardivo:supplier-request-updated','yardivo:data-synced']
+ .forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{bind();refresh(true);healOnline()},120)));
+window.addEventListener('focus',()=>setTimeout(()=>{refresh(false);healOnline()},120));
+window.addEventListener('load',()=>setTimeout(()=>{bind();refresh(true);healOnline()},900));
+setTimeout(()=>{bind();refresh(true);healOnline()},450);
+/* Stable polling only updates data; it never toggles the section/view. */
+setInterval(()=>{if(!document.hidden){refresh(false);healOnline()}},15000);
+
+window.YardivoSupplierInboxStableFinalV583={refresh,healOnline};
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-inbox-stable-supabase-health-fixed-final';
 })();
 </script></body>
 </html>
