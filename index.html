@@ -49612,10 +49612,28 @@ function fillWarehouses(){
   else if(rows.length===1)w.value=String(rows[0].id);
   else w.value='';
   chosenDate='';if($('ysnDateText'))$('ysnDateText').textContent='Odaberi datum dostave';
-  resetChoice();emptyMap();update();
+  resetChoice();emptyMap();flowGate();update();
 }
 function prerequisites(){
   return !!($('ysnLocation')?.value&&$('ysnWarehouse')?.value&&Number($('ysnPallets')?.value)>0&&Number($('ysnSku')?.value)>0);
+}
+function flowGate(){
+  const locationOk=!!$('ysnLocation')?.value;
+  const warehouseOk=locationOk&&!!$('ysnWarehouse')?.value;
+  const palletsOk=warehouseOk&&Number($('ysnPallets')?.value)>0;
+  const skuOk=palletsOk&&Number($('ysnSku')?.value)>0;
+  const pallets=$('ysnPallets'),sku=$('ysnSku'),dateBtn=$('ysnDateBtn');
+  if(pallets)pallets.disabled=!warehouseOk;
+  if(sku)sku.disabled=!palletsOk;
+  if(dateBtn){dateBtn.disabled=!skuOk;dateBtn.setAttribute('aria-disabled',String(!skuOk));}
+  const fields=[
+    [$('ysnWarehouse')?.closest('.ysn-field'),!locationOk],
+    [pallets?.closest('.ysn-field'),!warehouseOk],
+    [sku?.closest('.ysn-field'),!palletsOk],
+    [dateBtn?.closest('.ysn-field'),!skuOk]
+  ];
+  fields.forEach(([el,off])=>el?.classList.toggle('is-disabled',!!off));
+  return skuOk;
 }
 async function availability(date){
   return await edge(AVAIL_EDGE,{
@@ -49678,6 +49696,7 @@ async function loadMap(){
   }finally{loadingMap=false;update()}
 }
 function update(){
+  flowGate();
   const ok=prerequisites()&&!!chosenDate&&!!chosen&&confirmedChoice;
   if($('ysnSend'))$('ysnSend').disabled=!ok;
   if($('ysnStatus'))$('ysnStatus').textContent=ok?'SPREMNO ZA SLANJE':'SPREMNO ZA UNOS';
@@ -49744,24 +49763,30 @@ function clearAll(){
 function bind(){
   if(!$('ysnRoot')||$('ysnRoot').dataset.bookingAuthority==='1')return;
   $('ysnRoot').dataset.bookingAuthority='1';
-  $('ysnLocation').onchange=fillWarehouses;
-  $('ysnWarehouse').onchange=()=>{chosenDate='';$('ysnDateText').textContent='Odaberi datum dostave';resetChoice();emptyMap();update()};
-  $('ysnPallets').oninput=()=>{resetChoice();if(chosenDate)loadMap();else update()};
-  $('ysnSku').oninput=()=>{resetChoice();if(chosenDate)loadMap();else update()};
-  $('ysnDateBtn').onclick=openCal;
+  $('ysnLocation').onchange=()=>{fillWarehouses();flowGate()};
+  $('ysnWarehouse').onchange=()=>{chosenDate='';$('ysnDateText').textContent='Odaberi datum dostave';resetChoice();emptyMap();flowGate();update()};
+  $('ysnPallets').oninput=()=>{resetChoice();chosenDate='';if($('ysnDateText'))$('ysnDateText').textContent='Odaberi datum dostave';emptyMap();flowGate();update()};
+  $('ysnSku').oninput=()=>{resetChoice();chosenDate='';if($('ysnDateText'))$('ysnDateText').textContent='Odaberi datum dostave';emptyMap();flowGate();update()};
+  $('ysnDateBtn').onclick=e=>{e?.preventDefault?.();if(!flowGate())return;openCal()};
   $('ysnConfirm').onclick=()=>{if(!chosen)return;confirmedChoice=true;$('ysnChoice').innerHTML=`<strong>POTVRĐENO · ${chosen.ramp||chosen.dock} · ${chosen.time}–${chosen.end}</strong><span>Termin je spreman za slanje najave.</span>`;update()};
   $('ysnPdfBtn').onclick=()=>$('ysnPdf').click();
   $('ysnPdf').onchange=e=>{const f=e.target.files?.[0];if(!f)return;if((f.type!=='application/pdf'&&!/\.pdf$/i.test(f.name))||f.size>1572864){alert('PDF mora biti PDF datoteka do 1.5 MB.');e.target.value='';return}const r=new FileReader();r.onload=()=>{window.__YSN_PDF_V583={name:f.name,mime:'application/pdf',base64:String(r.result||'').split(',').pop()||''};$('ysnPdfName').textContent=f.name+' · '+Math.ceil(f.size/1024)+' KB';$('ysnPdfBtn').classList.add('has-file')};r.readAsDataURL(f)};
   $('ysnClear').onclick=clearAll;$('ysnSend').onclick=send;
 }
 function supplierRole(){
-  try{return String(window.currentSession?.role||window.currentSession?.app_role||'').toLowerCase()==='supplier'}catch(_){return false}
+  try{
+    const role=String(window.currentSession?.role||window.currentSession?.app_role||window.__YARDIVO_SESSION__?.role||window.__YARDIVO_SESSION__?.app_role||'').toLowerCase();
+    if(role==='supplier')return true;
+    const portal=$('yardivoSupplierPortal');
+    return !!(portal&&portal.getAttribute('aria-hidden')==='false'&&$('ysnRoot'));
+  }catch(_){return false}
 }
 let initRetry=0;
 async function init(force=false){
   if(!$('ysnRoot')||!supplierRole())return;
+  bind();flowGate();update();
   try{
-    await loadScope(force);hydrate();bind();update();
+    await loadScope(force);hydrate();flowGate();update();
     initRetry=0;
     if($('ysnStatus'))$('ysnStatus').textContent='SPREMNO ZA UNOS';
   }catch(e){
@@ -52256,5 +52281,28 @@ document.addEventListener('pointerdown',e=>{if(e.target?.closest?.('#yardivoStab
 document.addEventListener('click',e=>{if(e.target?.closest?.('#ysnCalGrid .ysn-day:not(.blank)'))setTimeout(()=>{const m=document.getElementById('ysnMap');if(m)m.style.display=''},0)},true);
 })();
 </script>
+
+<style id="yardivo-v583-supplier-booking-wizard-final-style">
+#ysnRoot .ysn-date-btn:disabled{cursor:not-allowed!important;opacity:.48!important;background:#eef2f6!important;border-color:#cbd6df!important;color:#718294!important;box-shadow:none!important}
+#ysnRoot .ysn-field.is-disabled{opacity:.55!important}
+#ysnRoot .ysn-field:not(.is-disabled){opacity:1!important;transition:opacity .12s ease,border-color .12s ease}
+</style>
+<script id="yardivo-v583-supplier-booking-wizard-final">
+(()=>{'use strict';
+if(window.__YARDIVO_SUPPLIER_BOOKING_WIZARD_FINAL__)return;window.__YARDIVO_SUPPLIER_BOOKING_WIZARD_FINAL__=true;
+function arm(){
+ const root=document.getElementById('ysnRoot'),date=document.getElementById('ysnDateBtn');
+ if(!root||!date)return;
+ /* Canonical booking authority owns the real calendar; this only re-triggers its init when portal DOM appears after login. */
+ if(root.dataset.bookingAuthority!=='1')window.dispatchEvent(new CustomEvent('yardivo:authenticated'));
+}
+window.addEventListener('yardivo:login',()=>setTimeout(arm,120));
+window.addEventListener('yardivo:authenticated',()=>setTimeout(arm,120));
+document.addEventListener('click',e=>{if(e.target?.closest?.('[data-ysp-view="new"]'))setTimeout(arm,40)},true);
+setTimeout(arm,300);
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-booking-wizard-calendar-final';
+})();
+</script>
+
 </body>
 </html>
