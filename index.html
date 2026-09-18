@@ -52347,5 +52347,59 @@ body.ysn-map-lock{overflow:hidden!important}#ysnMap.ysn-fullscreen{position:fixe
 </style>
 <script id="yardivo-v583-supplier-map-fullscreen-duration-weekend-marker">window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-fullscreen-duration-weekend-final';</script>
 
+
+<style id="yardivo-v583-supplier-step-unlock-hotfix-style">
+#ysnRoot .ysn-field.ysn-step-ready{opacity:1!important}
+#ysnRoot #ysnSku:not(:disabled),#ysnRoot #ysnDateBtn:not(:disabled){pointer-events:auto!important}
+</style>
+<script id="yardivo-v583-supplier-step-unlock-hotfix">
+(()=>{'use strict';
+if(window.__YARDIVO_SUPPLIER_STEP_UNLOCK_HOTFIX__)return;
+window.__YARDIVO_SUPPLIER_STEP_UNLOCK_HOTFIX__=true;
+const $=id=>document.getElementById(id);
+function positive(el){const n=Number(el?.value);return Number.isFinite(n)&&n>0}
+function sync(){
+  const root=$('ysnRoot');if(!root)return;
+  const wh=$('ysnWarehouse'),pal=$('ysnPallets'),sku=$('ysnSku'),date=$('ysnDateBtn');
+  if(!wh||!pal||!sku||!date)return;
+  const warehouseOk=!!String(wh.value||'').trim();
+  const palletsOk=warehouseOk&&positive(pal);
+  const skuOk=palletsOk&&positive(sku);
+
+  pal.disabled=!warehouseOk;
+  sku.disabled=!palletsOk;
+  date.disabled=!skuOk;
+  date.setAttribute('aria-disabled',String(!skuOk));
+
+  const pf=pal.closest('.ysn-field'),sf=sku.closest('.ysn-field'),df=date.closest('.ysn-field');
+  pf?.classList.toggle('is-disabled',!warehouseOk);
+  sf?.classList.toggle('is-disabled',!palletsOk);
+  df?.classList.toggle('is-disabled',!skuOk);
+  pf?.classList.toggle('ysn-step-ready',warehouseOk);
+  sf?.classList.toggle('ysn-step-ready',palletsOk);
+  df?.classList.toggle('ysn-step-ready',skuOk);
+}
+function later(){sync();requestAnimationFrame(sync);setTimeout(sync,30)}
+for(const ev of ['input','change','keyup']){
+  document.addEventListener(ev,e=>{
+    if(['ysnLocation','ysnWarehouse','ysnPallets','ysnSku'].includes(e.target?.id))later();
+  },true);
+}
+document.addEventListener('click',e=>{
+  if(e.target?.closest?.('[data-ysp-view="new"],#ysnDateBtn'))later();
+},true);
+window.addEventListener('yardivo:login',()=>setTimeout(later,120));
+window.addEventListener('yardivo:authenticated',()=>setTimeout(later,120));
+window.addEventListener('yardivo:supplier-scope-ready',()=>setTimeout(later,80));
+const mo=new MutationObserver(muts=>{
+  if(muts.some(m=>m.type==='attributes'&&m.attributeName==='disabled'&&['ysnPallets','ysnSku','ysnDateBtn'].includes(m.target?.id)))queueMicrotask(sync);
+});
+function observe(){const root=$('ysnRoot');if(root)mo.observe(root,{subtree:true,attributes:true,attributeFilter:['disabled']});later()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observe,{once:true});else observe();
+setTimeout(later,300);setTimeout(later,1000);
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-sku-calendar-unlock-fixed-final';
+})();
+</script>
+
 </body>
 </html>
