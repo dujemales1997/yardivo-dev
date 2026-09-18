@@ -52528,8 +52528,26 @@ async function edge(url,payload){
  return j?.data??j;
 }
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function locations(){return Array.isArray(sc?.locations)?sc.locations.filter(x=>x&&x.active!==false):[]}
+function localMaster(){
+ try{return JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{}}catch(_){return {}}
+}
 function warehouses(){return Array.isArray(sc?.warehouses)?sc.warehouses.filter(x=>x&&x.active!==false):[]}
+function locations(){
+ const map=new Map();
+ const raw=Array.isArray(sc?.locations)?sc.locations:[];
+ raw.filter(x=>x&&x.active!==false).forEach(x=>map.set(String(x.id),{id:String(x.id),name:String(x.name||x.id),active:true}));
+ const ids=new Set();
+ (Array.isArray(sc?.location_ids)?sc.location_ids:[]).forEach(x=>String(x||'').trim()&&ids.add(String(x)));
+ const one=String(sc?.location||'').trim();if(one&&one!=='ALL')ids.add(one);
+ warehouses().forEach(w=>{const id=String(w?.location_id||'').trim();if(id)ids.add(id)});
+ const masterLocs=Array.isArray(localMaster()?.locations)?localMaster().locations:[];
+ ids.forEach(id=>{
+   if(map.has(id))return;
+   const m=masterLocs.find(x=>x&&x.active!==false&&String(x.id)===id);
+   map.set(id,{id,name:String(m?.name||id),active:true});
+ });
+ return [...map.values()];
+}
 function selectedLoc(){return String($('ys2Location')?.value||'')}
 function selectedWh(){return String($('ys2Warehouse')?.value||'')}
 
@@ -52608,12 +52626,36 @@ function mount(){
  old.parentNode.insertBefore(root,old);
  bind();init();
 }
+function scopeLocationIds(s){
+ const ids=new Set();
+ (Array.isArray(s?.locations)?s.locations:[]).forEach(x=>{const id=String(x?.id||x||'').trim();if(id)ids.add(id)});
+ (Array.isArray(s?.location_ids)?s.location_ids:[]).forEach(x=>{const id=String(x||'').trim();if(id)ids.add(id)});
+ const one=String(s?.location||'').trim();if(one&&one!=='ALL')ids.add(one);
+ (Array.isArray(s?.warehouses)?s.warehouses:[]).forEach(w=>{const id=String(w?.location_id||'').trim();if(id)ids.add(id)});
+ return [...ids];
+}
+function normalizeScope(s){
+ if(!s)return s;
+ const n=Object.assign({},s);
+ const masterLocs=Array.isArray(localMaster()?.locations)?localMaster().locations:[];
+ const existing=Array.isArray(s.locations)?s.locations.filter(Boolean):[];
+ const by=new Map(existing.map(x=>[String(x.id||x),typeof x==='object'?x:{id:String(x),name:String(x),active:true}]));
+ scopeLocationIds(s).forEach(id=>{
+   if(by.has(id))return;
+   const m=masterLocs.find(x=>x&&x.active!==false&&String(x.id)===id);
+   by.set(id,{id,name:String(m?.name||id),active:true});
+ });
+ n.locations=[...by.values()];
+ n.location_ids=n.locations.map(x=>String(x.id));
+ return n;
+}
 function validScope(s){
- return !!s&&String(s?.app_role||'').toLowerCase()==='supplier'&&Array.isArray(s?.locations)&&Array.isArray(s?.warehouses)&&s.locations.length>0&&s.warehouses.length>0;
+ const n=normalizeScope(s);
+ return !!n&&String(n?.app_role||'').toLowerCase()==='supplier'&&Array.isArray(n?.warehouses)&&n.warehouses.length>0&&scopeLocationIds(n).length>0;
 }
 function cachedScope(){
  const candidates=[window.__YARDIVO_SUPPLIER_CANONICAL_SCOPE_V583,window.YardivoServerScopeV583,window.__YARDIVO_SUPPLIER_SCOPE_V583__];
- for(const x of candidates)if(validScope(x))return x;
+ for(const x of candidates)if(validScope(x))return normalizeScope(x);
  return null;
 }
 function legacyScope(){
@@ -52630,13 +52672,13 @@ async function resolveScope(){
  let last=null;
  for(let i=0;i<16;i++){
    const cached=cachedScope();if(cached)return cached;
-   const legacy=legacyScope();if(validScope(legacy))return legacy;
+   const legacy=legacyScope();if(validScope(legacy))return normalizeScope(legacy);
    try{
      const fresh=await edge(SCOPE,{});
-     if(validScope(fresh))return fresh;
+     if(validScope(fresh))return normalizeScope(fresh);
      last=new Error('Supplier nema dodijeljenu aktivnu lokaciju ili skladište.');
    }catch(e){last=e}
-   const after=cachedScope()||legacyScope();if(validScope(after))return after;
+   const after=cachedScope()||legacyScope();if(validScope(after))return normalizeScope(after);
    await waitScope(i<4?200:400);
  }
  throw last||new Error('Supplier dodjela nije dostupna.');
@@ -52648,11 +52690,11 @@ async function init(){
  const root=$('ysnV2Root');root?.classList.add('ys2-scope-loading');root?.classList.remove('ys2-scope-ready');
  setState('UČITAVAM LOKACIJE I SKLADIŠTA');
  try{
-   sc=await resolveScope();
+   sc=normalizeScope(await resolveScope());
    window.__YARDIVO_SUPPLIER_CANONICAL_SCOPE_V583=sc;window.YardivoServerScopeV583=sc;
    hydrateScope();
    root?.classList.remove('ys2-scope-loading');root?.classList.add('ys2-scope-ready');
-   enableLocation();drawCalendar();setState('1 · ODABERI LOKACIJU');
+   enableLocation();drawCalendar();setState(locations().length?'1 · ODABERI LOKACIJU':'LOKACIJA NIJE DOSTUPNA');
  }catch(e){
    root?.classList.remove('ys2-scope-loading');
    enableLocation();
@@ -52834,7 +52876,7 @@ function arm(){if(!supplier())return;mount()}
 document.addEventListener('click',e=>{if(e.target.closest?.('[data-ysp-view="new"]'))setTimeout(arm,40)},true);
 const mo=new MutationObserver(()=>{if(supplier()&&!$('ysnV2Root')&&$('ysnRoot'))arm()});mo.observe(document.documentElement,{subtree:true,childList:true});
 setTimeout(arm,300);
-window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-custom-dropdown-final';
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-location-derived-fix-final';
 })();
 </script>
 
