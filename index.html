@@ -49860,7 +49860,7 @@ window.addEventListener('yardivo:data-synced',()=>{if(!supplier()||!$('ysnRoot')
 window.YardivoSupplierDailyMapAfterDateV583={open:forceMap};
 })();
 </script>
-\n<script id="yardivo-v583-location-dropdowns-master-binding-final">
+\n<script id="yardivo-v583-location-dropdowns-master-binding-final" type="application/x-yardivo-disabled">
 (function(){
 'use strict';
 const KEY='yardivo_master_data_registry_v583';
@@ -51801,5 +51801,107 @@ window.YardivoSettingsMasterSeparationV583={clean};
 <script id="yardivo-v583-fullstack-reset-supplier-accounts-final-marker">
 window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-fullstack-reset-supplier-accounts-fixed-final';
 </script>
+
+
+<!-- YARDIVO DEV V5.8.3 · ADMIN HOME/CONTEXT + SETTINGS MASTER/USERS FINAL AUTHORITY · 2026-09-18 -->
+<style id="yardivo-v583-admin-home-context-settings-authority-style">
+/* Admin home must expose the full existing application card set without stale role-hidden/display overrides. */
+body[data-yardivo-role="admin"] #homeMenuGrid > [data-home-target],
+body.yardivo-admin-role #homeMenuGrid > [data-home-target]{display:block!important;visibility:visible!important;opacity:1!important}
+
+/* Stable native selects: no visual rebuild/flicker while the user is interacting. */
+#homeLocationSelect,#globalLocationV583,#globalWarehouse{pointer-events:auto!important;visibility:visible!important;opacity:1!important}
+#homeLocationSelect:focus,#globalLocationV583:focus,#globalWarehouse:focus{outline:2px solid rgba(43,140,255,.35)!important;outline-offset:1px!important}
+
+/* Settings entry cards. */
+#yardivoAdminSettingsEntryV583{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%;order:-20}
+#yardivoAdminSettingsEntryV583 .yv-admin-entry{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:104px;padding:18px;border:1px solid #2b4d65;border-radius:14px;background:linear-gradient(180deg,#0b1d2b,#081722);color:#fff;text-align:left;cursor:pointer}
+#yardivoAdminSettingsEntryV583 .yv-admin-entry:hover{border-color:#2b8cff;background:#0d2436}
+#yardivoAdminSettingsEntryV583 .yv-admin-entry strong{display:block;font-size:15px}
+#yardivoAdminSettingsEntryV583 .yv-admin-entry span{display:block;margin-top:5px;color:#8fa9bb;font-size:9px;line-height:1.5}
+#yardivoAdminSettingsEntryV583 .yv-admin-entry b{font-size:24px;color:#61afff}
+body.light-mode #yardivoAdminSettingsEntryV583 .yv-admin-entry{background:#fff;color:#17344f;border-color:#d5e1eb}
+body.light-mode #yardivoAdminSettingsEntryV583 .yv-admin-entry span{color:#667c8f}
+
+/* Canonical Master subsections are visible when Master workspace is open. */
+#yardivoSettingsMasterPaneV583 #yardivoStableMasterEditorV583,
+#yardivoSettingsMasterPaneV583 #yardivoMasterSuppliersV583,
+#yardivoSettingsMasterPaneV583 #yardivoResponsiblePeopleV583{display:block!important;visibility:visible!important;opacity:1!important}
+@media(max-width:760px){#yardivoAdminSettingsEntryV583{grid-template-columns:1fr}}
+</style>
+<script id="yardivo-v583-admin-home-context-settings-authority-js">
+(()=>{'use strict';
+if(window.__YARDIVO_ADMIN_HOME_CONTEXT_SETTINGS_AUTHORITY_V583__)return;
+window.__YARDIVO_ADMIN_HOME_CONTEXT_SETTINGS_AUTHORITY_V583__=true;
+const $=id=>document.getElementById(id), KEY='yardivo_master_data_registry_v583';
+let painting=false, interactionUntil=0, lastSig='';
+function master(){try{const d=JSON.parse(localStorage.getItem(KEY)||'{}')||{};return{...d,locations:Array.isArray(d.locations)?d.locations:[],warehouses:Array.isArray(d.warehouses)?d.warehouses:[],suppliers:Array.isArray(d.suppliers)?d.suppliers:[],responsible_people:Array.isArray(d.responsible_people)?d.responsible_people:[]}}catch(_){return{locations:[],warehouses:[],suppliers:[],responsible_people:[]}}}
+function role(){try{let r=String(window.currentSession?.role||window.currentSession?.app_role||document.body.dataset.yardivoRole||'').toLowerCase();if(r==='management'||r==='voditelj')r='manager';return r}catch(_){return''}}
+function admin(){return role()==='admin'}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function activeLocs(d){return d.locations.filter(x=>x&&x.active!==false&&String(x.id||'')&&String(x.name||''))}
+function activeWh(d,loc){return d.warehouses.filter(x=>x&&x.active!==false&&(!loc||String(x.location_id)===String(loc))&&String(x.id||'')&&String(x.name||''))}
+function stateLoc(){return String(window.currentSession?.location||localStorage.getItem('yardivo_active_location_v583')||localStorage.getItem('yardivo_last_location')||'')}
+function stateWh(){return String(window.activeWarehouse||localStorage.getItem('yardivo_active_warehouse_v583')||localStorage.getItem('studenac_active_warehouse')||'')}
+function setLoc(id){id=String(id||'');try{if(window.currentSession)window.currentSession.location=id||null}catch(_){};try{window.YardivoAppStateV583?.setLocation?.(id)}catch(_){};try{if(id){localStorage.setItem('yardivo_active_location_v583',id);localStorage.setItem('yardivo_last_location',id)}else{localStorage.removeItem('yardivo_active_location_v583')}}catch(_){} }
+function setWh(id){id=String(id||'');try{window.activeWarehouse=id||''}catch(_){};try{window.YardivoAppStateV583?.setWarehouse?.(id)}catch(_){};try{if(id){localStorage.setItem('yardivo_active_warehouse_v583',id);localStorage.setItem('studenac_active_warehouse',id)}else{localStorage.removeItem('yardivo_active_warehouse_v583');localStorage.removeItem('studenac_active_warehouse')}}catch(_){} }
+function optionHtml(rows,placeholder){return '<option value="">'+esc(placeholder)+'</option>'+rows.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('')}
+function stableFill(sel,html,value){if(!sel)return;const sig=html;if(sel.dataset.yvAuthoritySig!==sig){sel.innerHTML=html;sel.dataset.yvAuthoritySig=sig}if([...sel.options].some(o=>o.value===value))sel.value=value;else sel.value=''}
+function ensureHeaderLocation(){
+ const toolbar=document.querySelector('.topbar .warehouse-toolbar');if(!toolbar)return null;let gl=$('globalLocationV583');
+ if(!gl){let wrap=$('yardivoHeaderLocationV583');if(!wrap){wrap=document.createElement('label');wrap.id='yardivoHeaderLocationV583';wrap.innerHTML='<span>ODABERI LOKACIJU</span><select id="globalLocationV583" aria-label="Odaberi lokaciju"><option value="">Odaberi lokaciju...</option></select>';toolbar.prepend(wrap)}gl=$('globalLocationV583')}return gl
+}
+function paintContext(force=false){
+ if(painting)return; if(!force&&Date.now()<interactionUntil)return; painting=true;
+ try{
+   const d=master(), locs=activeLocs(d); let loc=stateLoc(); if(!locs.some(x=>String(x.id)===loc))loc='';
+   const hs=$('homeLocationSelect'), gl=ensureHeaderLocation();
+   const lhtml=optionHtml(locs,'Odaberi lokaciju...');stableFill(hs,lhtml,loc);stableFill(gl,lhtml,loc);
+   [hs,gl].forEach(s=>{if(s)s.disabled=!locs.length});
+   const whs=activeWh(d,loc);let wh=stateWh();if(!whs.some(x=>String(x.id)===wh))wh='';
+   const gw=$('globalWarehouse'); if(gw){stableFill(gw,optionHtml(whs,loc?'Odaberi skladište...':'Prvo odaberi lokaciju'),wh);gw.disabled=!loc||!whs.length}
+   const st=$('homeLocationStatus'), title=$('homeSelectedLocation');const ln=locs.find(x=>String(x.id)===loc)?.name||'';
+   if(st){st.textContent=loc?'Odabrano: '+ln:'Lokacija nije odabrana';st.classList.toggle('ready',!!loc)}
+   if(title){title.textContent=loc?ln.toUpperCase():'ODABERI LOKACIJU';title.classList.toggle('selected',!!loc)}
+   if(window.currentSession&&String(window.currentSession.location||'')!==loc)window.currentSession.location=loc||null;
+   try{window.persistCurrentSession?.()}catch(_){}
+   document.querySelectorAll('#homeMenuGrid .home-menu-card').forEach(c=>c.classList.toggle('locked',!loc));
+   lastSig=JSON.stringify([locs.map(x=>[x.id,x.name]),whs.map(x=>[x.id,x.name]),loc,wh]);
+ } finally{painting=false}
+}
+function revealAdminHome(){if(!admin())return;const grid=$('homeMenuGrid');if(!grid)return;grid.querySelectorAll(':scope > [data-home-target]').forEach(c=>{c.classList.remove('role-hidden');c.hidden=false;c.style.removeProperty('display')});}
+function masterWorkspace(){
+ const pane=$('yardivoSettingsMasterPaneV583');if(!pane)return null;
+ const editor=$('yardivoStableMasterEditorV583'),sup=$('yardivoMasterSuppliersV583'),rp=$('yardivoResponsiblePeopleV583');
+ [editor,sup,rp].forEach(x=>{if(x&&x.parentElement!==pane)pane.appendChild(x);if(x){x.hidden=false;x.style.setProperty('display','block','important')}});
+ return pane;
+}
+function ensureSettingsEntries(){
+ if(!admin())return;const settings=$('settings'),host=$('yardivoUnifiedSettingsV583')||settings?.querySelector('.settings-grid');if(!host)return;
+ let box=$('yardivoAdminSettingsEntryV583');if(!box){box=document.createElement('section');box.id='yardivoAdminSettingsEntryV583';box.innerHTML='<button type="button" class="yv-admin-entry" id="yardivoOpenMasterV583"><div><strong>MASTER PODACI</strong><span>Lokacije · skladišta i rampe · radno vrijeme i kapaciteti · dobavljači · odgovorne osobe</span></div><b>→</b></button><button type="button" class="yv-admin-entry" id="yardivoOpenUsersV583"><div><strong>KORISNIČKI RAČUNI</strong><span>Dodavanje korisnika · lista korisnika · role · lozinke · aktivacija i brisanje</span></div><b>→</b></button>';host.prepend(box)}
+ masterWorkspace();try{window.YardivoAccountSmartSystemV583?.accounts?.()}catch(_){}
+}
+function openMaster(){ensureSettingsEntries();const launch=$('yardivoMasterPopupLaunchV583');if(launch){launch.hidden=false;launch.style.setProperty('display','flex','important');launch.click();setTimeout(()=>{masterWorkspace();try{window.YardivoStableMasterV583?.render?.(true)}catch(_){}},50);return}const pane=masterWorkspace();if(pane){pane.hidden=false;pane.style.setProperty('display','block','important');pane.scrollIntoView({block:'start'})}}
+function openUsers(){ensureSettingsEntries();try{window.YardivoAccountSmartSystemV583?.accounts?.()}catch(_){};const x=$('yardivoAccountAdminRestoredV583')||$('yardivoSettingsAdminPaneV583');if(x){x.hidden=false;x.style.setProperty('display','block','important');x.scrollIntoView({behavior:'smooth',block:'start'})}}
+function refresh(force=false){paintContext(force);revealAdminHome();ensureSettingsEntries()}
+['pointerdown','focusin','mousedown'].forEach(t=>document.addEventListener(t,e=>{if(['homeLocationSelect','globalLocationV583','globalWarehouse'].includes(e.target?.id))interactionUntil=Date.now()+1400},true));
+document.addEventListener('change',e=>{
+ const id=e.target?.id;if(id==='homeLocationSelect'||id==='globalLocationV583'){
+   interactionUntil=Date.now()+300;const loc=String(e.target.value||'');setLoc(loc);setWh('');
+   window.dispatchEvent(new CustomEvent('yardivo:context-changed',{detail:{source:id==='homeLocationSelect'?'home-authority':'header-authority',location:loc,warehouse:''}}));setTimeout(()=>refresh(true),0);return;
+ }
+ if(id==='globalWarehouse'){
+   interactionUntil=Date.now()+300;const d=master(),loc=stateLoc(),wid=String(e.target.value||'');if(wid&&!activeWh(d,loc).some(w=>String(w.id)===wid)){e.target.value='';setWh('');return}setWh(wid);window.dispatchEvent(new CustomEvent('yardivo:context-changed',{detail:{source:'header-authority',location:loc,warehouse:wid}}));setTimeout(()=>refresh(true),0)
+ }
+},true);
+document.addEventListener('click',e=>{if(e.target?.closest?.('#yardivoOpenMasterV583')){e.preventDefault();openMaster()}if(e.target?.closest?.('#yardivoOpenUsersV583')){e.preventDefault();openUsers()}if(e.target?.closest?.('[data-home-target="settings"],[data-view="settings"],#navSettings'))setTimeout(()=>{ensureSettingsEntries();masterWorkspace()},50)},true);
+['yardivo:login','yardivo:data-synced','yardivo:master-data-ready','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>refresh(false),60)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>refresh(true),700),{once:true});else setTimeout(()=>refresh(true),100);
+window.addEventListener('load',()=>setTimeout(()=>refresh(true),600),{once:true});
+window.YardivoAdminHomeContextSettingsAuthorityV583={refresh,openMaster,openUsers};
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-admin-home-context-settings-authority-final';
+})();
+</script>
+
 </body>
 </html>
