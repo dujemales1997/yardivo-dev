@@ -52450,8 +52450,19 @@ window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-gate-canonical-fix-final'
 .ys2-scope select:disabled{opacity:.55;cursor:not-allowed}
 #ysnV2Root.ys2-scope-loading .ys2-cal-grid{opacity:.52;pointer-events:none}
 #ysnV2Root.ys2-scope-ready .ys2-cal-grid{opacity:1;pointer-events:auto}
-#ys2Location,#ys2Warehouse{pointer-events:auto!important;position:relative;z-index:4}
-#ys2Location:not(:disabled),#ys2Warehouse:not(:disabled){cursor:pointer!important;opacity:1!important}
+#ys2Location,#ys2Warehouse{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important}
+
+.ys2-dd{position:relative;min-width:180px}
+.ys2-dd-btn{width:100%;height:38px;border:1px solid #42617c;border-radius:9px;background:#173c5d;color:#fff;padding:0 34px 0 11px;text-align:left;font-size:10px;font-weight:850;cursor:pointer;position:relative}
+.ys2-dd-btn:after{content:"▾";position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:12px;color:#cce0f0}
+.ys2-dd-btn:disabled{opacity:.5;cursor:not-allowed}
+.ys2-dd-menu{display:none;position:absolute;z-index:2147483600;left:0;right:0;top:calc(100% + 5px);background:#fff;border:1px solid #c8d9e6;border-radius:10px;box-shadow:0 14px 34px rgba(12,45,72,.18);padding:5px;max-height:240px;overflow:auto}
+.ys2-dd.open .ys2-dd-menu{display:block}
+.ys2-dd-item{display:block;width:100%;border:0;background:#fff;color:#17324d;border-radius:7px;padding:10px 11px;text-align:left;font-size:10px;font-weight:850;cursor:pointer}
+.ys2-dd-item:hover,.ys2-dd-item:focus{background:#edf6ff;color:#0e67be;outline:none}
+.ys2-dd-empty{padding:10px;color:#7f92a3;font-size:9px}
+#ys2Location,#ys2Warehouse{display:none!important}
+
 
 
 .ys2-cal-nav{padding:13px 16px;display:flex;justify-content:space-between;align-items:center;background:#f3f8fc;border-bottom:1px solid #e1ebf2}
@@ -52521,6 +52532,39 @@ function locations(){return Array.isArray(sc?.locations)?sc.locations.filter(x=>
 function warehouses(){return Array.isArray(sc?.warehouses)?sc.warehouses.filter(x=>x&&x.active!==false):[]}
 function selectedLoc(){return String($('ys2Location')?.value||'')}
 function selectedWh(){return String($('ys2Warehouse')?.value||'')}
+
+function ddCloseAll(){document.querySelectorAll('#ysnV2Root .ys2-dd.open').forEach(x=>x.classList.remove('open'))}
+function ddSet(type,value,label){
+ const sel=$(type==='location'?'ys2Location':'ys2Warehouse');
+ const btn=$(type==='location'?'ys2LocationBtn':'ys2WarehouseBtn');
+ if(sel)sel.value=String(value||'');
+ if(btn)btn.textContent=label||((type==='location')?'Odaberi lokaciju...':'Odaberi skladište...');
+}
+function ddRender(type,rows){
+ const menu=$(type==='location'?'ys2LocationMenu':'ys2WarehouseMenu');
+ const dd=$(type==='location'?'ys2LocationDD':'ys2WarehouseDD');
+ const btn=$(type==='location'?'ys2LocationBtn':'ys2WarehouseBtn');
+ if(!menu||!dd||!btn)return;
+ menu.innerHTML='';
+ if(!rows.length){menu.innerHTML='<div class="ys2-dd-empty">Nema dostupnih opcija.</div>';return}
+ rows.forEach(x=>{
+   const b=document.createElement('button');b.type='button';b.className='ys2-dd-item';b.textContent=String(x.name||x.id||'');
+   b.dataset.value=String(x.id||'');
+   b.onclick=e=>{
+     e.preventDefault();e.stopPropagation();
+     ddSet(type,b.dataset.value,b.textContent);
+     dd.classList.remove('open');
+     if(type==='location'){fillWh()}else{resetBooking(false);drawCalendar();setState('3 · ODABERI DATUM U KALENDARU')}
+   };
+   menu.appendChild(b);
+ });
+}
+function ddToggle(type){
+ const dd=$(type==='location'?'ys2LocationDD':'ys2WarehouseDD'),btn=$(type==='location'?'ys2LocationBtn':'ys2WarehouseBtn');
+ if(!dd||!btn||btn.disabled)return;
+ const open=dd.classList.contains('open');ddCloseAll();if(!open)dd.classList.add('open');
+}
+
 function whRows(){const l=selectedLoc();return warehouses().filter(w=>!l||String(w.location_id)===l)}
 function contextReady(){return !!selectedLoc()&&!!selectedWh()}
 function detailsReady(){return Number($('ys2Pallets')?.value)>0&&Number($('ys2Sku')?.value)>0}
@@ -52542,7 +52586,10 @@ function mount(){
  root.innerHTML=`<div class="ys2-head"><div><span class="ys2-kicker">SUPPLIER · NOVA NAJAVA</span><h2>Nova najava dostave</h2><p>Odaberi lokaciju i skladište, zatim datum. Dnevna mapa se odmah otvara; nakon paleta i SKU-a odaberi zeleni slobodni termin.</p></div><div class="ys2-state" id="ys2State">UČITAVAM DODJELU</div></div>
  <div class="ys2-calendar-card">
    <div class="ys2-calendar-top"><div><strong>3 · ODABERI DATUM U KALENDARU</strong><small>Neradni dan možeš otvoriti za pregled; svi termini bit će crveni i nije ih moguće odabrati.</small></div>
-     <div class="ys2-scope"><div><label>1 · ODABERI LOKACIJU</label><select id="ys2Location"></select></div><div><label>2 · ODABERI SKLADIŠTE</label><select id="ys2Warehouse"></select></div></div>
+     <div class="ys2-scope">
+       <div><label>1 · ODABERI LOKACIJU</label><select id="ys2Location" aria-hidden="true" tabindex="-1"></select><div class="ys2-dd" id="ys2LocationDD"><button type="button" class="ys2-dd-btn" id="ys2LocationBtn">Odaberi lokaciju...</button><div class="ys2-dd-menu" id="ys2LocationMenu"></div></div></div>
+       <div><label>2 · ODABERI SKLADIŠTE</label><select id="ys2Warehouse" aria-hidden="true" tabindex="-1"></select><div class="ys2-dd" id="ys2WarehouseDD"><button type="button" class="ys2-dd-btn" id="ys2WarehouseBtn" disabled>Odaberi skladište...</button><div class="ys2-dd-menu" id="ys2WarehouseMenu"></div></div></div>
+     </div>
    </div>
    <div class="ys2-cal-nav"><button type="button" id="ys2Prev">‹</button><b id="ys2Month"></b><button type="button" id="ys2Next">›</button></div>
    <div class="ys2-cal-grid" id="ys2Calendar"></div>
@@ -52595,8 +52642,7 @@ async function resolveScope(){
  throw last||new Error('Supplier dodjela nije dostupna.');
 }
 function enableLocation(){
- const l=$('ys2Location');if(!l)return;
- l.disabled=false;l.removeAttribute('disabled');l.style.pointerEvents='auto';l.style.opacity='1';
+ const l=$('ys2Location'),btn=$('ys2LocationBtn');if(l){l.disabled=false;l.removeAttribute('disabled')}if(btn)btn.disabled=false;
 }
 async function init(){
  const root=$('ysnV2Root');root?.classList.add('ys2-scope-loading');root?.classList.remove('ys2-scope-ready');
@@ -52616,24 +52662,19 @@ async function init(){
 }
 function hydrateScope(){
  const l=$('ys2Location'),w=$('ys2Warehouse'),L=locations();if(!l||!w)return;
- const keep=String(l.value||'');
- l.innerHTML='<option value="">Odaberi lokaciju...</option>';
- L.forEach(x=>l.append(new Option(x.name||'Lokacija',x.id)));
- l.disabled=false;l.removeAttribute('disabled');l.style.pointerEvents='auto';l.style.opacity='1';
- l.value=L.some(x=>String(x.id)===keep)?keep:'';
- w.innerHTML='<option value="">Odaberi skladište...</option>';
- w.value='';w.disabled=true;
+ l.innerHTML='<option value="">Odaberi lokaciju...</option>';L.forEach(x=>l.append(new Option(x.name||'Lokacija',x.id)));l.value='';
+ w.innerHTML='<option value="">Odaberi skladište...</option>';w.value='';
+ ddSet('location','','Odaberi lokaciju...');ddSet('warehouse','','Odaberi skladište...');
+ ddRender('location',L);ddRender('warehouse',[]);
+ const lb=$('ys2LocationBtn'),wb=$('ys2WarehouseBtn');if(lb)lb.disabled=false;if(wb)wb.disabled=true;
  resetBooking(false);drawCalendar();
 }
 function fillWh(){
- const l=$('ys2Location'),w=$('ys2Warehouse'),rows=whRows();if(!l||!w)return;
- l.disabled=false;l.removeAttribute('disabled');l.style.pointerEvents='auto';
- w.innerHTML='<option value="">Odaberi skladište...</option>';
- rows.forEach(x=>w.append(new Option(x.name||'Skladište',x.id)));
- w.value='';
- if(selectedLoc()){w.disabled=false;w.removeAttribute('disabled');w.style.pointerEvents='auto';w.style.opacity='1'}else w.disabled=true;
- resetBooking(false);drawCalendar();
- setState(selectedLoc()?'2 · ODABERI SKLADIŠTE':'1 · ODABERI LOKACIJU');
+ const w=$('ys2Warehouse'),rows=whRows();if(!w)return;
+ w.innerHTML='<option value="">Odaberi skladište...</option>';rows.forEach(x=>w.append(new Option(x.name||'Skladište',x.id)));w.value='';
+ ddSet('warehouse','','Odaberi skladište...');ddRender('warehouse',rows);
+ const wb=$('ys2WarehouseBtn');if(wb)wb.disabled=!selectedLoc();
+ resetBooking(false);drawCalendar();setState(selectedLoc()?'2 · ODABERI SKLADIŠTE':'1 · ODABERI LOKACIJU');
 }
 function drawCalendar(){
  const g=$('ys2Calendar'),title=$('ys2Month');if(!g||!title)return;
@@ -52779,30 +52820,21 @@ function resetBooking(redraw=true){
 function bind(){
  $('ys2Prev').onclick=()=>{viewMonth=new Date(viewMonth.getFullYear(),viewMonth.getMonth()-1,1);drawCalendar()};
  $('ys2Next').onclick=()=>{viewMonth=new Date(viewMonth.getFullYear(),viewMonth.getMonth()+1,1);drawCalendar()};
- const loc=$('ys2Location'),wh=$('ys2Warehouse');
- loc.addEventListener('change',()=>{fillWh()},{capture:false});
- wh.addEventListener('change',()=>{resetBooking(false);drawCalendar();setState(selectedWh()?'3 · ODABERI DATUM U KALENDARU':'2 · ODABERI SKLADIŠTE')},{capture:false});
+ $('ys2LocationBtn').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();ddToggle('location')});
+ $('ys2WarehouseBtn').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();ddToggle('warehouse')});
+ document.addEventListener('click',e=>{if(!e.target.closest?.('#ys2LocationDD,#ys2WarehouseDD'))ddCloseAll()});
  $('ys2Pallets').addEventListener('input',scheduleReload);$('ys2Sku').addEventListener('input',scheduleReload);
  $('ys2Clear').onclick=()=>resetBooking(true);$('ys2Send').onclick=send;
  $('ys2RecommendBtn').onclick=recommendTerm;$('ys2OtherBtn').onclick=chooseOther;bindPdf();
  $('ys2Expand').onclick=()=>{const w=$('ys2Work'),on=!w.classList.contains('fullscreen');w.classList.toggle('fullscreen',on);document.body.classList.toggle('ys2-map-lock',on);$('ys2Expand').textContent=on?'× ZATVORI PUNI EKRAN':'⛶ POVEĆAJ MAPU'};
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('ys2Work')?.classList.contains('fullscreen')){$('ys2Work').classList.remove('fullscreen');document.body.classList.remove('ys2-map-lock');$('ys2Expand').textContent='⛶ POVEĆAJ MAPU'}});
- setInterval(()=>{
-   const l=$('ys2Location'),w=$('ys2Warehouse');if(!l||!w||!supplier())return;
-   if(sc&&locations().length){
-     if(l.options.length<=1)hydrateScope();
-     l.disabled=false;l.removeAttribute('disabled');l.style.pointerEvents='auto';
-     if(selectedLoc()&&w.options.length<=1)fillWh();
-     if(selectedLoc()){w.disabled=false;w.removeAttribute('disabled');w.style.pointerEvents='auto'}
-   }
- },900);
 }
 function arm(){if(!supplier())return;mount()}
 ['yardivo:login','yardivo:authenticated','yardivo:session-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(arm,180)));
 document.addEventListener('click',e=>{if(e.target.closest?.('[data-ysp-view="new"]'))setTimeout(arm,40)},true);
 const mo=new MutationObserver(()=>{if(supplier()&&!$('ysnV2Root')&&$('ysnRoot'))arm()});mo.observe(document.documentElement,{subtree:true,childList:true});
 setTimeout(arm,300);
-window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-booking-stabilized-final';
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-custom-dropdown-final';
 })();
 </script>
 
