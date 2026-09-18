@@ -8259,15 +8259,15 @@ AUTOMATSKA PREPORUKA</small>
 <section class="panel" data-yardivo-settings="reception" id="qrMobileSettingsPanel">
 <div class="panel-head">
 <div>
-<h2>QR / MOBILE PRIJAM</h2>
-<small>Prijam i Admin · odabir načina evidentiranja statusa na rampi</small>
+<h2>QR SCAN · ONE QR</h2>
+<small>Admin · globalno uključi ili isključi izdavanje i skeniranje ONE QR koda</small>
 </div>
 <span class="master-sync-state ok" id="qrMobileSettingsBadge">—</span>
 </div>
 <div class="qr-mobile-setting-body">
 <div class="qr-mobile-setting-row">
 <div class="qr-mobile-setting-copy">
-<strong>MOBILNO QR SKENIRANJE</strong>
+<strong>QR SCAN · TURN ON / OFF</strong>
 <small>Kada je uključeno, koristi se JEDAN YARDIVO QR za cijeli dolazak. Porta istim QR-om evidentira ULAZ, a Prijam istim QR-om evidentira NA RAMPI. Kada je isključeno, Prijam/Admin ih unose ručno u Prijam robe.</small>
 </div>
 <label class="qr-mobile-toggle">
@@ -8293,8 +8293,8 @@ AUTOMATSKA PREPORUKA</small>
 <section class="danger-zone">
 <div class="panel-head"><div><h2>OPASNA ZONA</h2><small>Samo Admin</small></div></div>
 <div class="danger-body">
-<p><strong>RESET YARDIVO</strong> vraća sustav u apsolutni Factory Zero. Brišu se svi poslovni podaci, konfiguracija, povijest, QR/Gate podaci, notifikacije, audit i svi drugi korisnički računi. <strong>Ostaje samo Admin dujemales.</strong></p>
-<button class="delete-all-btn" id="deleteAllDataBtn" type="button">OBRIŠI SVE PODATKE</button>
+<p><strong>FACTORY ZERO</strong> se izvršava kroz autoritativni RESET YARDIVO ispod. Briše svu poslovnu povijest, Master podatke, korisnike i Auth račune osim canonical Admina <strong>dujemales</strong>.</p>
+<button class="delete-all-btn" id="deleteAllDataBtn" type="button" hidden aria-hidden="true">LEGACY RESET RETIRED</button>
 </div>
 </section>
 </div>
@@ -10055,26 +10055,71 @@ function reloadAnnouncementsFromPersistentStorage(){
 // ===== PRIJAM ROBE — koristi isti `announcements` kao Unos najave / Dnevna / Tjedna mapa =====
 
 const YARDIVO_QR_MOBILE_SETTING_KEY='yardivo_ramp_qr_mobile_v1';
+const YARDIVO_QR_SCAN_SETTING_KEY='yardivo_qr_scan_cfg_v583';
 
 function yardivoQrMobileEnabled(){
+  const serverRaw=safeStorage.getItem(YARDIVO_QR_SCAN_SETTING_KEY);
+  if(serverRaw!==null&&serverRaw!==''){
+    try{const x=JSON.parse(serverRaw);if(x&&typeof x==='object'&&Object.prototype.hasOwnProperty.call(x,'enabled'))return !!x.enabled;if(typeof x==='boolean')return x}catch(_){}
+  }
   const raw=safeStorage.getItem(YARDIVO_QR_MOBILE_SETTING_KEY);
   if(raw===null||raw==='')return true;
   return raw==='1'||raw==='true'||raw==='on';
 }
-function yardivoSetQrMobileEnabled(enabled){
-  if(!['admin','reception'].includes(String(currentSession?.role||'').toLowerCase())){
-    alert('Samo Prijam ili Admin mogu mijenjati QR / Mobile postavku.');
+async function yardivoQrToken(){
+  const raw=String(window.__yardivoSupplierAccessToken||'').trim();if(raw)return raw;
+  try{
+    const c=await window.YardivoAuth?.client?.();let ss=(await c?.auth?.getSession?.())?.data?.session||null;
+    if(!ss?.access_token)ss=(await c?.auth?.refreshSession?.())?.data?.session||null;
+    return String(ss?.access_token||'');
+  }catch(_){return''}
+}
+async function yardivoPersistQrScanSetting(enabled){
+  const t=await yardivoQrToken();if(!t)throw new Error('ONLINE PRIJAVA NIJE AKTIVNA.');
+  const r=await fetch('https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-sync',{method:'POST',headers:{apikey:'sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy',Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({action:'set_state',key:YARDIVO_QR_SCAN_SETTING_KEY,value:JSON.stringify({enabled:!!enabled}),clientId:'yardivo-qr-settings-v583'})});
+  const d=await r.json().catch(()=>({}));if(!r.ok||d?.ok===false)throw new Error(d?.error||('HTTP '+r.status));return d;
+}
+async function yardivoLoadQrScanSetting(){
+  if(String(currentSession?.role||'').toLowerCase()!=='admin')return;
+  const t=await yardivoQrToken();if(!t)return;
+  try{
+    const r=await fetch('https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-sync',{method:'POST',headers:{apikey:'sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy',Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({action:'bootstrap',clientId:'yardivo-qr-settings-read-v583'})});
+    const d=await r.json();if(!r.ok||d?.ok===false)return;
+    const row=(Array.isArray(d?.state)?d.state:[]).find(x=>String(x?.key||'')===YARDIVO_QR_SCAN_SETTING_KEY&&!x?.deleted);
+    if(row){
+      safeStorage.setItem(YARDIVO_QR_SCAN_SETTING_KEY,String(row.value_json||'{"enabled":true}'));
+      let x={enabled:true};try{x=JSON.parse(String(row.value_json||'{}'))||x}catch(_){}
+      safeStorage.setItem(YARDIVO_QR_MOBILE_SETTING_KEY,x.enabled===false?'0':'1');
+      renderQrMobileAdminSetting();
+    }
+  }catch(_){}
+}
+async function yardivoSetQrMobileEnabled(enabled){
+  if(String(currentSession?.role||'').toLowerCase()!=='admin'){
+    alert('Samo Admin može mijenjati globalni QR SCAN ON / OFF.');
     return;
   }
+  const before=yardivoQrMobileEnabled();
   safeStorage.setItem(YARDIVO_QR_MOBILE_SETTING_KEY,enabled?'1':'0');
+  safeStorage.setItem(YARDIVO_QR_SCAN_SETTING_KEY,JSON.stringify({enabled:!!enabled}));
   renderQrMobileAdminSetting();
   if(typeof renderReceiving==='function')renderReceiving();
+  try{
+    await yardivoPersistQrScanSetting(enabled);
+    try{showYmsToast?.('success',enabled?'QR SCAN UKLJUČEN':'QR SCAN ISKLJUČEN',enabled?'Porta i Prijam mogu koristiti ONE QR skeniranje.':'QR izdavanje i skeniranje su zaustavljeni; Prijam radi ručno.')}catch(_){}
+  }catch(e){
+    safeStorage.setItem(YARDIVO_QR_MOBILE_SETTING_KEY,before?'1':'0');
+    safeStorage.setItem(YARDIVO_QR_SCAN_SETTING_KEY,JSON.stringify({enabled:before}));
+    renderQrMobileAdminSetting();
+    if(typeof renderReceiving==='function')renderReceiving();
+    alert('QR SCAN postavka nije spremljena na server: '+String(e?.message||e));
+  }
 }
 function renderQrMobileAdminSetting(){
   const panel=document.getElementById('qrMobileSettingsPanel');
   if(!panel)return;
   const isAdmin=currentSession?.role==='admin';
-  const canManageQr=isAdmin||currentSession?.role==='reception';
+  const canManageQr=isAdmin;
   panel.style.display=canManageQr?'':'none';
   if(!canManageQr)return;
   const on=yardivoQrMobileEnabled();
@@ -10215,9 +10260,9 @@ window.setReceivingAnnouncementStatus=function(id,status,source='manual'){
   const toggle=document.getElementById('qrMobileEnabledToggle');
   if(toggle){
     toggle.addEventListener('change',function(){
-      if(!['admin','reception'].includes(String(currentSession?.role||'').toLowerCase())){
+      if(String(currentSession?.role||'').toLowerCase()!=='admin'){
         this.checked=yardivoQrMobileEnabled();
-        alert('Samo Prijam ili Admin mogu mijenjati QR / Mobile postavku.');
+        alert('Samo Admin može mijenjati globalni QR SCAN ON / OFF.');
         return;
       }
       const next=!!this.checked;
@@ -29968,7 +30013,7 @@ window.YardivoAdminUsersServerV583=window.YardivoAdminUsersServerV583||{};
 window.YardivoAdminUsersServerV583.invoke=invokeUsers;
 
 function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function roleLabel(r){return ({admin:'Admin',manager:'Voditelj',inventory:'Upravljanje zalihama',reception:'Prijam',gate:'Porta',supplier:'Dobavljač'})[normRole(r)]||r||'—'}
+function roleLabel(r){return ({admin:'Admin',manager:'Voditelj',inventory:'Upravljanje zalihama',reception:'Prijam',gate:'Porta',supplier:'Dobavljač',auth_orphan:'AUTH BEZ YARDIVO PROFILA'})[normRole(r)]||r||'—'}
 function locLabel(l){if(l==='ALL')return 'Sve lokacije';try{const d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');const row=(d.locations||[]).find(x=>String(x.id)===String(l));if(row)return row.name||row.id}catch(_){}return l||'—'}
 
 async function renderProfiles(){
@@ -29987,9 +30032,7 @@ async function renderProfiles(){
         <div>${esc(locLabel(u.location))}</div>
         <div>${u.active?'AKTIVAN':'DEAKTIVIRAN'}</div>
         <div>
-          <button class="action" data-profile-toggle="${esc(u.auth_user_id)}" data-active="${u.active?'1':'0'}">${u.active?'DEAKT.':'AKTIV.'}</button>
-          <button class="action" data-profile-password="${esc(u.auth_user_id)}" data-profile-user="${esc(u.username)}">PROMIJENI ŠIFRU</button>
-          ${normRole(u.app_role)==='admin'?'':` <button class="action danger" data-profile-delete="${esc(u.auth_user_id)}">OBRIŠI</button>`}
+          ${u.auth_orphan?`<button class="action danger" data-profile-delete="${esc(u.auth_user_id)}">OBRIŠI AUTH</button>`:`<button class="action" data-profile-toggle="${esc(u.auth_user_id)}" data-active="${u.active?'1':'0'}">${u.active?'DEAKT.':'AKTIV.'}</button> <button class="action" data-profile-password="${esc(u.auth_user_id)}" data-profile-user="${esc(u.username)}">PROMIJENI ŠIFRU</button>${normRole(u.app_role)==='admin'?'':` <button class="action danger" data-profile-delete="${esc(u.auth_user_id)}">OBRIŠI</button>`}`}
         </div>
       </div>`).join('');
 
@@ -30006,7 +30049,7 @@ async function renderProfiles(){
         const username=btn.dataset.profileUser||'korisnik';
         const next=window.prompt(`NOVA ŠIFRA · ${username}\nUpiši novu šifru (najmanje 8 znakova).`);
         if(next===null)return;
-        if(String(next).length<6){alert('Šifra mora imati najmanje 8 znakova.');return}
+        if(String(next).length<8){alert('Šifra mora imati najmanje 8 znakova.');return}
         const again=window.prompt(`POTVRDA ŠIFRE · ${username}\nPonovno upiši novu šifru.`);
         if(again===null)return;
         if(next!==again){alert('Šifre se ne podudaraju.');return}
@@ -36096,10 +36139,42 @@ window.YardivoNotificationUXV583={delete:delN,decorate:decorateHistory};
 (function(){'use strict';
 const K='yardivo_auto_replan_cfg_v1',D={enabled:false,mode:'PAUSED',lateThreshold:20,horizonMinutes:240,maxShiftMinutes:240,scanSeconds:30,palletsPerHour:33,gapWeight:1.15};
 function cfg(){try{return {...D,...JSON.parse(localStorage.getItem(K)||'{}')}}catch(_){return {...D}}}
-function save(c){localStorage.setItem(K,JSON.stringify(c));try{if(typeof putCloudState==='function')putCloudState(K,JSON.stringify(c))}catch(_){};try{window.YardivoSmartReplanning?.applyState?.()}catch(_){};render()}
-function inject(){const v=document.getElementById('settings');if(!v||document.getElementById('yardivoSmartEngineSettingsV583'))return;const host=v.querySelector('.settings-grid,.settings-content,.master-settings-body')||v;const p=document.createElement('section');p.id='yardivoSmartEngineSettingsV583';p.innerHTML=`<div class="yse-head"><div><h3>YARDIVO SMART · PLANERSKI MOTOR</h3><p>Parametri za procjenu trajanja istovara i automatsko traženje najboljeg slobodnog gap-a. Kad je Smart OFF, motor ne radi automatske promjene i ne šalje Smart notifikacije.</p></div><span class="yse-status" id="yseStatus">SMART ON</span></div><div class="yse-grid"><div class="yse-field"><label>BRZINA ISKRCAJA · PALETA / SAT</label><input id="yseRate" type="number" min="1" max="200" step="1"><small>Početna vrijednost 33 pal/h. Iz nje YARDIVO računa potrebno trajanje termina kad nema pouzdanije povijesti.</small></div><div class="yse-field"><label>PRAG KAŠNJENJA · MIN</label><input id="yseLate" type="number" min="5" max="180" step="5"><small>Nakon ovog kašnjenja Smart traži sigurniji termin/rampu.</small></div><div class="yse-field"><label>HORIZONT PRETRAGE · MIN</label><input id="yseHorizon" type="number" min="30" max="1440" step="15"><small>Koliko unaprijed motor analizira najave i konflikte.</small></div><div class="yse-field"><label>MAX POMAK TERMINA · MIN</label><input id="yseShift" type="number" min="15" max="1440" step="15"><small>Najveći dopušteni pomak istog dana prije nego kandidat izgubi prioritet.</small></div><div class="yse-field"><label>TEŽINA GAP-A</label><input id="yseGap" type="number" min="0" max="5" step="0.05"><small>Veća vrijednost jače preferira kompaktne praznine između postojećih termina.</small></div><div class="yse-field"><label>INTERVAL PROVJERE · SEK</label><input id="yseScan" type="number" min="10" max="300" step="5"><small>Koliko često Smart motor provjerava promjene dok je uključen.</small></div></div><div class="yse-actions"><button type="button" class="yse-save" id="yseSave">SPREMI PARAMETRE</button><span class="yse-note" id="yseNote">—</span></div>`;host.appendChild(p);p.querySelector('#yseSave').addEventListener('click',()=>{const c=cfg();c.palletsPerHour=Math.max(1,Number(p.querySelector('#yseRate').value||33));c.lateThreshold=Math.max(5,Number(p.querySelector('#yseLate').value||20));c.horizonMinutes=Math.max(30,Number(p.querySelector('#yseHorizon').value||240));c.maxShiftMinutes=Math.max(15,Number(p.querySelector('#yseShift').value||240));c.gapWeight=Math.max(0,Number(p.querySelector('#yseGap').value||1.15));c.scanSeconds=Math.max(10,Number(p.querySelector('#yseScan').value||30));save(c);p.querySelector('#yseNote').textContent='Spremljeno · '+new Date().toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'})});render()}
-function render(){const p=document.getElementById('yardivoSmartEngineSettingsV583');if(!p)return;if(document.activeElement?.closest?.('#yardivoSmartEngineSettingsV583'))return;const c=cfg(),on=!!c.enabled&&c.mode!=='PAUSED';p.querySelector('#yseRate').value=c.palletsPerHour;p.querySelector('#yseLate').value=c.lateThreshold;p.querySelector('#yseHorizon').value=c.horizonMinutes;p.querySelector('#yseShift').value=c.maxShiftMinutes;p.querySelector('#yseGap').value=c.gapWeight;p.querySelector('#yseScan').value=c.scanSeconds;const st=p.querySelector('#yseStatus');st.textContent=on?'SMART ON':'SMART OFF';st.classList.toggle('off',!on)}
-window.addEventListener('load',()=>setTimeout(()=>{inject();render()},900));document.addEventListener('click',e=>{if(e.target.closest?.('[data-view="settings"]'))setTimeout(()=>{inject();render()},80)},true);window.YardivoSmartEngineSettingsV583={get:cfg,save};
+function masterSmart(){
+  try{
+    const m=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{};
+    return {...{enabled:false,mode:'PAUSED'},...(m.smart||{})};
+  }catch(_){return {enabled:false,mode:'PAUSED'}}
+}
+async function togglePower(){
+  if(window.YardivoSmartSupplierAccountsFixV583?.toggleSmart){
+    await window.YardivoSmartSupplierAccountsFixV583.toggleSmart();
+  }else{
+    let m={};try{m=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{}}catch(_){}
+    const st={...{enabled:false,mode:'PAUSED'},...(m.smart||{})},on=!!st.enabled&&st.mode!=='PAUSED';
+    m.smart={...st,enabled:!on,mode:!on?'ASSIST':'PAUSED'};
+    m.__masterUpdatedAtV583=new Date().toISOString();
+    localStorage.setItem('yardivo_master_data_registry_v583',JSON.stringify(m));
+    try{await window.YardivoMasterDataV583?.save?.(m)}catch(_){}
+  }
+  const st=masterSmart(),c=cfg();
+  c.enabled=!!st.enabled;c.mode=st.mode||'PAUSED';
+  localStorage.setItem(K,JSON.stringify(c));
+  try{if(typeof putCloudState==='function')await Promise.resolve(putCloudState(K,JSON.stringify(c)))}catch(_){}
+  try{window.YardivoSmartReplanning?.applyState?.()}catch(_){}
+  render();
+}
+function save(c){
+ const st=masterSmart();c.enabled=!!st.enabled;c.mode=st.mode||'PAUSED';
+ localStorage.setItem(K,JSON.stringify(c));
+ try{if(typeof putCloudState==='function')putCloudState(K,JSON.stringify(c))}catch(_){}
+ try{window.YardivoSmartReplanning?.applyState?.()}catch(_){}
+ render()
+}
+function inject(){const v=document.getElementById('settings');if(!v||document.getElementById('yardivoSmartEngineSettingsV583'))return;const host=v.querySelector('.settings-grid,.settings-content,.master-settings-body')||v;const p=document.createElement('section');p.id='yardivoSmartEngineSettingsV583';p.innerHTML=`<div class="yse-head"><div><h3>YARDIVO SMART · PLANERSKI MOTOR</h3><p>Parametri za procjenu trajanja istovara i automatsko traženje najboljeg slobodnog gap-a. Kad je Smart OFF, motor ne radi automatske promjene i ne šalje Smart notifikacije.</p></div><div class="yse-power-wrap"><span class="yse-status" id="yseStatus">SMART OFF</span><button type="button" class="yv-unified-switch" id="ysePower">OFF</button></div></div><div class="yse-grid"><div class="yse-field"><label>BRZINA ISKRCAJA · PALETA / SAT</label><input id="yseRate" type="number" min="1" max="200" step="1"><small>Početna vrijednost 33 pal/h. Iz nje YARDIVO računa potrebno trajanje termina kad nema pouzdanije povijesti.</small></div><div class="yse-field"><label>PRAG KAŠNJENJA · MIN</label><input id="yseLate" type="number" min="5" max="180" step="5"><small>Nakon ovog kašnjenja Smart traži sigurniji termin/rampu.</small></div><div class="yse-field"><label>HORIZONT PRETRAGE · MIN</label><input id="yseHorizon" type="number" min="30" max="1440" step="15"><small>Koliko unaprijed motor analizira najave i konflikte.</small></div><div class="yse-field"><label>MAX POMAK TERMINA · MIN</label><input id="yseShift" type="number" min="15" max="1440" step="15"><small>Najveći dopušteni pomak istog dana prije nego kandidat izgubi prioritet.</small></div><div class="yse-field"><label>TEŽINA GAP-A</label><input id="yseGap" type="number" min="0" max="5" step="0.05"><small>Veća vrijednost jače preferira kompaktne praznine između postojećih termina.</small></div><div class="yse-field"><label>INTERVAL PROVJERE · SEK</label><input id="yseScan" type="number" min="10" max="300" step="5"><small>Koliko često Smart motor provjerava promjene dok je uključen.</small></div></div><div class="yse-actions"><button type="button" class="yse-save" id="yseSave">SPREMI PARAMETRE</button><span class="yse-note" id="yseNote">—</span></div>`;host.appendChild(p);p.querySelector('#yseSave').addEventListener('click',()=>{const c=cfg();c.palletsPerHour=Math.max(1,Number(p.querySelector('#yseRate').value||33));c.lateThreshold=Math.max(5,Number(p.querySelector('#yseLate').value||20));c.horizonMinutes=Math.max(30,Number(p.querySelector('#yseHorizon').value||240));c.maxShiftMinutes=Math.max(15,Number(p.querySelector('#yseShift').value||240));c.gapWeight=Math.max(0,Number(p.querySelector('#yseGap').value||1.15));c.scanSeconds=Math.max(10,Number(p.querySelector('#yseScan').value||30));save(c);p.querySelector('#yseNote').textContent='Spremljeno · '+new Date().toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'})});
+p.querySelector('#ysePower')?.addEventListener('click',async()=>{const b=p.querySelector('#ysePower');if(b)b.disabled=true;try{await togglePower()}finally{if(b)b.disabled=false}});
+render()}
+function render(){const p=document.getElementById('yardivoSmartEngineSettingsV583');if(!p)return;if(document.activeElement?.closest?.('#yardivoSmartEngineSettingsV583 input'))return;const c=cfg(),ms=masterSmart(),on=!!ms.enabled&&ms.mode!=='PAUSED';p.querySelector('#yseRate').value=c.palletsPerHour;p.querySelector('#yseLate').value=c.lateThreshold;p.querySelector('#yseHorizon').value=c.horizonMinutes;p.querySelector('#yseShift').value=c.maxShiftMinutes;p.querySelector('#yseGap').value=c.gapWeight;p.querySelector('#yseScan').value=c.scanSeconds;const st=p.querySelector('#yseStatus'),b=p.querySelector('#ysePower');if(st){st.textContent=on?'SMART ON':'SMART OFF';st.classList.toggle('off',!on)}if(b){b.textContent=on?'ON':'OFF';b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on))}document.body.classList.toggle('yardivo-smart-off',!on)}
+window.addEventListener('load',()=>setTimeout(()=>{inject();render()},900));document.addEventListener('click',e=>{if(e.target.closest?.('[data-view="settings"]'))setTimeout(()=>{inject();render()},80)},true);window.YardivoSmartEngineSettingsV583={get:cfg,save,render,toggle:togglePower};
 })();
 </script>
 <style id="yardivo-v583-original-login-blue-authority">
@@ -45671,42 +45746,24 @@ function restoreAuthStorage(saved){for(const [name,vals] of Object.entries(saved
 function emptyMaster(){return {suppliers:[],locations:[],warehouses:[],responsible_people:[],smart:{enabled:false,mode:'PAUSED'},__factoryZeroV583:true,__cleanMasterFoundationV583:true,__resetYardivoV583:true,__masterUpdatedAtV583:new Date().toISOString()}}
 function resetRuntimeArrays(){for(const n of ['announcements','incidents','notifications','notificationHistory','trucks','unannounced'])try{if(Array.isArray(window[n]))window[n].length=0}catch(_){};try{if(typeof announcements!=='undefined'&&Array.isArray(announcements))announcements.length=0;if(typeof incidents!=='undefined'&&Array.isArray(incidents))incidents.length=0;if(typeof notifications!=='undefined'&&Array.isArray(notifications))notifications.length=0}catch(_){}}
 function localHardReset(keep){
- const auth=preserveAuthStorage();
- const session={...(window.currentSession||{}),user:keep,username:keep,role:'admin',app_role:'admin',location:'ALL',locations:[],warehouses:[],all_locations:true,all_warehouses:true,serverAuthorized:true};
-
- /* Scrub every YARDIVO business/config/history key known to the browserless
-    storage layer. Theme/auth are not business history; Supabase auth is restored below. */
- try{
-   const virtual=window.YardivoBrowserlessStorageV583?.businessKeys?.()||[];
-   virtual.forEach(k=>{try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(_){}});
- }catch(_){}
- for(const st of [localStorage,sessionStorage]){
-   let keys=[];try{for(let i=0;i<st.length;i++){const k=st.key(i);if(k)keys.push(k)}}catch(_){}
-   for(const k of keys){
-     if(/^sb-[a-z0-9_-]+-auth-token$/i.test(k)||/^supabase\.auth\./i.test(k))continue;
-     if(/^(yardivo|studenac|yms)_/i.test(k)||/^yardivo/i.test(k)){
-       try{st.removeItem(k)}catch(_){}
-     }
-   }
- }
-
- const master=emptyMaster();
- try{
-   localStorage.setItem(MASTER,JSON.stringify(master));
-   localStorage.setItem('yardivo_master_boot_cache_v583',JSON.stringify(master));
-   localStorage.setItem('yardivo_auto_replan_cfg_v1',JSON.stringify({enabled:false,mode:'PAUSED'}));
-   localStorage.setItem('yardivo_qr_scan_cfg_v583',JSON.stringify({enabled:false}));
-   localStorage.setItem('yardivo_ramp_qr_mobile_v1','0');
-   localStorage.setItem(CLEAN_EPOCH,new Date().toISOString());
-   EMPTY_ARRAY_KEYS.forEach(k=>localStorage.setItem(k,'[]'));
- }catch(_){}
-
+ const auth=preserveAuthStorage(),m=emptyMaster();
+ try{localStorage.clear()}catch(_){}
+ try{sessionStorage.clear()}catch(_){}
  restoreAuthStorage(auth);
- window.currentSession=session;
- try{if(typeof currentSession!=='undefined')currentSession=session}catch(_){}
+ try{
+  localStorage.setItem(MASTER,JSON.stringify(m));
+  localStorage.setItem('yardivo_master_boot_cache_v583',JSON.stringify(m));
+  localStorage.setItem('yardivo_auto_replan_cfg_v1',JSON.stringify({enabled:false,mode:'PAUSED'}));
+  localStorage.setItem('yardivo_qr_scan_cfg_v583',JSON.stringify({enabled:false}));
+  localStorage.setItem('yardivo_ramp_qr_mobile_v1','0');
+  localStorage.setItem(CLEAN_EPOCH,new Date().toISOString());
+ }catch(_){}
+ const session={user:keep,username:keep,role:'admin',app_role:'admin',location:'ALL',locations:[],warehouses:[],all_locations:true,all_warehouses:true,serverAuthorized:true};
+ window.currentSession=session;try{if(typeof currentSession!=='undefined')currentSession=session}catch(_){}
  try{window.activeWarehouse='';if(typeof activeWarehouse!=='undefined')activeWarehouse=''}catch(_){}
  resetRuntimeArrays();
  try{window.YardivoNotificationsV583?.clear?.()}catch(_){}
+ try{window.YardivoBrowserlessStorageV583?.purge?.()}catch(_){}
 }
 async function client(){const c=await window.YardivoAuth?.client?.();if(!c)throw new Error('ONLINE AUTH NIJE SPREMAN.');return c}
 async function adminInvoke(action,payload={}){if(window.YardivoAdminUsersServerV583?.invoke)return await window.YardivoAdminUsersServerV583.invoke(action,payload);const c=await client(),{data,error}=await c.functions.invoke('yardivo-admin-users',{body:{action,...payload}});if(error)throw error;if(data?.error)throw new Error(data.error);return data?.data??data}
@@ -45714,79 +45771,45 @@ async function factoryResetServer(){const c=await client(),{data,error}=await c.
 async function deleteOtherUsers(keep){const res=await adminInvoke('list',{}),users=Array.isArray(res)?res:(Array.isArray(res?.users)?res.users:[]),k=users.find(u=>norm(u?.username)===keep&&norm(u?.app_role)==='admin'&&u?.active!==false);if(!k)throw new Error('Trenutni Admin nije pronađen na serveru.');const failed=[];let deleted=0;for(const u of users){if(!u?.auth_user_id||u.auth_user_id===k.auth_user_id)continue;try{await adminInvoke('delete',{auth_user_id:u.auth_user_id});deleted++}catch(e){failed.push(`${u.username||u.auth_user_id}: ${e?.message||e}`)}}if(failed.length)throw new Error('Nisu obrisani svi drugi korisnici: '+failed.join(' | '));return {deleted,keeper:k}}
 function rerenderEmpty(){for(const n of ['render','renderAnnouncements','renderAnnouncementSchedule','renderDailyMap','renderWeeklyMap','renderReceiving','renderOverview','renderDashboard','renderRampe','renderDockOverview','renderCheckinPro','renderPlannerPro','renderSupplierProfiles'])try{if(typeof window[n]==='function')window[n]()}catch(_){};try{window.YardivoMasterFoundationV583?.render?.();window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{source:'reset-yardivo'}}));window.dispatchEvent(new CustomEvent('yardivo:context-changed',{detail:{location:'',warehouse:''}}))}catch(_){}}
 async function verifyEmpty(keep){
- const checks={localAnnouncements:-1,localIncidents:-1,locations:-1,warehouses:-1,suppliers:-1,responsible_people:-1,smartOff:false,qrOff:false,users:null};
+ const checks={localAnnouncements:-1,localIncidents:-1,locations:-1,warehouses:-1,suppliers:-1,responsiblePeople:-1,qrEnabled:null,users:null};
  try{
-   checks.localAnnouncements=JSON.parse(localStorage.getItem('yardivo_yms_announcements_v1')||'[]').length;
-   checks.localIncidents=JSON.parse(localStorage.getItem('yardivo_yms_incidents_v1')||'[]').length;
-   const m=JSON.parse(localStorage.getItem(MASTER)||'{}');
-   checks.locations=(m.locations||[]).length;
-   checks.warehouses=(m.warehouses||[]).length;
-   checks.suppliers=(m.suppliers||[]).length;
-   checks.responsible_people=(m.responsible_people||[]).length;
-   checks.smartOff=m?.smart?.enabled===false&&String(m?.smart?.mode||'').toUpperCase()==='PAUSED';
-   const q=JSON.parse(localStorage.getItem('yardivo_qr_scan_cfg_v583')||'{"enabled":false}');
-   checks.qrOff=q.enabled===false;
+  checks.localAnnouncements=JSON.parse(localStorage.getItem('yardivo_yms_announcements_v1')||'[]').length;
+  checks.localIncidents=JSON.parse(localStorage.getItem('yardivo_yms_incidents_v1')||'[]').length;
+  const m=JSON.parse(localStorage.getItem(MASTER)||'{}');
+  checks.locations=(m.locations||[]).length;checks.warehouses=(m.warehouses||[]).length;checks.suppliers=(m.suppliers||[]).length;checks.responsiblePeople=(m.responsible_people||[]).length;
+  checks.qrEnabled=JSON.parse(localStorage.getItem('yardivo_qr_scan_cfg_v583')||'{"enabled":false}').enabled===true;
  }catch(_){}
- try{
-   const r=await adminInvoke('list',{}),u=Array.isArray(r)?r:(r?.users||[]);
-   checks.users=u.map(x=>({username:norm(x.username),role:norm(x.app_role),active:x.active!==false}));
- }catch(_){}
+ try{const r=await adminInvoke('list',{}),u=Array.isArray(r)?r:(r?.users||[]);checks.users=u.map(x=>({username:norm(x.username),role:norm(x.app_role),active:x.active!==false}))}catch(_){}
  const userOk=Array.isArray(checks.users)&&checks.users.length===1&&checks.users[0].username===keep&&checks.users[0].role==='admin'&&checks.users[0].active;
- const dataOk=checks.localAnnouncements===0&&checks.localIncidents===0&&checks.locations===0&&checks.warehouses===0&&checks.suppliers===0&&checks.responsible_people===0&&checks.smartOff&&checks.qrOff;
- return {ok:dataOk&&userOk,dataOk,userOk,checks};
+ const dataOk=checks.localAnnouncements===0&&checks.localIncidents===0&&checks.locations===0&&checks.warehouses===0&&checks.suppliers===0&&checks.responsiblePeople===0&&checks.qrEnabled===false;
+ return {ok:dataOk&&userOk,dataOk,userOk,checks}
 }
 async function resetYardivo(){
- if(busy)return;
- let keep;try{keep=keeper()}catch(e){alert(e.message);return}
- if(!confirm(`RESET YARDIVO — APSOLUTNI FACTORY ZERO
-
-Brišu se SVE lokacije, skladišta, rampe, dobavljači, odgovorne osobe, najave, Supplier najave, incidenti, QR/Gate podaci, scanovi, notifikacije, audit/povijest, Smart stanje i svi drugi korisnički računi.
-
-OSTAJE SAMO ADMIN dujemales.
-
-Nastaviti?`))return;
+ if(busy)return;let keep;
+ try{keep=keeper()}catch(e){alert(e.message);return}
+ if(!confirm(`RESET YARDIVO — POTPUNI FACTORY ZERO\n\nBriše se SVE: lokacije, skladišta, rampe, dobavljači, odgovorne osobe, najave, Supplier najave, incidenti, QR/Gate povijest, notifikacije, audit, app state i svi drugi korisnici/Auth računi.\n\nOstaje samo canonical Admin dujemales.\n\nNastaviti?`))return;
  const typed=prompt('Za konačnu potvrdu upiši točno:\nRESET YARDIVO');
  if(String(typed||'').trim().toUpperCase()!=='RESET YARDIVO')return;
- const btn=document.getElementById('yardivoResetYardivoBtn');
- busy=true;if(btn){btn.disabled=true;btn.textContent='RESETIRAM YARDIVO…'}
+ const btn=document.getElementById('yardivoResetYardivoBtn');busy=true;if(btn){btn.disabled=true;btn.textContent='RESETIRAM YARDIVO…'}
  try{
-   status('1/4 · Provjeravam canonical Admin račun…');
-   const before=await adminInvoke('list',{}),users=Array.isArray(before)?before:(before?.users||[]);
-   if(!users.some(u=>norm(u.username)===keep&&norm(u.app_role)==='admin'&&u.active!==false))throw new Error('Aktivni Admin dujemales nije pronađen. Ništa nije obrisano.');
-
-   status('2/4 · Server Factory Zero: brišem sve podatke, povijest i druge korisnike…');
-   const server=await factoryResetServer();
-   if(!server?.factoryZero||Number(server?.users)!==1)throw new Error('Server nije potvrdio apsolutni Factory Zero.');
-
-   status('3/4 · Čistim lokalni runtime, cache i stare Master podatke…');
-   localHardReset(keep);rerenderEmpty();
-
-   status('4/4 · Verificiram prazni YARDIVO…');
-   const v=await verifyEmpty(keep);
-   if(!v.ok)throw new Error('Server je resetiran, ali lokalna završna verifikacija nije čista.');
-
-   status(`✓ FACTORY ZERO · 0 POVIJESTI · OSTAO JE SAMO ${keep}`,'ok');
-   try{showYmsToast?.('success','YARDIVO FACTORY ZERO','Sve je vraćeno na 0. Ostao je samo Admin dujemales.')}catch(_){}
-   alert(`YARDIVO DEV je vraćen na 0.
-
-0 lokacija
-0 skladišta
-0 dobavljača
-0 odgovornih osoba
-0 najava / incidenata / QR povijesti
-0 drugih korisnika
-SMART OFF
-QR SCAN OFF
-
-Ostao je samo Admin dujemales.
-Sada ponovno gradiš sustav kroz MASTER PODATKE.`);
+  status('1/5 · Provjeravam canonical Admina dujemales…');
+  const before=await adminInvoke('list',{}),users=Array.isArray(before)?before:(before?.users||[]);
+  if(!users.some(u=>norm(u.username)===keep&&norm(u.app_role)==='admin'&&u.active!==false))throw new Error('Aktivni Admin dujemales nije pronađen. Ništa nije obrisano.');
+  status('2/5 · Server Factory Zero briše poslovne podatke, povijest i druge Auth korisnike…');
+  const server=await factoryResetServer();
+  if(!server?.factoryZero||server?.users!==1||!Array.isArray(server?.app_state_keys)||server.app_state_keys.length!==4)throw new Error('Server nije potvrdio potpuni Factory Zero v3.');
+  status('3/5 · Čistim sav lokalni YARDIVO state i cache…');
+  localHardReset(keep);
+  status('4/5 · Vraćam prazan Master i SMART/QR na OFF…');
+  rerenderEmpty();
+  status('5/5 · Verificiram 0 podataka i samo jednog Admina…');
+  const v=await verifyEmpty(keep);if(!v.ok)throw new Error('Factory Zero je pokrenut, ali završna verifikacija nije potpuno čista.');
+  status(`✓ FACTORY ZERO · 0 POVIJESTI · 0 MASTER PODATAKA · SAMO ${keep} ADMIN`,'ok');
+  try{showYmsToast?.('success','YARDIVO FACTORY ZERO','Sve je na 0. Ostao je samo Admin dujemales.')}catch(_){}
+  alert(`YARDIVO DEV je potpuno resetiran.\n\n0 lokacija\n0 skladišta\n0 dobavljača\n0 odgovornih osoba\n0 najava / incidenata / QR povijesti\n0 drugih korisnika\nSMART OFF\nQR SCAN OFF\n\nOstao je samo ${keep} Admin.`);
  }catch(e){
-   console.error('[RESET YARDIVO]',e);
-   status('RESET NIJE ZAVRŠIO 100%: '+String(e?.message||e),'error');
-   alert('RESET YARDIVO nije završio 100%:\n\n'+String(e?.message||e));
- }finally{
-   busy=false;if(btn){btn.disabled=false;btn.textContent='RESET YARDIVO — VRATI SVE NA 0'}
- }
+  console.error('[RESET YARDIVO]',e);status('RESET NIJE ZAVRŠIO 100%: '+String(e?.message||e),'error');alert('RESET YARDIVO nije završio 100%:\n\n'+String(e?.message||e))
+ }finally{busy=false;if(btn){btn.disabled=false;btn.textContent='RESET YARDIVO — VRATI SVE NA 0'}}
 }
 function ensureBottom(){mount();const s=document.getElementById('settings'),c=document.getElementById('yardivoDevTotalResetV583');if(s&&c&&s.lastElementChild!==c)s.appendChild(c)}
 document.addEventListener('DOMContentLoaded',()=>setTimeout(ensureBottom,100));window.addEventListener('load',()=>setTimeout(ensureBottom,300),{once:true});['yardivo:login','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(ensureBottom,80)));document.addEventListener('click',e=>{if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(ensureBottom,40)},true);
@@ -50950,6 +50973,8 @@ function ensureOrdinary(){
  const launch=$('yardivoMasterPopupLaunchV583');if(launch&&launch.parentElement!==g)g.insertBefore(launch,shell);else if(launch)g.insertBefore(launch,shell);
 
  const font=$('yardivoFontSettings');if(font&&font.parentElement!==shell)shell.appendChild(font);
+ const qr=$('qrMobileSettingsPanel');if(qr&&qr.parentElement!==shell)shell.appendChild(qr);
+ const smartEngine=$('yardivoSmartEngineSettingsV583');if(smartEngine&&smartEngine.parentElement!==shell)shell.appendChild(smartEngine);
  if(!$('yardivoThemeSettingExactV583'))shell.appendChild(makeCard('yardivoThemeSettingExactV583','IZGLED APLIKACIJE','Original / Dark mode','yardivoThemeToggleExactV583'));
  const days=$('yardivoNonWorkingDaysSettings');if(days&&days.parentElement!==shell)shell.appendChild(days);
 
@@ -50981,8 +51006,7 @@ function ensureMaster(){
  if(danger&&danger.parentElement!==pane)pane.appendChild(danger);
  if(accounts&&accounts.parentElement!==pane)pane.appendChild(accounts);
 
- /* QR is explicitly not part of final Settings/Master contract. */
- $('qrMobileSettingsPanel')?.remove();
+ /* QR SCAN is an ordinary Settings control and remains visible. */
 }
 function renderToggles(){
  document.body.classList.toggle('yv-admin-exact-v583',admin());
@@ -51044,17 +51068,16 @@ function exactOrder(){
  if(b&&b.parentElement!==g)g.prepend(b);
  if(shell&&shell.parentElement!==g)g.appendChild(shell);
  if(b&&shell){g.insertBefore(b,g.firstElementChild);if(b.nextElementSibling!==shell)g.insertBefore(shell,b.nextSibling)}
- const order=['yardivoFontSettings','yardivoThemeSettingExactV583','yardivoNonWorkingDaysSettings','yardivoVoiceSettingsV583','yardivoVoicePlaceholderExactV583','yardivoSmartToggleCardExactV583'];
+ const order=['yardivoFontSettings','yardivoThemeSettingExactV583','yardivoNonWorkingDaysSettings','yardivoVoiceSettingsV583','yardivoVoicePlaceholderExactV583','__yardivoRetiredDuplicateSmartCardV583'];
  order.forEach(id=>{const x=$(id);if(x&&shell&&x.parentElement!==shell)shell.appendChild(x)});
 }
 function ensureMasterContent(){
  const pane=$('yardivoSettingsMasterPaneV583'),body=$('yardivoMasterPopupBodyV583');if(pane&&body&&pane.parentElement!==body)body.appendChild(pane);
  /* Required Admin Master sections are owned here. */
- ['yardivoStableMasterEditorV583','yardivoMasterDwellV583','yardivoSmartEngineSettingsV583','yardivoMasterSuppliersV583','yardivoResponsiblePeopleV583','yardivoSettingsAdminPaneV583'].forEach(id=>{
+ ['yardivoStableMasterEditorV583','yardivoMasterDwellV583','yardivoMasterSuppliersV583','yardivoResponsiblePeopleV583','yardivoSettingsAdminPaneV583'].forEach(id=>{
    const x=$(id);if(x&&pane&&x.parentElement!==pane)pane.appendChild(x);
  });
- const reset=[...document.querySelectorAll('.danger-zone')].find(x=>/OBRIŠI SVE PODATKE|RESET YARDIVO/i.test(x.textContent||''));
- if(reset&&pane&&reset.parentElement!==pane)pane.appendChild(reset);
+ /* RESET YARDIVO stays in Settings / Danger Zone. */
 }
 function apply(){try{window.YardivoSettingsExactV583?.apply?.()}catch(_){} exactOrder();ensureMasterContent();applyRole()}
 document.addEventListener('click',e=>{
@@ -51252,8 +51275,8 @@ function ensure(){
  /* Master workspace owns all admin-only configuration. */
  const pane=$('yardivoSettingsMasterPaneV583'),pb=$('yardivoMasterPopupBodyV583');
  if(pane&&pb&&pane.parentElement!==pb)pb.appendChild(pane);
- ['yardivoStableMasterEditorV583','yardivoMasterDwellV583','yardivoSmartEngineSettingsV583','yardivoMasterSuppliersV583','yardivoResponsiblePeopleV583','yardivoSettingsAdminPaneV583'].forEach(id=>{const x=$(id);if(x&&pane&&x.parentElement!==pane)pane.appendChild(x)});
- const reset=[...document.querySelectorAll('.danger-zone')].find(x=>/OBRIŠI SVE PODATKE|RESET YARDIVO/i.test(x.textContent||''));if(reset&&pane&&reset.parentElement!==pane)pane.appendChild(reset);
+ ['yardivoStableMasterEditorV583','yardivoMasterDwellV583','yardivoMasterSuppliersV583','yardivoResponsiblePeopleV583','yardivoSettingsAdminPaneV583'].forEach(id=>{const x=$(id);if(x&&pane&&x.parentElement!==pane)pane.appendChild(x)});
+ /* RESET YARDIVO is a Settings/Danger action and never belongs inside Master Data. */
  render();
 }
 function render(){
@@ -51331,31 +51354,25 @@ function build(){
  if(!host){host=document.createElement('div');host.id='yardivoUnifiedSettingsV583';grid.prepend(host)}
  if(host.parentElement!==grid)grid.prepend(host);
 
- /* MASTER / business configuration first. */
- move(host,'yardivoStableMasterEditorV583');       // locations, warehouses, warehouse/ramp config
- move(host,'yardivoMasterDwellV583');              // dwell/detention
- move(host,'yardivoSmartEngineSettingsV583');      // detailed SMART recommendation rules
- move(host,'yardivoMasterSuppliersV583');           // suppliers
- move(host,'yardivoResponsiblePeopleV583');         // responsible people
- move(host,'yardivoSettingsAdminPaneV583');         // accounts
- const reset=[...document.querySelectorAll('.danger-zone')].find(x=>/OBRIŠI SVE PODATKE|RESET YARDIVO|OPASNA ZONA/i.test(x.textContent||''));
- if(reset&&reset.parentElement!==host)host.appendChild(reset);
-
- /* Ordinary settings directly after business configuration. */
+ /* Ordinary Settings only. MASTER PODACI are owned by the Master workspace. */
  move(host,'yardivoFontSettings');
  if(!$('yardivoUnifiedThemeV583'))host.appendChild(card('yardivoUnifiedThemeV583','IZGLED APLIKACIJE','Original / Dark mode','yardivoUnifiedThemeSwitchV583'));
+ move(host,'qrMobileSettingsPanel');
  move(host,'yardivoNonWorkingDaysSettings');
  move(host,'yardivoVoiceSettingsV583');
  if(!$('yardivoVoiceSettingsV583')&&!$('yardivoUnifiedVoiceV583'))host.appendChild(card('yardivoUnifiedVoiceV583','GLASOVNE NOTIFIKACIJE','Uključi ili isključi glasovne notifikacije.','yardivoUnifiedVoiceSwitchV583'));
- if(!$('yardivoUnifiedSmartSwitchCardV583'))host.appendChild(card('yardivoUnifiedSmartSwitchCardV583','YARDIVO SMART','Glavni SMART ON / OFF. Detaljna pravila su iznad u istoj stranici Postavke.','yardivoUnifiedSmartSwitchV583'));
+ move(host,'yardivoSmartEngineSettingsV583');
 
- /* Nothing else may compete as a direct Settings owner. */
- [...grid.children].forEach(x=>{if(x!==host&&x.id!=='yardivoMasterPopupV583')x.style.setProperty('display','none','important')});
+ /* Master launcher stays visible for Admin; do not hide it. */
+ const launch=$('yardivoMasterPopupLaunchV583');
+ [...grid.children].forEach(x=>{
+   if(x===host||x===launch||x.id==='yardivoMasterPopupV583')x.style.removeProperty('display');
+ });
  render();
 }
 function render(){
  const t=$('yardivoUnifiedThemeSwitchV583');if(t){t.textContent=dark()?'DARK':'ORIGINAL';t.classList.toggle('on',dark())}
- const c=cfg(),on=!!c.enabled&&c.mode!=='PAUSED',b=$('yardivoUnifiedSmartSwitchV583');if(b){b.textContent=on?'ON':'OFF';b.classList.toggle('on',on)}
+ 
 }
 function toggleTheme(){
  const sw=document.querySelector('.theme-switch-wrap button,.theme-switch-wrap input');
@@ -51371,7 +51388,7 @@ function toggleSmart(){
 }
 document.addEventListener('click',e=>{
  if(e.target?.closest?.('#yardivoUnifiedThemeSwitchV583')){e.preventDefault();toggleTheme();return}
- if(e.target?.closest?.('#yardivoUnifiedSmartSwitchV583')){e.preventDefault();toggleSmart();return}
+
  if(e.target?.closest?.('[data-home-target="settings"],[data-view="settings"],[data-target="settings"],#navSettings'))setTimeout(build,0)
 },true);
 ['yardivo:login','yardivo:data-synced','yardivo:master-data-ready','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(build,40)));
@@ -51426,10 +51443,12 @@ function saveMaster(m){
  return Promise.resolve()
 }
 function ensureSmart(host){
+ const detailed=$('yardivoSmartEngineSettingsV583');
+ const old=$('yardivoUnifiedSmartDbCardV583');if(old)old.remove();
+ if(detailed){try{window.YardivoSmartEngineSettingsV583?.render?.()}catch(_){};return}
  let c=$('yardivoUnifiedSmartDbCardV583');
  if(!c){c=document.createElement('section');c.id='yardivoUnifiedSmartDbCardV583';c.className='yv-unified-card';
- c.innerHTML='<div class="yv-unified-row"><div><h3>YARDIVO SMART</h3><p>Glavni SMART status sinkronizira se kroz canonical Master podatke u Supabase.</p></div><button type="button" class="yv-unified-switch" id="yardivoUnifiedSmartDbSwitchV583">OFF</button></div>';
- const detailed=$('yardivoSmartEngineSettingsV583');if(detailed)detailed.insertAdjacentElement('afterend',c);else host.appendChild(c)}
+ c.innerHTML='<div class="yv-unified-row"><div><h3>YARDIVO SMART</h3><p>Glavni SMART status sinkronizira se kroz canonical Master podatke u Supabase.</p></div><button type="button" class="yv-unified-switch" id="yardivoUnifiedSmartDbSwitchV583">OFF</button></div>';host.appendChild(c)}
  const st=smartState(),on=!!st.enabled&&st.mode!=='PAUSED',b=$('yardivoUnifiedSmartDbSwitchV583');if(b){b.textContent=on?'ON':'OFF';b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on))}
 }
 async function toggleSmart(){
@@ -51482,8 +51501,9 @@ function accounts(){
  const host=$('yardivoUnifiedSettingsV583');if(!host)return;
  let wrap=$('yardivoAccountAdminRestoredV583');
  if(!wrap){wrap=document.createElement('section');wrap.id='yardivoAccountAdminRestoredV583';wrap.className='yv-unified-card';
- wrap.innerHTML='<div class="yv-unified-row"><div><h3>KORISNIČKI RAČUNI</h3><p>Dodavanje i upravljanje YARDIVO korisnicima.</p></div></div><div class="yv-account-actions"><button type="button" class="btn btn-primary" id="yardivoAddUserRestoredBtnV583">+ DODAJ KORISNIKA</button></div><div id="yardivoExistingAccountHostV583"></div>';
- const supplier=$('yardivoMasterSuppliersV583');if(supplier)supplier.insertAdjacentElement('afterend',wrap);else host.appendChild(wrap)}
+ wrap.innerHTML='<div class="yv-unified-row"><div><h3>KORISNIČKI RAČUNI</h3><p>Dodavanje i upravljanje YARDIVO korisnicima. Lista se učitava sa Supabase servera.</p></div></div><div class="yv-account-actions"><button type="button" class="btn btn-primary" id="yardivoAddUserRestoredBtnV583">+ DODAJ KORISNIKA</button></div><div id="yardivoExistingAccountHostV583"></div>';
+ host.appendChild(wrap)}
+ else if(wrap.parentElement!==host)host.appendChild(wrap);
  const existing=$('yardivoSettingsAdminPaneV583'),eh=$('yardivoExistingAccountHostV583');
  if(existing&&eh&&existing.parentElement!==eh){existing.hidden=false;existing.style.setProperty('display','block','important');eh.appendChild(existing)}
 }
@@ -51620,192 +51640,166 @@ body.light-mode #ysnBoard .ysn-inventory-map .ramp{background:#fff!important;col
 </script>
 
 
-<style id="yardivo-v583-settings-smart-qr-master-polish-style">
-/* One authoritative SMART control */
-#yardivoUnifiedSmartDbCardV583,#yardivoSmartVisibleFinalV583{display:none!important}
-#yardivoSmartEngineSettingsV583{border:1px solid #d9e4ef!important;border-radius:16px!important;background:#fff!important;box-shadow:0 8px 24px rgba(22,48,78,.06)!important;padding:18px!important}
-body.dark-mode #yardivoSmartEngineSettingsV583{background:#09151d!important;border-color:#274052!important}
-#yardivoSmartEngineSettingsV583 .yse-head{align-items:center!important}
-#yardivoSmartEngineSettingsV583 .yse-head>div{flex:1}
-#yardivoSmartMainToggleV583{min-width:108px;border:1px solid #c7d5e3;border-radius:999px;background:#eef3f7;color:#526579;padding:9px 14px;font-size:10px;font-weight:1000;cursor:pointer}
-#yardivoSmartMainToggleV583.on{background:#e8f9ef;border-color:#8ed3a9;color:#13723d}
-body.dark-mode #yardivoSmartMainToggleV583{background:#172630;border-color:#365062;color:#9fb2bf}
-body.dark-mode #yardivoSmartMainToggleV583.on{background:#0d2d1b;border-color:#2b8350;color:#70e29b}
-#yseStatus{display:none!important}
-
-/* QR switch: cleaner, explicit ON/OFF */
-#qrMobileSettingsPanel{border:1px solid #d9e4ef!important;border-radius:16px!important;box-shadow:0 8px 24px rgba(22,48,78,.06)!important;overflow:hidden}
-#qrMobileSettingsPanel .panel-head{padding:16px 18px!important}
-#qrMobileSettingsPanel .qr-mobile-setting-body{padding:18px!important}
-#qrMobileSettingsPanel .qr-mobile-setting-row{border-radius:14px!important;padding:16px!important}
-#qrMobileToggleLabel{min-width:42px!important;font-size:10px!important}
-#qrMobileSettingsBadge{font-size:9px!important}
-
-/* MASTER PODACI — visual consolidation only, no controller changes */
-#yardivoStableMasterEditorV583{display:grid!important;gap:16px!important}
-#yardivoStableMasterEditorV583>.ysm-head,
-#yardivoStableMasterEditorV583>.ysm-section,
-#yardivoStableMasterEditorV583>.ysm-wh,
-#yardivoStableMasterEditorV583 article.ysm-wh{
- border-radius:16px!important;
- border:1px solid #d8e3ed!important;
- background:#fff!important;
- box-shadow:0 8px 24px rgba(22,48,78,.055)!important;
-}
-#yardivoStableMasterEditorV583 .ysm-head{padding:18px 20px!important}
-#yardivoStableMasterEditorV583 .ysm-section{padding:18px!important}
-#yardivoStableMasterEditorV583 .ysm-wh{padding:18px!important;margin:0!important}
-#yardivoStableMasterEditorV583 .ysm-wh-head{padding-bottom:12px!important;margin-bottom:14px!important;border-bottom:1px solid #e6edf4!important}
-#yardivoStableMasterEditorV583 .ysm-sector{padding-top:16px!important;margin-top:16px!important;border-top:1px solid #e6edf4!important}
-#yardivoStableMasterEditorV583 .ysm-fields{gap:12px!important}
-#yardivoStableMasterEditorV583 input,
-#yardivoStableMasterEditorV583 select{min-height:42px!important;border-radius:10px!important;background:#fff!important;color:#15273a!important;border-color:#cfdce7!important}
-#yardivoStableMasterEditorV583 button{min-height:38px!important;border-radius:10px!important}
-#yardivoStableMasterEditorV583 .ysm-ramp{border-radius:13px!important;border:1px solid #dbe6ef!important;background:#f8fbfd!important;padding:14px!important;margin-top:10px!important}
-#yardivoStableMasterEditorV583 .ysm-ramp.off{opacity:.68!important}
-#yardivoStableMasterEditorV583 .ysm-config-path{border-radius:10px!important;background:#f2f7fb!important;padding:10px 12px!important}
-#yardivoStableMasterEditorV583 .ysm-sector-help{line-height:1.55!important}
-body.dark-mode #yardivoStableMasterEditorV583>.ysm-head,
-body.dark-mode #yardivoStableMasterEditorV583>.ysm-section,
-body.dark-mode #yardivoStableMasterEditorV583>.ysm-wh,
-body.dark-mode #yardivoStableMasterEditorV583 article.ysm-wh{background:#081722!important;border-color:#29465a!important}
-body.dark-mode #yardivoStableMasterEditorV583 input,
-body.dark-mode #yardivoStableMasterEditorV583 select{background:#06131e!important;color:#fff!important;border-color:#29485e!important}
-body.dark-mode #yardivoStableMasterEditorV583 .ysm-ramp{background:#0a1923!important;border-color:#29465a!important}
-body.dark-mode #yardivoStableMasterEditorV583 .ysm-config-path{background:#0c2230!important}
-
-/* One reset button in the actual danger zone */
-#deleteAllDataBtn{display:none!important}
-#yardivoDevTotalResetV583{margin:0!important;border:1px solid #efb3b8!important;border-radius:16px!important;background:#fff7f8!important;box-shadow:none!important}
-body.dark-mode #yardivoDevTotalResetV583{background:#241114!important;border-color:#6d3138!important}
-#yardivoResetYardivoBtn{border-radius:11px!important;min-height:44px!important;font-weight:1000!important}
-</style>
-<script id="yardivo-v583-settings-smart-qr-master-polish-js">
+<script id="yardivo-v583-qr-server-settings-refresh-js">
 (()=>{'use strict';
-const MASTER='yardivo_master_data_registry_v583';
-const SMART='yardivo_auto_replan_cfg_v1';
-const QR='yardivo_qr_scan_cfg_v583';
-const OLD_QR='yardivo_ramp_qr_mobile_v1';
-const BASE='https://rskticdbiovvgyocpzoc.supabase.co';
-const APIKEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
-const EDGE=BASE+'/functions/v1/yardivo-sync';
-
-function role(){try{return String(window.currentSession?.role||window.currentSession?.app_role||'').toLowerCase()}catch(_){return''}}
-function admin(){return role()==='admin'}
-async function token(){
- const raw=String(window.__yardivoSupplierAccessToken||'').trim();if(raw)return raw;
- const c=await window.YardivoAuth?.client?.();if(!c)throw new Error('ONLINE AUTH NIJE SPREMAN.');
- const s=(await c.auth.getSession())?.data?.session;
- if(!s?.access_token)throw new Error('ONLINE PRIJAVA NIJE AKTIVNA.');
- return s.access_token;
-}
-async function setState(key,value){
- const t=await token();
- const r=await fetch(EDGE,{method:'POST',headers:{apikey:APIKEY,Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({action:'set_state',key,value:JSON.stringify(value),clientId:'settings-v583'})});
- const d=await r.json().catch(()=>({}));
- if(!r.ok||d?.ok===false)throw new Error(d?.error||('HTTP '+r.status));
- return d;
-}
-function readMaster(){try{return JSON.parse(localStorage.getItem(MASTER)||'{}')||{}}catch(_){return{}}}
-function readEngine(){try{return JSON.parse(localStorage.getItem(SMART)||'{}')||{}}catch(_){return{}}}
-function smartOn(){
- const m=readMaster(),s=m.smart||{};
- if(Object.prototype.hasOwnProperty.call(s,'enabled'))return !!s.enabled&&String(s.mode||'').toUpperCase()!=='PAUSED';
- const e=readEngine();return !!e.enabled&&String(e.mode||'').toUpperCase()!=='PAUSED';
-}
-function qrOn(){
- try{
-   const q=JSON.parse(localStorage.getItem(QR)||'null');
-   if(q&&Object.prototype.hasOwnProperty.call(q,'enabled'))return !!q.enabled;
- }catch(_){}
- const old=localStorage.getItem(OLD_QR);
- if(old===null||old==='')return true;
- return old==='1'||old==='true'||old==='on';
-}
-async function setSmart(on){
- if(!admin())throw new Error('Samo Admin može mijenjati YARDIVO SMART.');
- const m=readMaster();m.smart={...(m.smart||{}),enabled:!!on,mode:on?'ASSIST':'PAUSED'};m.__masterUpdatedAtV583=new Date().toISOString();
- const e={...readEngine(),enabled:!!on,mode:on?'ASSIST':'PAUSED'};
- localStorage.setItem(MASTER,JSON.stringify(m));localStorage.setItem(SMART,JSON.stringify(e));
- try{window.YardivoSmartReplanning?.applyState?.()}catch(_){}
- await Promise.all([setState(MASTER,m),setState(SMART,e)]);
- try{window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{reason:'smart.toggle',source:'settings'}}))}catch(_){}
- paint();
-}
-async function setQr(on){
- if(!admin())throw new Error('Samo Admin može mijenjati QR SCAN.');
- const q={enabled:!!on,updated_at:new Date().toISOString()};
- localStorage.setItem(QR,JSON.stringify(q));localStorage.setItem(OLD_QR,on?'1':'0');
- await setState(QR,q);
- paintQr();
- try{if(typeof renderReceiving==='function')renderReceiving()}catch(_){}
-}
-function paintSmart(){
- const p=document.getElementById('yardivoSmartEngineSettingsV583');if(!p)return;
- let b=document.getElementById('yardivoSmartMainToggleV583');
- if(!b){
-   b=document.createElement('button');b.type='button';b.id='yardivoSmartMainToggleV583';
-   const h=p.querySelector('.yse-head');if(h)h.appendChild(b);else p.prepend(b);
-   b.addEventListener('click',async()=>{
-     const next=!smartOn();b.disabled=true;
-     try{await setSmart(next)}catch(e){alert('SMART nije spremljen: '+(e?.message||e))}
-     finally{b.disabled=false}
-   });
- }
- const on=smartOn();b.textContent=on?'TURN OFF':'TURN ON';b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));
-}
-function paintQr(){
- const on=qrOn(),toggle=document.getElementById('qrMobileEnabledToggle'),label=document.getElementById('qrMobileToggleLabel'),badge=document.getElementById('qrMobileSettingsBadge'),info=document.getElementById('qrMobileModeInfo');
- if(toggle){toggle.checked=on;toggle.disabled=!admin()}
- if(label)label.textContent=on?'ON':'OFF';
- if(badge){badge.textContent=on?'QR SCAN ON':'QR SCAN OFF';badge.className='master-sync-state '+(on?'ok':'')}
- if(info){
-   info.className='qr-mobile-mode '+(on?'on':'off');
-   info.innerHTML=on?'<strong>QR SCAN JE UKLJUČEN.</strong> ONE QR tok je aktivan za Portu i Prijam.':'<strong>QR SCAN JE ISKLJUČEN.</strong> Gate/Reception QR akcije su blokirane na backendu; koristi se ručni način.';
- }
-}
-function moveSmartIntoSettings(){
- const settings=document.getElementById('settings'),panel=document.getElementById('yardivoSmartEngineSettingsV583');if(!settings||!panel)return;
- const shell=document.getElementById('yardivoSettingsVisibleFinalV583')||settings.querySelector('.settings-grid');
- if(shell&&panel.parentElement!==shell)shell.appendChild(panel);
-}
-function moveResetIntoDanger(){
- const settings=document.getElementById('settings'),reset=document.getElementById('yardivoDevTotalResetV583');if(!settings||!reset)return;
- const danger=settings.querySelector('.danger-zone .danger-body,.danger-zone');
- if(danger&&reset.parentElement!==danger)danger.appendChild(reset);
-}
-function polishMaster(){
- const master=document.getElementById('yardivoStableMasterEditorV583');if(!master)return;
- master.setAttribute('aria-label','Master podaci');
-}
-function paint(){moveSmartIntoSettings();moveResetIntoDanger();polishMaster();paintSmart();paintQr()}
-
-/* Override old QR helpers with the canonical server-backed switch. */
-window.yardivoQrMobileEnabled=qrOn;
-window.yardivoSetQrMobileEnabled=async enabled=>{
- try{await setQr(!!enabled)}catch(e){alert('QR SCAN nije spremljen: '+(e?.message||e));paintQr()}
-};
-
-document.addEventListener('change',e=>{
- if(e.target?.id==='qrMobileEnabledToggle'){
-   e.stopImmediatePropagation();
-   const next=!!e.target.checked;
-   const msg=next?'Uključiti QR SCAN za Portu i Prijam?':'Isključiti QR SCAN i prijeći na ručni način?';
-   if(!confirm(msg)){e.target.checked=!next;return}
-   setQr(next).catch(err=>{alert('QR SCAN nije spremljen: '+(err?.message||err));paintQr()});
- }
-},true);
-
 document.addEventListener('click',e=>{
- if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"],[data-target="settings"],#navSettings')){
-   setTimeout(paint,80);
- }
+  if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"],#navSettings,[data-settings-tab="qr"]')){
+    setTimeout(()=>{try{window.yardivoLoadQrScanSetting?.()}catch(_){}},120);
+  }
 },true);
-
-window.YardivoSettingsSystemSwitchesV583={paint,setSmart,setQr,smartOn,qrOn};
-window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-settings-smart-qr-master-reset-factory-zero-final';
 })();
 </script>
 
+
+<style id="yardivo-v583-settings-smart-qr-master-zero-ui-style">
+/* One SMART owner in Settings */
+#yardivoUnifiedSmartDbCardV583,
+#yardivoSmartVisibleFinalV583,
+#yardivoUnifiedSmartCardV583{display:none!important}
+#yardivoSmartEngineSettingsV583{display:block!important}
+#yardivoSmartEngineSettingsV583 .yse-power-wrap{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+#yardivoSmartEngineSettingsV583 #ysePower{min-width:70px;height:34px;border-radius:999px;border:1px solid #3e4d46;background:#17201b;color:#8d9b93;font-size:10px;font-weight:1000;cursor:pointer}
+#yardivoSmartEngineSettingsV583 #ysePower.on{background:#123d27;border-color:#38b76b;color:#79f2a7;box-shadow:0 0 0 3px rgba(56,183,107,.08)}
+#yardivoSmartEngineSettingsV583 #ysePower:disabled{opacity:.55;cursor:wait}
+
+/* QR system switch */
+#qrMobileSettingsPanel .panel-head{align-items:center}
+#qrMobileSettingsPanel{border:1px solid #284e67!important;border-radius:16px!important;overflow:hidden!important}
+#qrMobileSettingsPanel .qr-mobile-setting-row{border-radius:12px!important}
+#qrMobileSettingsPanel #qrMobileSettingsBadge{min-width:126px;text-align:center}
+#deleteAllDataBtn{display:none!important}
+
+/* Master: one calm workspace, no danger/reset/smart mixed into Master */
+#yardivoSettingsMasterPaneV583{
+  max-width:1500px!important;margin:0 auto!important;padding:0!important;
+}
+#yardivoStableMasterEditorV583{
+  display:block!important;border:1px solid #263f52!important;border-radius:18px!important;
+  background:#07141f!important;padding:18px!important;box-shadow:0 18px 46px rgba(0,0,0,.18)!important
+}
+#yardivoStableMasterEditorV583 .ysm-head{
+  margin:-18px -18px 18px!important;padding:18px 20px!important;border-bottom:1px solid #28465a!important;
+  background:linear-gradient(180deg,#0d2536,#091a27)!important;border-radius:18px 18px 0 0!important
+}
+#yardivoStableMasterEditorV583 .ysm-title{font-size:18px!important;letter-spacing:.02em!important}
+#yardivoStableMasterEditorV583 .ysm-sub{font-size:10px!important;line-height:1.55!important;color:#8fa8b9!important}
+#yardivoStableMasterEditorV583 .ysm-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important}
+#yardivoStableMasterEditorV583 .ysm-card{
+  border:1px solid #28465a!important;border-radius:14px!important;background:#0a1925!important;padding:15px!important;
+  box-shadow:none!important
+}
+#yardivoStableMasterEditorV583 .ysm-card.full{grid-column:1/-1!important}
+#yardivoStableMasterEditorV583 .ysm-card-kicker{color:#5ea8e9!important;font-size:9px!important;font-weight:1000!important;letter-spacing:.08em!important}
+#yardivoStableMasterEditorV583 .ysm-row,
+#yardivoStableMasterEditorV583 .ysm-warehouse-create{
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:9px!important;align-items:end!important
+}
+#yardivoStableMasterEditorV583 .ysm-fields{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+#yardivoStableMasterEditorV583 input,
+#yardivoStableMasterEditorV583 select{
+  min-height:40px!important;border-radius:9px!important;border:1px solid #31536a!important;background:#06131d!important;
+  color:#eef7fc!important;padding:9px 10px!important
+}
+#yardivoStableMasterEditorV583 button{min-height:38px!important;border-radius:9px!important}
+#yardivoStableMasterEditorV583 .ysm-wh{border:1px solid #2a4b61!important;border-radius:14px!important;background:#081824!important;padding:15px!important}
+#yardivoStableMasterEditorV583 .ysm-wh-head{padding-bottom:11px!important;border-bottom:1px solid #203b4e!important}
+#yardivoStableMasterEditorV583 .ysm-sector{margin-top:14px!important;padding-top:14px!important}
+#yardivoStableMasterEditorV583 .ysm-ramp{
+  display:grid!important;grid-template-columns:1.2fr .85fr 1fr 1fr 1fr!important;gap:10px!important;align-items:end!important;
+  border:1px solid #29485d!important;border-radius:12px!important;background:#0b1a25!important;padding:12px!important;margin-top:9px!important
+}
+#yardivoStableMasterEditorV583 .ysm-ramp.off{opacity:.68!important}
+#yardivoStableMasterEditorV583 .ysm-config-path{display:flex!important;align-items:center!important;gap:7px!important;flex-wrap:wrap!important;padding:9px 10px!important;border-radius:9px!important;background:#07131d!important}
+#yardivoStableMasterEditorV583 .ysm-empty{min-height:70px!important;display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important}
+
+/* Premium light mode: white content, navy sidebar stays untouched */
+body.light-mode #yardivoStableMasterEditorV583,
+body.light-mode #yardivoStableMasterEditorV583 .ysm-card,
+body.light-mode #yardivoStableMasterEditorV583 .ysm-wh,
+body.light-mode #yardivoStableMasterEditorV583 .ysm-ramp,
+body.light-mode #yardivoStableMasterEditorV583 .ysm-config-path{
+  background:#fff!important;color:#13243a!important;border-color:#d8e3ed!important;box-shadow:none!important
+}
+body.light-mode #yardivoStableMasterEditorV583 .ysm-head{
+  background:#f7faff!important;border-color:#d8e3ed!important
+}
+body.light-mode #yardivoStableMasterEditorV583 input,
+body.light-mode #yardivoStableMasterEditorV583 select{
+  background:#fff!important;color:#13243a!important;border-color:#cbd9e6!important
+}
+body.light-mode #yardivoStableMasterEditorV583 .ysm-sub,
+body.light-mode #yardivoStableMasterEditorV583 small,
+body.light-mode #yardivoStableMasterEditorV583 .ysm-sector-help{color:#66788d!important}
+
+#yardivoDevTotalResetV583{
+  max-width:1500px!important;margin:18px auto!important;border:1px solid #7f3038!important;border-radius:16px!important;
+  background:linear-gradient(180deg,#241114,#160b0d)!important;padding:18px!important
+}
+body.light-mode #yardivoDevTotalResetV583{background:#fff7f7!important;border-color:#e7b4b8!important;color:#421f23!important}
+
+@media(max-width:1000px){
+ #yardivoStableMasterEditorV583 .ysm-grid{grid-template-columns:1fr!important}
+ #yardivoStableMasterEditorV583 .ysm-card.full{grid-column:auto!important}
+ #yardivoStableMasterEditorV583 .ysm-ramp{grid-template-columns:1fr 1fr!important}
+}
+@media(max-width:640px){
+ #yardivoStableMasterEditorV583{padding:12px!important}
+ #yardivoStableMasterEditorV583 .ysm-fields,
+ #yardivoStableMasterEditorV583 .ysm-ramp{grid-template-columns:1fr!important}
+}
+</style>
+<script id="yardivo-v583-settings-smart-qr-master-zero-runtime">
+(()=>{'use strict';
+function onSettings(){
+  setTimeout(()=>{
+    try{window.YardivoSmartEngineSettingsV583?.render?.()}catch(_){}
+    try{window.yardivoLoadQrScanSetting?.()}catch(_){}
+    try{window.YardivoStableMasterV583?.render?.()}catch(_){}
+  },80);
+}
+document.addEventListener('click',e=>{
+  if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"],#navSettings,[data-settings-tab="qr"],[data-settings-tab="general"]'))onSettings();
+},true);
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-settings-smart-qr-master-factory-zero-final';
+})();
+</script>
+
+
+<script id="yardivo-v583-qr-public-authority-js">
+(()=>{'use strict';
+try{
+ if(typeof yardivoLoadQrScanSetting==='function')window.yardivoLoadQrScanSetting=yardivoLoadQrScanSetting;
+ if(typeof yardivoSetQrMobileEnabled==='function')window.yardivoSetQrMobileEnabled=yardivoSetQrMobileEnabled;
+ if(typeof yardivoQrMobileEnabled==='function')window.yardivoQrMobileEnabled=yardivoQrMobileEnabled;
+}catch(_){}
+})();
+</script>
+
+
+<script id="yardivo-v583-settings-master-separation-cleanup-js">
+(()=>{'use strict';
+function clean(){
+ ['yardivoUnifiedSmartDbCardV583','yardivoSmartVisibleFinalV583','yardivoUnifiedSmartCardV583','yardivoUnifiedSmartSwitchCardV583','yardivoSmartToggleCardExactV583'].forEach(id=>document.getElementById(id)?.remove());
+ const grid=document.querySelector('#settings .settings-grid');
+ const smart=document.getElementById('yardivoSmartEngineSettingsV583');
+ const qr=document.getElementById('qrMobileSettingsPanel');
+ const host=document.getElementById('yardivoUnifiedSettingsV583')||grid;
+ if(smart&&host&&smart.parentElement!==host)host.appendChild(smart);
+ if(qr&&host&&qr.parentElement!==host)host.insertBefore(qr,smart||null);
+ const reset=document.getElementById('yardivoDevTotalResetV583');
+ const settings=document.getElementById('settings');
+ if(reset&&settings&&reset.parentElement!==settings)settings.appendChild(reset);
+}
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"],#navSettings,#yardivoMasterPopupLaunchV583'))setTimeout(clean,40);
+},true);
+window.YardivoSettingsMasterSeparationV583={clean};
+})();
+</script>
+
+
+<script id="yardivo-v583-fullstack-reset-supplier-accounts-final-marker">
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-fullstack-reset-supplier-accounts-fixed-final';
+</script>
 </body>
 </html>
