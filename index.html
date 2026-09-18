@@ -5852,11 +5852,11 @@ html:not(.yardivo-role-admin) #qrMobileSettingsPanel{display:none!important}
 (function(){
   try{
     const c=JSON.parse(localStorage.getItem('yardivo_auto_replan_cfg_v1')||'{}');
-    const on=c.enabled!==false && c.mode!=='PAUSED';
+    const on=c.enabled===true && c.mode!=='PAUSED';
     document.documentElement.classList.toggle('yardivo-smart-off',!on);
     document.documentElement.classList.toggle('yardivo-smart-on',on);
   }catch(e){
-    document.documentElement.classList.add('yardivo-smart-on');
+    document.documentElement.classList.add('yardivo-smart-off');
   }
 })();
 </script>
@@ -6694,7 +6694,17 @@ html[data-theme="light"] body.light-mode #yardivoMasterSuppliersV583{
   background:#fff!important;color:#10233f!important;border-color:#d8e2ec!important;
 }
 </style>
-</head>
+<style id="yardivo-v583-smart-operational-visibility-final-style">
+html.yardivo-smart-off .nav-btn[data-view="smartReplanning"],
+html.yardivo-smart-off #smartReplanning,
+html.yardivo-smart-off [data-home-target="smartReplanning"],
+html.yardivo-smart-off [data-home-target="smart"],
+html.yardivo-smart-off [data-view="smart"]:not(#yardivoSmartEngineSettingsV583),
+html.yardivo-smart-off [data-target="smart"]{
+  display:none!important;
+  visibility:hidden!important;
+}
+</style></head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
 <div aria-label="YARDIVO copyright" id="yardivoBrandFooter"><span><strong>YARDIVO™</strong> · Yard Management System · YARDIVO DEV · © 2026</span></div>
@@ -33139,11 +33149,8 @@ async function refreshApprovalInbox(){
   try{
     const rows=await window.YardivoSupplierLiveSync.call('list_internal');
     if(!Array.isArray(rows))return;
-    let visibleRows=rows;
-    if(role()==='inventory'){
-      const aw=String((typeof activeWarehouse!=='undefined'?activeWarehouse:'')||'').toUpperCase().trim();
-      visibleRows=(aw&&aw!=='ALL')?rows.filter(x=>String(x.warehouse||'').toUpperCase()===aw):[];
-    }
+    /* Server list_internal already scopes Inventory by assigned warehouses. */
+    const visibleRows=rows;
     const pending=visibleRows.filter(x=>String(x.status||'').toLowerCase()==='pending').length;
     const badge=document.getElementById('supplierRequestsBadge');
     if(badge){badge.textContent=String(pending);badge.style.display=pending?'inline-flex':'none'}
@@ -33599,7 +33606,7 @@ async function quietLoad(force=false){
     lastRows=rows;
     reconcileCanonical(rows);
     const scoped=supplierInboxRows(rows);
-    const fp=rowsFingerprint(rows)+'|'+supplierInboxActiveWarehouse()+'|'+supplierInboxRole();
+    const fp=rowsFingerprint(rows)+'|'+supplierInboxRole();
     if(force||fp!==lastFingerprint){
       lastFingerprint=fp;
       renderStable(rows,true);
@@ -33632,13 +33639,10 @@ function supplierInboxActiveWarehouse(){
  return /^(SVA|ALL)$/i.test(w)?'ALL':w;
 }
 function supplierInboxRows(rows){
- rows=Array.isArray(rows)?rows:[];
- const aw=supplierInboxActiveWarehouse();
- /* Inventory must not lose a new Supplier request simply because Master Data
-    has not yet selected/created a warehouse. In that state the inbox is an
-    all-warehouses triage queue; once a warehouse is active it scopes normally. */
- if(!aw||aw==='ALL')return rows;
- return rows.filter(x=>String(x?.warehouse||'').toUpperCase().trim()===String(aw).toUpperCase().trim());
+ /* list_internal already enforces account warehouse scope on the server.
+    Do NOT apply the Header warehouse again here: Admin must see all requests,
+    and Inventory must see every request returned for its assigned warehouses. */
+ return Array.isArray(rows)?rows:[];
 }
 function supplierWarehouseNameV583(id){
  try{const m=window.YardivoAppStateV583?.master?.()||JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');return String((m.warehouses||[]).find(w=>String(w.id)===String(id))?.name||id||'—')}catch(_){return String(id||'—')}
@@ -33653,25 +33657,13 @@ function renderStable(rows,force=false){
   const scopedRows=supplierInboxRows(lastRows);
   updateCounters(scopedRows);
   const wh=document.getElementById('ysrWarehouseFilter');
-  const inv=supplierInboxRole()==='inventory';
-  const aw=supplierInboxActiveWarehouse();
   if(wh){
-    if(inv){
-      wh.innerHTML=aw&&aw!=='ALL'
-        ? `<option value="${esc(aw)}">${esc(aw)} · AKTIVNO SKLADIŠTE</option>`
-        : '<option value="">ODABERI W... NA VRHU</option>';
-      wh.value=aw&&aw!=='ALL'?aw:'';
-      wh.disabled=true;
-      wh.title='Za Zalihe je gornji odabir skladišta autoritet.';
-    }else{
-      wh.disabled=false;
-      wh.title='';
-      const old=wh.value,opts=[...new Set(lastRows.map(x=>x.warehouse).filter(Boolean))].sort();
-      const html='<option value="">Sva skladišta</option>'+opts.map(w=>`<option value="${esc(w)}">${esc(supplierWarehouseNameV583(w))}</option>`).join('');
-      if(wh.innerHTML!==html){wh.innerHTML=html;if([...wh.options].some(o=>o.value===old))wh.value=old}
-    }
+    wh.disabled=false;wh.title='';
+    const old=wh.value,opts=[...new Set(scopedRows.map(x=>x.warehouse).filter(Boolean))].sort();
+    const h='<option value="">Sva dodijeljena skladišta</option>'+opts.map(w=>`<option value="${esc(w)}">${esc(supplierWarehouseNameV583(w))}</option>`).join('');
+    if(wh.innerHTML!==h){wh.innerHTML=h;if([...wh.options].some(o=>o.value===old))wh.value=old}
   }
-  const fS=document.getElementById('ysrStatusFilter')?.value||'',fW=aw&&aw!=='ALL'?aw:'',q=(document.getElementById('ysrSearch')?.value||'').trim().toLowerCase();
+  const fS=document.getElementById('ysrStatusFilter')?.value||'',fW=document.getElementById('ysrWarehouseFilter')?.value||'',q=(document.getElementById('ysrSearch')?.value||'').trim().toLowerCase();
   const filtered=scopedRows.filter(x=>{
    const rowWh=String(x.warehouse||'').toUpperCase().trim();
    if(fW&&rowWh!==String(fW).toUpperCase().trim())return false;
@@ -52895,41 +52887,140 @@ window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-warehouse-selection-fixed
 #supplierRequests .ysr-actions [data-v583-approve-request]{background:#117343!important;border-color:#23965e!important;color:#fff!important}
 #supplierRequests .yardivo-gate-qr-send{background:#126fc9!important;border-color:#2f8cdf!important;color:#fff!important}
 body.light-mode #supplierRequests .ysr-flow-info{background:#eef7fd!important;color:#24506f!important}
-</style><script id="yardivo-v583-supplier-requests-final-authority">
+</style><script id="yardivo-v583-smart-operational-visibility-final-authority">
 (()=>{'use strict';
-if(window.__YARDIVO_SUPPLIER_REQUESTS_FINAL__)return;window.__YARDIVO_SUPPLIER_REQUESTS_FINAL__=true;
+if(window.__YARDIVO_SMART_OPERATIONAL_VISIBILITY_FINAL__)return;
+window.__YARDIVO_SMART_OPERATIONAL_VISIBILITY_FINAL__=true;
+const MASTER='yardivo_master_data_registry_v583',CFG='yardivo_auto_replan_cfg_v1';
+function j(k){try{return JSON.parse(localStorage.getItem(k)||'{}')||{}}catch(_){return{}}}
 function role(){
- let r=String((window.currentSession||{}).role||'').toLowerCase().trim();
+ let r=String(window.currentSession?.role||window.currentSession?.app_role||'').toLowerCase().trim();
+ if(r==='zalihe'||r==='upravljanje zalihama')r='inventory';
+ if(r==='prijam')r='reception';
+ if(r==='management'||r==='voditelj')r='manager';
+ return r;
+}
+function enabled(){
+ const m=j(MASTER),c=j(CFG),s=(m.smart&&typeof m.smart==='object')?m.smart:c;
+ return s?.enabled===true && String(s?.mode||'').toUpperCase()!=='PAUSED';
+}
+function canSee(){
+ const r=role();
+ if(['admin','inventory','reception'].includes(r))return true;
+ if(r==='manager')return window.yardivoManagerSectionAllowed?.('smartReplanning')===true;
+ return false;
+}
+function apply(){
+ const on=enabled(),visible=on&&canSee();
+ document.documentElement.classList.toggle('yardivo-smart-on',on);
+ document.documentElement.classList.toggle('yardivo-smart-off',!on);
+ const nav=document.querySelector('.nav-btn[data-view="smartReplanning"]');
+ if(nav){
+   nav.hidden=!visible;
+   nav.classList.toggle('role-hidden',!visible);
+   nav.style.setProperty('display',visible?'':'none',visible?'':'important');
+ }
+ const view=document.getElementById('smartReplanning');
+ if(view&&!visible){
+   view.classList.remove('active');
+   view.hidden=true;
+   view.style.setProperty('display','none','important');
+   if(document.querySelector('.view.active')===null){
+     try{window.openAppView?.('homeMenu')}catch(_){}
+   }
+ }else if(view&&visible){
+   view.hidden=false;
+   view.style.removeProperty('display');
+ }
+ /* Settings control remains available so SMART can be enabled in the future.
+    Supplier slot recommendation is independent and is intentionally untouched. */
+}
+['yardivo:login','yardivo:data-synced','yardivo:master-data-changed','yardivo:smart-system-state']
+ .forEach(ev=>window.addEventListener(ev,()=>setTimeout(apply,30)));
+window.addEventListener('storage',e=>{if(e.key===MASTER||e.key===CFG)setTimeout(apply,10)});
+document.addEventListener('click',e=>{
+ if(e.target?.closest?.('#ysePower,#yardivoSmartToggleExactV583,#yseSave'))setTimeout(apply,160);
+},true);
+window.addEventListener('load',()=>setTimeout(apply,600));
+setTimeout(apply,50);
+window.YardivoSmartOperationalVisibilityV583={apply,enabled};
+})();
+</script><style id="yardivo-v583-supplier-inbox-visibility-final-style">
+#supplierRequests.yardivo-supplier-inbox-final{display:none}
+#supplierRequests.yardivo-supplier-inbox-final.active{display:block!important}
+#supplierRequests .ysr-scope-note{margin:0 0 12px;padding:10px 12px;border:1px solid #bed6e8;border-radius:10px;background:#eef7fd;color:#28516f;font-size:9px;font-weight:800}
+</style><script id="yardivo-v583-supplier-inbox-visibility-final-authority">
+(()=>{'use strict';
+if(window.__YARDIVO_SUPPLIER_INBOX_VISIBILITY_FINAL__)return;
+window.__YARDIVO_SUPPLIER_INBOX_VISIBILITY_FINAL__=true;
+function role(){
+ let r=String(window.currentSession?.role||window.currentSession?.app_role||'').toLowerCase().trim();
  if(r==='zalihe'||r==='upravljanje zalihama')r='inventory';
  if(r==='management'||r==='voditelj')r='manager';
  return r;
 }
 function allowed(){return ['admin','inventory','manager'].includes(role())}
-function ensure(){
- try{window.YardivoSupplierRequests?.ensureUi?.()}catch(_){}
- const nav=document.querySelector('.nav-btn[data-view="supplierRequests"]');
- if(nav)nav.style.setProperty('display',allowed()?'':'none','important');
- const view=document.getElementById('supplierRequests');
- if(!view)return;
- let info=view.querySelector('.ysr-flow-info');
- if(!info){
-   info=document.createElement('div');info.className='ysr-flow-info';
-   info.innerHTML='<strong>SUPPLIER APPROVAL FLOW</strong> · ODBRI TERMIN potvrđuje postojeći Supplier termin. PREDLOŽI DRUGI TERMIN šalje novi termin dobavljaču na prihvat. Tek status <strong>ODOBRENO</strong> ulazi u Dnevnu mapu, Tjednu mapu i Prijam robe. Nakon potvrde Zalihe/Admin mogu poslati <strong>QR · CHECK-IN</strong>.';
-   const hero=view.querySelector('.ysr-hero');hero?.insertAdjacentElement('afterend',info);
+function ensureNav(){
+ let nav=document.querySelector('.nav-btn[data-view="supplierRequests"]');
+ if(!nav){
+   const anchor=document.querySelector('.nav-btn[data-view="announcements"]');
+   const parent=anchor?.parentElement||document.querySelector('nav.nav');
+   if(parent){
+     nav=document.createElement('button');nav.className='nav-btn';nav.dataset.view='supplierRequests';
+     nav.innerHTML='<span>⇄</span> Najave dobavljača <b class="nav-badge" id="supplierRequestsBadge" style="display:none">0</b>';
+     if(anchor)parent.insertBefore(nav,anchor);else parent.appendChild(nav);
+   }
  }
+ if(nav){
+   nav.hidden=!allowed();
+   nav.style.setProperty('display',allowed()?'':'none',allowed()?'':'important');
+   if(!nav.dataset.yvInboxFinal){
+     nav.dataset.yvInboxFinal='1';
+     nav.addEventListener('click',async e=>{
+       e.preventDefault();
+       try{window.YardivoSupplierRequests?.ensureUi?.()}catch(_){}
+       const v=document.getElementById('supplierRequests');
+       try{window.openAppView?.('supplierRequests')}catch(_){}
+       if(v&&!v.classList.contains('active')){
+         document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+         v.classList.add('active');
+       }
+       try{await window.YardivoSupplierPlannerV580?.refresh?.(true)}catch(_){}
+       try{await window.YardivoSupplierRequests?.load?.()}catch(_){}
+     },true);
+   }
+ }
+ return nav;
+}
+function ensureView(){
+ try{window.YardivoSupplierRequests?.ensureUi?.()}catch(_){}
+ const v=document.getElementById('supplierRequests');
+ if(v){
+   v.classList.add('yardivo-supplier-inbox-final');
+   let n=v.querySelector('.ysr-scope-note');
+   if(!n){
+     n=document.createElement('div');n.className='ysr-scope-note';
+     n.textContent=role()==='admin'
+       ?'ADMIN · prikazuju se sve Supplier najave iz backend sustava.'
+       :'ZALIHE · prikazuju se Supplier najave za skladišta dodijeljena ovom korisničkom računu.';
+     v.querySelector('.ysr-hero')?.insertAdjacentElement('afterend',n);
+   }
+ }
+ return v;
 }
 async function refresh(){
- ensure();
+ ensureNav();ensureView();
  if(!allowed())return;
- try{await window.YardivoSupplierRequests?.load?.()}catch(_){}
  try{await window.YardivoSupplierPlannerV580?.refresh?.(true)}catch(_){}
+ try{await window.YardivoSupplierRequests?.load?.()}catch(_){}
 }
-window.addEventListener('yardivo:login',()=>setTimeout(refresh,700));
-window.addEventListener('yardivo:supplier-request-updated',()=>setTimeout(refresh,180));
-window.addEventListener('yardivo:gate-qr-issued',()=>setTimeout(refresh,180));
-window.addEventListener('load',()=>setTimeout(refresh,1500));
-setTimeout(ensure,250);
-window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-approval-qr-operational-final';
+['yardivo:login','yardivo:supplier-request-updated','yardivo:supplier-inbox-changed','yardivo:data-synced']
+ .forEach(ev=>window.addEventListener(ev,()=>setTimeout(refresh,180)));
+window.addEventListener('focus',()=>setTimeout(refresh,80));
+window.addEventListener('load',()=>setTimeout(refresh,1000));
+setTimeout(refresh,400);
+window.YardivoSupplierInboxFinalV583={refresh,ensureNav,ensureView};
+window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-smart-off-supplier-inbox-fixed-final';
 })();
 </script></body>
 </html>
