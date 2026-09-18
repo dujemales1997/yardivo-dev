@@ -6704,7 +6704,101 @@ html.yardivo-smart-off [data-target="smart"]{
   display:none!important;
   visibility:hidden!important;
 }
-</style></head>
+</style>
+<style id="yardivo-v583-reception-sidebar-no-flicker-css">
+body.yv-role-reception-v583 .sidebar [data-view="dashboard"],
+body.yv-role-reception-v583 .sidebar [data-view="controlTower"],
+body.yv-role-reception-v583 .sidebar [data-view="checkin"],
+body.yv-role-reception-v583 .sidebar [data-view="docks"],
+body.yv-role-reception-v583 .sidebar [data-view="suppliers"],
+body.yv-role-reception-v583 .sidebar [data-view="orderSearch"],
+body.yv-role-reception-v583 [data-home-target="dashboard"],
+body.yv-role-reception-v583 [data-home-target="controlTower"],
+body.yv-role-reception-v583 [data-home-target="checkin"],
+body.yv-role-reception-v583 [data-home-target="docks"],
+body.yv-role-reception-v583 [data-home-target="suppliers"],
+body.yv-role-reception-v583 [data-home-target="orderSearch"]{
+  display:none!important;
+  visibility:hidden!important;
+}
+</style>
+
+<style id="yardivo-v583-sidebar-hide-toggle-css">
+:root{--yv-sidebar-toggle-z:12050}
+.sidebar{
+  transition:transform .18s ease,opacity .18s ease!important;
+}
+#yardivoSidebarHideBtn{
+  width:100%;
+  margin:0 0 8px!important;
+  min-height:34px!important;
+  border:1px solid rgba(255,255,255,.16)!important;
+  border-radius:9px!important;
+  background:rgba(255,255,255,.06)!important;
+  color:#dfeeff!important;
+  font-size:11px!important;
+  font-weight:850!important;
+  letter-spacing:.04em!important;
+  cursor:pointer!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  transition:background .14s ease,border-color .14s ease!important;
+}
+#yardivoSidebarHideBtn:hover{
+  background:rgba(255,255,255,.11)!important;
+  border-color:rgba(255,255,255,.24)!important;
+}
+#yardivoSidebarShowBtn{
+  position:fixed!important;
+  left:12px!important;
+  top:12px!important;
+  z-index:var(--yv-sidebar-toggle-z)!important;
+  min-height:38px!important;
+  padding:0 13px!important;
+  border:1px solid #b9cadb!important;
+  border-radius:10px!important;
+  background:#0b2f55!important;
+  color:#fff!important;
+  box-shadow:0 5px 18px rgba(7,35,65,.18)!important;
+  font-size:11px!important;
+  font-weight:900!important;
+  letter-spacing:.03em!important;
+  cursor:pointer!important;
+  display:none!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+}
+body.yv-sidebar-hidden #yardivoSidebarShowBtn{
+  display:flex!important;
+}
+body.yv-sidebar-hidden .sidebar{
+  transform:translateX(-110%)!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  position:fixed!important;
+  left:0!important;
+  top:0!important;
+}
+body.yv-sidebar-hidden .app-shell{
+  grid-template-columns:1fr!important;
+}
+body.yv-sidebar-hidden .main{
+  width:100%!important;
+  min-width:0!important;
+  margin-left:0!important;
+}
+@media (max-width:780px){
+  #yardivoSidebarShowBtn{
+    left:8px!important;
+    top:8px!important;
+    min-height:36px!important;
+  }
+}
+</style>
+</head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
 <div aria-label="YARDIVO copyright" id="yardivoBrandFooter"><span><strong>YARDIVO™</strong> · Yard Management System · YARDIVO DEV · © 2026</span></div>
@@ -53999,7 +54093,7 @@ body.yv-role-reception-v583 #settings #yardivoDevTotalResetV583{
 if(window.__YV_RECEPTION_UI_SCOPE_CLEAN__)return;
 window.__YV_RECEPTION_UI_SCOPE_CLEAN__=true;
 
-const HIDDEN_VIEWS=new Set(['dashboard','controlTower','controltower','checkin','docks','orderSearch']);
+const HIDDEN_VIEWS=new Set(['dashboard','controlTower','controltower','checkin','docks','suppliers','orderSearch']);
 const $=id=>document.getElementById(id);
 let applyTimer=0;
 let lastUiSig='';
@@ -54226,9 +54320,9 @@ document.addEventListener('change',e=>{
 },true);
 
 /* Login/master changes can affect scope. Avoid the high-frequency data-synced/context-changed hooks. */
-window.addEventListener('yardivo:login',()=>{lastUiSig='';scheduleApply(120)});
-window.addEventListener('yardivo:master-data-ready',()=>{lastUiSig='';scheduleApply(120)});
-window.addEventListener('yardivo:master-data-changed',()=>{lastUiSig='';scheduleApply(120)});
+window.addEventListener('yardivo:login',()=>{lastUiSig='';scheduleApply(0)});
+window.addEventListener('yardivo:master-data-ready',()=>{lastUiSig='';scheduleApply(40)});
+window.addEventListener('yardivo:master-data-changed',()=>{lastUiSig='';scheduleApply(40)});
 
 /* Settings-only cleanup runs only when Settings is opened, not on every sync. */
 document.addEventListener('click',e=>{
@@ -54252,5 +54346,66 @@ window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-reception-ui-scope-smooth';
 })();
 </script>
 
+
+<script id="yardivo-v583-sidebar-hide-toggle-js">
+(()=>{'use strict';
+if(window.__YV_SIDEBAR_HIDE_TOGGLE_V583__)return;
+window.__YV_SIDEBAR_HIDE_TOGGLE_V583__=true;
+
+const KEY='yardivo_sidebar_hidden_v583';
+
+function isHidden(){
+  try{return localStorage.getItem(KEY)==='1'}catch(_){return false}
+}
+function apply(hidden){
+  document.body.classList.toggle('yv-sidebar-hidden',!!hidden);
+  const show=document.getElementById('yardivoSidebarShowBtn');
+  const hide=document.getElementById('yardivoSidebarHideBtn');
+  if(show)show.setAttribute('aria-expanded',hidden?'false':'true');
+  if(hide)hide.setAttribute('aria-expanded',hidden?'false':'true');
+}
+function save(hidden){
+  try{localStorage.setItem(KEY,hidden?'1':'0')}catch(_){}
+  apply(hidden);
+}
+function ensure(){
+  const side=document.querySelector('.sidebar');
+  if(!side)return;
+
+  let hide=document.getElementById('yardivoSidebarHideBtn');
+  if(!hide){
+    hide=document.createElement('button');
+    hide.id='yardivoSidebarHideBtn';
+    hide.type='button';
+    hide.innerHTML='<span aria-hidden="true">‹</span><span>SAKRIJ IZBORNIK</span>';
+    hide.title='Sakrij lijevi izbornik';
+    hide.setAttribute('aria-label','Sakrij lijevi izbornik');
+    hide.addEventListener('click',()=>save(true));
+    side.insertBefore(hide,side.firstChild);
+  }
+
+  let show=document.getElementById('yardivoSidebarShowBtn');
+  if(!show){
+    show=document.createElement('button');
+    show.id='yardivoSidebarShowBtn';
+    show.type='button';
+    show.innerHTML='<span aria-hidden="true">☰</span><span>IZBORNIK</span>';
+    show.title='Prikaži lijevi izbornik';
+    show.setAttribute('aria-label','Prikaži lijevi izbornik');
+    show.addEventListener('click',()=>save(false));
+    document.body.appendChild(show);
+  }
+  apply(isHidden());
+}
+
+/* Apply stored state immediately when DOM exists, with no periodic redraws. */
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',ensure,{once:true});
+}else ensure();
+
+window.addEventListener('yardivo:login',ensure);
+window.YardivoSidebarV583={hide:()=>save(true),show:()=>save(false),toggle:()=>save(!document.body.classList.contains('yv-sidebar-hidden'))};
+})();
+</script>
 </body>
 </html>
