@@ -49702,7 +49702,7 @@ function drawCal(){
   for(let d=1;d<=n;d++){
     const dt=new Date(calMonth.getFullYear(),calMonth.getMonth(),d),iso=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const b=document.createElement('button');b.className='ysn-day'+(dt.getTime()===today.getTime()?' today':'');b.textContent=d;b.disabled=dt<today;
-    b.onclick=async()=>{chosenDate=iso;$('ysnDateText').textContent=dt.toLocaleDateString('hr-HR');document.querySelector('.ysn-cal-back')?.remove();await loadMap();setTimeout(()=>$('ysnMap')?.scrollIntoView({behavior:'smooth',block:'start'}),40)};
+    b.classList.toggle('selected',iso===chosenDate);b.onclick=()=>{chosenDate=iso;$('ysnDateText').textContent=dt.toLocaleDateString('hr-HR');document.querySelector('.ysn-cal-back')?.remove();resetChoice();emptyMap('Učitavam dnevnu mapu…','Provjeravam slobodne termine za '+dt.toLocaleDateString('hr-HR')+'.');requestAnimationFrame(()=>{loadMap().finally(()=>setTimeout(()=>$('ysnMap')?.scrollIntoView({behavior:'smooth',block:'start'}),40))})};
     g.appendChild(b);
   }
 }
@@ -49931,7 +49931,7 @@ window.YardivoMasterPopupV583={open,close,refresh:ensure};window.YARDIVO_DEV_BUI
 })();
 </script>
 \n<style id="yardivo-v583-shared-hours-dropdown-style">
-.yv583-time-pair{display:grid;grid-template-columns:minmax(86px,1fr) 18px minmax(86px,1fr);align-items:center;gap:8px;width:100%}.yv583-time-pair select{width:100%;min-height:44px;border:1px solid #9fc4e5;border-radius:10px;background:#fff;color:#102a43;font-weight:800;padding:0 10px}.yv583-time-pair .yv583-colon{text-align:center;font-weight:900;font-size:18px}.yv583-time-pair-label{display:flex;justify-content:space-between;gap:12px;margin:0 0 6px;color:#5b7894;font-size:10px;font-weight:900;letter-spacing:.06em}.yv583-time-native{display:none!important}
+.yv583-time-pair{display:grid;grid-template-columns:minmax(86px,1fr) 18px minmax(86px,1fr);align-items:center;gap:8px;width:100%}.yv583-time-pair select{width:100%;height:46px;min-height:46px;border:1px solid #9fc4e5;border-radius:11px;background:#fff;color:#102a43;font-weight:900;padding:0 34px 0 12px;outline:none;cursor:pointer;appearance:auto}.yv583-time-pair select:focus{border-color:#2387df;box-shadow:0 0 0 3px rgba(35,135,223,.14)}.yv583-time-pair .yv583-colon{text-align:center;font-weight:900;font-size:18px}.yv583-time-pair-label{display:flex;justify-content:space-between;gap:12px;margin:0 0 6px;color:#5b7894;font-size:10px;font-weight:900;letter-spacing:.06em}.yv583-time-native{display:none!important}
 </style>
 <script id="yardivo-v583-shared-hours-dropdown-authority">
 (()=>{'use strict';
@@ -49944,7 +49944,7 @@ window.YardivoMasterPopupV583={open,close,refresh:ensure};window.YARDIVO_DEV_BUI
   const box=document.createElement('div');box.className='yv583-time-control';
   box.innerHTML=`<div class="yv583-time-pair-label"><span>SAT (00–23)</span><span>MINUTA (00–59)</span></div><div class="yv583-time-pair"><select aria-label="Sat">${opt(0,24,parts[0])}</select><span class="yv583-colon">:</span><select aria-label="Minuta">${opt(0,60,parts[1])}</select></div>`;
   input.insertAdjacentElement('afterend',box); const sels=box.querySelectorAll('select');
-  const sync=()=>{input.value=`${sels[0].value}:${sels[1].value}`;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));};
+  const sync=()=>{input.value=`${sels[0].value}:${sels[1].value}`;input.setAttribute('value',input.value);input.dispatchEvent(new Event('input',{bubbles:true}));};
   sels.forEach(x=>x.addEventListener('change',sync));
  }
  function upgradeAll(){document.querySelectorAll('input[type="time"][data-sm-wh-from],input[type="time"][data-sm-wh-to]').forEach(upgrade);}
@@ -52233,5 +52233,28 @@ window.YardivoFinalSmallFixesV583={armHome13,filterSupplierWh,filterResponsibleW
 })();
 </script>
 
+
+<style id="yardivo-v583-wh-time-supplier-calendar-hotfix-style">
+/* Surgical hotfix: warehouse hours OD/DO use identical dropdown UI; Supplier free slots are unmistakably green. */
+#yardivoStableMasterEditorV583 .yv583-time-control{width:100%;contain:layout style}
+#yardivoStableMasterEditorV583 .yv583-time-pair{grid-template-columns:minmax(96px,1fr) 20px minmax(96px,1fr)!important}
+#yardivoStableMasterEditorV583 .yv583-time-pair select{background:#fff!important;color:#102a43!important;border-color:#9fc4e5!important}
+#yardivoStableMasterEditorV583 .yv583-time-pair select option{background:#fff;color:#102a43}
+#ysnCalGrid .ysn-day.selected{background:#1769e0!important;color:#fff!important;border-color:#1769e0!important}
+#ysnBoard .ysn-free{background:#dff8e8!important;border-color:#27a65b!important;color:#126b36!important;box-shadow:inset 0 0 0 1px rgba(39,166,91,.12)}
+#ysnBoard .ysn-free:hover{background:#c9f2d8!important;border-color:#168847!important}
+#ysnBoard .ysn-busy{background:#fee2e2!important;border-color:#dc4c4c!important;color:#9f2020!important}
+</style>
+<script id="yardivo-v583-wh-time-supplier-calendar-hotfix-final">
+(()=>{'use strict';
+if(window.__YARDIVO_WH_TIME_SUPPLIER_CAL_HOTFIX__)return;window.__YARDIVO_WH_TIME_SUPPLIER_CAL_HOTFIX__=true;
+/* Prevent click/focus churn in the warehouse configuration while time dropdowns are open. */
+let hold=0;
+document.addEventListener('pointerdown',e=>{if(e.target?.closest?.('#yardivoStableMasterEditorV583 .yv583-time-control'))hold=Date.now()+4000},true);
+['yardivo:data-synced','yardivo:context-changed'].forEach(ev=>window.addEventListener(ev,e=>{if(Date.now()<hold&&document.activeElement?.closest?.('#yardivoStableMasterEditorV583'))e.stopImmediatePropagation()},true));
+/* Date UX authority: once a supplier selected a date, keep the daily-map block visible. */
+document.addEventListener('click',e=>{if(e.target?.closest?.('#ysnCalGrid .ysn-day:not(.blank)'))setTimeout(()=>{const m=document.getElementById('ysnMap');if(m)m.style.display=''},0)},true);
+})();
+</script>
 </body>
 </html>
