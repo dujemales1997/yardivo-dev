@@ -12570,7 +12570,7 @@ function allowedViewsForRole(role){
   const map={
     admin:[],
     inventory:['homeMenu','dashboard','weeklyMap','dailyMap','myYard','announcements','supplierRequests','weeklyDeliveries','overview','suppliers','calendar','heatmap','controltower','controlTower','plannerPro','incidents','incidentArchive','reports','settings','unannounced','epal','orderSearch'],
-    reception:['homeMenu','dashboard','receiving','dailyMap','weeklyMap','suppliers','checkin','myYard','docks','operations','incidents','incidentArchive','controltower','controlTower','settings','unannounced','epal','orderSearch','liveYard'],
+    reception:['homeMenu','receiving','dailyMap','weeklyMap','suppliers','myYard','operations','incidents','incidentArchive','settings','unannounced','epal','liveYard'],
     gate:['homeMenu','checkin','unannounced','myYard','docks'],
     manager:[],
     management:[]
@@ -13412,7 +13412,7 @@ const ROLE_LABEL={admin:'Admin',inventory:'Upravljanje zalihama',reception:'Prij
 const ROLE_VIEWS={
  admin:['homeMenu','dashboard','receiving','weeklyMap','dailyMap','settings','checkin','myYard','docks','trucks','suppliers','announcements','weeklyDeliveries','overview','incidents','incidentArchive','shipments','operations','reports','plannerPro','controltower','calendar','heatmap'],
  inventory:['homeMenu','dashboard','weeklyMap','dailyMap','myYard','announcements','supplierRequests','weeklyDeliveries','overview','suppliers','calendar','heatmap','controltower','controlTower','plannerPro','incidents','incidentArchive','reports','settings','unannounced','epal','orderSearch'],
- reception:['homeMenu','dashboard','receiving','dailyMap','weeklyMap','suppliers','checkin','myYard','docks','operations','incidents','incidentArchive','controltower','controlTower','settings','unannounced','epal','orderSearch','liveYard'],
+ reception:['homeMenu','receiving','dailyMap','weeklyMap','suppliers','myYard','operations','incidents','incidentArchive','settings','unannounced','epal','liveYard'],
  gate:['homeMenu','checkin','unannounced','myYard','docks'],
  management:['homeMenu','dashboard','weeklyMap','dailyMap','myYard','supplierRequests','overview','reports','calendar','heatmap','controltower','suppliers','incidents','incidentArchive','settings']
 };
@@ -14069,7 +14069,7 @@ if(select){
 'use strict';
 const KEY='yardivo_yms_announcements_v1', LEG='yardivo_yms_announcements_v1';
 const HOME={
- reception:new Set(['homeMenu','dashboard','receiving','dailyMap','weeklyMap','suppliers','checkin','myYard','docks','operations','incidents','incidentArchive','controltower','controlTower','settings','unannounced','epal','orderSearch','liveYard']),
+ reception:new Set(['homeMenu','receiving','dailyMap','weeklyMap','suppliers','myYard','operations','incidents','incidentArchive','settings','unannounced','epal','liveYard']),
  inventory:new Set(['dashboard','yard','docks','announcements','supplierRequests','dailyMap','weeklyMap','suppliers','overview','incidents','incidentArchive','notifications','settings']),
  gate:new Set(['homeMenu','checkin','unannounced','myYard','docks'])
 };
@@ -30348,7 +30348,7 @@ const MATRIX={
  admin:'ALL',
  manager:'ALL',
  inventory:new Set(['homeMenu','dashboard','controlTower','suppliers','orderSearch','announcements','supplierRequests','dailyMap','weeklyMap','overview','incidents','unannounced','epal','myYard','reports','settings']),
- reception:new Set(['homeMenu','dashboard','receiving','dailyMap','weeklyMap','suppliers','checkin','myYard','docks','operations','incidents','incidentArchive','controltower','controlTower','settings','unannounced','epal','orderSearch','liveYard']),
+ reception:new Set(['homeMenu','receiving','dailyMap','weeklyMap','suppliers','myYard','operations','incidents','incidentArchive','settings','unannounced','epal','liveYard']),
  gate:new Set(['homeMenu','checkin','unannounced','myYard','docks'])
 };
 function norm(r){
@@ -53969,5 +53969,170 @@ setInterval(()=>{if(!document.hidden)paintFromCanonical()},3000);
 window.YardivoSupabaseCanonicalGreenV583={paint:paintFromCanonical};
 window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supabase-canonical-green-final';
 })();
-</script></body>
+</script>
+<style id="yardivo-v583-reception-ui-scope-clean-style">
+body.yv-role-reception-v583 .nav-btn[data-view="dashboard"],
+body.yv-role-reception-v583 .nav-btn[data-view="controlTower"],
+body.yv-role-reception-v583 .nav-btn[data-view="controltower"],
+body.yv-role-reception-v583 .nav-btn[data-view="checkin"],
+body.yv-role-reception-v583 .nav-btn[data-view="docks"],
+body.yv-role-reception-v583 .nav-btn[data-view="orderSearch"],
+body.yv-role-reception-v583 [data-home-target="dashboard"],
+body.yv-role-reception-v583 [data-home-target="controlTower"],
+body.yv-role-reception-v583 [data-home-target="controltower"],
+body.yv-role-reception-v583 [data-home-target="checkin"],
+body.yv-role-reception-v583 [data-home-target="docks"],
+body.yv-role-reception-v583 [data-home-target="orderSearch"],
+body.yv-role-reception-v583 #settings #masterUserAdmin,
+body.yv-role-reception-v583 #settings #yardivoAddUserRestoredBtnV583,
+body.yv-role-reception-v583 #settings #yardivoOpenUsersV583,
+body.yv-role-reception-v583 #settings #yvAddSupplierMasterBtnV583,
+body.yv-role-reception-v583 #settings #qrMobileSettingsPanel,
+body.yv-role-reception-v583 #settings .danger-zone,
+body.yv-role-reception-v583 #settings #yardivoDevTotalResetV583{
+  display:none!important;
+  visibility:hidden!important;
+}
+</style>
+<script id="yardivo-v583-reception-ui-scope-clean-js">
+(()=>{'use strict';
+if(window.__YV_RECEPTION_UI_SCOPE_CLEAN__)return;
+window.__YV_RECEPTION_UI_SCOPE_CLEAN__=true;
+const HIDDEN_VIEWS=new Set(['dashboard','controlTower','controltower','checkin','docks','orderSearch']);
+const $=id=>document.getElementById(id);
+function role(){
+  let r=String(window.currentSession?.app_role||window.currentSession?.role||document.body.dataset.yardivoRole||'').toLowerCase().trim();
+  if(r==='prijam')r='reception';
+  return r;
+}
+function isReception(){return role()==='reception'}
+function master(){
+  try{
+    return window.YardivoAppStateV583?.master?.()||JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{};
+  }catch(_){return{}}
+}
+function ids(v){
+  return Array.isArray(v)?v.map(x=>String(typeof x==='object'?(x?.id||''):x||'').trim()).filter(Boolean):[];
+}
+function allowedLocations(){
+  const s=window.currentSession||{};
+  const d=master(), all=(Array.isArray(d.locations)?d.locations:[]).filter(x=>x&&x.active!==false);
+  if(!isReception())return all;
+  const set=new Set(ids(s.locations||s.location_ids));
+  const one=String(s.location||s.location_id||'').trim();
+  if(one&&one!=='ALL')set.add(one);
+  // derive location from assigned warehouses too, so multi-location assignments work automatically.
+  const whSet=new Set(ids(s.warehouses||s.warehouse_ids));
+  (Array.isArray(d.warehouses)?d.warehouses:[]).forEach(w=>{
+    if(w&&whSet.has(String(w.id))&&w.location_id)set.add(String(w.location_id));
+  });
+  return all.filter(x=>set.has(String(x.id)));
+}
+function allowedWarehouses(loc){
+  const s=window.currentSession||{},d=master();
+  const all=(Array.isArray(d.warehouses)?d.warehouses:[]).filter(x=>x&&x.active!==false);
+  if(!isReception())return all.filter(x=>!loc||String(x.location_id)===String(loc));
+  const set=new Set(ids(s.warehouses||s.warehouse_ids));
+  const one=String(s.warehouse||s.warehouse_id||'').trim();if(one&&one!=='ALL')set.add(one);
+  return all.filter(x=>set.has(String(x.id))&&(!loc||String(x.location_id)===String(loc)));
+}
+function fill(sel,rows,placeholder,value){
+  if(!sel)return;
+  const html='<option value="">'+placeholder+'</option>'+rows.map(x=>'<option value="'+String(x.id).replace(/"/g,'&quot;')+'">'+String(x.name||x.id).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</option>').join('');
+  const sig=JSON.stringify(rows.map(x=>[x.id,x.name]));
+  if(sel.dataset.yvReceptionScopeSig!==sig){sel.innerHTML=html;sel.dataset.yvReceptionScopeSig=sig}
+  const ok=rows.some(x=>String(x.id)===String(value||''));sel.value=ok?String(value):'';
+}
+function currentLoc(){
+  const L=allowedLocations();
+  const candidates=[
+    window.currentSession?.location,
+    localStorage.getItem('yardivo_active_location_v583'),
+    localStorage.getItem('yardivo_last_location'),
+    localStorage.getItem('yardivo_selected_location')
+  ].map(x=>String(x||'')).filter(Boolean);
+  return candidates.find(v=>L.some(x=>String(x.id)===v))||String(L[0]?.id||'');
+}
+function currentWh(loc){
+  const W=allowedWarehouses(loc);
+  const candidates=[
+    window.activeWarehouse,
+    window.YardivoAppStateV583?.warehouse?.(),
+    localStorage.getItem('yardivo_active_warehouse_v583'),
+    localStorage.getItem('studenac_active_warehouse')
+  ].map(x=>String(x||'')).filter(Boolean);
+  return candidates.find(v=>W.some(x=>String(x.id)===v))||String(W[0]?.id||'');
+}
+function persistContext(loc,wh){
+  try{
+    if(window.currentSession)window.currentSession.location=loc||null;
+    window.activeWarehouse=wh||'';
+    window.YardivoAppStateV583?.setLocation?.(loc||'');
+    window.YardivoAppStateV583?.setWarehouse?.(wh||'');
+    if(loc){localStorage.setItem('yardivo_active_location_v583',loc);localStorage.setItem('yardivo_last_location',loc);localStorage.setItem('yardivo_selected_location',loc)}
+    if(wh){localStorage.setItem('yardivo_active_warehouse_v583',wh);localStorage.setItem('studenac_active_warehouse',wh)}
+    window.persistCurrentSession?.();
+  }catch(_){}
+}
+function enforceScope(){
+  if(!isReception())return;
+  const L=allowedLocations(),loc=currentLoc(),W=allowedWarehouses(loc),wh=currentWh(loc);
+  const hs=$('homeLocationSelect'),gl=$('globalLocationV583'),gw=$('globalWarehouse');
+  fill(hs,L,'Odaberi lokaciju...',loc);fill(gl,L,'Odaberi lokaciju...',loc);
+  fill(gw,W,loc?'Odaberi skladište...':'Prvo odaberi lokaciju',wh);
+  [hs,gl].forEach(s=>{if(s)s.disabled=L.length<=1});
+  if(gw)gw.disabled=W.length<=1;
+  persistContext(loc,wh);
+  const st=$('homeLocationStatus'),ttl=$('homeSelectedLocation'),name=L.find(x=>String(x.id)===loc)?.name||'';
+  if(st&&name){st.textContent='Odabrano: '+name;st.classList.add('ready')}
+  if(ttl&&name){ttl.textContent=name.toUpperCase();ttl.classList.add('selected')}
+}
+function hideRequestedSettings(){
+  if(!isReception())return;
+  const directIds=['masterUserAdmin','yardivoAddUserRestoredBtnV583','yardivoOpenUsersV583','yvAddSupplierMasterBtnV583','qrMobileSettingsPanel','yardivoDevTotalResetV583'];
+  directIds.forEach(id=>{const x=$(id);if(x){x.hidden=true;x.style.setProperty('display','none','important')}});
+  document.querySelectorAll('#settings .danger-zone').forEach(x=>x.style.setProperty('display','none','important'));
+  // Also hide dynamically-created "Dodaj korisnika / Dodaj dobavljača" controls if their ids change.
+  document.querySelectorAll('#settings button').forEach(b=>{
+    const t=String(b.textContent||'').trim().toLowerCase();
+    if(t.includes('dodaj korisnika')||t.includes('dodaj dobavljača')||t.includes('dodaj dobavljaca')||t.includes('reset yardivo')){
+      b.hidden=true;b.style.setProperty('display','none','important');
+    }
+  });
+}
+function hideViews(){
+  const rec=isReception();document.body.classList.toggle('yv-role-reception-v583',rec);if(!rec)return;
+  document.querySelectorAll('[data-view]').forEach(el=>{if(HIDDEN_VIEWS.has(String(el.dataset.view||''))){el.classList.add('role-hidden');el.hidden=true;el.style.setProperty('display','none','important')}});
+  document.querySelectorAll('[data-home-target]').forEach(el=>{if(HIDDEN_VIEWS.has(String(el.dataset.homeTarget||''))){el.classList.add('role-hidden');el.hidden=true;el.style.setProperty('display','none','important')}});
+  HIDDEN_VIEWS.forEach(id=>{const v=$(id);if(v&&v.classList.contains('view')){v.classList.remove('active');v.setAttribute('aria-hidden','true')}});
+  const active=document.querySelector('.view.active');
+  if(active&&HIDDEN_VIEWS.has(active.id)){
+    try{window.showView?.('receiving')}catch(_){}
+    const recv=$('receiving');if(recv){document.querySelectorAll('.view.active').forEach(x=>x.classList.remove('active'));recv.classList.add('active')}
+  }
+}
+function apply(){hideViews();hideRequestedSettings();enforceScope()}
+document.addEventListener('change',e=>{
+  if(!isReception())return;
+  const id=e.target?.id;if(!['homeLocationSelect','globalLocationV583','globalWarehouse'].includes(id))return;
+  const L=allowedLocations();
+  if(id==='homeLocationSelect'||id==='globalLocationV583'){
+    const loc=String(e.target.value||'');if(!L.some(x=>String(x.id)===loc)){e.preventDefault();e.stopImmediatePropagation();setTimeout(enforceScope,0);return}
+    const W=allowedWarehouses(loc);persistContext(loc,String(W[0]?.id||''));setTimeout(enforceScope,0);
+  }else{
+    const loc=currentLoc(),W=allowedWarehouses(loc),wh=String(e.target.value||'');
+    if(!W.some(x=>String(x.id)===wh)){e.preventDefault();e.stopImmediatePropagation();setTimeout(enforceScope,0);return}
+    persistContext(loc,wh);
+  }
+},true);
+['yardivo:login','yardivo:data-synced','yardivo:master-data-ready','yardivo:master-data-changed','yardivo:context-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(apply,80)));
+document.addEventListener('click',e=>{if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"],#navSettings'))setTimeout(apply,40)},true);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,900),{once:true});else setTimeout(apply,150);
+window.addEventListener('load',()=>setTimeout(apply,500),{once:true});
+window.YardivoReceptionUiScopeCleanV583={apply,allowedLocations,allowedWarehouses};
+window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-reception-ui-scope-clean';
+})();
+</script>
+
+</body>
 </html>
