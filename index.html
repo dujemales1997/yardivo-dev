@@ -6723,78 +6723,118 @@ body.yv-role-reception-v583 [data-home-target="orderSearch"]{
 }
 </style>
 
-<style id="yardivo-v583-sidebar-hide-toggle-css">
-:root{--yv-sidebar-toggle-z:12050}
+
+
+<style id="yardivo-v583-sidebar-hover-drawer-css">
+/* Full-width application shell at all times. Sidebar never changes content geometry. */
+.app-shell{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+}
+.main, main.main, .content, .view, .view.active{
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin-left:0!important;
+  margin-right:0!important;
+}
+.topbar{
+  width:100%!important;
+  max-width:none!important;
+  left:0!important;
+}
+
+/* Navigation is a fixed overlay drawer. */
 .sidebar{
-  transition:transform .18s ease,opacity .18s ease!important;
-}
-#yardivoSidebarHideBtn{
-  width:100%;
-  margin:0 0 8px!important;
-  min-height:34px!important;
-  border:1px solid rgba(255,255,255,.16)!important;
-  border-radius:9px!important;
-  background:rgba(255,255,255,.06)!important;
-  color:#dfeeff!important;
-  font-size:11px!important;
-  font-weight:850!important;
-  letter-spacing:.04em!important;
-  cursor:pointer!important;
-  display:flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  gap:7px!important;
-  transition:background .14s ease,border-color .14s ease!important;
-}
-#yardivoSidebarHideBtn:hover{
-  background:rgba(255,255,255,.11)!important;
-  border-color:rgba(255,255,255,.24)!important;
-}
-#yardivoSidebarShowBtn{
-  position:fixed!important;
-  left:12px!important;
-  top:12px!important;
-  z-index:var(--yv-sidebar-toggle-z)!important;
-  min-height:38px!important;
-  padding:0 13px!important;
-  border:1px solid #b9cadb!important;
-  border-radius:10px!important;
-  background:#0b2f55!important;
-  color:#fff!important;
-  box-shadow:0 5px 18px rgba(7,35,65,.18)!important;
-  font-size:11px!important;
-  font-weight:900!important;
-  letter-spacing:.03em!important;
-  cursor:pointer!important;
-  display:none!important;
-  align-items:center!important;
-  justify-content:center!important;
-  gap:7px!important;
-}
-body.yv-sidebar-hidden #yardivoSidebarShowBtn{
-  display:flex!important;
-}
-body.yv-sidebar-hidden .sidebar{
-  transform:translateX(-110%)!important;
-  opacity:0!important;
-  pointer-events:none!important;
   position:fixed!important;
   left:0!important;
   top:0!important;
+  bottom:0!important;
+  z-index:2147482400!important;
+  width:220px!important;
+  max-width:86vw!important;
+  transform:translateX(calc(-100% + 7px))!important;
+  opacity:1!important;
+  pointer-events:none!important;
+  will-change:transform!important;
+  transition:transform .16s ease!important;
+  box-shadow:10px 0 28px rgba(0,0,0,.18)!important;
 }
-body.yv-sidebar-hidden .app-shell{
-  grid-template-columns:1fr!important;
+body.yv-sidebar-hover-open .sidebar{
+  transform:translateX(0)!important;
+  pointer-events:auto!important;
 }
-body.yv-sidebar-hidden .main{
-  width:100%!important;
-  min-width:0!important;
-  margin-left:0!important;
+
+/* Invisible 12px activation strip on the far left. */
+#yardivoSidebarHoverZone{
+  position:fixed!important;
+  left:0!important;
+  top:0!important;
+  bottom:0!important;
+  width:12px!important;
+  z-index:2147482450!important;
+  background:transparent!important;
 }
-@media (max-width:780px){
-  #yardivoSidebarShowBtn{
-    left:8px!important;
-    top:8px!important;
-    min-height:36px!important;
+
+/* Remove old button UI completely. */
+#yardivoSidebarHideBtn,#yardivoSidebarShowBtn{
+  display:none!important;
+}
+
+/* Sidebar entries are visually stable: no slide/scale/width animation. */
+.sidebar .nav-btn,
+.sidebar [data-view],
+.sidebar [data-home-target]{
+  transform:none!important;
+  animation:none!important;
+  transition:background-color .10s ease,border-color .10s ease,color .10s ease!important;
+}
+
+/* Reception restrictions remain authoritative. */
+body[data-yardivo-role="reception"] .sidebar [data-view="dashboard"],
+body[data-yardivo-role="reception"] .sidebar [data-view="controlTower"],
+body[data-yardivo-role="reception"] .sidebar [data-view="controltower"],
+body[data-yardivo-role="reception"] .sidebar [data-view="checkin"],
+body[data-yardivo-role="reception"] .sidebar [data-view="docks"],
+body[data-yardivo-role="reception"] .sidebar [data-view="suppliers"],
+body[data-yardivo-role="reception"] .sidebar [data-view="orderSearch"],
+body.yv-role-reception-v583 .sidebar [data-view="dashboard"],
+body.yv-role-reception-v583 .sidebar [data-view="controlTower"],
+body.yv-role-reception-v583 .sidebar [data-view="controltower"],
+body.yv-role-reception-v583 .sidebar [data-view="checkin"],
+body.yv-role-reception-v583 .sidebar [data-view="docks"],
+body.yv-role-reception-v583 .sidebar [data-view="suppliers"],
+body.yv-role-reception-v583 .sidebar [data-view="orderSearch"]{
+  display:none!important;
+  visibility:hidden!important;
+}
+
+/* Keep notification surfaces steady. */
+#yardivoNotificationHistory,
+#yardivoNotificationHistory .y5-history-card,
+#yardivoNotificationHistory .y5-notif-toolbar,
+#notifList,
+#notifList .notif-item{
+  animation:none!important;
+  transition:none!important;
+}
+
+/* Touch devices keep the existing sidebar visible because there is no mouse hover. */
+@media (hover:none),(pointer:coarse){
+  #yardivoSidebarHoverZone{display:none!important}
+  .sidebar{
+    position:relative!important;
+    width:auto!important;
+    max-width:none!important;
+    transform:none!important;
+    pointer-events:auto!important;
+    box-shadow:none!important;
+  }
+  .app-shell{
+    display:grid!important;
   }
 }
 </style>
@@ -15664,6 +15704,30 @@ function save(rows){localStorage.setItem(KEY,JSON.stringify(rows))}
 function locationForWarehouse(wh){try{const m=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');const w=(m.warehouses||[]).find(x=>x&&x.active!==false&&String(x.id)===String(wh));return w?String(w.location_id||''):''}catch(_){return ''}}
 function locName(loc){try{const m=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');return String((m.locations||[]).find(x=>String(x.id)===String(loc))?.name||loc||'Sve lokacije')}catch(_){return String(loc||'Sve lokacije')}}
 function epalMaster(){try{const d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');return {locations:Array.isArray(d.locations)?d.locations:[],warehouses:Array.isArray(d.warehouses)?d.warehouses:[],suppliers:Array.isArray(d.suppliers)?d.suppliers:[]}}catch(_){return {locations:[],warehouses:[],suppliers:[]}}}
+function epalScope(){
+  const d=epalMaster(),r=role();
+  if(r!=='reception')return {
+    locations:d.locations.filter(x=>x&&x.active!==false),
+    warehouses:d.warehouses.filter(x=>x&&x.active!==false)
+  };
+  let locIds=[],whIds=[];
+  try{
+    locIds=Array.isArray(currentSession?.locations)?currentSession.locations.map(String).filter(Boolean):[];
+    const oneLoc=String(currentSession?.location||'').trim();
+    if(oneLoc&&oneLoc!=='ALL'&&!locIds.includes(oneLoc))locIds.push(oneLoc);
+    whIds=Array.isArray(currentSession?.warehouses)?currentSession.warehouses.map(String).filter(Boolean):[];
+    const oneWh=String(currentSession?.warehouse||'').trim();
+    if(oneWh&&oneWh!=='ALL'&&!whIds.includes(oneWh))whIds.push(oneWh);
+  }catch(_){}
+  const wset=new Set(whIds),lset=new Set(locIds);
+  d.warehouses.filter(w=>w&&w.active!==false&&wset.has(String(w.id))).forEach(w=>{
+    if(w.location_id)lset.add(String(w.location_id));
+  });
+  return {
+    locations:d.locations.filter(x=>x&&x.active!==false&&lset.has(String(x.id))),
+    warehouses:d.warehouses.filter(x=>x&&x.active!==false&&wset.has(String(x.id)))
+  };
+}
 function currentMasterLocation(){
   const d=epalMaster();
   const valid=new Set(d.locations.filter(x=>x&&x.active!==false).map(x=>String(x.id)));
@@ -15684,8 +15748,9 @@ function supplierList(){
   return [...set].sort((a,b)=>a.localeCompare(b,'hr'));
 }
 function warehouseList(loc=selectedLocation()){
-  const d=epalMaster();
-  return d.warehouses.filter(w=>w&&w.active!==false&&(loc==='ALL'||String(w.location_id)===String(loc)));
+  const d=epalMaster(),scope=epalScope();
+  const base=role()==='reception'?scope.warehouses:d.warehouses.filter(w=>w&&w.active!==false);
+  return base.filter(w=>w&&w.active!==false&&(loc==='ALL'||String(w.location_id)===String(loc)));
 }
 function selectedLocation(){
   const v=document.getElementById('epalLocationFilter')?.value||'CURRENT';
@@ -15693,10 +15758,24 @@ function selectedLocation(){
 }
 function updateLocationFilter(){
   const sel=document.getElementById('epalLocationFilter');if(!sel)return;
-  const d=epalMaster(),old=sel.value||'CURRENT',cur=currentMasterLocation();
+  const d=epalMaster(),old=sel.value||'CURRENT',cur=currentMasterLocation(),scope=epalScope();
+  if(role()==='reception'){
+    const rows=scope.locations;
+    const wanted=rows.some(x=>String(x.id)===String(old))?String(old):
+      (rows.some(x=>String(x.id)===String(cur))?String(cur):String(rows[0]?.id||''));
+    const sig=JSON.stringify(rows.map(x=>[String(x.id),String(x.name||x.id)]));
+    if(sel.dataset.yvEpalScopeSig!==sig){
+      sel.innerHTML=rows.map(x=>`<option value="${esc(x.id)}">${esc(x.name||x.id)}</option>`).join('');
+      sel.dataset.yvEpalScopeSig=sig;
+    }
+    if(wanted&&sel.value!==wanted)sel.value=wanted;
+    sel.disabled=rows.length<=1;
+    return;
+  }
   const curName=cur==='ALL'?'Sve lokacije':String(d.locations.find(x=>String(x.id)===String(cur))?.name||'Trenutna lokacija');
   sel.innerHTML=`<option value="CURRENT">Trenutna lokacija · ${esc(curName)}</option>`+d.locations.filter(x=>x&&x.active!==false).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')+'<option value="ALL">Sve lokacije</option>';
   if([...sel.options].some(o=>o.value===old))sel.value=old;else sel.value='CURRENT';
+  sel.disabled=false;
 }
 function filteredTransactions(){
   const loc=selectedLocation(),wh=document.getElementById('epalWarehouseFilter')?.value||'ALL',q=(document.getElementById('epalSupplierSearch')?.value||'').trim().toLocaleLowerCase('hr-HR');
@@ -15717,8 +15796,20 @@ function updateWarehouseFilter(){
   updateLocationFilter();
   const loc=selectedLocation(),sel=document.getElementById('epalWarehouseFilter');if(!sel)return;
   const current=sel.value,rows=warehouseList(loc);
+  if(role()==='reception'){
+    const sig=JSON.stringify(rows.map(w=>[String(w.id),String(w.name||w.id)]));
+    if(sel.dataset.yvEpalScopeSig!==sig){
+      sel.innerHTML=rows.map(w=>`<option value="${esc(w.id)}">${esc(w.name||w.id)}</option>`).join('');
+      sel.dataset.yvEpalScopeSig=sig;
+    }
+    const wanted=rows.some(w=>String(w.id)===String(current))?String(current):String(rows[0]?.id||'');
+    if(wanted&&sel.value!==wanted)sel.value=wanted;
+    sel.disabled=rows.length<=1;
+    return;
+  }
   sel.innerHTML='<option value="ALL">Sva skladišta</option>'+rows.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');
   if([...sel.options].some(o=>o.value===current))sel.value=current;else sel.value='ALL';
+  sel.disabled=false;
 }
 function render(){
   const view=document.getElementById('epal'),nav=document.querySelector('[data-view="epal"]');
@@ -54391,133 +54482,57 @@ window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-reception-ui-scope-smooth';
 </script>
 
 
-<script id="yardivo-v583-sidebar-hide-toggle-js">
+
+
+
+<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-reception-scope-hover-sidebar-final';</script>
+<script id="yardivo-v583-sidebar-hover-drawer-js">
 (()=>{'use strict';
-if(window.__YV_SIDEBAR_HIDE_TOGGLE_V583__)return;
-window.__YV_SIDEBAR_HIDE_TOGGLE_V583__=true;
+if(window.__YV_SIDEBAR_HOVER_DRAWER_V583__)return;
+window.__YV_SIDEBAR_HOVER_DRAWER_V583__=true;
 
-const KEY='yardivo_sidebar_hidden_v583';
-
-function isHidden(){
-  try{return localStorage.getItem(KEY)==='1'}catch(_){return false}
+let closeTimer=0;
+const body=()=>document.body;
+function open(){
+  clearTimeout(closeTimer);
+  body()?.classList.add('yv-sidebar-hover-open');
 }
-function apply(hidden){
-  document.body.classList.toggle('yv-sidebar-hidden',!!hidden);
-  const show=document.getElementById('yardivoSidebarShowBtn');
-  const hide=document.getElementById('yardivoSidebarHideBtn');
-  if(show)show.setAttribute('aria-expanded',hidden?'false':'true');
-  if(hide)hide.setAttribute('aria-expanded',hidden?'false':'true');
-}
-function save(hidden){
-  try{localStorage.setItem(KEY,hidden?'1':'0')}catch(_){}
-  apply(hidden);
+function closeSoon(){
+  clearTimeout(closeTimer);
+  closeTimer=setTimeout(()=>body()?.classList.remove('yv-sidebar-hover-open'),110);
 }
 function ensure(){
   const side=document.querySelector('.sidebar');
   if(!side)return;
 
-  let hide=document.getElementById('yardivoSidebarHideBtn');
-  if(!hide){
-    hide=document.createElement('button');
-    hide.id='yardivoSidebarHideBtn';
-    hide.type='button';
-    hide.innerHTML='<span aria-hidden="true">‹</span><span>SAKRIJ IZBORNIK</span>';
-    hide.title='Sakrij lijevi izbornik';
-    hide.setAttribute('aria-label','Sakrij lijevi izbornik');
-    hide.addEventListener('click',()=>save(true));
-    side.insertBefore(hide,side.firstChild);
+  /* Remove any legacy buttons if an older browser cache inserted them. */
+  document.getElementById('yardivoSidebarHideBtn')?.remove();
+  document.getElementById('yardivoSidebarShowBtn')?.remove();
+  body()?.classList.remove('yv-sidebar-hidden');
+
+  let zone=document.getElementById('yardivoSidebarHoverZone');
+  if(!zone){
+    zone=document.createElement('div');
+    zone.id='yardivoSidebarHoverZone';
+    zone.setAttribute('aria-hidden','true');
+    document.body.appendChild(zone);
   }
 
-  let show=document.getElementById('yardivoSidebarShowBtn');
-  if(!show){
-    show=document.createElement('button');
-    show.id='yardivoSidebarShowBtn';
-    show.type='button';
-    show.innerHTML='<span aria-hidden="true">☰</span><span>IZBORNIK</span>';
-    show.title='Prikaži lijevi izbornik';
-    show.setAttribute('aria-label','Prikaži lijevi izbornik');
-    show.addEventListener('click',()=>save(false));
-    document.body.appendChild(show);
+  if(!zone.dataset.bound){
+    zone.dataset.bound='1';
+    zone.addEventListener('pointerenter',open,{passive:true});
+    zone.addEventListener('mousemove',open,{passive:true});
   }
-  apply(isHidden());
+  if(!side.dataset.yvHoverBound){
+    side.dataset.yvHoverBound='1';
+    side.addEventListener('pointerenter',open,{passive:true});
+    side.addEventListener('pointerleave',closeSoon,{passive:true});
+  }
 }
-
-/* Apply stored state immediately when DOM exists, with no periodic redraws. */
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',ensure,{once:true});
-}else ensure();
-
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensure,{once:true});
+else ensure();
 window.addEventListener('yardivo:login',ensure);
-window.YardivoSidebarV583={hide:()=>save(true),show:()=>save(false),toggle:()=>save(!document.body.classList.contains('yv-sidebar-hidden'))};
 })();
 </script>
-
-<style id="yardivo-v583-sidebar-notification-smooth-final-css">
-/* Sidebar items stay visually stable; only color/background may change. */
-.sidebar .nav-btn,
-.sidebar [data-view],
-.sidebar [data-home-target]{
-  transform:none!important;
-  animation:none!important;
-  transition:background-color .12s ease,border-color .12s ease,color .12s ease!important;
-}
-
-/* Reception restrictions are authoritative before/without JS repaint. */
-body[data-yardivo-role="reception"] .sidebar [data-view="dashboard"],
-body[data-yardivo-role="reception"] .sidebar [data-view="controlTower"],
-body[data-yardivo-role="reception"] .sidebar [data-view="controltower"],
-body[data-yardivo-role="reception"] .sidebar [data-view="checkin"],
-body[data-yardivo-role="reception"] .sidebar [data-view="docks"],
-body[data-yardivo-role="reception"] .sidebar [data-view="suppliers"],
-body[data-yardivo-role="reception"] .sidebar [data-view="orderSearch"],
-body.yv-role-reception-v583 .sidebar [data-view="dashboard"],
-body.yv-role-reception-v583 .sidebar [data-view="controlTower"],
-body.yv-role-reception-v583 .sidebar [data-view="controltower"],
-body.yv-role-reception-v583 .sidebar [data-view="checkin"],
-body.yv-role-reception-v583 .sidebar [data-view="docks"],
-body.yv-role-reception-v583 .sidebar [data-view="suppliers"],
-body.yv-role-reception-v583 .sidebar [data-view="orderSearch"]{
-  display:none!important;
-  visibility:hidden!important;
-}
-
-/* Hidden sidebar removes its grid column and every view uses full available width. */
-body.yv-sidebar-hidden .app-shell{
-  display:block!important;
-  width:100%!important;
-  max-width:none!important;
-  min-width:0!important;
-}
-body.yv-sidebar-hidden .main,
-body.yv-sidebar-hidden main,
-body.yv-sidebar-hidden .content,
-body.yv-sidebar-hidden .view,
-body.yv-sidebar-hidden .view.active{
-  box-sizing:border-box!important;
-  width:100%!important;
-  max-width:none!important;
-  min-width:0!important;
-  margin-left:0!important;
-  margin-right:0!important;
-}
-body.yv-sidebar-hidden .topbar{
-  width:100%!important;
-  max-width:none!important;
-  left:0!important;
-}
-body.yv-sidebar-hidden #yardivoSidebarShowBtn{
-  z-index:2147482500!important;
-}
-
-/* Notification history: no transition/animation flicker on rerender. */
-#yardivoNotificationHistory,
-#yardivoNotificationHistory .y5-history-card,
-#yardivoNotificationHistory .y5-notif-toolbar,
-#notifList,
-#notifList .notif-item{
-  animation:none!important;
-  transition:none!important;
-}
-</style>
-<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-reception-notification-flow-fix';</script></body>
+</body>
 </html>
