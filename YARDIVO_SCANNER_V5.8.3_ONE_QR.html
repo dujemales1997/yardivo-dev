@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#050806">
+<meta name="theme-color" content="#06111f">
 <title>YARDIVO · ONE QR Scanner</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 :root{
-  --bg:#050806;--panel:#0b120e;--panel2:#0e1712;--line:#20352a;
-  --text:#eef8f1;--muted:#8ba497;--green:#54f28b;--green2:#1ec96a;
-  --red:#ff6b74;--yellow:#ffd56a;
+  --bg:#06111f;--panel:#0b1728;--panel2:#0f1f34;--line:#25466f;
+  --text:#eef6ff;--muted:#90a9c6;--green:#4aa3ff;--green2:#2f86e6;
+  --red:#ff6673;--yellow:#ffd56a;
 }
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -23,18 +23,18 @@ body{padding:env(safe-area-inset-top) 14px calc(16px + env(safe-area-inset-botto
 .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:16px;margin:10px 0;box-shadow:0 14px 40px rgba(0,0,0,.26)}
 label{display:block;font-size:11px;color:var(--muted);font-weight:800;margin:10px 0 6px}
 input,select,button{font:inherit}
-input,select{width:100%;padding:13px 12px;border-radius:12px;border:1px solid #294435;background:#07100b;color:var(--text);outline:none}
-input:focus,select:focus{border-color:var(--green2);box-shadow:0 0 0 3px rgba(84,242,139,.08)}
+input,select{width:100%;padding:13px 12px;border-radius:12px;border:1px solid #2b4f7d;background:#081729;color:var(--text);outline:none}
+input:focus,select:focus{border-color:var(--green2);box-shadow:0 0 0 3px rgba(74,163,255,.12)}
 button{border:0;border-radius:12px;padding:13px 16px;font-weight:950;cursor:pointer}
-button.primary{background:var(--green);color:#041008}
-button.secondary{background:#132019;color:var(--text);border:1px solid #294435}
+button.primary{background:linear-gradient(180deg,#57adff,#2f86e6);color:#04111f}
+button.secondary{background:#132019;color:var(--text);border:1px solid #2b4f7d}
 button.danger{background:#31171a;color:#ffc5c8;border:1px solid #6b2d33}
 button:disabled{opacity:.45;cursor:not-allowed}
 .row{display:flex;gap:10px;flex-wrap:wrap}
 .row>*{flex:1 1 180px}
 .status{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:900}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--yellow);box-shadow:0 0 14px rgba(255,213,106,.5)}
-.status.ok .dot{background:var(--green);box-shadow:0 0 14px rgba(84,242,139,.55)}
+.status.ok .dot{background:var(--green);box-shadow:0 0 14px rgba(74,163,255,.55)}
 .status.bad .dot{background:var(--red);box-shadow:0 0 14px rgba(255,107,116,.5)}
 .hidden{display:none!important}
 #reader{width:100%;overflow:hidden;border-radius:16px;background:#000;min-height:280px}
@@ -43,14 +43,14 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .hero strong{display:block;font-size:20px}
 .hero span{color:var(--muted);font-size:12px}
 .result{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
-.fact{border:1px solid #21382b;border-radius:12px;padding:10px;background:#08110c}
+.fact{border:1px solid #25466f;border-radius:12px;padding:10px;background:#09182a}
 .fact small{display:block;color:var(--muted);font-size:9px;font-weight:800;margin-bottom:3px}
 .fact strong{font-size:13px;word-break:break-word}
 .msg{padding:11px 12px;border-radius:12px;border:1px solid #5a4720;background:#251e0b;color:#ffe8a4;font-size:12px;font-weight:800;line-height:1.45}
-.msg.ok{border-color:#245d3a;background:#0b2115;color:#a5f5bf}
-.msg.bad{border-color:#6a2e34;background:#2a1115;color:#ffc0c5}
+.msg.ok{border-color:#2f78bb;background:#0b223d;color:#b9dcff}
+.msg.bad{border-color:#b73543;background:#3a1017;color:#ffd3d7;font-size:13px}
 .toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.rolepill{font-size:10px;font-weight:950;color:#aef5c4;background:#0d2416;border:1px solid #255f3b;padding:7px 9px;border-radius:999px}
+.rolepill{font-size:10px;font-weight:950;color:#c6e4ff;background:#0c2541;border:1px solid #2f6fa8;padding:7px 9px;border-radius:999px}
 .footer{color:#5f7568;text-align:center;font-size:10px;padding:18px 6px}
 @media(max-width:520px){.result{grid-template-columns:1fr}.brand h1{font-size:16px}}
 </style>
@@ -126,6 +126,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
       <div id="facts" class="result"></div>
       <div class="row" style="margin-top:14px">
         <button id="confirmBtn" class="primary">POTVRDI</button>
+        <button id="rejectBtn" class="danger hidden">ODBIJEN</button>
         <button id="cancelBtn" class="secondary">ODUSTANI</button>
       </div>
     </div>
@@ -292,34 +293,63 @@ async function processRaw(raw){
     if(/QR_SCAN_DISABLED/i.test(er)){
       msg($('scanMsg'),'ERROR · Mobilno QR skeniranje je isključeno u YARDIVO Postavkama. Admin mora uključiti QR Scan switch za test.','bad');
     }else{
-      msg($('scanMsg'),'ERROR · '+er,'bad');
+      msg($('scanMsg'),'⛔ NEVAŽEĆI QR · '+er,'bad');
     }
     $('resultCard').classList.add('hidden');
   }
 }
+function fmtDateTime(v){
+  if(!v)return'—';
+  try{return new Intl.DateTimeFormat('hr-HR',{dateStyle:'short',timeStyle:'medium'}).format(new Date(v))}catch(_){return String(v)}
+}
 function renderValidation(d){
   const isGate=mode()==='gate';
+  const completing=!isGate && d.nextAction==='complete';
   $('resultTitle').textContent='QR VALJAN';
-  $('resultSub').textContent=isGate?'Porta · potvrda ulaza':'Prijam · potvrda dolaska na rampu';
+  $('resultSub').textContent=isGate
+    ?'Porta · provjeri podatke i potvrdi ulaz'
+    :(completing?'Prijam · završi prijam':'Prijam · spoji vozilo na rampu');
+
   const facts=[
     ['DOBAVLJAČ',d.supplier||'—'],
-    ['LOKACIJA',d.locationName||d.location||'—'],
-    ['SKLADIŠTE',d.warehouse||'—'],
-    ['TERMIN',d.time||'—'],
+    ['REGISTRACIJA',d.plate||'—'],
+    ['VOZAČ',d.driver||'—'],
+    ['KONTAKT VOZAČA',d.driverContact||'—'],
+    ['PRIKOLICA',d.trailerPlate||'—'],
+    ['LOKACIJA',d.locationName||'—'],
+    ['SKLADIŠTE',d.warehouseName||'—'],
+    ['DATUM NAJAVE',d.date||'—'],
+    ['VRIJEME NAJAVE',d.time||'—'],
     ['RAMPA',d.dock||'—'],
-    ['STATUS',d.status||'—']
+    ['PALETE',Number.isFinite(Number(d.pallets))?d.pallets:'—'],
+    ['SKU',Number.isFinite(Number(d.sku))?d.sku:'—'],
+    ['BROJ NARUDŽBE',d.orderNumber||'—'],
+    ['STATUS',String(d.status||'—').toUpperCase()==='RAMPA'?'NA RAMPI':(d.status||'—')],
+    ['ULAZ EVIDENTIRAN',fmtDateTime(d.gateUsedAt)],
+    ['SPOJEN NA RAMPU',fmtDateTime(d.dockUsedAt||d.dockArrivalAt)]
   ];
   $('facts').innerHTML=facts.map(([k,v])=>`<div class="fact"><small>${esc(k)}</small><strong>${esc(v)}</strong></div>`).join('');
-  $('confirmBtn').textContent=isGate?'POTVRDI ULAZ':'POTVRDI NA RAMPI';
+
+  $('rejectBtn').classList.toggle('hidden',!completing);
+  $('confirmBtn').classList.remove('hidden');
+  if(isGate)$('confirmBtn').textContent='POTVRDI ULAZ';
+  else if(completing)$('confirmBtn').textContent='ZAPRIMLJEN';
+  else $('confirmBtn').textContent='NA RAMPI';
+
   $('resultCard').classList.remove('hidden');
 }
-async function confirmScan(){
+async function finishReception(outcome){
   if(!currentToken||!currentValidation)return;
-  const action=mode()==='gate'?'arrival':'dock';
-  const btn=$('confirmBtn');btn.disabled=true;btn.textContent='SPREMAM…';
+  const ok=outcome==='received';
+  const btn=ok?$('confirmBtn'):$('rejectBtn');
+  const other=ok?$('rejectBtn'):$('confirmBtn');
+  btn.disabled=true;other.disabled=true;
+  const previous=btn.textContent;btn.textContent='SPREMAM…';
   try{
-    const data=await invokeGate(action,{token:currentToken,type:mode()});
-    msg($('scanMsg'),action==='arrival'?'USPJEH · Vozilo je evidentirano kao U DVORIŠTU.':'USPJEH · Vozilo je evidentirano NA RAMPI.','ok');
+    const data=await invokeGate('complete',{token:currentToken,type:'dock',outcome});
+    msg($('scanMsg'),ok
+      ?'USPJEH · Prijam je završen: ZAPRIMLJEN.'
+      :'USPJEH · Prijam je završen: ODBIJEN.','ok');
     $('resultCard').classList.add('hidden');
     currentToken='';currentValidation=null;
     setTimeout(()=>startCamera(),900);
@@ -327,7 +357,33 @@ async function confirmScan(){
     const er=String(e?.message||e);
     if(/QR_SCAN_DISABLED/i.test(er))msg($('scanMsg'),'ERROR · QR Scan switch je isključen u YARDIVO Postavkama.','bad');
     else msg($('scanMsg'),'ERROR · '+er,'bad');
-  }finally{btn.disabled=false;btn.textContent=mode()==='gate'?'POTVRDI ULAZ':'POTVRDI NA RAMPI'}
+  }finally{
+    btn.disabled=false;other.disabled=false;btn.textContent=previous;
+  }
+}
+async function confirmScan(){
+  if(!currentToken||!currentValidation)return;
+  if(mode()==='dock'&&currentValidation.nextAction==='complete'){
+    return finishReception('received');
+  }
+  const action=mode()==='gate'?'arrival':'dock';
+  const btn=$('confirmBtn');btn.disabled=true;btn.textContent='SPREMAM…';
+  try{
+    const data=await invokeGate(action,{token:currentToken,type:mode()});
+    msg($('scanMsg'),action==='arrival'
+      ?'USPJEH · Vozilo je evidentirano kao U DVORIŠTU.'
+      :'USPJEH · Vozilo je NA RAMPI i vrijeme spajanja je zabilježeno.','ok');
+    $('resultCard').classList.add('hidden');
+    currentToken='';currentValidation=null;
+    setTimeout(()=>startCamera(),900);
+  }catch(e){
+    const er=String(e?.message||e);
+    if(/QR_SCAN_DISABLED/i.test(er))msg($('scanMsg'),'ERROR · QR Scan switch je isključen u YARDIVO Postavkama.','bad');
+    else msg($('scanMsg'),'ERROR · '+er,'bad');
+  }finally{
+    btn.disabled=false;
+    btn.textContent=mode()==='gate'?'POTVRDI ULAZ':'NA RAMPI';
+  }
 }
 
 $('loginBtn').onclick=login;
@@ -336,6 +392,7 @@ $('startBtn').onclick=startCamera;
 $('stopBtn').onclick=stopCamera;
 $('manualBtn').onclick=()=>processRaw($('manualToken').value);
 $('confirmBtn').onclick=confirmScan;
+$('rejectBtn').onclick=()=>finishReception('rejected');
 $('cancelBtn').onclick=()=>{$('resultCard').classList.add('hidden');currentToken='';currentValidation=null;startCamera()};
 $('adminMode').onchange=()=>{if(currentValidation)renderValidation(currentValidation)};
 $('logoutBtn').onclick=async()=>{await stopCamera();await sb.auth.signOut();showLogin();setNet(false,'ODJAVLJEN')};
