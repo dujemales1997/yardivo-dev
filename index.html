@@ -8011,6 +8011,232 @@ html[data-yardivo-main-theme="light"] .yv3-gate{background:#eef5f8;color:#365c73
   .yv3-detail{width:205px}
 }
 </style>
+
+<style id="yardivo-v583-bottom-minimap-assistant-css">
+/* ==========================================================
+   BOTTOM UX
+   Left: live mini yard map.
+   Right: scope-aware YARDIVO Smart Assistant.
+   ========================================================== */
+#yardivoMiniMapZone{
+  position:fixed;left:0;bottom:0;width:42%;height:12px;
+  z-index:2147482500;background:transparent;
+}
+#yardivoAssistantZone{
+  position:fixed;right:0;bottom:0;width:42%;height:12px;
+  z-index:2147482500;background:transparent;
+}
+
+#yardivoMiniMapDock,
+#yardivoSmartAssistant{
+  position:fixed;
+  bottom:0;
+  z-index:2147482450;
+  background:#081722;
+  color:#e8f1f6;
+  border:1px solid #294253;
+  box-shadow:0 -14px 34px rgba(0,0,0,.24);
+  transition:transform .18s ease;
+  overflow:hidden;
+}
+#yardivoMiniMapDock{
+  left:14px;
+  width:min(560px,48vw);
+  min-width:390px;
+  height:270px;
+  border-radius:12px 12px 0 0;
+  transform:translateY(calc(100% - 7px));
+}
+#yardivoSmartAssistant{
+  right:14px;
+  width:min(410px,42vw);
+  min-width:350px;
+  height:410px;
+  border-radius:12px 12px 0 0;
+  transform:translateY(calc(100% - 7px));
+}
+body.yv-minimap-open #yardivoMiniMapDock,
+body.yv-assistant-open #yardivoSmartAssistant{
+  transform:translateY(0);
+}
+body:not(.yv-minimap-open) #yardivoMiniMapDock,
+body:not(.yv-assistant-open) #yardivoSmartAssistant{
+  pointer-events:none;
+}
+body.yv-minimap-open #yardivoMiniMapDock,
+body.yv-assistant-open #yardivoSmartAssistant{
+  pointer-events:auto;
+}
+body.yv-assistant-open #yardivoDbStatus{display:none!important}
+
+/* Mini map */
+.yv-mm-head,.yv-ai-head{
+  min-height:48px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:0 13px;
+  background:#0b1c29;
+  border-bottom:1px solid #294253;
+}
+.yv-mm-head strong,.yv-ai-head strong{
+  color:#fff;font-size:10px;letter-spacing:.05em;
+}
+.yv-mm-head small,.yv-ai-head small{
+  color:#7f9bac;font-size:7px;
+}
+.yv-mm-close,.yv-ai-close{
+  width:28px;height:28px;border-radius:7px;
+  border:1px solid #34546a;background:#10293c;color:#dfeaf1;
+  cursor:pointer;
+}
+.yv-mm-canvas{
+  position:relative;
+  height:222px;
+  background:
+    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px),
+    #101c24;
+  background-size:24px 24px;
+  overflow:hidden;
+}
+.yv-mm-warehouse{
+  position:absolute;left:5%;right:5%;top:8%;height:44px;
+  display:flex;align-items:center;justify-content:center;
+  background:#1c2b34;border:1px solid #3a5260;border-radius:6px;
+  color:#adbdc7;font-size:8px;font-weight:1000;
+}
+.yv-mm-docks{
+  position:absolute;left:8%;right:8%;top:27%;
+  display:grid;gap:6px;height:82px;
+}
+.yv-mm-dock{
+  min-width:0;
+  border-radius:6px;
+  border:2px solid #25c969;
+  background:#103422;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;padding:4px;
+  animation:yvMmFree 1.7s ease-in-out infinite;
+  overflow:hidden;
+}
+.yv-mm-dock.busy{
+  border-color:#ef5058;background:#3c171b;
+  animation:yvMmBusy 1.4s ease-in-out infinite;
+}
+.yv-mm-dock b{font-size:7px;color:#fff}
+.yv-mm-dock span{
+  max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-size:6px;color:#c8d6de;
+}
+.yv-mm-dock em{
+  font-style:normal;font-size:6px;font-weight:1000;color:#77e8a5;
+}
+.yv-mm-dock.busy em{color:#ff9da2}
+@keyframes yvMmFree{50%{box-shadow:0 0 14px rgba(37,201,105,.22)}}
+@keyframes yvMmBusy{50%{box-shadow:0 0 14px rgba(239,80,88,.22)}}
+.yv-mm-bottom{
+  position:absolute;left:8%;right:8%;bottom:12px;
+  display:flex;align-items:center;justify-content:space-between;
+  color:#718c9d;font-size:6px;font-weight:900;
+}
+
+/* Assistant */
+.yv-ai-head .yv-ai-live{
+  display:inline-flex;align-items:center;gap:5px;color:#8fa9b8;
+}
+.yv-ai-live i{width:6px;height:6px;border-radius:50%;background:#30d373;box-shadow:0 0 8px rgba(48,211,115,.5)}
+.yv-ai-body{
+  height:300px;
+  overflow:auto;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.yv-ai-msg{
+  max-width:90%;
+  border-radius:10px;
+  padding:8px 10px;
+  font-size:8px;
+  line-height:1.5;
+  border:1px solid #294457;
+  white-space:pre-wrap;
+}
+.yv-ai-msg.assistant{
+  align-self:flex-start;
+  background:#0e2231;color:#cfe0e9;
+}
+.yv-ai-msg.user{
+  align-self:flex-end;
+  background:#176fc1;border-color:#2f88d5;color:#fff;
+}
+.yv-ai-inputbar{
+  height:61px;
+  display:grid;grid-template-columns:1fr 68px;gap:8px;
+  padding:9px 11px;
+  border-top:1px solid #294253;
+  background:#0a1b27;
+}
+#yardivoAssistantInput{
+  width:100%;height:42px;resize:none;
+  border:1px solid #35546a;border-radius:8px;
+  background:#071722;color:#eaf2f7;
+  padding:9px 10px;font-size:8px;
+}
+#yardivoAssistantSend{
+  border:1px solid #2e82c7;border-radius:8px;
+  background:#176fc1;color:#fff;font-size:8px;font-weight:1000;cursor:pointer;
+}
+.yv-ai-suggestions{
+  display:flex;gap:5px;flex-wrap:wrap;padding:0 11px 8px;background:#0a1b27;
+}
+.yv-ai-suggestions button{
+  border:1px solid #2d4b60;border-radius:999px;
+  background:#0e2636;color:#94b3c6;
+  padding:4px 7px;font-size:6px;cursor:pointer;
+}
+
+/* Assistant OFF */
+body.yv-assistant-disabled #yardivoAssistantZone,
+body.yv-assistant-disabled #yardivoSmartAssistant{display:none!important}
+
+/* Add toggle to right settings drawer */
+#yardivoRightSettingsDrawer [data-yv-setting="assistant"] .yv-rs-icon{
+  font-size:13px;
+}
+.yv-rs-toggle-state.on{color:#58df8f!important}
+.yv-rs-toggle-state.off{color:#ff858a!important}
+
+/* Light mode */
+html[data-yardivo-main-theme="light"] #yardivoMiniMapDock,
+html[data-yardivo-main-theme="light"] #yardivoSmartAssistant{
+  background:#fff;color:#183247;border-color:#cbd9e3;
+  box-shadow:0 -12px 30px rgba(37,62,78,.12);
+}
+html[data-yardivo-main-theme="light"] .yv-mm-head,
+html[data-yardivo-main-theme="light"] .yv-ai-head,
+html[data-yardivo-main-theme="light"] .yv-ai-inputbar,
+html[data-yardivo-main-theme="light"] .yv-ai-suggestions{
+  background:#f7fafc;border-color:#d4e0e8;
+}
+html[data-yardivo-main-theme="light"] .yv-mm-head strong,
+html[data-yardivo-main-theme="light"] .yv-ai-head strong{color:#183247!important}
+html[data-yardivo-main-theme="light"] .yv-mm-canvas{
+  background:
+    linear-gradient(rgba(24,50,71,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(24,50,71,.035) 1px,transparent 1px),
+    #f1f5f8;
+  background-size:24px 24px;
+}
+html[data-yardivo-main-theme="light"] .yv-mm-warehouse{background:#e9f0f4;border-color:#c4d3dc;color:#35566a}
+html[data-yardivo-main-theme="light"] .yv-ai-msg.assistant{background:#f2f7fa;color:#29475b;border-color:#d2dfe7}
+html[data-yardivo-main-theme="light"] #yardivoAssistantInput{background:#fff;color:#183247;border-color:#c4d3de}
+html[data-yardivo-main-theme="light"] .yv-ai-suggestions button{background:#fff;color:#41657a;border-color:#cad9e3}
+
+@media(max-width:900px),(hover:none),(pointer:coarse){
+  #yardivoMiniMapZone,#yardivoAssistantZone,
+  #yardivoMiniMapDock,#yardivoSmartAssistant{display:none!important}
+}
+</style>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -55658,7 +55884,7 @@ window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-reception-ui-scope-smooth';
 
 
 
-<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-live-yard-3d-twin-final';</script>
+<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-minimap-smart-assistant-final';</script>
 <script id="yardivo-v583-sidebar-hover-drawer-js">
 (()=>{'use strict';
 if(window.__YV_SIDEBAR_HOVER_DRAWER_V583__)return;
@@ -56318,6 +56544,258 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 window.addEventListener('load',()=>setTimeout(ensureButton,1700),{once:true});
 
 window.YardivoLiveYard3DTwinV583={render:render3d};
+})();
+</script>
+
+<script id="yardivo-v583-bottom-minimap-assistant-js">
+(()=>{'use strict';
+if(window.__YV_BOTTOM_MINIMAP_ASSISTANT__)return;
+window.__YV_BOTTOM_MINIMAP_ASSISTANT__=true;
+
+const ASSISTANT_PREF='ui_smart_assistant_v583';
+let mmTimer=0,aiTimer=0;
+
+function normRole(v){
+  v=String(v||'').trim().toLowerCase();
+  if(v==='prijam')return'reception';
+  if(v==='porta'||v==='portir')return'gate';
+  if(v==='zalihe'||v.includes('zalih'))return'inventory';
+  if(v==='voditelj'||v==='management')return'manager';
+  return v;
+}
+function session(){try{return window.currentSession||{}}catch(_){return{}}}
+function role(){return normRole(session()?.app_role||session()?.role||'')}
+function master(){try{return JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){return{}}}
+function arr(){try{return Array.isArray(announcements)?announcements:[]}catch(_){return[]}}
+function inc(){try{return Array.isArray(incidents)?incidents:[]}catch(_){return[]}}
+function today(){try{return window.yardivoLocalDateV583?.()||new Date().toISOString().slice(0,10)}catch(_){return new Date().toISOString().slice(0,10)}}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function assistantEnabled(){try{return localStorage.getItem(ASSISTANT_PREF)!=='off'}catch(_){return true}}
+function setAssistantEnabled(v){
+  try{localStorage.setItem(ASSISTANT_PREF,v?'on':'off')}catch(_){}
+  document.body.classList.toggle('yv-assistant-disabled',!v);
+  if(!v)document.body.classList.remove('yv-assistant-open');
+  updateSettingsAssistantStatus();
+}
+function ids(v){
+  return Array.isArray(v)?v.map(x=>String(typeof x==='object'?(x?.id||''):x||'').trim()).filter(Boolean):[];
+}
+function allowedWarehouseIds(){
+  const s=session(),r=role();
+  if(r==='admin'||s?.all_warehouses===true)return null;
+  const set=new Set(ids(s?.warehouses||s?.warehouse_ids));
+  const one=String(s?.warehouse||s?.warehouse_id||'').trim();
+  if(one&&one!=='ALL')set.add(one);
+  return set;
+}
+function warehouseRows(){
+  const d=master(),allowed=allowedWarehouseIds();
+  let rows=(d.warehouses||[]).filter(w=>w&&w.active!==false);
+  if(allowed)rows=rows.filter(w=>allowed.has(String(w.id)));
+  return rows;
+}
+function whName(id){
+  const w=(master().warehouses||[]).find(x=>String(x.id)===String(id));
+  return w?.name||String(id||'—');
+}
+function locName(id){
+  const x=(master().locations||[]).find(a=>String(a.id)===String(id));
+  return x?.name||String(id||'—');
+}
+function state(a){
+  const s=String(a?.status||'').toLowerCase();
+  if(a?.receivedAt||a?.rejectedAt||/zaprim|odbij|zavr|izašao|izasao/.test(s))return'done';
+  if(a?.dockArrivalAt||/rampi/.test(s))return'dock';
+  if(a?.yardArrivalAt||/dvori|parking|parkiran|buffer|čeka|ceka/.test(s))return'yard';
+  if(a?.gateCheckedAt||a?.gateEntryApprovedAt||a?.actualDate||a?.actualTime||/ulaz|port/.test(s))return'gate';
+  return'incoming';
+}
+function scopedAnnouncements(){
+  const allowed=allowedWarehouseIds();
+  return arr().filter(a=>!allowed||allowed.has(String(a.warehouse||'')));
+}
+function currentWarehouse(){
+  const s=session(),rows=warehouseRows(),candidate=String(
+    document.getElementById('globalWarehouse')?.value||
+    window.YardivoAppStateV583?.warehouse?.()||
+    window.activeWarehouse||
+    s?.warehouse||
+    ''
+  );
+  if(rows.some(w=>String(w.id)===candidate))return candidate;
+  return rows[0]?.id||'';
+}
+function rampCount(wid){
+  const w=(master().warehouses||[]).find(x=>String(x.id)===String(wid));
+  let n=Number(w?.ramps||w?.ramp_count||0);
+  try{if(!n)n=Number(WAREHOUSES?.[wid]?.ramps||0)}catch(_){}
+  return Math.max(1,n||1);
+}
+
+/* ---------------- MINI MAP ---------------- */
+function ensureMiniMap(){
+  if(document.getElementById('yardivoMiniMapDock'))return;
+  const zone=document.createElement('div');zone.id='yardivoMiniMapZone';document.body.appendChild(zone);
+  const dock=document.createElement('section');dock.id='yardivoMiniMapDock';
+  dock.innerHTML=`<div class="yv-mm-head"><div><strong>MINI MY YARD</strong><small id="yvMmSubtitle"></small></div><button type="button" class="yv-mm-close">×</button></div><div class="yv-mm-canvas" id="yvMmCanvas"></div>`;
+  document.body.appendChild(dock);
+  zone.addEventListener('pointerenter',openMini,{passive:true});
+  zone.addEventListener('mousemove',openMini,{passive:true});
+  dock.addEventListener('pointerenter',openMini,{passive:true});
+  dock.addEventListener('pointerleave',()=>{clearTimeout(mmTimer);mmTimer=setTimeout(()=>document.body.classList.remove('yv-minimap-open'),120)},{passive:true});
+  dock.querySelector('.yv-mm-close').onclick=()=>document.body.classList.remove('yv-minimap-open');
+}
+function openMini(){
+  clearTimeout(mmTimer);document.body.classList.add('yv-minimap-open');renderMiniMap();
+}
+function renderMiniMap(){
+  const canvas=document.getElementById('yvMmCanvas');if(!canvas)return;
+  const wid=currentWarehouse(),ramps=rampCount(wid),D=today();
+  const list=scopedAnnouncements().filter(a=>String(a.warehouse||'')===String(wid)&&String(a.date||'')===D);
+  const sub=document.getElementById('yvMmSubtitle');if(sub)sub.textContent=`${whName(wid)} · ${D}`;
+  let h=`<div class="yv-mm-warehouse">${esc(whName(wid))}</div><div class="yv-mm-docks" style="grid-template-columns:repeat(${ramps},1fr)">`;
+  for(let r=1;r<=ramps;r++){
+    const a=list.find(x=>Number(x.dock)===r&&state(x)==='dock');
+    h+=`<div class="yv-mm-dock ${a?'busy':''}"><b>R${r}</b><span>${a?esc(a.supplier||'DOBAVLJAČ'):'SLOBODNA'}</span><em>${a?Number(a.pallets||0)+' pal':'FREE'}</em></div>`;
+  }
+  const parking=list.filter(a=>state(a)==='yard').length;
+  h+=`</div><div class="yv-mm-bottom"><span>PARKING: ${parking}</span><span>NA RAMPI: ${list.filter(a=>state(a)==='dock').length}</span><span>${esc(locName((master().warehouses||[]).find(w=>String(w.id)===String(wid))?.location_id||''))}</span></div>`;
+  canvas.innerHTML=h;
+}
+
+/* ---------------- SMART ASSISTANT ---------------- */
+function ensureAssistant(){
+  if(document.getElementById('yardivoSmartAssistant'))return;
+  const zone=document.createElement('div');zone.id='yardivoAssistantZone';document.body.appendChild(zone);
+  const box=document.createElement('section');box.id='yardivoSmartAssistant';
+  box.innerHTML=`<div class="yv-ai-head"><div><strong>YARDIVO SMART ASSISTANT</strong><small class="yv-ai-live"><i></i> LIVE YARDIVO DATA · SCOPE AWARE</small></div><button type="button" class="yv-ai-close">×</button></div>
+    <div class="yv-ai-body" id="yardivoAssistantMessages"></div>
+    <div class="yv-ai-suggestions">
+      <button type="button" data-yv-ai-q="Koja skladišta vidim?">MOJA SKLADIŠTA</button>
+      <button type="button" data-yv-ai-q="Što je trenutno na rampi?">NA RAMPI</button>
+      <button type="button" data-yv-ai-q="Koliko je danas paleta?">PALETE DANAS</button>
+      <button type="button" data-yv-ai-q="Koje su rampe slobodne?">SLOBODNE RAMPE</button>
+    </div>
+    <div class="yv-ai-inputbar"><textarea id="yardivoAssistantInput" placeholder="Pitaj YARDIVO..."></textarea><button id="yardivoAssistantSend" type="button">POŠALJI</button></div>`;
+  document.body.appendChild(box);
+  zone.addEventListener('pointerenter',openAssistant,{passive:true});
+  zone.addEventListener('mousemove',openAssistant,{passive:true});
+  box.addEventListener('pointerenter',openAssistant,{passive:true});
+  box.addEventListener('pointerleave',()=>{clearTimeout(aiTimer);aiTimer=setTimeout(()=>document.body.classList.remove('yv-assistant-open'),220)},{passive:true});
+  box.querySelector('.yv-ai-close').onclick=()=>document.body.classList.remove('yv-assistant-open');
+  box.querySelector('#yardivoAssistantSend').onclick=sendAssistant;
+  box.querySelector('#yardivoAssistantInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAssistant()}});
+  box.querySelectorAll('[data-yv-ai-q]').forEach(b=>b.onclick=()=>ask(b.dataset.yvAiQ));
+}
+function openAssistant(){
+  if(!assistantEnabled())return;
+  clearTimeout(aiTimer);document.body.classList.add('yv-assistant-open');
+  const m=document.getElementById('yardivoAssistantMessages');
+  if(m&&!m.children.length){
+    addMsg('assistant',welcome());
+  }
+}
+function welcome(){
+  const rows=warehouseRows();
+  return `Pozdrav. Vidim samo YARDIVO podatke dopuštene ovom korisniku.\nTrenutni scope: ${rows.length?rows.map(w=>w.name||w.id).join(', '):'nema dodijeljenih skladišta'}.\nPitaj me za rampe, parking, palete, današnje najave, incidente ili svoja skladišta.`;
+}
+function addMsg(kind,text){
+  const m=document.getElementById('yardivoAssistantMessages');if(!m)return;
+  const d=document.createElement('div');d.className='yv-ai-msg '+kind;d.textContent=text;m.appendChild(d);m.scrollTop=m.scrollHeight;
+}
+function sendAssistant(){
+  const i=document.getElementById('yardivoAssistantInput');if(!i)return;
+  const q=String(i.value||'').trim();if(!q)return;i.value='';ask(q);
+}
+function ask(q){
+  addMsg('user',q);
+  const a=answer(q);
+  setTimeout(()=>addMsg('assistant',a),80);
+}
+function scopedToday(){
+  const D=today();return scopedAnnouncements().filter(a=>String(a.date||'')===D);
+}
+function answer(raw){
+  const q=String(raw||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const rows=warehouseRows(),todayRows=scopedToday();
+  if(/skladist|warehouse|scope|dodijel/.test(q)){
+    if(!rows.length)return'Nemate dodijeljeno nijedno aktivno skladište.';
+    return 'Dodijeljena skladišta:\n'+rows.map(w=>`• ${w.name||w.id}${w.location_id?' · '+locName(w.location_id):''}`).join('\n');
+  }
+  if(/rampi|rampa|dock/.test(q)&&/(trenut|tko|sto|zauzet|na rampi)/.test(q)){
+    const d=todayRows.filter(a=>state(a)==='dock');
+    if(!d.length)return'Trenutno nema kamiona na rampi u vašem dodijeljenom scopeu.';
+    return d.map(a=>`• ${whName(a.warehouse)} · R${a.dock||'—'} · ${a.supplier||'DOBAVLJAČ'} · ${Number(a.pallets||0)} pal`).join('\n');
+  }
+  if(/slobodn/.test(q)&&/ramp/.test(q)){
+    const lines=[];
+    rows.forEach(w=>{
+      const n=rampCount(w.id),busy=new Set(todayRows.filter(a=>String(a.warehouse)===String(w.id)&&state(a)==='dock').map(a=>Number(a.dock)));
+      const free=[];for(let r=1;r<=n;r++)if(!busy.has(r))free.push('R'+r);
+      lines.push(`${w.name||w.id}: ${free.length?free.join(', '):'nema slobodnih rampi'}`);
+    });
+    return lines.length?lines.join('\n'):'Nema dodijeljenih skladišta.';
+  }
+  if(/palet/.test(q)){
+    const total=todayRows.reduce((s,a)=>s+Number(a.pallets||0),0);
+    const dock=todayRows.filter(a=>state(a)==='dock').reduce((s,a)=>s+Number(a.pallets||0),0);
+    return `Danas u vašem scopeu: ${total} paleta ukupno u najavama.\nTrenutno na rampama: ${dock} paleta.`;
+  }
+  if(/parking|parkiran|dvorist|buffer|ceka/.test(q)){
+    const p=todayRows.filter(a=>state(a)==='yard');
+    if(!p.length)return'Trenutno nema kamiona na parkingu / buffer zoni u vašem scopeu.';
+    return p.map(a=>`• ${a.supplier||'DOBAVLJAČ'} · ${whName(a.warehouse)} · ${Number(a.pallets||0)} pal · plan ${a.dock?'R'+a.dock:'bez rampe'}`).join('\n');
+  }
+  if(/incident/.test(q)){
+    const allowed=allowedWarehouseIds();
+    const rowsI=inc().filter(x=>!allowed||allowed.has(String(x.warehouse||x.warehouseId||'')));
+    return rowsI.length?`Vidim ${rowsI.length} incidenta u vašem scopeu. Otvorite sekciju Incidenti za detaljan pregled.`:'Trenutno ne vidim evidentirane incidente u vašem scopeu.';
+  }
+  if(/danas|najav|dolaz/.test(q)){
+    const active=todayRows.filter(a=>state(a)!=='done');
+    return `Danas imate ${todayRows.length} najava u svom scopeu.\nAktivno: ${active.length} · parking: ${active.filter(a=>state(a)==='yard').length} · na rampi: ${active.filter(a=>state(a)==='dock').length}.`;
+  }
+  const supplierMatch=scopedAnnouncements().find(a=>String(a.supplier||'').toLowerCase()&&q.includes(String(a.supplier||'').toLowerCase()));
+  if(supplierMatch){
+    return `${supplierMatch.supplier}: ${whName(supplierMatch.warehouse)} · ${supplierMatch.date||'—'} ${supplierMatch.time||'—'} · ${Number(supplierMatch.pallets||0)} pal · R${supplierMatch.dock||'—'} · status ${supplierMatch.status||state(supplierMatch)}.`;
+  }
+  return `Mogu odgovoriti iz live YARDIVO podataka koje smijete vidjeti.\nProbajte: “Koja skladišta vidim?”, “Što je na rampi?”, “Koje su rampe slobodne?”, “Koliko je danas paleta?” ili “Tko je na parkingu?”.`;
+}
+
+/* ---------------- RIGHT SETTINGS TOGGLE ---------------- */
+function ensureAssistantSetting(){
+  const list=document.querySelector('#yardivoRightSettingsDrawer .yv-rs-list');
+  if(!list||list.querySelector('[data-yv-setting="assistant"]'))return;
+  const b=document.createElement('button');
+  b.type='button';b.className='yv-rs-item';b.dataset.yvSetting='assistant';
+  b.innerHTML=`<span class="yv-rs-icon">✦</span><span class="yv-rs-copy"><strong>YARDIVO SMART ASSISTANT</strong><small class="yv-rs-toggle-state" data-yv-assistant-setting-status></small></span><span class="yv-rs-arrow">›</span>`;
+  list.appendChild(b);
+  b.onclick=e=>{
+    e.preventDefault();e.stopPropagation();
+    setAssistantEnabled(!assistantEnabled());
+  };
+  updateSettingsAssistantStatus();
+}
+function updateSettingsAssistantStatus(){
+  const on=assistantEnabled();
+  document.body.classList.toggle('yv-assistant-disabled',!on);
+  document.querySelectorAll('[data-yv-assistant-setting-status]').forEach(x=>{
+    x.textContent=on?'UKLJUČEN':'ISKLJUČEN';x.classList.toggle('on',on);x.classList.toggle('off',!on);
+  });
+}
+
+function ensure(){
+  ensureMiniMap();ensureAssistant();ensureAssistantSetting();setAssistantEnabled(assistantEnabled());
+}
+window.addEventListener('yardivo:login',()=>setTimeout(()=>{ensure();renderMiniMap()},80));
+window.addEventListener('yardivo:data-synced',()=>{if(document.body.classList.contains('yv-minimap-open'))renderMiniMap()});
+window.addEventListener('yardivo:master-data-changed',()=>{ensureAssistantSetting();if(document.body.classList.contains('yv-minimap-open'))renderMiniMap()});
+document.addEventListener('DOMContentLoaded',ensure,{once:true});
+window.addEventListener('load',()=>setTimeout(ensure,300),{once:true});
+setTimeout(ensure,250);
+
+window.YardivoMiniMapV583={render:renderMiniMap,open:openMini};
+window.YardivoSmartAssistantV583={ask,answer,enabled:assistantEnabled,setEnabled:setAssistantEnabled};
 })();
 </script>
 </body>
