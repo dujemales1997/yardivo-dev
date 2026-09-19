@@ -45599,9 +45599,9 @@ function mount(){
  const settings=document.getElementById('settings');if(!settings)return;
  let card=document.getElementById('yardivoDevTotalResetV583');
  if(!card){card=document.createElement('section');card.id='yardivoDevTotalResetV583';card.innerHTML=`
- <div class="ydr-head"><div><h2>RESET YARDIVO</h2><p>Factory Zero briše poslovne podatke, konfiguraciju, Supplier/Gate podatke i sve druge korisnike. Ostaje samo Admin dujemales. Nakon reseta struktura se gradi isključivo: Lokacija → Skladište → Rampe → radno vrijeme / kapacitet / EPAL.</p></div><span class="ydr-dev">YARDIVO DEV</span></div>
- <div class="ydr-checks"><span>0 LOKACIJA / SKLADIŠTA / RAMPI</span><span>0 NAJAVA / SUPPLIER NAJAVA / INCIDENATA</span><span>0 GATE QR / SCANOVA / PALETA</span><span>0 NOTIFIKACIJA / POVIJESTI / CACHEA</span><span>BRIŠE SVE DRUGE KORISNIKE</span><span>SMART: OFF / PAUSED</span></div>
- <div class="ydr-keep">OSTAJE SAMO: <strong id="yardivoResetKeeperLabel">TRENUTNI ADMIN</strong> + aktivna autentikacijska sesija.</div>
+ <div class="ydr-head"><div><h2>RESET YARDIVO</h2><p>Factory Zero briše poslovne podatke, konfiguraciju, Supplier/Gate podatke, sve Self Gate QR kodove/tokene i sve druge korisnike. Ostaje samo Admin dujemales. Nakon reseta struktura se gradi isključivo: Lokacija → Skladište → Rampe → radno vrijeme / kapacitet / EPAL.</p></div><span class="ydr-dev">YARDIVO DEV</span></div>
+ <div class="ydr-checks"><span>0 LOKACIJA / SKLADIŠTA / RAMPI</span><span>0 NAJAVA / SUPPLIER NAJAVA / INCIDENATA</span><span>0 SELF GATE QR / GATE QR / SCANOVA / PALETA</span><span>0 NOTIFIKACIJA / POVIJESTI / CACHEA</span><span>BRIŠE SVE DRUGE KORISNIKE</span><span>SMART: OFF / PAUSED</span></div>
+ <div class="ydr-keep">OSTAJE SAMO: <strong id="yardivoResetKeeperLabel">TRENUTNI ADMIN</strong> + aktivna autentikacijska sesija.<br><span style="display:block;margin-top:6px;font-weight:800">Nakon reseta: prvo izradi Lokaciju u Master Data, zatim u QR postavkama klikni “IZRADI QR GATE ZA LOKACIJU”. QR se više ne stvara unaprijed.</span></div>
  <button type="button" id="yardivoResetYardivoBtn">RESET YARDIVO — VRATI SVE NA 0</button><div id="yardivoResetYardivoStatus" aria-live="polite"></div>`;settings.appendChild(card)}else if(settings.lastElementChild!==card)settings.appendChild(card);
  const label=document.getElementById('yardivoResetKeeperLabel');if(label)label.textContent=(username()||'trenutni Admin')+' · ADMIN';
  const btn=document.getElementById('yardivoResetYardivoBtn');if(btn&&!btn.dataset.bound){btn.dataset.bound='1';btn.addEventListener('click',resetYardivo)}
@@ -45662,7 +45662,8 @@ async function resetYardivo(){
   if(!users.some(u=>norm(u.username)===keep&&norm(u.app_role)==='admin'&&u.active!==false))throw new Error('Aktivni Admin dujemales nije pronađen. Ništa nije obrisano.');
   status('2/5 · Server Factory Zero briše poslovne podatke, povijest i druge Auth korisnike…');
   const server=await factoryResetServer();
-  if(!server?.factoryZero||server?.users!==1||!Array.isArray(server?.app_state_keys)||server.app_state_keys.length!==4)throw new Error('Server nije potvrdio potpuni Factory Zero v3.');
+  if(!server?.factoryZero||server?.users!==1||!Array.isArray(server?.app_state_keys)||server.app_state_keys.length!==4)throw new Error('Server nije potvrdio potpuni Factory Zero.');
+  if(Number(server?.self_gate?.tokens)!==0||Number(server?.self_gate?.passes)!==0||Number(server?.self_gate?.events)!==0)throw new Error('Self Gate podaci nisu potpuno obrisani. Reset je zaustavljen radi sigurnosti.');
   status('3/5 · Čistim sav lokalni YARDIVO state i cache…');
   localHardReset(keep);
   status('4/5 · Vraćam prazan Master i SMART/QR na OFF…');
