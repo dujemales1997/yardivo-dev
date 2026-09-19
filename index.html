@@ -7106,6 +7106,193 @@ body.yv-role-reception-v583 #settings .danger-zone{
   visibility:hidden!important;
 }
 </style>
+
+<style id="yardivo-v583-right-settings-drawer-css">
+/* ==========================================================
+   RIGHT EDGE SETTINGS DRAWER · non-admin users only.
+   Admin keeps the original Settings section and top theme UI.
+   ========================================================== */
+#yardivoRightSettingsZone{
+  position:fixed;
+  right:0;top:0;bottom:0;
+  width:12px;
+  z-index:2147482450;
+  background:transparent;
+}
+#yardivoRightSettingsDrawer{
+  position:fixed;
+  right:0;top:0;bottom:0;
+  width:292px;
+  max-width:88vw;
+  z-index:2147482400;
+  transform:translateX(calc(100% - 7px));
+  pointer-events:none;
+  transition:transform .16s ease;
+  background:#071522;
+  border-left:1px solid #20384d;
+  box-shadow:-12px 0 30px rgba(0,0,0,.20);
+  color:#eaf3fb;
+  display:flex;
+  flex-direction:column;
+  padding:18px 14px;
+}
+body.yv-right-settings-open #yardivoRightSettingsDrawer{
+  transform:translateX(0);
+  pointer-events:auto;
+}
+#yardivoRightSettingsDrawer .yv-rs-head{
+  padding:8px 8px 16px;
+  border-bottom:1px solid #20384d;
+  margin-bottom:12px;
+}
+#yardivoRightSettingsDrawer .yv-rs-head strong{
+  display:block;color:#fff;font-size:13px;letter-spacing:.03em
+}
+#yardivoRightSettingsDrawer .yv-rs-head small{
+  display:block;margin-top:4px;color:#88a3bb;font-size:9px;line-height:1.4
+}
+#yardivoRightSettingsDrawer .yv-rs-list{
+  display:grid;gap:8px;
+}
+#yardivoRightSettingsDrawer .yv-rs-item{
+  width:100%;
+  min-height:56px;
+  display:grid;
+  grid-template-columns:34px 1fr 16px;
+  align-items:center;
+  gap:9px;
+  border:1px solid #29465e;
+  border-radius:10px;
+  background:#0b1d2c;
+  color:#eaf3fb;
+  padding:9px 10px;
+  cursor:pointer;
+  text-align:left;
+}
+#yardivoRightSettingsDrawer .yv-rs-item:hover{
+  background:#10283d;
+  border-color:#3d6d93;
+}
+#yardivoRightSettingsDrawer .yv-rs-icon{
+  width:30px;height:30px;border-radius:8px;
+  display:grid;place-items:center;
+  background:#102b43;
+  font-size:15px;
+}
+#yardivoRightSettingsDrawer .yv-rs-copy strong{
+  display:block;color:#fff;font-size:10px
+}
+#yardivoRightSettingsDrawer .yv-rs-copy small{
+  display:block;color:#89a5bd;font-size:8px;margin-top:3px
+}
+#yardivoRightSettingsDrawer .yv-rs-arrow{
+  color:#7391aa;font-weight:900;font-size:14px
+}
+#yardivoRightSettingsDrawer .yv-rs-foot{
+  margin-top:auto;padding:12px 8px 4px;
+  border-top:1px solid #20384d;
+  color:#718ca4;font-size:8px;
+}
+
+/* Non-admin users use right drawer, not the permanent top-right moon/sun. */
+body:not([data-yardivo-role="admin"]) #yardivoThemeSwitch{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+body:not([data-yardivo-role="admin"]) .topbar{
+  padding-right:16px!important;
+}
+
+/* Non-admin original Settings nav/card disappears. Admin remains untouched. */
+body:not([data-yardivo-role="admin"]) .sidebar [data-view="settings"],
+body:not([data-yardivo-role="admin"]) [data-home-target="settings"]{
+  display:none!important;
+  visibility:hidden!important;
+}
+
+/* Popup */
+#yardivoQuickSettingModal{
+  position:fixed;inset:0;
+  z-index:2147483000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(2,10,18,.58);
+  backdrop-filter:blur(6px);
+}
+#yardivoQuickSettingModal.open{display:flex}
+#yardivoQuickSettingModal .yv-qsm-card{
+  width:min(430px,94vw);
+  border:1px solid #29465e;
+  border-radius:14px;
+  background:#0a1928;
+  color:#eaf3fb;
+  box-shadow:0 22px 60px rgba(0,0,0,.38);
+  overflow:hidden;
+}
+#yardivoQuickSettingModal .yv-qsm-head{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:14px 16px;
+  border-bottom:1px solid #213a50;
+}
+#yardivoQuickSettingModal .yv-qsm-head strong{font-size:13px;color:#fff}
+#yardivoQuickSettingModal .yv-qsm-close{
+  width:32px;height:32px;border-radius:8px;
+  border:1px solid #34536d;background:#10283c;color:#fff;
+  cursor:pointer;font-size:17px
+}
+#yardivoQuickSettingModal .yv-qsm-body{padding:16px}
+#yardivoQuickSettingModal .yv-qsm-options{
+  display:grid;gap:9px
+}
+#yardivoQuickSettingModal .yv-qsm-option{
+  min-height:46px;border-radius:9px;
+  border:1px solid #2b4b65;
+  background:#0d2234;color:#dceaf5;
+  padding:10px 12px;cursor:pointer;font-weight:850;font-size:10px;
+}
+#yardivoQuickSettingModal .yv-qsm-option:hover{background:#13304a}
+#yardivoQuickSettingModal .yv-qsm-option.active{
+  background:#126fc4;border-color:#54a6ec;color:#fff
+}
+#yardivoQuickSettingModal .yv-qsm-help{
+  color:#89a5bd;font-size:9px;line-height:1.5;margin:0 0 13px
+}
+
+/* Light mode popup follows app theme, drawer intentionally stays dark. */
+html[data-yardivo-main-theme="light"] #yardivoQuickSettingModal .yv-qsm-card{
+  background:#fff;color:#17324d;border-color:#cbd9e5;
+}
+html[data-yardivo-main-theme="light"] #yardivoQuickSettingModal .yv-qsm-head{
+  border-color:#d9e4ed;
+}
+html[data-yardivo-main-theme="light"] #yardivoQuickSettingModal .yv-qsm-head strong{
+  color:#17324d!important;
+}
+html[data-yardivo-main-theme="light"] #yardivoQuickSettingModal .yv-qsm-close,
+html[data-yardivo-main-theme="light"] #yardivoQuickSettingModal .yv-qsm-option{
+  background:#f7fafc;color:#17324d;border-color:#cbd9e5;
+}
+html[data-yardivo-main-theme="light"] #yardivoQuickSettingModal .yv-qsm-option.active{
+  background:#1678d4;color:#fff;border-color:#1678d4;
+}
+html[data-yardivo-main-theme="light"] #yardivoQuickSettingModal .yv-qsm-help{
+  color:#667b91!important;
+}
+
+@media (hover:none),(pointer:coarse){
+  #yardivoRightSettingsZone{display:none}
+  #yardivoRightSettingsDrawer{display:none}
+  /* On touch devices keep original Settings access for non-admin users. */
+  body:not([data-yardivo-role="admin"]) .sidebar [data-view="settings"],
+  body:not([data-yardivo-role="admin"]) [data-home-target="settings"]{
+    display:flex!important;
+    visibility:visible!important;
+  }
+}
+</style>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -54753,7 +54940,7 @@ window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-reception-ui-scope-smooth';
 
 
 
-<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-light-mode-reception-settings-final';</script>
+<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-right-settings-drawer-final';</script>
 <script id="yardivo-v583-sidebar-hover-drawer-js">
 (()=>{'use strict';
 if(window.__YV_SIDEBAR_HOVER_DRAWER_V583__)return;
@@ -55004,6 +55191,260 @@ document.addEventListener('click',e=>{
 },true);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',clean,{once:true});
 else clean();
+})();
+</script>
+
+<script id="yardivo-v583-right-settings-drawer-js">
+(()=>{'use strict';
+if(window.__YV_RIGHT_SETTINGS_DRAWER_V583__)return;
+window.__YV_RIGHT_SETTINGS_DRAWER_V583__=true;
+
+const SOUND_KEY='yardivo_notification_sound_v1';
+const FONT_KEY='yardivo_master_font_v1';
+const THEME_KEY='yardivo_main_theme_v2';
+let closeTimer=0;
+
+function normRole(v){
+  v=String(v||'').trim().toLowerCase();
+  if(v==='prijam')return'reception';
+  if(v==='porta'||v==='portir')return'gate';
+  if(v==='zalihe'||v.includes('zalih'))return'inventory';
+  if(v==='voditelj'||v==='management')return'manager';
+  return v;
+}
+function role(){
+  return normRole(window.currentSession?.app_role||window.currentSession?.role||document.body.dataset.yardivoRole||'');
+}
+function isAdmin(){return role()==='admin'}
+function openDrawer(){
+  if(isAdmin())return;
+  clearTimeout(closeTimer);
+  document.body.classList.add('yv-right-settings-open');
+}
+function closeDrawerSoon(){
+  clearTimeout(closeTimer);
+  closeTimer=setTimeout(()=>document.body.classList.remove('yv-right-settings-open'),110);
+}
+function esc(v){
+  return String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+function soundEnabled(){
+  try{return localStorage.getItem(SOUND_KEY)!=='off'}catch(_){return true}
+}
+function fontValue(){
+  let p=100;try{p=Number(localStorage.getItem(FONT_KEY)||100)}catch(_){}
+  return Math.max(80,Math.min(150,p||100));
+}
+function themeValue(){
+  try{
+    const v=localStorage.getItem(THEME_KEY);
+    if(v==='light'||v==='dark')return v;
+  }catch(_){}
+  return document.body.classList.contains('light-mode')?'light':'dark';
+}
+function applySound(v){
+  try{localStorage.setItem(SOUND_KEY,v?'on':'off')}catch(_){}
+  try{document.getElementById('yardivoNotifSoundToggle')?.click?.()}catch(_){}
+}
+function applyFont(p){
+  p=Math.max(80,Math.min(150,Number(p)||100));
+  try{localStorage.setItem(FONT_KEY,String(p))}catch(_){}
+  document.documentElement.style.setProperty('--yardivo-ui-scale',String(p/100));
+  document.documentElement.dataset.yardivoFontScale=String(p);
+}
+function applyTheme(theme){
+  theme=theme==='light'?'light':'dark';
+  try{
+    localStorage.setItem(THEME_KEY,theme);
+    localStorage.setItem('yardivo_theme_v3',theme);
+    localStorage.setItem('yardivo_theme_v2',theme);
+    localStorage.setItem('yardivo_theme',theme);
+    localStorage.setItem('theme',theme);
+  }catch(_){}
+  const html=document.documentElement,body=document.body;
+  html.dataset.yardivoMainTheme=theme;
+  html.dataset.theme=theme;
+  html.dataset.yardivoTheme=theme;
+  html.classList.toggle('light-mode',theme==='light');
+  html.classList.toggle('dark-mode',theme==='dark');
+  body.classList.toggle('light-mode',theme==='light');
+  body.classList.toggle('dark-mode',theme==='dark');
+  body.classList.remove('yardivo-light-green');
+  try{window.YardivoSimpleTheme?.apply?.()}catch(_){}
+  try{window.YardivoDarkPaletteIsolation?.apply?.()}catch(_){}
+  if(theme==='light'){try{window.YardivoAbsoluteWhite?.apply?.()}catch(_){}}
+}
+function statusText(type){
+  if(type==='sound')return soundEnabled()?'UKLJUČEN':'ISKLJUČEN';
+  if(type==='font')return fontValue()+'%';
+  if(type==='theme')return themeValue()==='light'?'LIGHT':'DARK';
+  return '';
+}
+function ensureDrawer(){
+  let zone=document.getElementById('yardivoRightSettingsZone');
+  if(!zone){
+    zone=document.createElement('div');
+    zone.id='yardivoRightSettingsZone';
+    zone.setAttribute('aria-hidden','true');
+    document.body.appendChild(zone);
+  }
+  let drawer=document.getElementById('yardivoRightSettingsDrawer');
+  if(!drawer){
+    drawer=document.createElement('aside');
+    drawer.id='yardivoRightSettingsDrawer';
+    drawer.setAttribute('aria-label','Brze postavke');
+    drawer.innerHTML=`
+      <div class="yv-rs-head">
+        <strong>BRZE POSTAVKE</strong>
+        <small>Osobne postavke ovog korisnika</small>
+      </div>
+      <div class="yv-rs-list">
+        <button type="button" class="yv-rs-item" data-yv-setting="sound">
+          <span class="yv-rs-icon">🔊</span>
+          <span class="yv-rs-copy"><strong>ZVUK</strong><small data-yv-setting-status="sound"></small></span>
+          <span class="yv-rs-arrow">›</span>
+        </button>
+        <button type="button" class="yv-rs-item" data-yv-setting="font">
+          <span class="yv-rs-icon">Aa</span>
+          <span class="yv-rs-copy"><strong>VELIČINA SLOVA</strong><small data-yv-setting-status="font"></small></span>
+          <span class="yv-rs-arrow">›</span>
+        </button>
+        <button type="button" class="yv-rs-item" data-yv-setting="theme">
+          <span class="yv-rs-icon">◐</span>
+          <span class="yv-rs-copy"><strong>LIGHT / DARK MODE</strong><small data-yv-setting-status="theme"></small></span>
+          <span class="yv-rs-arrow">›</span>
+        </button>
+      </div>
+      <div class="yv-rs-foot">Pomakni miš izvan panela za zatvaranje.</div>`;
+    document.body.appendChild(drawer);
+  }
+
+  if(!zone.dataset.bound){
+    zone.dataset.bound='1';
+    zone.addEventListener('pointerenter',openDrawer,{passive:true});
+    zone.addEventListener('mousemove',openDrawer,{passive:true});
+  }
+  if(!drawer.dataset.bound){
+    drawer.dataset.bound='1';
+    drawer.addEventListener('pointerenter',openDrawer,{passive:true});
+    drawer.addEventListener('pointerleave',closeDrawerSoon,{passive:true});
+    drawer.addEventListener('click',e=>{
+      const b=e.target.closest?.('[data-yv-setting]');
+      if(!b)return;
+      openSetting(b.dataset.yvSetting);
+    });
+  }
+  updateStatuses();
+}
+function ensureModal(){
+  let modal=document.getElementById('yardivoQuickSettingModal');
+  if(modal)return modal;
+  modal=document.createElement('div');
+  modal.id='yardivoQuickSettingModal';
+  modal.setAttribute('role','dialog');
+  modal.setAttribute('aria-modal','true');
+  modal.innerHTML=`
+    <div class="yv-qsm-card">
+      <div class="yv-qsm-head"><strong id="yardivoQuickSettingTitle">POSTAVKA</strong><button type="button" class="yv-qsm-close" aria-label="Zatvori">×</button></div>
+      <div class="yv-qsm-body" id="yardivoQuickSettingBody"></div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('.yv-qsm-close').onclick=closeModal;
+  modal.addEventListener('click',e=>{if(e.target===modal)closeModal()});
+  return modal;
+}
+function closeModal(){
+  document.getElementById('yardivoQuickSettingModal')?.classList.remove('open');
+}
+function optionButton(label,value,active,kind){
+  return `<button type="button" class="yv-qsm-option ${active?'active':''}" data-yv-qsm-kind="${esc(kind)}" data-yv-qsm-value="${esc(value)}">${esc(label)}</button>`;
+}
+function openSetting(type){
+  if(isAdmin())return;
+  const modal=ensureModal();
+  const title=document.getElementById('yardivoQuickSettingTitle');
+  const body=document.getElementById('yardivoQuickSettingBody');
+  if(!title||!body)return;
+
+  if(type==='sound'){
+    const on=soundEnabled();
+    title.textContent='ZVUK';
+    body.innerHTML=`<p class="yv-qsm-help">Uključi ili isključi zvuk YARDIVO notifikacija na ovom uređaju.</p><div class="yv-qsm-options">
+      ${optionButton('🔊 UKLJUČEN','on',on,'sound')}
+      ${optionButton('🔇 ISKLJUČEN','off',!on,'sound')}
+    </div>`;
+  }else if(type==='font'){
+    const p=fontValue();
+    title.textContent='VELIČINA SLOVA';
+    body.innerHTML=`<p class="yv-qsm-help">Promjena vrijedi kroz cijelo YARDIVO sučelje na ovom uređaju.</p><div class="yv-qsm-options">
+      ${optionButton('MANJE · 90%','90',p===90,'font')}
+      ${optionButton('NORMALNO · 100%','100',p===100,'font')}
+      ${optionButton('VEĆE · 115%','115',p===115,'font')}
+      ${optionButton('NAJVEĆE · 130%','130',p===130,'font')}
+    </div>`;
+  }else{
+    const t=themeValue();
+    title.textContent='LIGHT / DARK MODE';
+    body.innerHTML=`<p class="yv-qsm-help">Odaberi izgled YARDIVO sučelja. Lijevi i desni drawer ostaju u YARDIVO dark bojama.</p><div class="yv-qsm-options">
+      ${optionButton('☀️ LIGHT MODE','light',t==='light','theme')}
+      ${optionButton('🌙 DARK MODE','dark',t==='dark','theme')}
+    </div>`;
+  }
+  body.onclick=e=>{
+    const b=e.target.closest?.('[data-yv-qsm-kind]');
+    if(!b)return;
+    const kind=b.dataset.yvQsmKind,val=b.dataset.yvQsmValue;
+    if(kind==='sound')applySound(val==='on');
+    else if(kind==='font')applyFont(Number(val));
+    else if(kind==='theme')applyTheme(val);
+    updateStatuses();
+    openSetting(kind);
+  };
+  modal.classList.add('open');
+}
+function updateStatuses(){
+  document.querySelectorAll('[data-yv-setting-status]').forEach(el=>{
+    el.textContent=statusText(el.dataset.yvSettingStatus);
+  });
+}
+function applyRoleUi(){
+  const admin=isAdmin();
+  document.body.classList.toggle('yv-right-settings-disabled',admin);
+  const zone=document.getElementById('yardivoRightSettingsZone');
+  const drawer=document.getElementById('yardivoRightSettingsDrawer');
+  if(zone)zone.style.display=admin?'none':'block';
+  if(drawer)drawer.style.display=admin?'none':'flex';
+  if(admin)document.body.classList.remove('yv-right-settings-open');
+
+  /* Admin keeps the original theme switch and original Settings section unchanged. */
+  const sw=document.getElementById('yardivoThemeSwitch');
+  if(sw&&admin){
+    sw.style.removeProperty('display');
+    sw.style.removeProperty('visibility');
+    sw.style.removeProperty('pointer-events');
+  }
+}
+function ensure(){
+  ensureDrawer();
+  applyRoleUi();
+  updateStatuses();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeModal();document.body.classList.remove('yv-right-settings-open')}
+});
+window.addEventListener('yardivo:login',()=>setTimeout(ensure,0));
+window.addEventListener('yardivo:logout',()=>document.body.classList.remove('yv-right-settings-open'));
+document.addEventListener('DOMContentLoaded',ensure,{once:true});
+window.addEventListener('load',ensure,{once:true});
+setTimeout(ensure,120);
+
+window.YardivoQuickSettingsV583={
+  open:openSetting,
+  sound:applySound,
+  font:applyFont,
+  theme:applyTheme,
+  refresh:updateStatuses
+};
 })();
 </script>
 </body>
