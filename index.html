@@ -8473,6 +8473,25 @@ body.yv-minimap-open #yardivoMiniMapDock{
   font-size:12px!important;
 }
 </style>
+
+<style id="yardivo-v583-ai-assistant-supabase-v2-final-css">
+/* Final AI chat state: empty until the user sends the first message. */
+#yardivoSmartAssistant .yv-ai-suggestions{display:none!important}
+#yardivoSmartAssistant .yv-ai-body{
+  font-size:12px!important;
+}
+#yardivoSmartAssistant .yv-ai-msg{
+  font-size:12px!important;
+  line-height:1.55!important;
+}
+#yardivoAssistantInput{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  font-size:12px!important;
+}
+</style>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -56120,7 +56139,7 @@ window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-reception-ui-scope-smooth';
 
 
 
-<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-real-ai-assistant-final';</script>
+<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-ai-assistant-supabase-v2-final';</script>
 <script id="yardivo-v583-sidebar-hover-drawer-js">
 (()=>{'use strict';
 if(window.__YV_SIDEBAR_HOVER_DRAWER_V583__)return;
@@ -57331,6 +57350,68 @@ window.addEventListener('yardivo:login',()=>setTimeout(clean,80));
 window.addEventListener('load',()=>setTimeout(clean,500),{once:true});
 document.addEventListener('DOMContentLoaded',clean,{once:true});
 setTimeout(clean,300);
+})();
+</script>
+
+<script id="yardivo-v583-ai-assistant-supabase-v2-final-js">
+(()=>{'use strict';
+if(window.__YV_AI_ASSISTANT_SUPABASE_V2_FINAL__)return;
+window.__YV_AI_ASSISTANT_SUPABASE_V2_FINAL__=true;
+
+let clearedForSession=false;
+
+function clearAutomaticContent(){
+  const box=document.getElementById('yardivoAssistantMessages');
+  if(!box)return;
+  if(!clearedForSession){
+    box.replaceChildren();
+    clearedForSession=true;
+  }
+  document.querySelectorAll('#yardivoSmartAssistant .yv-ai-suggestions').forEach(x=>x.remove());
+  const input=document.getElementById('yardivoAssistantInput');
+  if(input){
+    input.placeholder='Napiši poruku YARDIVO Assistantu...';
+    input.removeAttribute('readonly');
+    input.removeAttribute('disabled');
+  }
+}
+
+function translateAiError(text){
+  const t=String(text||'');
+  if(/AI provider nije konfiguriran|AI provider not configured|AI_PROVIDER_NOT_CONFIGURED|AI_NOT_CONFIGURED/i.test(t)){
+    return 'YARDIVO AI backend je aktivan, ali AI provider još nije konfiguriran u Supabase secrets.';
+  }
+  if(/AI_PROVIDER_ERROR/i.test(t)){
+    return 'YARDIVO AI provider trenutno nije odgovorio. Pokušaj ponovno.';
+  }
+  return t;
+}
+
+function patchMessages(){
+  const box=document.getElementById('yardivoAssistantMessages');
+  if(!box||box.dataset.yvAiV2Observer)return;
+  box.dataset.yvAiV2Observer='1';
+  const obs=new MutationObserver(()=>{
+    box.querySelectorAll('.yv-ai-msg.assistant').forEach(el=>{
+      const text=String(el.textContent||'');
+      const translated=translateAiError(text);
+      if(translated!==text)el.textContent=translated;
+    });
+  });
+  obs.observe(box,{childList:true,subtree:true,characterData:true});
+}
+
+function ensure(){
+  clearAutomaticContent();
+  patchMessages();
+}
+
+window.addEventListener('yardivo:login',()=>setTimeout(()=>{clearedForSession=false;ensure()},80));
+document.addEventListener('DOMContentLoaded',ensure,{once:true});
+window.addEventListener('load',()=>setTimeout(ensure,350),{once:true});
+setTimeout(ensure,250);
+
+window.YardivoAiAssistantSupabaseV2Final={clear:()=>{clearedForSession=false;clearAutomaticContent()}};
 })();
 </script>
 </body>
