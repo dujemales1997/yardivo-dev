@@ -12549,7 +12549,7 @@ function applyAnnouncementSlot(mode='auto'){
     showYmsToast('success',`NAJAVA #${announcementNumber(edited)} USPJEŠNO PROMIJENJENA`,`${supplier} · ${date} ${time} · Rampa ${dock}`);
     cancelEditAnnouncement();
   }else{
-    const created={id:Date.now(),date,warehouse,supplier,pallets,sku,responsible,duration,dock,time,orderNumber,status:'U dolasku',createdAt:new Date().toISOString(),createdBy:(currentSession?.user||currentSession?.username||''),announcementRef:yardivoGenerateAnnouncementRef(warehouse)};
+    const created={id:Date.now(),date,warehouse,supplier,pallets,sku,responsible,duration,dock,time,orderNumber,status:'U dolasku',createdAt:new Date().toISOString(),createdBy:(currentSession?.user||currentSession?.username||''),announcementRef:yardivoGenerateAnnouncementRef()};
     announcements.push(created);
     saveAnnouncements();
     renderAnnouncements();
@@ -12740,16 +12740,24 @@ function showYmsToast(type,title,message,timeout=3600){
   ymsToastTimer=setTimeout(()=>el.classList.remove('show'),timeout);
 }
 
-function yardivoGenerateAnnouncementRef(warehouse){
-  const wh=String(warehouse||yardivoCanonicalWarehouseV583()).toUpperCase();
-  const used=new Set((Array.isArray(announcements)?announcements:[]).map(a=>String(a.announcementRef||'')));
-  let ref='';
-  do{ref=wh+String(Math.floor(Math.random()*99999)+1).padStart(5,'0')}while(used.has(ref));
+function yardivoGenerateAnnouncementRef(){
+  const used=new Set((Array.isArray(announcements)?announcements:[]).map(a=>String(a?.announcementRef||'').trim().toUpperCase()));
+  let max=0;
+  used.forEach(ref=>{
+    const m=/^NAJ(\d{6})$/.exec(ref);
+    if(m)max=Math.max(max,Number(m[1])||0);
+  });
+  let n=max+1,ref='';
+  do{
+    ref='NAJ'+String(n).padStart(6,'0');
+    n++;
+  }while(used.has(ref));
   return ref;
 }
 function announcementNumber(a){
   if(!a)return '—';
-  if(!a.announcementRef)a.announcementRef=yardivoGenerateAnnouncementRef(a.warehouse||yardivoCanonicalWarehouseV583());
+  const current=String(a.announcementRef||'').trim().toUpperCase();
+  if(!/^NAJ\d{6}$/.test(current))a.announcementRef=yardivoGenerateAnnouncementRef();
   return a.announcementRef;
 }
 
@@ -21977,7 +21985,7 @@ function ensureRefs(){
   let changed=false;
   (Array.isArray(window.announcements)?window.announcements:(typeof announcements!=='undefined'&&Array.isArray(announcements)?announcements:[])).forEach(a=>{
     if(!a.announcementRef && typeof yardivoGenerateAnnouncementRef==='function'){
-      a.announcementRef=yardivoGenerateAnnouncementRef(a.warehouse||yardivoCanonicalWarehouseV583());
+      a.announcementRef=yardivoGenerateAnnouncementRef();
       changed=true;
     }
   });
@@ -57234,6 +57242,7 @@ window.__YARDIVO_SELF_GATE_PASS_V1__=true;
 const BASE='https://rskticdbiovvgyocpzoc.supabase.co';
 const PUB='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
 const EDGE=BASE+'/functions/v1/yardivo-self-gate';
+const SELF_GATE_WEB='https://dujemales1997.github.io/yardivo-dev/self-gate/';
 const DP_RE=/\[\[YARDIVO_DELIVERY_PASS_V1:([A-Za-z0-9_-]+)\]\]/g;
 
 function role(){let r=String(window.currentSession?.app_role||window.currentSession?.role||'').toLowerCase();if(r==='porta'||r==='portir')r='gate';if(r==='prijam')r='reception';return r}
@@ -57292,7 +57301,7 @@ function ensureWallAdmin(){
   if(!b){
     b=document.createElement('div');b.id='yardivoSelfGateAdminV1';
     b.innerHTML=`<div style="font-size:10px;font-weight:1000;margin-bottom:7px">YARDIVO SELF GATE CHECK-IN · ZIDNI QR</div>
-      <div style="font-size:8px;color:#829faf;margin-bottom:9px">Stalni Self Gate QR na zidu Porte. Vozač njime otvara mobilni Self Check-In. Radi samo kada je PORTA QR = ON.</div>
+      <div style="font-size:8px;color:#829faf;margin-bottom:9px">Stalni Self Gate QR na zidu Porte. Otvara YARDIVO mobilni UI preko GitHub Pagesa; Supabase radi samo u pozadini. Radi samo kada je PORTA QR = ON.</div>
       <div class="ysg-admin-row"><button type="button" class="primary" id="ysgWallOpen">OTVORI SELF GATE QR</button><button type="button" class="secondary" id="ysgWallCopy">KOPIRAJ LINK</button></div>
       <div class="ysg-url" id="ysgWallUrl"></div>`;
     root.querySelector('.yqr6-body')?.appendChild(b);
@@ -57304,8 +57313,13 @@ async function wallLink(open){
   const wh=String(document.getElementById('yqr6Warehouse')?.value||document.getElementById('globalWarehouse')?.value||'');
   if(!wh)return alert('Odaberi skladište.');
   try{
-    const d=await api('wall_link',{warehouse:wh});document.getElementById('ysgWallUrl').textContent=d.url;
-    if(open)window.open(d.url,'_blank','noopener');else{await navigator.clipboard.writeText(d.url);window.showYmsToast?.('success','SELF GATE LINK KOPIRAN',wh)}
+    const d=await api('wall_link',{warehouse:wh});
+    let wallToken='';
+    try{wallToken=new URL(String(d.url||'')).searchParams.get('wall')||''}catch(_){}
+    if(!wallToken)throw new Error('SELF GATE WALL TOKEN NIJE PRONAĐEN.');
+    const publicUrl=SELF_GATE_WEB+'?wall='+encodeURIComponent(wallToken);
+    document.getElementById('ysgWallUrl').textContent=publicUrl;
+    if(open)window.open(publicUrl,'_blank','noopener');else{await navigator.clipboard.writeText(publicUrl);window.showYmsToast?.('success','SELF GATE LINK KOPIRAN',wh)}
   }catch(e){alert('Self Gate QR nije dostupan:\n'+(e?.message||e))}
 }
 
