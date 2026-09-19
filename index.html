@@ -11209,7 +11209,7 @@ function renderDailyMap(){
         out+=`<div class="dmv-cell dmv-booked ${operationalPlanClass(a)}" draggable="true" data-announcement-id="${a.id}" data-move-date="${date}" data-move-warehouse="${wh}" data-move-dock="${dock}" data-move-time="${label}" oncontextmenu="openAnnouncementContextMenu(event,${a.id})" title="Povuci za promjenu termina · Desni klik za opcije">
           <strong>${a.time} · ${a.supplier}</strong>
           <small>${a.pallets} pal. · ${truckCountForPallets(a.pallets)} kam.</small>
-          ${(a.hasAttachment||a.attachmentDataUrl||window.YardivoSupplierAttachments?.has?.(a))?`<button type="button" class="yardivo-doc-icon" data-yardivo-doc="${a.id}" title="Priložen PDF dokument">📁 PDF</button>`:''}
+          ${(a.hasAttachment||a.attachmentDataUrl||window.YardivoSupplierAttachments?.has?.(a))?`<button type="button" class="yardivo-doc-icon" data-yardivo-doc="${a.id}" title="Otvori priloženi PDF dokument" aria-label="Otvori priloženi PDF dokument">📁</button>`:''}
           <span class="booking-status">${operationalPlanStatus(a).toUpperCase()}</span>
           ${operationalDelayText(a)?`<span class="booking-delay-detail">${operationalDelayText(a)}</span>`:''}
         </div>`;
@@ -11343,7 +11343,7 @@ function renderWeeklyMap(){
                 return `<div class="week-map-item ${yardivoUnifiedStatusClass(a)}" draggable="true" data-announcement-id="${a.id}" title="Povuci na drugi dan · Desni klik za promjenu termina · Klikni za detalj najave">
                   <strong>${a.time} · ${a.supplier}</strong>
                   <div class="meta">R${a.dock} · ${a.pallets} pal. · ${truckCountForPallets(a.pallets)} kam. · ${a.sku} SKU</div>
-                  ${(a.hasAttachment||a.attachmentDataUrl||window.YardivoSupplierAttachments?.has?.(a))?`<button type="button" class="yardivo-doc-icon" data-yardivo-doc="${a.id}" title="Priložen PDF dokument">📁 PDF</button>`:''}
+                  ${(a.hasAttachment||a.attachmentDataUrl||window.YardivoSupplierAttachments?.has?.(a))?`<button type="button" class="yardivo-doc-icon" data-yardivo-doc="${a.id}" title="Otvori priloženi PDF dokument" aria-label="Otvori priloženi PDF dokument">📁</button>`:''}
                   <div class="statusline">${status}${operationalDelayText(a)?' · '+operationalDelayText(a):''}</div>
                 </div>`;
               }).join('')
@@ -16358,6 +16358,9 @@ window.YardivoCleanCore={load,save,role,applyHome,driverOpen,driverSave,gateFind
 
  // Daily map: left click = INFO; right click remains existing actions.
  document.addEventListener('click',e=>{
+   // PDF is its own action. Never route a folder click into the appointment-detail modal.
+   if(e.target.closest?.('.yardivo-doc-icon[data-yardivo-doc]'))return;
+
    const daily=e.target.closest('#dailyMapBoard [data-announcement-id]');
    if(daily){e.preventDefault();e.stopImmediatePropagation();show(daily.dataset.announcementId);return}
 
@@ -58084,22 +58087,21 @@ window.YardivoDocumentArchiveV583={load,render,archiveCurrent};
   max-width:24px!important;
   height:22px!important;
   min-height:22px!important;
+  max-height:22px!important;
   padding:0!important;
   margin:4px 0 0 0!important;
   gap:0!important;
   border-radius:6px!important;
   line-height:1!important;
-  font-size:0!important;
+  font-size:13px!important;
   white-space:nowrap!important;
   flex:0 0 24px!important;
+  align-self:flex-start!important;
+  justify-self:start!important;
   vertical-align:middle!important;
   box-sizing:border-box!important;
-}
-#dailyMapBoard .yardivo-doc-icon::before,
-#weeklyMapBoard .yardivo-doc-icon::before{
-  content:"📁";
-  font-size:13px!important;
-  line-height:1!important;
+  overflow:hidden!important;
+  appearance:none!important;
 }
 #dailyMapBoard .yardivo-doc-icon:hover,
 #weeklyMapBoard .yardivo-doc-icon:hover{transform:translateY(-1px)}
