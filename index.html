@@ -56337,7 +56337,7 @@ function openSetting(type){
   if(type==='sound'){
     const m=soundMode(),vol=soundVolume();
     title.textContent='ZVUK';
-    body.innerHTML=`<p class="yv-qsm-help">Kad je uključeno, YARDIVO odmah pročita novu notifikaciju Gemini ženskim glasom.</p>
+    body.innerHTML=`<p class="yv-qsm-help">Kad je uključeno, YARDIVO odmah pročita novu notifikaciju Gemini AI glasom.</p>
       <div class="yv-qsm-options">
         ${optionButton('🔊 ON','ai',m==='ai','sound')}
         ${optionButton('🔇 OFF','off',m==='off','sound')}
@@ -57823,7 +57823,7 @@ document.addEventListener('keydown',function(e){
 </script>
 
 
-<style id="yardivo-v583-gemini-voice-volume-style">
+<style id="yardivo-v583-openai-voice-volume-style">
 #yardivoQuickSettingModal .yv-voice-volume{margin-top:14px;padding:14px;border:1px solid rgba(128,145,160,.28);border-radius:12px;background:rgba(255,255,255,.035)}
 #yardivoQuickSettingModal .yv-voice-volume-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;font-size:12px;letter-spacing:.04em}
 #yardivoQuickSettingModal .yv-voice-volume-head span{font-variant-numeric:tabular-nums;opacity:.82}
@@ -57901,8 +57901,8 @@ function setVolume(v){v=Math.max(0,Math.min(100,Number(v)||0));try{localStorage.
 function ensure(){
  const grid=$('settings')?.querySelector('.settings-grid');if(!grid)return;
  let d=$('yardivoVoiceSettingsV583');
- if(!d){d=document.createElement('section');d.id='yardivoVoiceSettingsV583';d.className='panel';d.dataset.yvOrdinarySetting='1';d.innerHTML=`<div class="yv-title">ZVUK · AI GLAS</div><div class="yv-sub">Nova vidljiva YARDIVO notifikacija čita se odmah Gemini ženskim glasom. Jedina zvučna postavka je AI glas — stari klasični zvuk je uklonjen.</div><div class="yv-row"><div><label>AI GLAS</label><div id="yardivoVoiceStatusV583"></div></div><div class="yv-toggle"><button type="button" data-yv-ai-sound="ai">ON</button><button type="button" data-yv-ai-sound="off">OFF</button></div></div><div class="yv-row"><label>GLASNOĆA</label><div style="display:flex;align-items:center;gap:8px"><input id="yardivoVoiceVolumeV583" type="range" min="0" max="100" step="5"><span id="yardivoVoiceVolumeValueV583"></span></div></div><div class="yv-row"><label>TEST AI GLASA</label><button type="button" id="yardivoVoiceTestV583">▶ TEST</button></div>`;grid.appendChild(d);
-   d.addEventListener('click',e=>{const b=e.target.closest?.('[data-yv-ai-sound]');if(b){setMode(b.dataset.yvAiSound);return}if(e.target.closest?.('#yardivoVoiceTestV583')){const st=$('yardivoVoiceStatusV583');if(st)st.textContent='Pokrećem Gemini glas…';window.YardivoAIVoiceNotifications?.test?.('YARDIVO test glas.').then(()=>{if(st)st.textContent='AI glas je spreman.'}).catch((err)=>{if(st)st.textContent='AI glas trenutno nije dostupan'+(err?.message?' · '+err.message:'')})}});
+ if(!d){d=document.createElement('section');d.id='yardivoVoiceSettingsV583';d.className='panel';d.dataset.yvOrdinarySetting='1';d.innerHTML=`<div class="yv-title">ZVUK · AI GLAS</div><div class="yv-sub">Nova vidljiva YARDIVO notifikacija čita se odmah Gemini AI glasom. Jedina zvučna postavka je AI glas — stari klasični zvuk je uklonjen.</div><div class="yv-row"><div><label>AI GLAS</label><div id="yardivoVoiceStatusV583"></div></div><div class="yv-toggle"><button type="button" data-yv-ai-sound="ai">ON</button><button type="button" data-yv-ai-sound="off">OFF</button></div></div><div class="yv-row"><label>GLASNOĆA</label><div style="display:flex;align-items:center;gap:8px"><input id="yardivoVoiceVolumeV583" type="range" min="0" max="100" step="5"><span id="yardivoVoiceVolumeValueV583"></span></div></div><div class="yv-row"><label>TEST AI GLASA</label><button type="button" id="yardivoVoiceTestV583">▶ TEST</button></div>`;grid.appendChild(d);
+   d.addEventListener('click',e=>{const b=e.target.closest?.('[data-yv-ai-sound]');if(b){setMode(b.dataset.yvAiSound);return}if(e.target.closest?.('#yardivoVoiceTestV583')){const st=$('yardivoVoiceStatusV583');if(st)st.textContent='Pokrećem Gemini AI glas…';window.YardivoAIVoiceNotifications?.test?.('YARDIVO test glas.').then(()=>{if(st)st.textContent='AI glas je spreman.'}).catch((err)=>{if(st)st.textContent='AI glas trenutno nije dostupan'+(err?.message?' · '+err.message:'')})}});
    d.querySelector('#yardivoVoiceVolumeV583')?.addEventListener('input',e=>setVolume(e.target.value));
  }
  if(d.parentElement!==grid)grid.appendChild(d);d.hidden=false;d.style.setProperty('display','block','important');render();
