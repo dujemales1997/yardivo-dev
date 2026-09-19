@@ -56677,6 +56677,12 @@ function ensureDrawer(){
           <span class="yv-rs-copy"><strong>THEME</strong><small data-yv-setting-status="palette"></small></span>
           <span class="yv-rs-arrow">›</span>
         </button>
+        <button type="button" class="yv-rs-item yv-help-chat-menu-item" data-yv-help-chat-open>
+          <span class="yv-rs-icon">💬</span>
+          <span class="yv-rs-copy"><strong>HELP CHAT</strong><small>dujemales · Yard Manager</small></span>
+          <span class="yv-help-chat-menu-badge" data-yv-help-badge hidden>0</span>
+          <span class="yv-rs-arrow">›</span>
+        </button>
       </div>
       <div class="yv-rs-foot">Pomakni miš izvan panela za zatvaranje.</div>`;
     document.body.appendChild(drawer);
@@ -58245,5 +58251,76 @@ window.addEventListener('load',()=>{try{localStorage.setItem(LEGACY_KEY,'off');c
 window.YardivoAIVoiceNotifications={mode,setMode,volume,setVolume,speak:speakNotification,test:(text='YARDIVO glasovne notifikacije su uključene.')=>{stopCurrent();const seq=currentSpeakSeq;return aiSpeak(String(text),seq).catch(()=>fallbackTTS(String(text),seq))}};
 })();
 </script>
+
+<style id="yardivo-v583-help-chat-css">
+#yardivoHelpChatAdminTrigger{position:fixed;right:0;top:46%;transform:translateY(-50%);z-index:2147481500;border:1px solid #31576d;border-right:0;border-radius:10px 0 0 10px;background:#0c2030;color:#eaf6fc;padding:10px 9px;font:700 10px/1 Arial,sans-serif;letter-spacing:.4px;box-shadow:0 8px 28px rgba(0,0,0,.34);cursor:pointer;display:none;align-items:center;gap:6px}
+#yardivoHelpChatAdminTrigger .hc-badge,.yv-help-chat-menu-badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#ef4a53;color:#fff;display:inline-flex;align-items:center;justify-content:center;font:800 10px/18px Arial,sans-serif}
+#yardivoHelpChatOverlay{position:fixed;inset:0;z-index:2147482600;background:rgba(3,10,15,.56);backdrop-filter:blur(3px);display:none;justify-content:flex-end}
+#yardivoHelpChatOverlay.open{display:flex}
+#yardivoHelpChatPanel{width:min(760px,94vw);height:100%;background:#0b1d28;color:#eef7fb;border-left:1px solid #29495b;box-shadow:-22px 0 60px rgba(0,0,0,.42);display:grid;grid-template-rows:auto 1fr;overflow:hidden}
+#yardivoHelpChatPanel.nonadmin{width:min(430px,94vw)}
+.yhc-head{height:64px;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid #29495b;background:#0d2432}
+.yhc-head .avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#1d7fc0;color:#fff;font-weight:900}
+.yhc-head-copy{min-width:0;flex:1}.yhc-head-copy strong{display:block;font:800 13px/1.2 Arial,sans-serif}.yhc-head-copy small{display:block;color:#8eabbc;font:600 9px/1.4 Arial,sans-serif;margin-top:3px}
+.yhc-close{border:1px solid #335568;background:#112c3a;color:#dceaf1;width:32px;height:32px;border-radius:8px;font-size:20px;cursor:pointer}
+.yhc-main{min-height:0;display:grid;grid-template-columns:230px minmax(0,1fr)}
+#yardivoHelpChatPanel.nonadmin .yhc-main{grid-template-columns:1fr}
+#yardivoHelpChatPanel.nonadmin .yhc-threads{display:none}
+.yhc-threads{border-right:1px solid #29495b;overflow:auto;background:#0a1922;padding:10px}
+.yhc-threads-title{font:800 9px/1 Arial,sans-serif;letter-spacing:.8px;color:#7897a9;padding:5px 5px 9px}
+.yhc-thread{width:100%;border:1px solid #243f4e;background:#0f2532;color:#dceaf1;border-radius:9px;padding:9px 10px;margin-bottom:7px;text-align:left;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px}
+.yhc-thread.active{border-color:#338bc1;background:#123044}.yhc-thread b{font-size:10px}.yhc-thread small{grid-column:1/-1;color:#7f9cad;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.yhc-thread em{font-style:normal;background:#ef4a53;color:#fff;border-radius:8px;padding:2px 5px;font-size:8px}
+.yhc-chat{min-height:0;display:grid;grid-template-rows:1fr auto;background:#0c202c}
+.yhc-messages{overflow:auto;padding:16px;display:flex;flex-direction:column;gap:9px}
+.yhc-empty{margin:auto;color:#7793a3;font-size:11px;text-align:center;max-width:280px;line-height:1.5}
+.yhc-msg{max-width:82%;padding:9px 11px;border-radius:12px;border:1px solid #2e4e60;background:#122d3c;align-self:flex-start}
+.yhc-msg.mine{align-self:flex-end;background:#113b55;border-color:#276f97}.yhc-msg .who{font-size:8px;color:#7fa3b8;margin-bottom:4px}.yhc-msg .body{font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-word}.yhc-msg .time{font-size:7px;color:#66869a;text-align:right;margin-top:5px}
+.yhc-compose{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px;border-top:1px solid #29495b;background:#0d2432}.yhc-compose textarea{resize:none;min-height:44px;max-height:110px;border:1px solid #315164;border-radius:9px;background:#091923;color:#eef7fb;padding:10px;font:11px/1.35 Arial,sans-serif;outline:none}.yhc-compose button{border:1px solid #2c86bc;border-radius:9px;background:#1378b9;color:#fff;padding:0 16px;font-weight:800;cursor:pointer}.yhc-compose button:disabled{opacity:.5;cursor:default}
+.yhc-admin-no-thread{display:flex;align-items:center;justify-content:center;color:#7897a9;font-size:11px;padding:20px}
+body.light-mode #yardivoHelpChatPanel{background:#f6f8fa;color:#172631;border-left-color:#ccd7de}body.light-mode .yhc-head,body.light-mode .yhc-compose{background:#fff;border-color:#d5dfe5}body.light-mode .yhc-threads{background:#eef2f5;border-color:#d5dfe5}body.light-mode .yhc-thread{background:#fff;color:#1f313c;border-color:#d6e0e5}body.light-mode .yhc-thread.active{background:#eaf5fc;border-color:#7cb7db}body.light-mode .yhc-chat{background:#f5f7f8}body.light-mode .yhc-msg{background:#fff;color:#20323c;border-color:#d2dde3}body.light-mode .yhc-msg.mine{background:#e8f5fc;border-color:#a5cfe6}body.light-mode .yhc-compose textarea{background:#fff;color:#172631;border-color:#c9d5dc}
+@media(max-width:650px){#yardivoHelpChatPanel,#yardivoHelpChatPanel.nonadmin{width:100vw}.yhc-main{grid-template-columns:128px minmax(0,1fr)}.yhc-msg{max-width:92%}}
+</style>
+<script id="yardivo-v583-help-chat-js">
+(()=>{
+'use strict';
+const ADMIN='dujemales';
+let me=null,threads=[],messages=[],selectedThread='',opened=false,badgeTimer=null,chatTimer=null,busy=false;
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const role=()=>{let r=String(window.currentSession?.app_role||window.currentSession?.role||document.body?.dataset?.yardivoRole||'').toLowerCase().trim();if(r==='management'||r==='voditelj')r='manager';return r};
+const admin=()=>role()==='admin';
+async function invoke(action,payload={}){const c=await window.YardivoAuth?.client?.();if(!c)throw new Error('YARDIVO Auth nije spreman.');const {data,error}=await c.functions.invoke('yardivo-help-chat',{body:{action,...payload}});if(error)throw error;if(data?.ok===false||data?.error)throw new Error(data?.error||'Help Chat greška.');return data?.data??data}
+function fmtTime(v){try{return new Intl.DateTimeFormat('hr-HR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(v))}catch(_){return''}}
+function ensure(){
+ if(!document.getElementById('yardivoHelpChatOverlay')){
+  const o=document.createElement('div');o.id='yardivoHelpChatOverlay';o.innerHTML=`<section id="yardivoHelpChatPanel" aria-label="YARDIVO Help Chat"><header class="yhc-head"><div class="avatar">Y</div><div class="yhc-head-copy"><strong id="yhcTitle">HELP CHAT</strong><small id="yhcSub">dujemales · Yard Manager</small></div><button type="button" class="yhc-close" data-yhc-close>×</button></header><div class="yhc-main"><aside class="yhc-threads"><div class="yhc-threads-title">RAZGOVORI</div><div id="yhcThreadList"></div></aside><section class="yhc-chat"><div class="yhc-messages" id="yhcMessages"><div class="yhc-empty">Učitavam razgovor…</div></div><div class="yhc-compose"><textarea id="yhcInput" maxlength="2000" placeholder="Napiši poruku adminu…"></textarea><button type="button" id="yhcSend">POŠALJI</button></div></section></div></section>`;document.body.appendChild(o);
+  o.addEventListener('click',e=>{if(e.target===o||e.target.closest?.('[data-yhc-close]'))close()});
+  o.querySelector('#yhcSend').addEventListener('click',send);
+  o.querySelector('#yhcInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+  o.querySelector('#yhcThreadList').addEventListener('click',e=>{const b=e.target.closest?.('[data-yhc-thread]');if(!b)return;selectedThread=b.dataset.yhcThread;renderThreads();loadMessages(true)});
+ }
+ let a=document.getElementById('yardivoHelpChatAdminTrigger');
+ if(!a){a=document.createElement('button');a.type='button';a.id='yardivoHelpChatAdminTrigger';a.innerHTML='💬 <span>HELP CHAT</span><span class="hc-badge" hidden>0</span>';a.addEventListener('click',open);document.body.appendChild(a)}
+ a.style.display=admin()?'flex':'none';
+ const p=document.getElementById('yardivoHelpChatPanel');if(p)p.classList.toggle('nonadmin',!admin());
+}
+function renderThreads(){const host=document.getElementById('yhcThreadList');if(!host)return;if(!threads.length){host.innerHTML='<div class="yhc-empty">Još nema Help Chat razgovora.</div>';return}host.innerHTML=threads.map(t=>`<button type="button" class="yhc-thread ${String(t.thread_user_id)===String(selectedThread)?'active':''}" data-yhc-thread="${esc(t.thread_user_id)}"><b>${esc(t.thread_username||'korisnik')}</b>${Number(t.unread||0)?`<em>${Number(t.unread)}</em>`:''}<small>${esc(t.last_message||'')}</small></button>`).join('')}
+function renderMessages(){const host=document.getElementById('yhcMessages');if(!host)return;if(admin()&&!selectedThread){host.innerHTML='<div class="yhc-admin-no-thread">Odaberi korisnika s lijeve strane.</div>';return}if(!messages.length){host.innerHTML='<div class="yhc-empty">Nema poruka. Napiši poruku i Admin dujemales će je vidjeti ovdje.</div>';return}const myName=String(me?.username||window.currentSession?.username||'').toLowerCase();host.innerHTML=messages.map(m=>{const mine=String(m.sender_username||'').toLowerCase()===myName;return `<div class="yhc-msg ${mine?'mine':''}"><div class="who">${esc(mine?'TI':m.sender_username||'')}</div><div class="body">${esc(m.body||'')}</div><div class="time">${esc(fmtTime(m.created_at))}</div></div>`}).join('');host.scrollTop=host.scrollHeight}
+async function loadThreads(){if(!admin())return;try{threads=await invoke('list_threads')||[];if(!selectedThread&&threads[0])selectedThread=String(threads[0].thread_user_id);renderThreads()}catch(e){console.error('[YARDIVO Help Chat] threads',e)}}
+async function loadMessages(silent=false){if(busy)return;if(admin()&&!selectedThread){messages=[];renderMessages();return}busy=true;try{messages=await invoke('list_messages',admin()?{thread_user_id:selectedThread}:{});if(!Array.isArray(messages))messages=[];renderMessages();if(admin())await loadThreads();updateBadge(0,true)}catch(e){if(!silent){const h=document.getElementById('yhcMessages');if(h)h.innerHTML='<div class="yhc-empty">Help Chat nije dostupan: '+esc(e?.message||e)+'</div>'}}finally{busy=false}}
+async function send(){const input=document.getElementById('yhcInput'),btn=document.getElementById('yhcSend');if(!input||!btn)return;const body=input.value.trim();if(!body)return;if(admin()&&!selectedThread)return alert('Odaberi korisnika.');btn.disabled=true;try{await invoke('send',admin()?{thread_user_id:selectedThread,body}:{body});input.value='';await loadMessages()}catch(e){alert('Poruka nije poslana:\n'+(e?.message||e))}finally{btn.disabled=false;input.focus()}}
+async function who(){try{me=await invoke('whoami');return me}catch(e){console.error('[YARDIVO Help Chat] whoami',e);return null}}
+async function open(){ensure();opened=true;document.getElementById('yardivoHelpChatOverlay')?.classList.add('open');await who();const t=document.getElementById('yhcTitle'),s=document.getElementById('yhcSub'),inp=document.getElementById('yhcInput');if(admin()){if(t)t.textContent='HELP CHAT · ADMIN';if(s)s.textContent='Korisnici ↔ dujemales · Yard Manager';if(inp)inp.placeholder='Odgovori korisniku…';await loadThreads()}else{if(t)t.textContent='HELP CHAT';if(s)s.textContent='dujemales · Yard Manager';if(inp)inp.placeholder='Napiši poruku adminu…'}await loadMessages();clearInterval(chatTimer);chatTimer=setInterval(()=>{if(opened)loadMessages(true)},2500)}
+function close(){opened=false;document.getElementById('yardivoHelpChatOverlay')?.classList.remove('open');clearInterval(chatTimer);chatTimer=null}
+function updateBadge(n,forceZero=false){const count=forceZero?0:Number(n||0);document.querySelectorAll('[data-yv-help-badge],#yardivoHelpChatAdminTrigger .hc-badge').forEach(b=>{b.textContent=String(count);b.hidden=!count})}
+async function pollBadge(){try{if(!window.currentSession&&!document.body?.dataset?.yardivoRole)return;const x=await invoke('unread_count');updateBadge(x?.count||0)}catch(_){}}
+document.addEventListener('click',e=>{const b=e.target.closest?.('[data-yv-help-chat-open]');if(!b)return;e.preventDefault();e.stopPropagation();open()},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&opened)close()});
+window.addEventListener('yardivo:logout',()=>{close();updateBadge(0,true)});
+window.addEventListener('yardivo:online-ready',()=>{ensure();pollBadge()});
+setTimeout(()=>{ensure();pollBadge()},1800);badgeTimer=setInterval(pollBadge,6000);
+window.YardivoHelpChatV583={open,close,refresh:loadMessages};
+})();
+</script>
+
 </body>
 </html>
