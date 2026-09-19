@@ -58318,7 +58318,42 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&opened)close()});
 window.addEventListener('yardivo:logout',()=>{close();updateBadge(0,true)});
 window.addEventListener('yardivo:online-ready',()=>{ensure();pollBadge()});
 setTimeout(()=>{ensure();pollBadge()},1800);badgeTimer=setInterval(pollBadge,6000);
-window.YardivoHelpChatV583={open,close,refresh:loadMessages};
+async function openThread(threadId){selectedThread=String(threadId||'');await open()}
+window.YardivoHelpChatV583={open,openThread,close,refresh:loadMessages};
+})();
+</script>
+
+
+<style id="yardivo-v583-help-chat-admin-popups-css">
+#yardivoHelpChatPopupStack{position:fixed;right:14px;top:92px;z-index:2147481495;width:min(330px,calc(100vw - 28px));display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.yhc-pop{pointer-events:auto;display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:10px;align-items:start;padding:12px 12px 11px;border:1px solid #31576d;border-radius:12px;background:#0c2030;color:#eaf6fc;box-shadow:0 14px 38px rgba(0,0,0,.38);cursor:pointer;animation:yhcPopIn .18s ease-out both}
+.yhc-pop:hover{border-color:#4487ad;background:#10293b}
+.yhc-pop-avatar{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:#143b54;border:1px solid #2c6e95;font:900 14px/1 Arial,sans-serif;color:#fff}
+.yhc-pop-copy{min-width:0}.yhc-pop-copy strong{display:flex;align-items:center;gap:7px;font:800 11px/1.2 Arial,sans-serif;letter-spacing:.02em}.yhc-pop-copy small{display:block;margin-top:4px;color:#86a7ba;font:700 8px/1.2 Arial,sans-serif;text-transform:uppercase}.yhc-pop-copy p{margin:6px 0 0;color:#d7e7ef;font:10px/1.35 Arial,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.yhc-pop-badge{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#ef4a53;color:#fff;display:inline-grid;place-items:center;font:900 10px/20px Arial,sans-serif;box-shadow:0 0 0 2px rgba(239,74,83,.12)}
+.yhc-pop-time{display:block;margin-top:7px;color:#668a9f;font:8px/1 Arial,sans-serif;text-align:right;white-space:nowrap}
+body.light-mode .yhc-pop{background:#fff;color:#1d313d;border-color:#c7d6df;box-shadow:0 12px 34px rgba(30,50,65,.18)}body.light-mode .yhc-pop:hover{background:#f4f9fc;border-color:#8db8cf}body.light-mode .yhc-pop-copy p{color:#405965}body.light-mode .yhc-pop-copy small{color:#6b8796}body.light-mode .yhc-pop-time{color:#7a929e}
+@keyframes yhcPopIn{from{opacity:0;transform:translateX(22px) scale(.98)}to{opacity:1;transform:translateX(0) scale(1)}}
+@media(max-width:650px){#yardivoHelpChatPopupStack{right:8px;top:72px;width:calc(100vw - 16px)}}
+</style>
+<script id="yardivo-v583-help-chat-admin-popups-js">
+(()=>{
+'use strict';
+let timer=null,lastSig='';
+const role=()=>{let r=String(window.currentSession?.app_role||window.currentSession?.role||document.body?.dataset?.yardivoRole||'').toLowerCase().trim();if(r==='management'||r==='voditelj')r='manager';return r};
+const isAdmin=()=>role()==='admin';
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function fmt(v){try{return new Intl.DateTimeFormat('hr-HR',{hour:'2-digit',minute:'2-digit'}).format(new Date(v))}catch(_){return''}}
+function ensureHost(){let h=document.getElementById('yardivoHelpChatPopupStack');if(!h){h=document.createElement('div');h.id='yardivoHelpChatPopupStack';h.setAttribute('aria-live','polite');h.setAttribute('aria-label','Nove Help Chat poruke');document.body.appendChild(h)}return h}
+async function invoke(action,payload={}){const c=await window.YardivoAuth?.client?.();if(!c)throw new Error('Auth nije spreman');const {data,error}=await c.functions.invoke('yardivo-help-chat',{body:{action,...payload}});if(error)throw error;if(data?.ok===false||data?.error)throw new Error(data?.error||'Help Chat greška');return data?.data??data}
+function render(rows){const h=ensureHost();const unread=(Array.isArray(rows)?rows:[]).filter(x=>Number(x?.unread||0)>0);const sig=unread.map(x=>`${x.thread_user_id}:${x.unread}:${x.last_at||''}`).join('|');if(sig===lastSig)return;lastSig=sig;if(!isAdmin()){h.replaceChildren();return}h.innerHTML=unread.map(t=>{const name=String(t.thread_username||'korisnik');const initial=(name.trim()[0]||'?').toUpperCase();return `<button type="button" class="yhc-pop" data-yhc-pop-thread="${esc(t.thread_user_id)}" title="Otvori Help Chat s ${esc(name)}"><span class="yhc-pop-avatar">${esc(initial)}</span><span class="yhc-pop-copy"><strong>${esc(name)}</strong><small>HELP CHAT · NOVA PORUKA</small><p>${esc(t.last_message||'Nova poruka')}</p></span><span><span class="yhc-pop-badge">${Number(t.unread||0)}</span><span class="yhc-pop-time">${esc(fmt(t.last_at))}</span></span></button>`}).join('')}
+async function poll(){if(!isAdmin()){render([]);return}try{const rows=await invoke('list_threads');render(rows)}catch(_){}}
+function openThread(id){if(!id)return;window.YardivoHelpChatV583?.openThread?.(id);setTimeout(poll,700)}
+document.addEventListener('click',e=>{const b=e.target.closest?.('[data-yhc-pop-thread]');if(!b)return;e.preventDefault();e.stopPropagation();openThread(b.dataset.yhcPopThread)},true);
+window.addEventListener('yardivo:logout',()=>{lastSig='';render([])});
+window.addEventListener('yardivo:online-ready',()=>{lastSig='';poll()});
+setTimeout(()=>{poll();clearInterval(timer);timer=setInterval(poll,3500)},2200);
+window.YardivoHelpChatAdminPopupsV583={refresh:poll};
 })();
 </script>
 
