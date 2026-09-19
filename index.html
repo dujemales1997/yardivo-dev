@@ -58072,5 +58072,76 @@ window.YardivoDocumentArchiveV583={load,render,archiveCurrent};
 })();
 </script>
 
+
+<style id="yardivo-v583-pdf-icon-click-final-fix">
+/* Supplier PDF in Daily / Weekly map: compact icon only, never a full-width action. */
+#dailyMapBoard .yardivo-doc-icon,
+#weeklyMapBoard .yardivo-doc-icon{
+  display:inline-grid!important;
+  place-items:center!important;
+  width:24px!important;
+  min-width:24px!important;
+  max-width:24px!important;
+  height:22px!important;
+  min-height:22px!important;
+  padding:0!important;
+  margin:4px 0 0 0!important;
+  gap:0!important;
+  border-radius:6px!important;
+  line-height:1!important;
+  font-size:0!important;
+  white-space:nowrap!important;
+  flex:0 0 24px!important;
+  vertical-align:middle!important;
+  box-sizing:border-box!important;
+}
+#dailyMapBoard .yardivo-doc-icon::before,
+#weeklyMapBoard .yardivo-doc-icon::before{
+  content:"📁";
+  font-size:13px!important;
+  line-height:1!important;
+}
+#dailyMapBoard .yardivo-doc-icon:hover,
+#weeklyMapBoard .yardivo-doc-icon:hover{transform:translateY(-1px)}
+</style>
+<script id="yardivo-v583-pdf-icon-click-final-fix-js">
+(function(){
+'use strict';
+function findAnnouncement(id){
+  try{return (Array.isArray(window.announcements)?window.announcements:(typeof announcements!=='undefined'&&Array.isArray(announcements)?announcements:[])).find(x=>String(x?.id)===String(id))||null}catch(_){return null}
+}
+function openPdfFromButton(b){
+  if(!b)return false;
+  const a=findAnnouncement(b.dataset.yardivoDoc);
+  if(!a)return false;
+  try{
+    if(window.YardivoSupplierAttachments?.has?.(a)||a.attachmentDataUrl||a.documentDataUrl||a.attachmentUrl||a.documentUrl){
+      window.YardivoSupplierAttachments?.open?.(a);
+      return true;
+    }
+  }catch(err){console.error('YARDIVO PDF open',err)}
+  return false;
+}
+/* Capture before Daily/Weekly card click handlers so folder always means PDF, never appointment detail. */
+document.addEventListener('click',function(e){
+  const b=e.target?.closest?.('#dailyMapBoard .yardivo-doc-icon[data-yardivo-doc],#weeklyMapBoard .yardivo-doc-icon[data-yardivo-doc]');
+  if(!b)return;
+  e.preventDefault();
+  e.stopPropagation();
+  e.stopImmediatePropagation();
+  openPdfFromButton(b);
+},true);
+/* Keyboard accessibility follows the exact same PDF-first behavior. */
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const b=e.target?.closest?.('#dailyMapBoard .yardivo-doc-icon[data-yardivo-doc],#weeklyMapBoard .yardivo-doc-icon[data-yardivo-doc]');
+  if(!b)return;
+  e.preventDefault();
+  e.stopPropagation();
+  e.stopImmediatePropagation();
+  openPdfFromButton(b);
+},true);
+})();
+</script>
 </body>
 </html>
