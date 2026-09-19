@@ -8492,6 +8492,40 @@ body.yv-minimap-open #yardivoMiniMapDock{
   font-size:12px!important;
 }
 </style>
+
+<style id="yardivo-v583-supplier-status-layout-clean">
+/* Supplier status cards: clean, stable right-side action layout. Paint/layout only. */
+#yardivoSupplierPortal .ysp-delivery-side{
+  min-width:0;display:grid;grid-template-rows:auto auto;gap:10px;align-content:center
+}
+#yardivoSupplierPortal .ysp-delivery-actions{
+  display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0
+}
+#yardivoSupplierPortal .ysp-delivery-actions>.status{
+  flex:0 0 auto;margin:0!important;white-space:nowrap;align-self:flex-start
+}
+#yardivoSupplierPortal .ysp-action-buttons{
+  display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;min-width:0
+}
+#yardivoSupplierPortal .ysp-action-buttons>.btn-secondary,
+#yardivoSupplierPortal .ysp-action-buttons>a,
+#yardivoSupplierPortal .ysp-action-buttons>button{
+  margin:0!important;min-height:34px;white-space:nowrap
+}
+#yardivoSupplierPortal .ysp-delivery-side .ysp-progress{
+  width:100%;margin:0;padding:7px 0 0;justify-content:flex-end;border-top:1px solid rgba(126,151,175,.18)
+}
+@media(max-width:1180px){
+  #yardivoSupplierPortal .ysp-delivery-actions{align-items:flex-end;flex-direction:column}
+  #yardivoSupplierPortal .ysp-action-buttons{width:100%}
+}
+@media(max-width:900px){
+  #yardivoSupplierPortal .ysp-delivery-actions{align-items:stretch}
+  #yardivoSupplierPortal .ysp-action-buttons{justify-content:flex-start}
+  #yardivoSupplierPortal .ysp-delivery-actions>.status{align-self:flex-start}
+  #yardivoSupplierPortal .ysp-delivery-side .ysp-progress{justify-content:flex-start}
+}
+</style>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -34165,11 +34199,15 @@ function renderStatus(){
           ${x.reviewNote?`<br><strong style="color:#ffc36b">YARDIVO: ${escapeHtml(x.reviewNote)}</strong>`:''}
         </div>
       </div>
-      <div>
-        <span class="status ${idx===5?'done':'wait'}">${escapeHtml(labelStatus(x.status))}</span>
-        <div style="margin-top:8px"><button type="button" class="btn-secondary" data-ysp-edit-vehicle="${escapeHtml(x.id)}">${escapeHtml((x.plate||x.trailerPlate||x.driver||x.driverContact)?'UREDI TRANSPORT':'DODAJ TRANSPORT')}</button></div>
-        ${String(x.status||'').toLowerCase()==='confirmed'?`<div style="margin-top:7px"><button type="button" class="btn-secondary" data-ysp-request-reschedule="${escapeHtml(x.id)}">ZATRAŽI PROMJENU TERMINA</button></div>${window.YardivoGateQrV583?.supplierButtons?.(x)||''}`:''}
-        ${String(x.status||'').toLowerCase()==='revision_requested'?`<div style="margin-top:7px"><button type="button" class="btn-secondary" data-ysp-revise="${escapeHtml(x.id)}">ISPRAVI I PONOVNO POŠALJI</button></div>`:''}
+      <div class="ysp-delivery-side">
+        <div class="ysp-delivery-actions">
+          <span class="status ${idx===5?'done':'wait'}">${escapeHtml(labelStatus(x.status))}</span>
+          <div class="ysp-action-buttons">
+            <button type="button" class="btn-secondary" data-ysp-edit-vehicle="${escapeHtml(x.id)}">${escapeHtml((x.plate||x.trailerPlate||x.driver||x.driverContact)?'UREDI TRANSPORT':'DODAJ TRANSPORT')}</button>
+            ${String(x.status||'').toLowerCase()==='confirmed'?`<button type="button" class="btn-secondary" data-ysp-request-reschedule="${escapeHtml(x.id)}">ZATRAŽI PROMJENU TERMINA</button>${window.YardivoGateQrV583?.supplierButtons?.(x)||''}`:''}
+            ${String(x.status||'').toLowerCase()==='revision_requested'?`<button type="button" class="btn-secondary" data-ysp-revise="${escapeHtml(x.id)}">ISPRAVI I PONOVNO POŠALJI</button>`:''}
+          </div>
+        </div>
         <div class="ysp-progress">
           ${steps.map((k,i)=>`<div class="ysp-step ${i<=idx?'done':''}"><i></i>${escapeHtml(t(k))}</div>`).join('')}
         </div>
