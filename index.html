@@ -8526,6 +8526,15 @@ body.yv-minimap-open #yardivoMiniMapDock{
   #yardivoSupplierPortal .ysp-delivery-side .ysp-progress{justify-content:flex-start}
 }
 </style>
+
+<style id="yardivo-admin-settings-clean-v1">
+body:has(#settings.view) #settings #yardivoDarkStyleSettings,
+body:has(#settings.view) #settings #yardivoThemeSettingsV2,
+body:has(#settings.view) #settings #yardivoThemeSettingExactV583,
+body:has(#settings.view) #settings #qrMobileSettingsPanel{
+  display:none!important;
+}
+</style>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -50099,7 +50108,7 @@ async function persist(d,reason){d.__masterUpdatedAtV583=new Date().toISOString(
 function openSupplier(){const m=$('yardivoSupplierMasterModalV583');if(!m)return;m.classList.add('open');const n=$('ysmpName'),c=$('ysmpCode'),e=$('ysmpError');if(n)n.value='';if(c)c.value='';if(e)e.textContent='';setTimeout(()=>n?.focus(),0)}
 function openImport(){status.textContent='';status.className='ysi-status';file.value='';im.classList.add('open')}
 function closeImport(){im.classList.remove('open')}
-function patchUI(){const card=$('yardivoMasterSuppliersV583');if(!card)return;card.querySelector('#specNewSupplier')?.remove();const old=card.querySelector('[data-spec-sup-add]');if(old){old.removeAttribute('data-spec-sup-add');old.id='yvAddSupplierPopupV583';old.textContent='DODAJ DOBAVLJAČA'}let acts=card.querySelector('.yv-supplier-actions-v583');if(!acts){acts=document.createElement('div');acts.className='yv-supplier-actions-v583';acts.innerHTML='<button type="button" class="primary" id="yvAddSupplierPopupV583">DODAJ DOBAVLJAČA</button><button type="button" id="yvImportSuppliersXlsxV583">IMPORT DOBAVLJAČI XLSX</button>';card.querySelector('.ymsup-add')?.replaceWith(acts)}else if(!acts.querySelector('#yvImportSuppliersXlsxV583'))acts.insertAdjacentHTML('beforeend','<button type="button" id="yvImportSuppliersXlsxV583">IMPORT DOBAVLJAČI XLSX</button>');
+function patchUI(){const card=$('yardivoMasterSuppliersV583');if(!card)return;card.querySelector('#specNewSupplier')?.remove();const old=card.querySelector('[data-spec-sup-add]');if(old){old.removeAttribute('data-spec-sup-add');old.id='yvAddSupplierPopupV583';old.textContent='DODAJ DOBAVLJAČA'}let acts=card.querySelector('.yv-supplier-actions-v583');if(!acts){acts=document.createElement('div');acts.className='yv-supplier-actions-v583';acts.innerHTML='<button type="button" class="primary" id="yvAddSupplierPopupV583">DODAJ DOBAVLJAČA</button><button type="button" id="yvImportSuppliersXlsxV583">IMPORT DOBAVLJAČA XLSX</button>';card.querySelector('.ymsup-add')?.replaceWith(acts)}else if(!acts.querySelector('#yvImportSuppliersXlsxV583'))acts.insertAdjacentHTML('beforeend','<button type="button" id="yvImportSuppliersXlsxV583">IMPORT DOBAVLJAČA XLSX</button>');
  const d=master();card.querySelectorAll('[data-spec-sup-name]').forEach(inp=>{const x=d.suppliers.find(v=>String(v.id)===String(inp.dataset.specSupName));if(!x)return;let badge=inp.parentElement?.querySelector('.yv-supplier-code-v583');if(!badge){badge=document.createElement('div');badge.className='yv-supplier-code-v583';inp.insertAdjacentElement('beforebegin',badge)}badge.textContent='ŠIFRA: '+String(x.supplier_code||x.code||'—')});}
 async function importFile(f){if(!f)return;if(!window.XLSX){status.textContent='XLSX modul nije učitan. Osvježi YARDIVO i pokušaj ponovno.';status.className='ysi-status err';return}status.textContent='Čitam datoteku…';try{const buf=await f.arrayBuffer(),wb=XLSX.read(buf,{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});if(rows.length<2)throw new Error('Datoteka nema redove za import.');const norm=v=>String(v??'').trim().toLowerCase().replace(/\s+/g,' ');const h=(rows[0]||[]).map(norm);let ci=h.findIndex(v=>v.includes('šifra')||v.includes('sifra')||v==='code'||v.includes('supplier code')),ni=h.findIndex(v=>v.includes('naziv')||v.includes('ime')||v==='name'||v.includes('supplier name'));if(ci<0||ni<0){ci=0;ni=1}const parsed=rows.slice(1).map(r=>({code:String(r[ci]??'').trim(),name:String(r[ni]??'').trim()})).filter(x=>x.code||x.name);if(!parsed.length)throw new Error('Nema dobavljača za import.');const bad=parsed.filter(x=>!x.code||!x.name);if(bad.length)throw new Error('Svaki red mora imati šifru i naziv. Neispravnih redova: '+bad.length);const d=master(),existing=new Set(d.suppliers.map(x=>norm(x.supplier_code||x.code))),seen=new Set(),dup=[];for(const x of parsed){const k=norm(x.code);if(existing.has(k)||seen.has(k))dup.push(x.code);seen.add(k)}if(dup.length)throw new Error('Duplikat šifre: '+dup.slice(0,8).join(', ')+(dup.length>8?'…':''));const id=nextId(d.suppliers);for(const x of parsed)d.suppliers.push({id:id(),supplier_code:x.code,name:x.name,active:true});await persist(d,'supplier.xlsx-import');status.textContent='Uvezeno dobavljača: '+parsed.length;status.className='ysi-status ok';patchUI();setTimeout(closeImport,700)}catch(e){console.error(e);status.textContent=e?.message||'Import nije uspio.';status.className='ysi-status err'}}
 document.addEventListener('click',e=>{const add=e.target.closest?.('#yvAddSupplierPopupV583');if(add){e.preventDefault();e.stopImmediatePropagation();openSupplier();return}const imp=e.target.closest?.('#yvImportSuppliersXlsxV583');if(imp){e.preventDefault();e.stopImmediatePropagation();openImport();return}},true);
@@ -50138,8 +50147,123 @@ function installSupplierModal(){const m=$('yardivoSupplierMasterModalV583');if(!
  }
 function resetSupplierModal(){const m=$('yardivoSupplierMasterModalV583');if(!m)return;['ysmpCode','ysmpName','ysmpPhone','ysmpEmail','ysmpContact'].forEach(id=>{if($(id))$(id).value=''});if($('ysmpAllLocations'))$('ysmpAllLocations').checked=false;if($('ysmpAllWarehouses'))$('ysmpAllWarehouses').checked=false;const d=md();if($('ysmpLocations'))$('ysmpLocations').innerHTML=d.locations.filter(x=>x.active!==false).map(x=>`<label><input name="ysmpLoc" type="checkbox" value="${esc(x.id)}"> ${esc(x.name)}</label>`).join('');if($('ysmpWarehouses'))$('ysmpWarehouses').innerHTML='<span>Odaberi lokaciju.</span>';if($('ysmpError'))$('ysmpError').textContent=''}
 function patchList(){const card=$('yardivoMasterSuppliersV583');if(!card)return;const d=md();card.querySelectorAll('[data-spec-sup-name]').forEach(inp=>{const x=d.suppliers.find(v=>String(v.id)===String(inp.dataset.specSupName));if(!x)return;let z=inp.parentElement.querySelector('.yv-supplier-meta');if(!z){z=document.createElement('div');z.className='yv-supplier-meta';inp.insertAdjacentElement('afterend',z)}const ln=x.all_locations?'SVE LOKACIJE':(x.locations||[]).map(id=>d.locations.find(l=>String(l.id)===String(id))?.name).filter(Boolean).join(', ');const wn=x.all_warehouses?'SVA SKLADIŠTA':(x.warehouses||[]).map(id=>d.warehouses.find(w=>String(w.id)===String(id))?.name).filter(Boolean).join(', ');z.textContent=`${x.supplier_code||'—'} · ${ln||'—'} · ${wn||'—'}${x.contact_email?' · '+x.contact_email:''}`})}
-function installImport(){const im=$('yardivoSupplierImportModalV583');if(!im||im.dataset.fullReady)return;im.dataset.fullReady='1';const note=im.querySelector('.ysi-note');if(note)note.innerHTML='Stupci: <b>Šifra dobavljača</b> | <b>Naziv</b> | <b>Lokacije</b> | <b>Skladišta</b> | <b>Kontakt broj</b> | <b>Email</b> | <b>Kontakt osoba</b><br>Za lokacije/skladišta koristi nazive odvojene sa <b>;</b> ili vrijednost <b>SVE</b>. Kontakt osoba je opcionalna.';const drop=im.querySelector('.ysi-drop strong');if(drop)drop.textContent='XLSX · MASTER DOBAVLJAČI';const old=$('ysiFileV583');if(!old)return;const file=old.cloneNode(true);old.replaceWith(file);const pick=im.querySelector('.ysi-pick');if(pick){const np=pick.cloneNode(true);pick.replaceWith(np);np.addEventListener('click',()=>file.click())}file.addEventListener('change',()=>importFull(file.files?.[0],im));}
-async function importFull(f,im){const st=$('ysiStatusV583');if(!f||!window.XLSX)return;try{st.textContent='Čitam i validiram XLSX…';const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});const d=md(),norm=v=>String(v??'').trim().toLowerCase(),find=(r,names)=>{for(const k of Object.keys(r))if(names.some(n=>norm(k).includes(n)))return String(r[k]??'').trim();return''},split=v=>String(v||'').split(/[;,]/).map(x=>x.trim()).filter(Boolean),locBy=new Map(d.locations.filter(x=>x.active!==false).map(x=>[norm(x.name),x.id])),whBy=new Map(d.warehouses.filter(x=>x.active!==false).map(x=>[norm(x.name),x.id])),existing=new Set(d.suppliers.map(x=>norm(x.supplier_code||x.code))),parsed=[];for(const [i,r] of rows.entries()){const code=find(r,['šifra','sifra','code']),name=find(r,['naziv','name']),lv=find(r,['lokacij']),wv=find(r,['skladi']),phone=find(r,['kontakt broj','telefon','phone']),email=find(r,['email','e-mail']),contact=find(r,['kontakt osoba','osoba','contact person']);if(!code&&!name)continue;if(!code||!name)throw new Error(`Red ${i+2}: šifra i naziv su obavezni.`);if(existing.has(norm(code))||parsed.some(x=>norm(x.supplier_code)===norm(code)))throw new Error(`Red ${i+2}: duplikat šifre ${code}.`);const all_locations=/^(sve|all)$/i.test(lv),all_warehouses=/^(sve|all)$/i.test(wv);const locations=all_locations?[]:split(lv).map(x=>locBy.get(norm(x)));const warehouses=all_warehouses?[]:split(wv).map(x=>whBy.get(norm(x)));if(!all_locations&&(!locations.length||locations.some(x=>!x)))throw new Error(`Red ${i+2}: nepoznata ili prazna lokacija.`);if(!all_warehouses&&(!warehouses.length||warehouses.some(x=>!x)))throw new Error(`Red ${i+2}: nepoznato ili prazno skladište.`);if(email&&!/^\S+@\S+\.\S+$/.test(email))throw new Error(`Red ${i+2}: email nije ispravan.`);parsed.push({supplier_code:code,name,locations,warehouses,all_locations,all_warehouses,contact_phone:phone,contact_email:email.toLowerCase(),contact_name:contact,active:true})}if(!parsed.length)throw new Error('Nema dobavljača za import.');let n=0;d.suppliers.forEach(x=>{const m=String(x.id||'').match(/^SUP(\d+)$/);if(m)n=Math.max(n,+m[1])});parsed.forEach(x=>{x.id='SUP'+String(++n).padStart(3,'0');d.suppliers.push(x)});await persist(d,'supplier.xlsx.full');st.textContent='Uvezeno dobavljača: '+parsed.length;st.className='ysi-status ok';patchList();setTimeout(()=>im.classList.remove('open'),700)}catch(e){st.textContent=String(e?.message||e);st.className='ysi-status err'}}
+function installImport(){const im=$('yardivoSupplierImportModalV583');if(!im||im.dataset.fullReady)return;im.dataset.fullReady='1';const note=im.querySelector('.ysi-note');if(note)note.innerHTML='<b>YARDIVO šablona:</b> supplier_code | name | locations | warehouses | all_locations | all_warehouses | active<br><br>Lokacije i skladišta odvoji znakom <b>;</b>. Za DA/NE koristi upravo <b>DA</b> ili <b>NE</b>. Import prvo provjeri cijelu datoteku i ništa ne sprema dok svi redovi nisu ispravni.';const drop=im.querySelector('.ysi-drop strong');if(drop)drop.textContent='XLSX · MASTER DOBAVLJAČI · VALIDIRANI IMPORT';const old=$('ysiFileV583');if(!old)return;const file=old.cloneNode(true);old.replaceWith(file);const pick=im.querySelector('.ysi-pick');if(pick){const np=pick.cloneNode(true);pick.replaceWith(np);np.addEventListener('click',()=>file.click())}file.addEventListener('change',()=>importFull(file.files?.[0],im));}
+async function importFull(f,im){
+ const st=$('ysiStatusV583');if(!f||!window.XLSX)return;
+ try{
+  st.textContent='Čitam i validiram cijelu XLSX datoteku…';st.className='ysi-status';
+  const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+  const sheetName=wb.SheetNames.includes('Dobavljaci_Import')?'Dobavljaci_Import':wb.SheetNames[0];
+  const ws=wb.Sheets[sheetName];
+  if(!ws)throw new Error('XLSX nema radni list za import.');
+  const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
+  if(!rows.length)throw new Error('Datoteka nema dobavljača za import.');
+
+  const d=md(),norm=v=>String(v??'').trim().toLowerCase().replace(/\s+/g,' '),keyNorm=v=>norm(v).replace(/[\s\-]+/g,'_');
+  const yes=v=>/^(da|yes|true|1|sve|all)$/i.test(String(v??'').trim());
+  const no=v=>/^(ne|no|false|0|)$/i.test(String(v??'').trim());
+  const split=v=>String(v??'').split(';').map(x=>x.trim()).filter(Boolean);
+  const get=(r,key,aliases=[])=>{
+    for(const [k,v] of Object.entries(r)){
+      const nk=keyNorm(k);
+      if(nk===key||aliases.includes(nk))return String(v??'').trim();
+    }
+    return '';
+  };
+
+  const activeLocs=(d.locations||[]).filter(x=>x&&x.active!==false);
+  const activeWhs=(d.warehouses||[]).filter(x=>x&&x.active!==false);
+  if(!activeLocs.length)throw new Error('Master Data nema aktivnih lokacija. Prvo izradi lokacije.');
+  if(!activeWhs.length)throw new Error('Master Data nema aktivnih skladišta. Prvo izradi skladišta.');
+
+  const locBy=new Map();
+  activeLocs.forEach(x=>{locBy.set(norm(x.id),x);locBy.set(norm(x.name),x)});
+  const whBy=new Map();
+  activeWhs.forEach(x=>{whBy.set(norm(x.id),x);whBy.set(norm(x.name),x)});
+
+  const existing=new Set((d.suppliers||[]).map(x=>norm(x.supplier_code||x.code)));
+  const seen=new Set(),parsed=[],errors=[];
+
+  for(const [i,r] of rows.entries()){
+    const rowNo=i+2;
+    const code=get(r,'supplier_code',['sifra_dobavljaca','šifra_dobavljača','code','suppliercode']);
+    const name=get(r,'name',['naziv','naziv_dobavljaca','naziv_dobavljača']);
+    const lv=get(r,'locations',['lokacije','location']);
+    const wv=get(r,'warehouses',['skladista','skladišta','warehouse']);
+    const alRaw=get(r,'all_locations',['sve_lokacije']);
+    const awRaw=get(r,'all_warehouses',['sva_skladista','sva_skladišta']);
+    const activeRaw=get(r,'active',['aktivan']);
+    const phone=get(r,'contact_phone',['kontakt_broj','telefon','phone']);
+    const email=get(r,'contact_email',['email','e_mail']);
+    const contact=get(r,'contact_name',['kontakt_osoba','contact_person']);
+
+    if(!code&&!name&&!lv&&!wv&&!alRaw&&!awRaw)continue;
+    const rowErr=[];
+    if(!code)rowErr.push('nedostaje supplier_code');
+    if(!name)rowErr.push('nedostaje name');
+
+    const ckey=norm(code);
+    if(code&&(existing.has(ckey)||seen.has(ckey)))rowErr.push(`duplikat šifre ${code}`);
+
+    if(alRaw&&!yes(alRaw)&&!no(alRaw))rowErr.push('all_locations mora biti DA ili NE');
+    if(awRaw&&!yes(awRaw)&&!no(awRaw))rowErr.push('all_warehouses mora biti DA ili NE');
+    if(activeRaw&&!yes(activeRaw)&&!no(activeRaw))rowErr.push('active mora biti DA ili NE');
+
+    const all_locations=yes(alRaw);
+    const all_warehouses=yes(awRaw);
+    const active=activeRaw===''?true:yes(activeRaw);
+
+    const locTokens=split(lv);
+    const whTokens=split(wv);
+    const locRows=locTokens.map(x=>locBy.get(norm(x)));
+    const whRows=whTokens.map(x=>whBy.get(norm(x)));
+
+    if(!all_locations){
+      if(!locTokens.length)rowErr.push('locations je obavezan kada all_locations=NE');
+      const bad=locTokens.filter((x,idx)=>!locRows[idx]);
+      if(bad.length)rowErr.push('nepoznata lokacija: '+bad.join(', '));
+    }
+    if(!all_warehouses){
+      if(!whTokens.length)rowErr.push('warehouses je obavezan kada all_warehouses=NE');
+      const bad=whTokens.filter((x,idx)=>!whRows[idx]);
+      if(bad.length)rowErr.push('nepoznato skladište: '+bad.join(', '));
+    }
+
+    const locations=all_locations?[]:locRows.filter(Boolean).map(x=>String(x.id));
+    const warehouses=all_warehouses?[]:whRows.filter(Boolean).map(x=>String(x.id));
+
+    if(!all_locations&&!all_warehouses&&locations.length&&warehouses.length){
+      const wrong=whRows.filter(Boolean).filter(w=>!locations.includes(String(w.location_id)));
+      if(wrong.length)rowErr.push('skladište nije u odabranoj lokaciji: '+wrong.map(w=>w.name||w.id).join(', '));
+    }
+    if(email&&!/^\S+@\S+\.\S+$/.test(email))rowErr.push('email nije ispravan');
+
+    if(rowErr.length){errors.push(`Red ${rowNo}: ${rowErr.join('; ')}`);continue}
+    seen.add(ckey);
+    parsed.push({
+      supplier_code:code,code,name,
+      locations,warehouses,all_locations,all_warehouses,
+      contact_phone:phone,contact_email:email.toLowerCase(),contact_name:contact,
+      active
+    });
+  }
+
+  if(errors.length)throw new Error(`Import zaustavljen. Ispravi XLSX:\n${errors.slice(0,12).join('\n')}${errors.length>12?`\n… i još ${errors.length-12} grešaka.`:''}`);
+  if(!parsed.length)throw new Error('Nema ispravnih dobavljača za import.');
+
+  let n=0;(d.suppliers||[]).forEach(x=>{const m=String(x.id||'').match(/^SUP(\d+)$/);if(m)n=Math.max(n,+m[1]||0)});
+  parsed.forEach(x=>{x.id='SUP'+String(++n).padStart(3,'0');d.suppliers.push(x)});
+  await persist(d,'supplier.xlsx.template-v1');
+  st.textContent=`USPJEŠNO · Uvezeno dobavljača: ${parsed.length}. Lokacije i skladišta su validirani prema Master Data.`;
+  st.className='ysi-status ok';patchList();
+  try{window.YardivoStableMasterV583?.render?.(true)}catch(_){}
+  setTimeout(()=>im.classList.remove('open'),1200);
+ }catch(e){
+  console.error(e);
+  st.textContent=String(e?.message||e);
+  st.className='ysi-status err';
+ }
+}
 function supplierAccountUI(){const sel=$('yufSupplierSelect');if(!sel)return;let d=md();sel.innerHTML='<option value="">— ODABERI DOBAVLJAČA —</option>'+d.suppliers.filter(x=>x.active!==false).sort((a,b)=>String(a.name).localeCompare(String(b.name),'hr')).map(x=>`<option value="${esc(x.id)}">${esc(x.supplier_code||'')} · ${esc(x.name)}</option>`).join('');const sf=$('yufSupplierContactFields'),scope=$('yufScopeSection'),name=$('yufName');if(sf)sf.style.display='none';if(scope)scope.style.display='none';if(name?.closest('label'))name.closest('label').style.display='none';const title=$('yufBasicStepTitle');if(title)title.textContent='2 · USERNAME I LOZINKA';sel.onchange=()=>{d=md();const x=d.suppliers.find(v=>String(v.id)===String(sel.value));if(!x)return;name.value=x.name||'';$('yufContactName').value=x.contact_name||'N/A';$('yufContactEmail').value=x.contact_email||'supplier@yardivo.local';$('yufContactPhone').value=x.contact_phone||'';const loc=$('yufLocation');if(loc){loc.innerHTML='<option value="ALL">SVE LOKACIJE</option>';loc.value='ALL'}const aw=$('yufAllWarehouses');if(aw)aw.checked=true;};}
 document.addEventListener('click',e=>{if(e.target.closest?.('#yvAddSupplierPopupV583,#ymdAddSupplier,[data-spec-sup-add]'))setTimeout(()=>{installSupplierModal();resetSupplierModal()},0);if(e.target.closest?.('[data-yucr-role="supplier"]'))setTimeout(supplierAccountUI,0)},true);
 ['yardivo:master-data-changed','yardivo:master-data-ready','yardivo:data-synced'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{patchList();installSupplierModal();installImport()},0)));
@@ -50911,9 +51035,11 @@ function ensureOrdinary(){
  const launch=$('yardivoMasterPopupLaunchV583');if(launch&&launch.parentElement!==g)g.insertBefore(launch,shell);else if(launch)g.insertBefore(launch,shell);
 
  const font=$('yardivoFontSettings');if(font&&font.parentElement!==shell)shell.appendChild(font);
- const qr=$('qrMobileSettingsPanel');if(qr&&qr.parentElement!==shell)shell.appendChild(qr);
+ const qr=$('qrMobileSettingsPanel');if(qr)qr.style.setProperty('display','none','important');
+ const dark1=$('yardivoDarkStyleSettings');if(dark1)dark1.style.setProperty('display','none','important');
+ const dark2=$('yardivoThemeSettingsV2');if(dark2)dark2.style.setProperty('display','none','important');
+ const oldTheme=$('yardivoThemeSettingExactV583');if(oldTheme)oldTheme.remove();
  const smartEngine=$('yardivoSmartEngineSettingsV583');if(smartEngine&&smartEngine.parentElement!==shell)shell.appendChild(smartEngine);
- if(!$('yardivoThemeSettingExactV583'))shell.appendChild(makeCard('yardivoThemeSettingExactV583','IZGLED APLIKACIJE','Original / Dark mode','yardivoThemeToggleExactV583'));
  const days=$('yardivoNonWorkingDaysSettings');if(days&&days.parentElement!==shell)shell.appendChild(days);
 
  const voice=$('yardivoVoiceSettingsV583');
@@ -57329,7 +57455,7 @@ function ensureWallAdmin(){
     b=document.createElement('div');b.id='yardivoSelfGateAdminV1';
     b.innerHTML=`<div style="font-size:10px;font-weight:1000;margin-bottom:7px">SELF GATE QR · PO LOKACIJI</div>
       <div style="font-size:8px;color:#829faf;margin-bottom:9px;line-height:1.55">
-        Odaberi LOKACIJU iznad i izradi jedan stalni Gate QR za cijelu lokaciju. Sva sadašnja i buduća skladišta te lokacije koriste isti ulazni QR.
+        Odaberi LOKACIJU iznad i izradi jedan stalni Gate QR za cijelu lokaciju. QR se izrađuje samo jednom. PORTA QR ON/OFF određuje radi li Self Gate; ako je OFF status mora biti crven.
       </div>
       <div id="ysgWallState" style="margin-bottom:9px;padding:8px 10px;border:1px solid #334b59;border-radius:9px;font-size:8px;font-weight:1000;color:#9bb7c7">PROVJERA QR-a...</div>
       <div class="ysg-admin-row" style="flex-wrap:wrap">
@@ -57355,18 +57481,30 @@ async function loadWallQrState(){
   if(role()!=='admin')return;
   const loc=wallLocation(),st=document.getElementById('ysgWallState');
   if(!loc||!st)return;
-  st.textContent='PROVJERA QR-a...';st.style.color='#9bb7c7';st.style.borderColor='#334b59';
+  st.textContent='PROVJERA QR-a...';st.style.color='#9bb7c7';st.style.borderColor='#334b59';st.style.background='transparent';
   try{
     const d=await api('wall_token_status',{location:loc});
-    if(d.exists){
-      st.textContent='QR AKTIVAN · '+String(d.locationName||loc);
-      st.style.color='#63ef98';st.style.borderColor='rgba(79,235,135,.35)';
-      const c=document.getElementById('ysgWallCreate');if(c)c.textContent='QR VEĆ POSTOJI';
+    const c=document.getElementById('ysgWallCreate');
+    const u=document.getElementById('ysgWallUrl');
+    if(!d.exists){
+      st.textContent='QR NE POSTOJI · '+String(d.locationName||loc);
+      st.style.color='#ff9ca4';
+      st.style.borderColor='#9e3942';
+      st.style.background='rgba(158,57,66,.10)';
+      if(c){c.textContent='IZRADI QR GATE ZA LOKACIJU';c.disabled=false}
+      if(u)u.textContent='';
+    }else if(d.enabled===false){
+      st.textContent='QR POSTOJI · SELF GATE ISKLJUČEN · '+String(d.locationName||loc);
+      st.style.color='#ff9ca4';
+      st.style.borderColor='#9e3942';
+      st.style.background='rgba(158,57,66,.10)';
+      if(c){c.textContent='QR VEĆ POSTOJI';c.disabled=true}
     }else{
-      st.textContent='QR NIJE IZRAĐEN · '+String(d.locationName||loc);
-      st.style.color='#ffbf69';st.style.borderColor='rgba(255,191,105,.38)';
-      const c=document.getElementById('ysgWallCreate');if(c)c.textContent='IZRADI QR GATE ZA LOKACIJU';
-      const u=document.getElementById('ysgWallUrl');if(u)u.textContent='';
+      st.textContent='QR AKTIVAN · '+String(d.locationName||loc);
+      st.style.color='#63ef98';
+      st.style.borderColor='rgba(79,235,135,.35)';
+      st.style.background='rgba(43,139,86,.10)';
+      if(c){c.textContent='QR VEĆ POSTOJI';c.disabled=true}
     }
   }catch(e){
     st.textContent='GREŠKA PROVJERE QR-a';st.style.color='#ff9ca4';st.style.borderColor='#9e3942';
