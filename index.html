@@ -8302,6 +8302,163 @@ html[data-yardivo-main-theme="light"] #yardivoMiniRampModal .yv-mr-grid>div{
 }
 html[data-yardivo-main-theme="light"] #yardivoMiniRampModal .yv-mr-grid strong{color:#183247!important}
 </style>
+
+<style id="yardivo-v583-minimap-assistant-ux-fix-final-css">
+/* ===== FINAL UX FIX · ASSISTANT ===== */
+#yardivoSmartAssistant{
+  height:460px!important;
+}
+#yardivoSmartAssistant .yv-ai-head{
+  min-height:54px!important;
+}
+#yardivoSmartAssistant .yv-ai-head strong{
+  font-size:14px!important;
+  line-height:1.2!important;
+}
+#yardivoSmartAssistant .yv-ai-head small{
+  font-size:9px!important;
+  line-height:1.35!important;
+}
+#yardivoSmartAssistant .yv-ai-body{
+  height:310px!important;
+  padding:14px!important;
+  gap:10px!important;
+}
+#yardivoSmartAssistant .yv-ai-msg{
+  font-size:12px!important;
+  line-height:1.55!important;
+  padding:11px 13px!important;
+  border-radius:11px!important;
+}
+#yardivoSmartAssistant .yv-ai-suggestions{
+  padding:0 12px 8px!important;
+  gap:6px!important;
+}
+#yardivoSmartAssistant .yv-ai-suggestions button{
+  font-size:8px!important;
+  padding:5px 8px!important;
+}
+#yardivoSmartAssistant .yv-ai-inputbar{
+  height:72px!important;
+  grid-template-columns:minmax(0,1fr) 82px!important;
+  gap:9px!important;
+  padding:10px 12px!important;
+}
+#yardivoAssistantInput{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  width:100%!important;
+  min-width:0!important;
+  height:50px!important;
+  min-height:50px!important;
+  max-height:50px!important;
+  font-size:12px!important;
+  line-height:1.35!important;
+  padding:10px 11px!important;
+  border-radius:9px!important;
+  resize:none!important;
+  box-sizing:border-box!important;
+}
+#yardivoAssistantSend{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  height:50px!important;
+  min-height:50px!important;
+  font-size:9px!important;
+  font-weight:1000!important;
+}
+
+/* ===== FINAL UX FIX · MINI MY YARD ===== */
+#yardivoMiniMapDock{
+  width:min(600px,50vw)!important;
+  min-width:430px!important;
+  height:286px!important;
+}
+#yardivoMiniMapDock .yv-mm-head{
+  min-height:52px!important;
+  cursor:pointer!important;
+  user-select:none!important;
+}
+#yardivoMiniMapDock .yv-mm-head strong{
+  font-size:13px!important;
+}
+#yardivoMiniMapDock .yv-mm-head small{
+  font-size:9px!important;
+}
+#yardivoMiniMapDock .yv-mm-canvas{
+  height:234px!important;
+}
+#yardivoMiniMapDock .yv-mm-dock{
+  cursor:pointer!important;
+  transition:transform .12s ease,filter .12s ease,border-color .12s ease!important;
+}
+#yardivoMiniMapDock .yv-mm-dock:hover{
+  transform:translateY(-3px)!important;
+  filter:brightness(1.1)!important;
+}
+#yardivoMiniMapDock .yv-mm-dock b{
+  font-size:10px!important;
+}
+#yardivoMiniMapDock .yv-mm-dock span{
+  font-size:8.5px!important;
+}
+#yardivoMiniMapDock .yv-mm-dock em{
+  font-size:8px!important;
+}
+#yardivoMiniMapDock .yv-mm-bottom{
+  font-size:8px!important;
+}
+
+/* Header click = enlarged mini yard */
+body.yv-minimap-expanded #yardivoMiniMapDock{
+  width:min(900px,72vw)!important;
+  height:470px!important;
+}
+body.yv-minimap-expanded #yardivoMiniMapDock .yv-mm-canvas{
+  height:418px!important;
+}
+body.yv-minimap-expanded #yardivoMiniMapDock .yv-mm-warehouse{
+  top:6%!important;
+  height:58px!important;
+  font-size:11px!important;
+}
+body.yv-minimap-expanded #yardivoMiniMapDock .yv-mm-docks{
+  top:25%!important;
+  height:150px!important;
+  gap:10px!important;
+}
+body.yv-minimap-expanded #yardivoMiniMapDock .yv-mm-dock b{
+  font-size:12px!important;
+}
+body.yv-minimap-expanded #yardivoMiniMapDock .yv-mm-dock span{
+  font-size:10px!important;
+}
+body.yv-minimap-expanded #yardivoMiniMapDock .yv-mm-dock em{
+  font-size:9px!important;
+}
+body.yv-minimap-expanded #yardivoMiniMapDock .yv-mm-bottom{
+  bottom:18px!important;
+  font-size:9px!important;
+}
+
+/* Mouse leave always closes/collapses completely */
+body:not(.yv-minimap-open) #yardivoMiniMapDock{
+  transform:translateY(calc(100% - 7px))!important;
+}
+body.yv-minimap-open #yardivoMiniMapDock{
+  transform:translateY(0)!important;
+}
+
+@media(max-width:1000px){
+  #yardivoSmartAssistant{width:min(430px,46vw)!important}
+}
+</style>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -55949,7 +56106,7 @@ window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-reception-ui-scope-smooth';
 
 
 
-<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-minimap-ai-chat-ramp-click-final';</script>
+<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-minimap-assistant-ux-fix-final';</script>
 <script id="yardivo-v583-sidebar-hover-drawer-js">
 (()=>{'use strict';
 if(window.__YV_SIDEBAR_HOVER_DRAWER_V583__)return;
@@ -56959,6 +57116,170 @@ setTimeout(ensure,250);
 
 window.YardivoMiniMapV583={render:renderMiniMap,open:openMini};
 window.YardivoSmartAssistantV583={ask,answer,enabled:assistantEnabled,setEnabled:setAssistantEnabled};
+})();
+</script>
+
+<script id="yardivo-v583-minimap-assistant-ux-fix-final-js">
+(()=>{'use strict';
+if(window.__YV_MINIMAP_ASSISTANT_UX_FIX_FINAL__)return;
+window.__YV_MINIMAP_ASSISTANT_UX_FIX_FINAL__=true;
+
+let mmLeaveTimer=0;
+
+function bindAssistantInput(){
+  const input=document.getElementById('yardivoAssistantInput');
+  const send=document.getElementById('yardivoAssistantSend');
+  if(input){
+    input.removeAttribute('disabled');
+    input.removeAttribute('readonly');
+    input.setAttribute('placeholder','Upiši poruku YARDIVO Assistantu...');
+    input.style.pointerEvents='auto';
+    input.style.userSelect='text';
+    input.tabIndex=0;
+    if(!input.dataset.yvUxFixBound){
+      input.dataset.yvUxFixBound='1';
+      input.addEventListener('pointerdown',e=>e.stopPropagation());
+      input.addEventListener('click',e=>e.stopPropagation());
+      input.addEventListener('focus',()=>document.body.classList.add('yv-assistant-open'));
+    }
+  }
+  if(send){
+    send.removeAttribute('disabled');
+    send.style.pointerEvents='auto';
+  }
+}
+
+function closeMiniNow(){
+  clearTimeout(mmLeaveTimer);
+  document.body.classList.remove('yv-minimap-open','yv-minimap-expanded');
+}
+function bindMini(){
+  const dock=document.getElementById('yardivoMiniMapDock');
+  if(!dock||dock.dataset.yvUxFinalBound)return;
+  dock.dataset.yvUxFinalBound='1';
+
+  const head=dock.querySelector('.yv-mm-head');
+  if(head){
+    head.title='Klikni za veći prikaz Mini My Yard';
+    head.addEventListener('click',e=>{
+      if(e.target.closest('.yv-mm-close'))return;
+      e.preventDefault();
+      document.body.classList.add('yv-minimap-open');
+      document.body.classList.toggle('yv-minimap-expanded');
+      try{window.YardivoMiniMapV583?.render?.()}catch(_){}
+    });
+  }
+
+  dock.addEventListener('pointerenter',()=>{
+    clearTimeout(mmLeaveTimer);
+    document.body.classList.add('yv-minimap-open');
+  },{passive:true});
+
+  /* User request: when mouse leaves, panel disappears. */
+  dock.addEventListener('pointerleave',()=>{
+    clearTimeout(mmLeaveTimer);
+    mmLeaveTimer=setTimeout(closeMiniNow,90);
+  },{passive:true});
+
+  dock.addEventListener('click',e=>{
+    const r=e.target.closest?.('[data-yv-mm-dock]');
+    if(!r)return;
+    e.stopPropagation();
+    const wid=r.dataset.yvMmWh;
+    const dockNo=Number(r.dataset.yvMmDock);
+    /* Existing build already owns the modal function through click binding.
+       Re-dispatch a dedicated event only if popup didn't open immediately. */
+    setTimeout(()=>{
+      const modal=document.getElementById('yardivoMiniRampModal');
+      if(modal&&!modal.classList.contains('open')){
+        try{
+          r.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));
+        }catch(_){}
+      }
+    },0);
+  });
+}
+
+function ensureRampModalVisible(){
+  const m=document.getElementById('yardivoMiniRampModal');
+  if(!m)return;
+  if(!m.dataset.yvUxFixBound){
+    m.dataset.yvUxFixBound='1';
+    m.addEventListener('pointerenter',()=>clearTimeout(mmLeaveTimer),{passive:true});
+  }
+}
+
+/* Explicit fallback click owner for ramps, in case an older listener is shadowed. */
+function fallbackRampClick(e){
+  const r=e.target.closest?.('#yardivoMiniMapDock [data-yv-mm-dock]');
+  if(!r)return;
+  const existing=document.getElementById('yardivoMiniRampModal');
+  if(existing?.classList.contains('open'))return;
+
+  const wid=r.dataset.yvMmWh,dockNo=Number(r.dataset.yvMmDock);
+  try{
+    /* openRampDetail exists in the canonical mini-map closure only, so use public data
+       to build a fallback modal if needed. */
+    setTimeout(()=>{
+      const still=document.getElementById('yardivoMiniRampModal');
+      if(still?.classList.contains('open'))return;
+
+      let modal=still;
+      if(!modal){
+        modal=document.createElement('div');
+        modal.id='yardivoMiniRampModal';
+        modal.innerHTML='<div class="yv-mr-card"><div class="yv-mr-head"><strong id="yvMrTitle">RAMPA</strong><button type="button" class="yv-mr-close">×</button></div><div class="yv-mr-body" id="yvMrBody"></div></div>';
+        document.body.appendChild(modal);
+        modal.querySelector('.yv-mr-close').onclick=()=>modal.classList.remove('open');
+        modal.addEventListener('click',ev=>{if(ev.target===modal)modal.classList.remove('open')});
+      }
+
+      const title=document.getElementById('yvMrTitle');
+      const body=document.getElementById('yvMrBody');
+      const all=Array.isArray(window.announcements)?window.announcements:(typeof announcements!=='undefined'&&Array.isArray(announcements)?announcements:[]);
+      const D=window.yardivoLocalDateV583?.()||new Date().toISOString().slice(0,10);
+      const st=a=>{
+        const s=String(a?.status||'').toLowerCase();
+        if(a?.dockArrivalAt||/rampi/.test(s))return'dock';
+        return'other';
+      };
+      const a=all.find(x=>String(x.warehouse||'')===String(wid)&&String(x.date||'')===String(D)&&Number(x.dock)===dockNo&&st(x)==='dock');
+      const wn=window.yardivoWarehouseNameV583?.(wid)||wid||'SKLADIŠTE';
+
+      if(title)title.textContent=`${wn} · RAMPA R${dockNo}`;
+      if(body){
+        body.innerHTML=a
+          ? `<span class="yv-mr-status busy">ZAUZETA</span><div class="yv-mr-grid">
+              <div><small>DOBAVLJAČ</small><strong>${String(a.supplier||'—')}</strong></div>
+              <div><small>PALETE</small><strong>${Number(a.pallets||0)}</strong></div>
+              <div><small>TERMIN</small><strong>${String(a.time||'—')}</strong></div>
+              <div><small>STATUS</small><strong>${String(a.status||'NA RAMPI')}</strong></div>
+             </div>`
+          : `<span class="yv-mr-status free">SLOBODNA</span><div class="yv-mr-grid">
+              <div><small>SKLADIŠTE</small><strong>${String(wn)}</strong></div>
+              <div><small>RAMPA</small><strong>R${dockNo}</strong></div>
+              <div><small>DATUM</small><strong>${String(D)}</strong></div>
+              <div><small>STANJE</small><strong>NEMA AKTIVNOG KAMIONA</strong></div>
+             </div>`;
+      }
+      modal.classList.add('open');
+      ensureRampModalVisible();
+    },20);
+  }catch(_){}
+}
+
+function ensure(){
+  bindAssistantInput();
+  bindMini();
+  ensureRampModalVisible();
+}
+document.addEventListener('click',fallbackRampClick,true);
+window.addEventListener('yardivo:login',()=>setTimeout(ensure,80));
+window.addEventListener('load',()=>setTimeout(ensure,400),{once:true});
+document.addEventListener('DOMContentLoaded',ensure,{once:true});
+setTimeout(ensure,300);
+
+window.YardivoMiniAssistantUxFixFinalV583={refresh:ensure,closeMini:closeMiniNow};
 })();
 </script>
 </body>
