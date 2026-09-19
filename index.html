@@ -11890,11 +11890,28 @@ function reloadAnnouncementsFromPersistentStorage(){
 const YARDIVO_QR_MOBILE_SETTING_KEY='yardivo_ramp_qr_mobile_v1';
 const YARDIVO_QR_SCAN_SETTING_KEY='yardivo_qr_scan_cfg_v583';
 
-function yardivoQrMobileEnabled(){
+function yardivoQrMobileEnabled(warehouseId){
+  const id=String(
+    warehouseId||
+    document.getElementById('globalWarehouse')?.value||
+    activeWarehouse||
+    ''
+  ).trim();
+
   const serverRaw=safeStorage.getItem(YARDIVO_QR_SCAN_SETTING_KEY);
   if(serverRaw!==null&&serverRaw!==''){
-    try{const x=JSON.parse(serverRaw);if(x&&typeof x==='object'&&Object.prototype.hasOwnProperty.call(x,'enabled'))return !!x.enabled;if(typeof x==='boolean')return x}catch(_){}
+    try{
+      const x=JSON.parse(serverRaw);
+      if(x&&typeof x==='object'){
+        const v=x.byWarehouse?.[id];
+        if(typeof v==='boolean')return v;
+        if(v&&typeof v==='object'&&Object.prototype.hasOwnProperty.call(v,'enabled'))return !!v.enabled;
+        if(Object.prototype.hasOwnProperty.call(x,'enabled'))return !!x.enabled;
+      }
+      if(typeof x==='boolean')return x;
+    }catch(_){}
   }
+
   const raw=safeStorage.getItem(YARDIVO_QR_MOBILE_SETTING_KEY);
   if(raw===null||raw==='')return true;
   return raw==='1'||raw==='true'||raw==='on';
@@ -11971,8 +11988,7 @@ function renderQrMobileAdminSetting(){
   }
 }
 function yardivoManualReceivingStatusAllowed(status){
-  /* QR switch controls scanner permission only; it never locks manual receiving workflow. */
-  return true;
+  return !yardivoQrMobileEnabled(receivingWarehouseValue());
 }
 const RECEIVING_STATUS_META={
   'U dolasku':{label:'U DOLASKU',color:'#1688ff'},
@@ -11983,7 +11999,7 @@ const RECEIVING_STATUS_META={
 };
 function receivingStatus(a){return normalizedPlanStatus(a)}
 function receivingStatusMeta(a){return RECEIVING_STATUS_META[receivingStatus(a)]||RECEIVING_STATUS_META['U dolasku']}
-function receivingCanEdit(){return canChangeReceptionStatus()}
+function receivingCanEdit(){return canChangeReceptionStatus()&&!yardivoQrMobileEnabled(receivingWarehouseValue())}
 function receivingDateValue(){return document.getElementById('receivingDate')?.value||window.yardivoLocalDateV583()}
 function receivingWarehouseValue(){return activeWarehouse&&activeWarehouse!=='ALL'?activeWarehouse:defaultWarehouseForLocation(currentSession?.location||'VG')}
 function receivingFilteredData(){
@@ -12011,9 +12027,9 @@ function renderReceiving(){
   const note=document.getElementById('receivingPermissionNote');
   if(note){
     if(receivingCanEdit()&&yardivoQrMobileEnabled()){
-      note.textContent=`Prijam robe · ${receivingWarehouseValue()} · Mobilno QR skeniranje je dopušteno. Ručni statusi u Prijamu robe i dalje su dostupni.`;
+      note.textContent=`Prijam robe · ${receivingWarehouseValue()} · QR scanner je UKLJUČEN. Ručna promjena statusa je zaključana.`;
     }else if(receivingCanEdit()){
-      note.textContent=`Prijam robe · ${receivingWarehouseValue()} · Mobilno QR skeniranje je isključeno. Ručni statusi i dalje rade normalno.`;
+      note.textContent=`Prijam robe · ${receivingWarehouseValue()} · QR scanner je ISKLJUČEN. Otvori dobavljača za ručnu promjenu statusa.`;
     }else{
       note.textContent=`Pregled prijama · ${receivingWarehouseValue()} · tvoja uloga može samo pregledavati statuse.`;
     }
@@ -12021,12 +12037,6 @@ function renderReceiving(){
   if(!data.length){host.innerHTML='<div class="receiving-empty">Nema najava za odabrani datum, skladište i filter.</div>';return}
   host.innerHTML=data.map(a=>{
     const meta=receivingStatusMeta(a),st=receivingStatus(a);
-    const qrOn=yardivoQrMobileEnabled();
-    const actions=Object.keys(RECEIVING_STATUS_META).map(s=>{
-      const m=RECEIVING_STATUS_META[s];
-      const enabled=receivingCanEdit();
-      return `<button type="button" ${enabled?'':'disabled'} class="${s===st?'active':''}" style="--status-color:${m.color}" onclick="setReceivingAnnouncementStatus(${a.id},'${s}','manual')">${m.label}</button>`;
-    }).join('');
     return `<div class="receiving-row ${st==='Odbijen'?'status-odbijen':st==='NIJE DOŠAO'?'status-nije-dosao':''}" data-receiving-announcement-id="${a.id}" role="button" tabindex="0" title="Klikni za detalje najave" style="--receiving-color:${meta.color}">
       <div class="receiving-supplier">
         <strong>${a.supplier}</strong>
@@ -12040,7 +12050,6 @@ function renderReceiving(){
       <div class="receiving-cell">
         <small>TABLICE / VOZAČ</small>
         <strong>${identityDisplayHtml(a)}</strong>
-        <div class="receiving-status-actions">${actions}</div>
       </div>
     </div>`;
   }).join('');
@@ -19668,7 +19677,9 @@ function openReceiving(id,allowActions=true){
   const a=anns().find(x=>String(x.id)===String(id));if(!a)return;
   const m=makeModal('yardivoReceivingModal','Detalji prijama robe'),h=m.querySelector('.yod-head'),b=m.querySelector('.yod-body');
   const st=typeof normalizedPlanStatus==='function'?normalizedPlanStatus(a):a.status||'';
-  const editable=allowActions && typeof receivingCanEdit==='function' && receivingCanEdit();
+  const qrLocked=typeof yardivoQrMobileEnabled==='function' ? yardivoQrMobileEnabled(a.warehouse||receivingWarehouseValue()) : true;
+  const roleEditable=typeof canChangeReceptionStatus==='function' ? canChangeReceptionStatus() : false;
+  const editable=allowActions && roleEditable && !qrLocked;
 
   h.innerHTML=`<div><h3>${esc(a.supplier||'NAJAVA')}</h3><small>${esc(a.date||'')} · ${esc(a.time||'—')} · ${esc(a.warehouse||'')} · R${esc(a.dock||'—')}</small></div><button type="button" class="yod-close">×</button>`;
   b.innerHTML=`<div class="yod-grid">
@@ -19697,7 +19708,7 @@ function openReceiving(id,allowActions=true){
     <button type="button" data-status="Na rampi" ${editable?'':'disabled'} class="${st==='Na rampi'?'active':''}">NA RAMPI</button>
     <button type="button" data-status="Zaprimljeno" ${editable?'':'disabled'} class="${st==='Zaprimljeno'?'active':''}">ZAPRIMLJEN</button>
     <button type="button" data-status="Odbijen" ${editable?'':'disabled'} class="${st==='Odbijen'?'active':''}">ODBIJEN</button>
-    ${editable?'':'<span style="font-size:8px;color:#748f9f;align-self:center">Tvoja uloga ima samo pregled.</span>'}
+    ${editable?'':`<span style="font-size:8px;color:#748f9f;align-self:center">${qrLocked?'QR scanner je uključen za ovo skladište. Ručna promjena statusa je zaključana.':'Tvoja uloga ima samo pregled.'}</span>`}
   </div>`:''}`;
 
   h.querySelector('.yod-close').onclick=()=>closeModal(m);
@@ -58743,13 +58754,13 @@ async function toggle(){
   const before=cfg(),next=JSON.parse(JSON.stringify(before));next.byWarehouse=next.byWarehouse||{};
   const enabled=!whEnabled(wh);
   next.byWarehouse[wh]={enabled,location_id:loc,updated_at:new Date().toISOString(),updated_by:String(window.currentSession?.username||window.currentSession?.user||'admin')};
-  localStorage.setItem(KEY,JSON.stringify(next));renderState();
+  localStorage.setItem(KEY,JSON.stringify(next));try{window.safeStorage?.setItem?.(KEY,JSON.stringify(next))}catch(_){};renderState();
   try{
     await persist(next);
     try{window.showYmsToast?.('success',enabled?'QR SCANNER UKLJUČEN':'QR SCANNER ISKLJUČEN',`${nameWh(wh)} · ${nameLoc(loc)}`)}catch(_){}
     try{window.renderReceiving?.()}catch(_){}
   }catch(e){
-    localStorage.setItem(KEY,JSON.stringify(before));renderState();alert('QR postavka nije spremljena: '+String(e?.message||e));
+    localStorage.setItem(KEY,JSON.stringify(before));try{window.safeStorage?.setItem?.(KEY,JSON.stringify(before))}catch(_){};renderState();alert('QR postavka nije spremljena: '+String(e?.message||e));
   }
 }
 window.yardivoRenderQrWarehouseAdminV584=render;
@@ -58757,6 +58768,445 @@ document.addEventListener('click',e=>{if(e.target.closest?.('[data-view="setting
 document.addEventListener('change',e=>{if(e.target?.id==='globalWarehouse')setTimeout(render,30)},true);
 ['yardivo:login','yardivo:data-synced','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(render,80)));
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(render,300),{once:true});else setTimeout(render,150);
+})();
+</script>
+
+
+<script id="yardivo-receiving-modal-qr-final-v585">
+(()=>{'use strict';
+if(window.__YARDIVO_RECEIVING_MODAL_QR_FINAL_V585__)return;
+window.__YARDIVO_RECEIVING_MODAL_QR_FINAL_V585__=true;
+
+function currentCfg(){
+  try{
+    const raw=window.safeStorage?.getItem?.('yardivo_qr_scan_cfg_v583') ?? localStorage.getItem('yardivo_qr_scan_cfg_v583');
+    const p=JSON.parse(raw||'{}');
+    return {enabled:p?.enabled!==false,byWarehouse:(p?.byWarehouse&&typeof p.byWarehouse==='object')?p.byWarehouse:{}};
+  }catch(_){return {enabled:true,byWarehouse:{}}}
+}
+function enabledFor(wh){
+  const c=currentCfg(),v=c.byWarehouse?.[String(wh||'')];
+  if(typeof v==='boolean')return v;
+  if(v&&typeof v==='object'&&Object.prototype.hasOwnProperty.call(v,'enabled'))return !!v.enabled;
+  return c.enabled!==false;
+}
+window.yardivoReceivingQrEnabledForWarehouseV585=enabledFor;
+
+const prior=window.setReceivingAnnouncementStatus;
+if(typeof prior==='function'){
+  window.setReceivingAnnouncementStatus=function(id,status,source='manual'){
+    let wh=String(document.getElementById('globalWarehouse')?.value||window.activeWarehouse||'');
+    try{
+      const a=(Array.isArray(window.announcements)?window.announcements:[]).find(x=>String(x?.id)===String(id));
+      if(a?.warehouse)wh=String(a.warehouse);
+    }catch(_){}
+    if(source==='manual'&&enabledFor(wh)){
+      const md=(()=>{try{return typeof master==='function'?master():{}}catch(_){return{}}})();
+      const w=(md?.warehouses||[]).find(x=>String(x.id)===wh);
+      alert(`QR scanner je UKLJUČEN za ${String(w?.name||wh||'odabrano skladište')}. Ručna promjena statusa nije dopuštena.`);
+      return;
+    }
+    return prior.apply(this,arguments);
+  };
+}
+})();
+</script>
+
+
+<style id="yardivo-qr-role-control-v586-style">
+/* Retire legacy/global QR admin cards so Admin sees only the authoritative per-role card. */
+#qrMobileSettingsPanel,
+#yardivoQrWarehouseAdminV583,
+#yardivoQrWarehouseAdminPanelV584{display:none!important}
+
+#yardivoQrRoleAdminV586{display:none}
+#yardivoQrRoleAdminV586 .yqr6-body{padding:14px}
+#yardivoQrRoleAdminV586 .yqr6-grid{display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,1fr);gap:10px;margin-bottom:12px}
+#yardivoQrRoleAdminV586 label{display:grid;gap:6px;color:#8ba7bb;font-size:8px;font-weight:950}
+#yardivoQrRoleAdminV586 select{width:100%}
+.yqr6-role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.yqr6-role-card{border:1px solid #29485e;border-radius:10px;background:#071724;padding:12px}
+.yqr6-role-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.yqr6-role-head strong{font-size:11px}
+.yqr6-role-copy{margin-top:6px;color:#7f9cad;font-size:8px;line-height:1.5}
+.yqr6-state{display:inline-flex;align-items:center;justify-content:center;min-width:68px;padding:6px 8px;border-radius:999px;font-size:8px;font-weight:1000;border:1px solid #2f8d57;background:#0b2b1a;color:#7fe6a2}
+.yqr6-state.off{border-color:#a13b44;background:#351419;color:#ff969e}
+.yqr6-toggle{margin-top:10px;width:100%;padding:10px 12px}
+.yqr6-role-card.off{border-color:#71313a;background:#241114}
+.yqr6-foot{margin-top:10px;color:#748f9f;font-size:8px;line-height:1.55}
+
+/* Reception scanner status */
+#yardivoReceivingQrRoleV586{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin:9px 0 12px;padding:11px 12px;border:1px solid #2f8d57;border-radius:8px;
+  background:#0b2b1a;color:#bdf7cf
+}
+#yardivoReceivingQrRoleV586.off{
+  border-color:#a43e47;background:#351419;color:#ffd2d5;
+  box-shadow:0 0 0 1px rgba(255,70,80,.06) inset
+}
+#yardivoReceivingQrRoleV586 .yqr6-op-title{font-size:10px;font-weight:1000}
+#yardivoReceivingQrRoleV586 .yqr6-op-msg{margin-top:3px;font-size:8px;font-weight:850}
+#yardivoReceivingQrRoleV586 button{white-space:nowrap}
+#yardivoReceivingQrRoleV586.off button{
+  background:#6f1e25!important;border-color:#a43e47!important;color:#ffccd0!important;
+  cursor:not-allowed!important;opacity:1!important
+}
+
+/* Gate / Porta scanner status */
+#yardivoGateQrRoleV586{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-bottom:12px;padding:11px 12px;border:1px solid #2f8d57;border-radius:8px;
+  background:#0b2b1a;color:#bdf7cf
+}
+#yardivoGateQrRoleV586.off{border-color:#a43e47;background:#351419;color:#ffd2d5}
+#yardivoGateQrRoleV586 .yqr6-op-title{font-size:10px;font-weight:1000}
+#yardivoGateQrRoleV586 .yqr6-op-msg{margin-top:3px;font-size:8px;font-weight:850}
+#yardivoGateQrRoleV586.off button{
+  background:#6f1e25!important;border-color:#a43e47!important;color:#ffccd0!important;
+  cursor:not-allowed!important;opacity:1!important
+}
+
+/* Strong visual state requested for Reception OFF */
+#receiving.yardivo-reception-qr-off .receiving-permission-note{
+  border:1px solid #a43e47!important;background:#351419!important;color:#ffd2d5!important
+}
+#receiving.yardivo-reception-qr-off .receiving-toolbar{
+  box-shadow:inset 0 0 0 1px rgba(255,78,88,.10)
+}
+
+@media(max-width:760px){
+  #yardivoQrRoleAdminV586 .yqr6-grid,.yqr6-role-grid{grid-template-columns:1fr}
+  #yardivoReceivingQrRoleV586,#yardivoGateQrRoleV586{align-items:stretch;flex-direction:column}
+}
+</style>
+
+<script id="yardivo-qr-role-control-v586">
+(()=>{'use strict';
+if(window.__YARDIVO_QR_ROLE_CONTROL_V586__)return;
+window.__YARDIVO_QR_ROLE_CONTROL_V586__=true;
+
+const KEY='yardivo_qr_scan_cfg_v583';
+const PUB='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
+const SYNC='https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-sync';
+const SCANNER='YARDIVO_SCANNER_V5.8.3_ONE_QR.html';
+
+function role(){
+  let r=String(window.currentSession?.app_role||window.currentSession?.role||'').toLowerCase().trim();
+  if(r==='porta'||r==='portir')r='gate';
+  if(r==='prijam')r='reception';
+  return r;
+}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function masterData(){
+  try{if(typeof master==='function')return master()||{locations:[],warehouses:[]}}catch(_){}
+  try{return JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{locations:[],warehouses:[]}}catch(_){return {locations:[],warehouses:[]}}
+}
+function whName(id){const w=(masterData().warehouses||[]).find(x=>String(x.id)===String(id));return String(w?.name||id||'—')}
+function locName(id){const l=(masterData().locations||[]).find(x=>String(x.id)===String(id));return String(l?.name||id||'—')}
+function headerWarehouse(){
+  const v=String(document.getElementById('globalWarehouse')?.value||window.activeWarehouse||'').trim();
+  return v&&v!=='ALL'?v:'';
+}
+function readCfg(){
+  const defaults={enabled:true,byWarehouse:{}};
+  let raw='';
+  try{raw=window.safeStorage?.getItem?.(KEY) ?? localStorage.getItem(KEY) ?? ''}catch(_){}
+  if(!raw)return defaults;
+  try{
+    const p=JSON.parse(raw);
+    if(!p||typeof p!=='object')return defaults;
+    return {...defaults,...p,byWarehouse:(p.byWarehouse&&typeof p.byWarehouse==='object')?p.byWarehouse:{}};
+  }catch(_){return defaults}
+}
+function writeCfg(c){
+  const raw=JSON.stringify(c);
+  try{localStorage.setItem(KEY,raw)}catch(_){}
+  try{window.safeStorage?.setItem?.(KEY,raw)}catch(_){}
+}
+function enabledFor(warehouseId,targetRole){
+  const wh=String(warehouseId||headerWarehouse()).trim();
+  const rr=targetRole==='gate'?'gate':'reception';
+  const c=readCfg(),v=c.byWarehouse?.[wh];
+
+  /* New authoritative per-role values. */
+  if(v&&typeof v==='object'&&typeof v[rr]==='boolean')return v[rr];
+  if(v&&typeof v==='object'&&v.roles&&typeof v.roles[rr]==='boolean')return v.roles[rr];
+
+  /* Backward compatibility with the old warehouse-wide switch. */
+  if(typeof v==='boolean')return v;
+  if(v&&typeof v==='object'&&typeof v.enabled==='boolean')return v.enabled;
+  return c.enabled!==false;
+}
+window.yardivoQrRoleEnabledV586=enabledFor;
+
+/* Old receiving code calls this name. From now on it means PRIJAM access for the selected/header warehouse. */
+window.yardivoQrMobileEnabled=function(warehouseId){
+  return enabledFor(String(warehouseId||headerWarehouse()),'reception');
+};
+window.yardivoManualReceivingStatusAllowed=function(){
+  return !enabledFor(headerWarehouse(),'reception');
+};
+window.receivingCanEdit=function(){
+  let can=false;
+  try{can=typeof canChangeReceptionStatus==='function'?!!canChangeReceptionStatus():['admin','reception'].includes(role())}catch(_){}
+  return can&&!enabledFor(headerWarehouse(),'reception');
+};
+
+async function token(){
+  const direct=String(window.__yardivoSupplierAccessToken||'').trim();if(direct)return direct;
+  try{
+    const c=await window.YardivoAuth?.client?.();
+    let s=(await c?.auth?.getSession?.())?.data?.session||null;
+    if(!s?.access_token)s=(await c?.auth?.refreshSession?.())?.data?.session||null;
+    return String(s?.access_token||'');
+  }catch(_){return''}
+}
+async function persist(c){
+  const t=await token();if(!t)throw new Error('ONLINE PRIJAVA NIJE AKTIVNA.');
+  const r=await fetch(SYNC,{
+    method:'POST',
+    headers:{apikey:PUB,Authorization:'Bearer '+t,'Content-Type':'application/json'},
+    body:JSON.stringify({action:'set_state',key:KEY,value:JSON.stringify(c),clientId:'yardivo-qr-role-v586'})
+  });
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok||d?.ok===false)throw new Error(d?.error||('HTTP '+r.status));
+  return d;
+}
+async function loadServerCfg(){
+  const t=await token();if(!t)return;
+  try{
+    const r=await fetch(SYNC,{
+      method:'POST',
+      headers:{apikey:PUB,Authorization:'Bearer '+t,'Content-Type':'application/json'},
+      body:JSON.stringify({action:'bootstrap',clientId:'yardivo-qr-role-read-v586'})
+    });
+    const d=await r.json().catch(()=>({}));if(!r.ok||d?.ok===false)return;
+    const row=(Array.isArray(d?.state)?d.state:[]).find(x=>String(x?.key||'')===KEY&&!x?.deleted);
+    if(row?.value_json){
+      const p=JSON.parse(String(row.value_json));
+      if(p&&typeof p==='object')writeCfg(p);
+      refreshAll();
+    }
+  }catch(e){console.warn('QR role config load',e)}
+}
+
+/* ---------- ADMIN CARD ---------- */
+function ensureAdmin(){
+  const grid=document.querySelector('#settings .settings-grid');if(!grid)return null;
+  let p=document.getElementById('yardivoQrRoleAdminV586');
+  if(!p){
+    p=document.createElement('section');p.className='panel';p.id='yardivoQrRoleAdminV586';
+    p.innerHTML=`
+      <div class="panel-head">
+        <div>
+          <h2>QR SCANNER · PORTA / PRIJAM</h2>
+          <small>Admin · zasebno uključi ili isključi QR po skladištu i radnom mjestu</small>
+        </div>
+        <span class="master-sync-state ok">PO ULOZI</span>
+      </div>
+      <div class="yqr6-body">
+        <div class="yqr6-grid">
+          <label>LOKACIJA<select id="yqr6Location"></select></label>
+          <label>SKLADIŠTE<select id="yqr6Warehouse"></select></label>
+        </div>
+        <div class="yqr6-role-grid">
+          <div class="yqr6-role-card" id="yqr6GateCard">
+            <div class="yqr6-role-head"><strong>PORTA</strong><span class="yqr6-state" id="yqr6GateState">—</span></div>
+            <div class="yqr6-role-copy">Kontrolira QR skeniranje na Porti za odabrano skladište.</div>
+            <button class="primary yqr6-toggle" id="yqr6GateToggle" type="button">—</button>
+          </div>
+          <div class="yqr6-role-card" id="yqr6ReceptionCard">
+            <div class="yqr6-role-head"><strong>PRIJAM</strong><span class="yqr6-state" id="yqr6ReceptionState">—</span></div>
+            <div class="yqr6-role-copy">Kad je OFF, Prijam nema QR skeniranje; koristi ručnu promjenu statusa.</div>
+            <button class="primary yqr6-toggle" id="yqr6ReceptionToggle" type="button">—</button>
+          </div>
+        </div>
+        <div class="yqr6-foot">
+          PORTA i PRIJAM su neovisni. Npr. W201 može imati PORTA ON i PRIJAM OFF.
+        </div>
+      </div>`;
+    grid.insertBefore(p,grid.firstChild);
+    p.querySelector('#yqr6Location').addEventListener('change',renderWhOptions);
+    p.querySelector('#yqr6Warehouse').addEventListener('change',renderRoleStates);
+    p.querySelector('#yqr6GateToggle').addEventListener('click',()=>toggleRole('gate'));
+    p.querySelector('#yqr6ReceptionToggle').addEventListener('click',()=>toggleRole('reception'));
+  }
+  return p;
+}
+function renderAdmin(){
+  const p=ensureAdmin();if(!p)return;
+  p.style.display=role()==='admin'?'block':'none';
+  if(role()!=='admin')return;
+  const d=masterData(),locs=(d.locations||[]).filter(x=>x&&x.active!==false&&x.id);
+  const l=p.querySelector('#yqr6Location');
+  const hw=(d.warehouses||[]).find(x=>String(x.id)===headerWarehouse());
+  const wanted=String(l.value||hw?.location_id||locs[0]?.id||'');
+  l.innerHTML=locs.map(x=>`<option value="${esc(x.id)}">${esc(locName(x.id))}</option>`).join('');
+  if(locs.some(x=>String(x.id)===wanted))l.value=wanted;
+  renderWhOptions();
+}
+function renderWhOptions(){
+  const p=ensureAdmin();if(!p||role()!=='admin')return;
+  const d=masterData(),loc=String(p.querySelector('#yqr6Location').value||'');
+  const rows=(d.warehouses||[]).filter(x=>x&&x.active!==false&&x.id&&String(x.location_id||'')===loc);
+  const s=p.querySelector('#yqr6Warehouse'),wanted=String(s.value||headerWarehouse()||rows[0]?.id||'');
+  s.innerHTML=rows.map(x=>`<option value="${esc(x.id)}">${esc(whName(x.id))}</option>`).join('');
+  s.value=rows.some(x=>String(x.id)===wanted)?wanted:String(rows[0]?.id||'');
+  renderRoleStates();
+}
+function renderRoleStates(){
+  const p=ensureAdmin();if(!p||role()!=='admin')return;
+  const wh=String(p.querySelector('#yqr6Warehouse').value||'');
+  for(const rr of ['gate','reception']){
+    const on=enabledFor(wh,rr);
+    const cap=rr==='gate'?'Gate':'Reception';
+    const st=p.querySelector('#yqr6'+cap+'State'),card=p.querySelector('#yqr6'+cap+'Card'),btn=p.querySelector('#yqr6'+cap+'Toggle');
+    if(st){st.textContent=on?'ON':'OFF';st.className='yqr6-state'+(on?'':' off')}
+    if(card)card.classList.toggle('off',!on);
+    if(btn)btn.textContent=on?'ISKLJUČI':'UKLJUČI';
+  }
+}
+async function toggleRole(rr){
+  if(role()!=='admin')return;
+  const p=ensureAdmin(),loc=String(p.querySelector('#yqr6Location').value||''),wh=String(p.querySelector('#yqr6Warehouse').value||'');
+  if(!wh)return alert('Odaberi skladište.');
+  const before=readCfg(),next=JSON.parse(JSON.stringify(before));
+  next.byWarehouse=next.byWarehouse||{};
+  const prev=next.byWarehouse[wh];
+  let node=(prev&&typeof prev==='object'&&!Array.isArray(prev))?{...prev}:{};
+  /* If migrating an old warehouse-wide value, preserve it for the other role. */
+  const oldBase=(typeof prev==='boolean')?prev:(node&&typeof node.enabled==='boolean'?node.enabled:before.enabled!==false);
+  if(typeof node.gate!=='boolean')node.gate=oldBase;
+  if(typeof node.reception!=='boolean')node.reception=oldBase;
+  node[rr]=!enabledFor(wh,rr);
+  node.location_id=loc;
+  node.updated_at=new Date().toISOString();
+  node.updated_by=String(window.currentSession?.username||window.currentSession?.user||'admin');
+  next.byWarehouse[wh]=node;
+  writeCfg(next);renderRoleStates();refreshAll();
+  try{
+    await persist(next);
+    try{
+      const label=rr==='gate'?'PORTA':'PRIJAM',on=node[rr];
+      window.showYmsToast?.('success',`${label} QR ${on?'UKLJUČEN':'ISKLJUČEN'}`,`${whName(wh)} · ${locName(loc)}`);
+    }catch(_){}
+  }catch(e){
+    writeCfg(before);renderRoleStates();refreshAll();
+    alert('QR postavka nije spremljena na server: '+String(e?.message||e));
+  }
+}
+
+/* ---------- OPERATIONAL STATUS ---------- */
+function openScanner(targetRole){
+  const wh=headerWarehouse();
+  if(!enabledFor(wh,targetRole)){
+    alert(targetRole==='reception'
+      ? 'QR scanner za PRIJAM je ISKLJUČEN. Unesi manualno status.'
+      : 'QR scanner za PORTU je ISKLJUČEN. Koristi ručni unos na Porti.');
+    return;
+  }
+  const q=new URLSearchParams({role:targetRole,warehouse:wh});
+  window.open(SCANNER+'?'+q.toString(),'_blank','noopener');
+}
+function ensureReceivingStatus(){
+  const note=document.getElementById('receivingPermissionNote');if(!note)return null;
+  let b=document.getElementById('yardivoReceivingQrRoleV586');
+  if(!b){
+    b=document.createElement('div');b.id='yardivoReceivingQrRoleV586';
+    b.innerHTML=`<div><div class="yqr6-op-title"></div><div class="yqr6-op-msg"></div></div><button class="primary" type="button">OTVORI QR SCANNER</button>`;
+    note.insertAdjacentElement('afterend',b);
+    b.querySelector('button').addEventListener('click',()=>openScanner('reception'));
+  }
+  return b;
+}
+function renderReceivingStatus(){
+  const wh=headerWarehouse(),on=enabledFor(wh,'reception'),b=ensureReceivingStatus(),view=document.getElementById('receiving');
+  if(!b)return;
+  b.classList.toggle('off',!on);view?.classList.toggle('yardivo-reception-qr-off',!on);
+  const title=b.querySelector('.yqr6-op-title'),msg=b.querySelector('.yqr6-op-msg'),btn=b.querySelector('button');
+  if(on){
+    title.textContent=`QR SCANNER PRIJAM · RADI · ${whName(wh)}`;
+    msg.textContent='QR skeniranje je uključeno. Ručna promjena statusa je zaključana.';
+    btn.disabled=false;btn.textContent='OTVORI QR SCANNER';
+  }else{
+    title.textContent=`QR SCANNER PRIJAM · NE RADI · ${whName(wh)}`;
+    msg.textContent='NE RADI — unesi manualno status.';
+    btn.disabled=true;btn.textContent='NE RADI';
+  }
+  const note=document.getElementById('receivingPermissionNote');
+  if(note){
+    if(on)note.textContent=`Prijam robe · ${whName(wh)} · QR scanner PRIJAM je UKLJUČEN. Status se mijenja QR skeniranjem.`;
+    else note.textContent=`Prijam robe · ${whName(wh)} · QR scanner PRIJAM je ISKLJUČEN. Unesi manualno status u prozoru dobavljača.`;
+  }
+}
+function ensureGateStatus(){
+  const body=document.querySelector('.gate-panel .gate-body');if(!body)return null;
+  let b=document.getElementById('yardivoGateQrRoleV586');
+  if(!b){
+    b=document.createElement('div');b.id='yardivoGateQrRoleV586';
+    b.innerHTML=`<div><div class="yqr6-op-title"></div><div class="yqr6-op-msg"></div></div><button class="primary" type="button">OTVORI QR SCANNER</button>`;
+    body.insertBefore(b,body.firstChild);
+    b.querySelector('button').addEventListener('click',()=>openScanner('gate'));
+  }
+  return b;
+}
+function renderGateStatus(){
+  const wh=headerWarehouse(),on=enabledFor(wh,'gate'),b=ensureGateStatus();if(!b)return;
+  b.classList.toggle('off',!on);
+  const title=b.querySelector('.yqr6-op-title'),msg=b.querySelector('.yqr6-op-msg'),btn=b.querySelector('button');
+  if(on){
+    title.textContent=`QR SCANNER PORTA · RADI · ${whName(wh)}`;
+    msg.textContent='QR skeniranje na Porti je uključeno.';
+    btn.disabled=false;btn.textContent='OTVORI QR SCANNER';
+  }else{
+    title.textContent=`QR SCANNER PORTA · NE RADI · ${whName(wh)}`;
+    msg.textContent='NE RADI — koristi ručni unos na Porti.';
+    btn.disabled=true;btn.textContent='NE RADI';
+  }
+}
+
+/* Manual status guard uses PRIJAM specifically. */
+const prevSetStatus=window.setReceivingAnnouncementStatus;
+if(typeof prevSetStatus==='function'){
+  window.setReceivingAnnouncementStatus=function(id,status,source='manual'){
+    let wh=headerWarehouse();
+    try{
+      const a=(Array.isArray(window.announcements)?window.announcements:[]).find(x=>String(x?.id)===String(id));
+      if(a?.warehouse)wh=String(a.warehouse);
+    }catch(_){}
+    if(source==='manual'&&enabledFor(wh,'reception')){
+      alert(`QR scanner PRIJAM je UKLJUČEN za ${whName(wh)}. Ručna promjena statusa nije dopuštena.`);
+      return;
+    }
+    return prevSetStatus.apply(this,arguments);
+  };
+}
+
+function refreshAll(){
+  renderAdmin();
+  renderReceivingStatus();
+  renderGateStatus();
+  try{window.renderReceiving?.()}catch(_){}
+}
+window.YardivoQrRoleControlV586={enabledFor,render:refreshAll,openScanner,load:loadServerCfg};
+
+document.addEventListener('click',e=>{
+  if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(renderAdmin,30);
+  if(e.target.closest?.('[data-view="receiving"],[data-home-target="receiving"]'))setTimeout(renderReceivingStatus,30);
+  if(e.target.closest?.('[data-view="checkin"],[data-home-target="checkin"]'))setTimeout(renderGateStatus,30);
+},true);
+document.addEventListener('change',e=>{
+  if(e.target?.id==='globalWarehouse')setTimeout(refreshAll,20);
+},true);
+['yardivo:login','yardivo:data-synced','yardivo:master-data-changed'].forEach(ev=>{
+  window.addEventListener(ev,()=>setTimeout(()=>{loadServerCfg();refreshAll()},80));
+});
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{loadServerCfg();refreshAll()},350),{once:true});
+}else{
+  setTimeout(()=>{loadServerCfg();refreshAll()},180);
+}
 })();
 </script>
 
