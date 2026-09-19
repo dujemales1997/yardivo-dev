@@ -8,7 +8,15 @@
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:#06131d;color:#eef8fd;font-family:Arial,Helvetica,sans-serif}
-body{min-height:100vh}
+body{min-height:100vh;transition:background .18s ease}
+body.status-ok{background:#071f13}
+body.status-ok .top{background:#0a2919;border-bottom-color:#2d8b56}
+body.status-error{background:#2a0b10}
+body.status-error .top{background:#3a1017;border-bottom-color:#9e3942}
+body.status-error .card{background:#351419;border-color:#9e3942}
+body.status-error input,body.status-error textarea{background:#1c090c;border-color:#8b333c}
+body.status-ok .card{background:#0d2d1b;border-color:#2d8b56}
+body.status-ok input,body.status-ok textarea{background:#071b10;border-color:#35724f}
 .top{padding:22px 18px 18px;background:#081b29;border-bottom:1px solid #18394d;text-align:center;position:sticky;top:0;z-index:5}
 .logoimg{max-width:240px;width:65vw;height:auto;display:block;margin:0 auto 8px}
 .brand{font-weight:1000;letter-spacing:.12em;font-size:25px}
@@ -80,24 +88,29 @@ function field(id,label,placeholder='',value='') {
 
 async function loadWall() {
   if(!WALL) {
+    document.body.classList.remove('status-ok');
+    document.body.classList.add('status-error');
     app.className='card red';
     app.innerHTML='<div class="state">QR NIJE ISPRAVAN</div><div class="small">Nedostaje YARDIVO Self Gate token.</div>';
     return;
   }
   const d = await api('wall_status');
   if(!d.enabled) {
+    document.body.classList.remove('status-ok');
+    document.body.classList.add('status-error');
     app.className='card red';
     app.innerHTML='<div class="state">SELF CHECK-IN · NE RADI</div><div>Javite se djelatniku na Porti.</div>';
     return;
   }
-  app.className='card';
+  document.body.classList.remove('status-error');
+  document.body.classList.add('status-ok');
+  app.className='card green';
   app.innerHTML = `
     <div class="state">YARDIVO SELF GATE CHECK-IN</div>
     <div class="small">${esc(d.warehouseName || d.warehouse)} · skenirano na ulazu</div>
-    ${field('ref','BROJ NAJAVE / NARUDŽBE','npr. broj najave')}
+    ${field('ref','BROJ NAJAVE / BROJ NARUDŽBE','npr. broj najave')}
     ${field('plate','REGISTRACIJA VOZILA','npr. ST-123-AB')}
     ${field('driver','IME I PREZIME VOZAČA','ime i prezime')}
-    ${field('phone','MOBITEL VOZAČA','npr. +385...')}
     <div id="err" class="err"></div>
     <button id="submit">NASTAVI</button>`;
   document.getElementById('submit').onclick = submitWall;
@@ -111,14 +124,16 @@ async function submitWall() {
     const d = await api('wall_submit', {
       reference:document.getElementById('ref').value.trim(),
       plate:document.getElementById('plate').value.trim(),
-      driver:document.getElementById('driver').value.trim(),
-      phone:document.getElementById('phone').value.trim()
+      driver:document.getElementById('driver').value.trim()
     });
     // Move the browser to pass/session mode on the same static page.
     location.replace(location.pathname + '?pass=' + encodeURIComponent(d.sessionToken));
   } catch(e) {
+    document.body.classList.remove('status-ok');
+    document.body.classList.add('status-error');
+    app.className='card red';
     err.textContent=e.message;
-    btn.disabled=false; btn.textContent='NASTAVI';
+    btn.disabled=false; btn.textContent='POKUŠAJ PONOVNO';
   }
 }
 
@@ -151,11 +166,15 @@ async function loadPass() {
   if(!PASS) return;
   try {
     const d = await api('status');
+    document.body.classList.remove('status-error');
+    document.body.classList.add('status-ok');
     app.outerHTML = '<div id="app">' + statusCard(d.pass) + '</div>';
     document.getElementById('sendMsg').onclick = sendMsg;
     timeline.style.display='block';
     eventsHost.innerHTML=(d.events||[]).map(x=>`<div style="padding:10px 0;border-bottom:1px solid #18394d;font-size:13px;line-height:1.45"><b>${esc(x.actor_name||'YARDIVO')}</b> · ${new Date(x.created_at).toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'})}<br>${esc(x.message)}</div>`).join('') || '<div class="small">Nema novih poruka.</div>';
   } catch(e) {
+    document.body.classList.remove('status-ok');
+    document.body.classList.add('status-error');
     const current=document.getElementById('app');
     current.className='card red';
     current.innerHTML='<div class="state">DELIVERY PASS NIJE AKTIVAN</div><div class="small">'+esc(e.message)+'</div>';
@@ -171,7 +190,7 @@ async function sendMsg() {
   catch(e) { alert(e.message); btn.disabled=false; }
 }
 
-if(MODE==='wall') loadWall().catch(e=>{app.className='card red';app.innerHTML='<div class="state">GREŠKA</div><div class="small">'+esc(e.message)+'</div>'});
+if(MODE==='wall') loadWall().catch(e=>{document.body.classList.remove('status-ok');document.body.classList.add('status-error');app.className='card red';app.innerHTML='<div class="state">GREŠKA</div><div class="small">'+esc(e.message)+'</div>'});
 else {
   loadPass();
   setInterval(()=>{ if(!document.hidden) loadPass(); },5000);
