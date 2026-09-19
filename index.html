@@ -12261,8 +12261,8 @@ function updateHolidayWarning(){
 }
 function renderHolidayAdmin(){
  const list=document.getElementById('holidayAdminList');if(!list)return;
- if(currentSession?.role!=='admin'){
-   list.innerHTML='<div class="overview-empty">Samo Admin može mijenjati neradne dane.</div>';return;
+ if(!['admin','manager','management'].includes(String(currentSession?.role||'').toLowerCase())){
+   list.innerHTML='<div class="overview-empty">Nemate ovlast za promjenu neradnih dana.</div>';return;
  }
  let rows=Object.entries(HR_HOLIDAYS_2026).map(([date,name])=>{
    const open=holidayOverrides[date]==='open';
@@ -12272,16 +12272,16 @@ function renderHolidayAdmin(){
  list.innerHTML=rows.join('');
 }
 window.toggleHolidayOpen=function(date){
- if(currentSession?.role!=='admin')return;
+ if(!['admin','manager','management'].includes(String(currentSession?.role||'').toLowerCase()))return;
  holidayOverrides[date]=holidayOverrides[date]==='open'?'closed':'open';
  saveHolidaySettings();renderHolidayAdmin();updateHolidayWarning();renderWeeklyDeliveries();renderDailyMap();updateSavedAnnouncementsToolbar();refreshRecommendation();
 }
 window.removeCustomHoliday=function(date){
- if(currentSession?.role!=='admin')return;
+ if(!['admin','manager','management'].includes(String(currentSession?.role||'').toLowerCase()))return;
  delete customHolidays[date];saveHolidaySettings();renderHolidayAdmin();updateHolidayWarning();refreshRecommendation();
 }
 document.getElementById('addCustomHoliday')?.addEventListener('click',()=>{
- if(currentSession?.role!=='admin'){alert('Samo Admin može mijenjati neradne dane.');return}
+ if(!['admin','manager','management'].includes(String(currentSession?.role||'').toLowerCase())){alert('Nemate ovlast za promjenu neradnih dana.');return}
  const date=document.getElementById('customHolidayDate').value;
  const name=document.getElementById('customHolidayName').value.trim()||'Interni neradni dan';
  if(!date){alert('Odaberi datum.');return}
@@ -14275,12 +14275,12 @@ function warehousesForLocation(code){
 function defaultWarehouseForLocation(code){
   const id=String(code||'').trim();
   try{
-    const raw=localStorage.getItem('yardivo_master_data_registry_v583');
-    const d=raw?JSON.parse(raw):null;
-    const w=d?.warehouses?.find?.(x=>x&&x.active!==false&&String(x.location_id)===id);
-    return w?.id||'ALL';
+    const allowed=warehousesForLocation(id);
+    if(allowed.length)return allowed[0];
+    const r=String(currentSession?.role||window.currentSession?.role||'').trim().toLowerCase();
+    return r==='admin'?'ALL':'';
   }catch(e){}
-  return 'ALL';
+  return '';
 }
 function currentAllowedWarehouses(){
   return currentSession?.location?warehousesForLocation(currentSession.location):[];
@@ -14439,13 +14439,16 @@ function allowedViewsForRole(role){
     manager:[],
     management:[]
   };
-  if(role==='admin'||role==='manager'||role==='management'){
+  if(role==='admin'){
     return [...new Set([
       'homeMenu',
       ...Array.from(document.querySelectorAll('.view[id]')).map(v=>v.id),
       ...Array.from(document.querySelectorAll('[data-view]')).map(v=>v.dataset.view).filter(Boolean),
       ...Array.from(document.querySelectorAll('[data-home-target]')).map(v=>v.dataset.homeTarget).filter(Boolean)
     ])];
+  }
+  if(role==='manager'||role==='management'){
+    return ['homeMenu','dashboard','controlTower','myYard','suppliers','overview','dailyMap','weeklyMap'];
   }
   return map[role]||[];
 }
@@ -42097,8 +42100,20 @@ function persistSessionLocation(id){
     }
   }catch(_){}
 }
+function homeAllowedLocations(d=master()){
+  const s=session(),r=String(s?.role||s?.app_role||'').trim().toLowerCase();
+  let rows=d.locations.filter(x=>x&&x.active!==false);
+  if(r==='manager'||r==='management'){
+    const fixed=String(s?.location||'').trim();
+    if(fixed&&fixed!=='ALL')return rows.filter(x=>String(x.id)===fixed);
+    const assigned=new Set((Array.isArray(s?.warehouses)?s.warehouses:[]).map(String));
+    const ids=new Set(d.warehouses.filter(w=>assigned.has(String(w.id))).map(w=>String(w.location_id)));
+    return rows.filter(x=>ids.has(String(x.id)));
+  }
+  return rows;
+}
 function homeSig(d=master()){
-  return JSON.stringify(d.locations.filter(x=>x.active!==false).map(x=>[x.id,x.name]));
+  return JSON.stringify(homeAllowedLocations(d).map(x=>[x.id,x.name]));
 }
 function whSig(d=master()){
   return JSON.stringify({
@@ -42117,11 +42132,15 @@ function refreshHomeSelector(force=false){
 
   if(force||sig!==lastHomeSignature){
     const before=id||String(sel.value||'');
-    const html='<option value="">Odaberi lokaciju...</option>'+
-      d.locations.filter(x=>x.active!==false).map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+    const rows=homeAllowedLocations(d);
+    const isManager=['manager','management'].includes(String(session()?.role||session()?.app_role||'').trim().toLowerCase());
+    const html=(isManager?'':'<option value="">Odaberi lokaciju...</option>')+
+      rows.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
     if(sel.innerHTML!==html)sel.innerHTML=html;
-    if(before&&locObj(before,d))sel.value=before;
+    if(before&&rows.some(x=>String(x.id)===String(before)))sel.value=before;
+    else if(rows.length)sel.value=String(rows[0].id);
     else sel.value='';
+    sel.disabled=isManager&&rows.length<=1;
     lastHomeSignature=sig;
   }else if(id && sel.value!==id){
     sel.value=id;
@@ -42207,7 +42226,13 @@ try{
 document.addEventListener('change',function(e){
   if(e.target?.id!=='homeLocationSelect')return;
   if(window.__YV_HOME_HEADER_MASTER_DWELL_FINAL__)return;
-  const chosen=String(e.target.value||'').trim();
+  let chosen=String(e.target.value||'').trim();
+  const rr=String(session()?.role||session()?.app_role||'').trim().toLowerCase();
+  if(rr==='manager'||rr==='management'){
+    const rows=homeAllowedLocations(master());
+    if(!rows.some(x=>String(x.id)===chosen))chosen=String(rows[0]?.id||'');
+    e.target.value=chosen;
+  }
   if(chosen && !locObj(chosen))return;
   persistSessionLocation(chosen);
   refreshHomeSelector(false);
@@ -45356,25 +45381,40 @@ function ensureStableHeader(){
 function currentLoc(){try{return String(window.YardivoAppStateV583?.location?.()||'')}catch(_){return''}}
 function currentWh(){try{return String(window.YardivoAppStateV583?.warehouse?.()||window.activeWarehouse||'')}catch(_){return''}}
 function renderContextSelectors(){
- const d=master(),lid=currentLoc(),wid=currentWh();
+ const d=master(),s=window.currentSession||{},r=String(s.role||s.app_role||'').trim().toLowerCase(),lid=currentLoc(),wid=currentWh();
  const ls=document.getElementById('yscLocationSelect'),ws=document.getElementById('yscWarehouseSelect');
+ const isAdmin=r==='admin';
+ const assignedWh=new Set((Array.isArray(s.warehouses)?s.warehouses:[]).map(x=>String(x)));
+ let locRows=d.locations.filter(x=>x&&x.active!==false);
+ if(!isAdmin){
+   const fixed=String(s.location||'').trim();
+   if(fixed&&fixed!=='ALL')locRows=locRows.filter(x=>String(x.id)===fixed);
+   else if(assignedWh.size){
+     const locIds=new Set(d.warehouses.filter(w=>assignedWh.has(String(w.id))).map(w=>String(w.location_id)));
+     locRows=locRows.filter(x=>locIds.has(String(x.id)));
+   }else locRows=[];
+ }
  if(ls){
-   const sig=d.locations.filter(x=>x.active!==false).map(x=>x.id+'|'+x.name).join('¦');
+   const sig=locRows.map(x=>x.id+'|'+x.name).join('¦');
    if(ls.dataset.sig!==sig){
      ls.dataset.sig=sig;
-     ls.innerHTML='<option value="">ODABERI LOKACIJU</option>'+d.locations.filter(x=>x.active!==false).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+     ls.innerHTML=locRows.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
    }
-   if([...ls.options].some(o=>o.value===lid))ls.value=lid;else ls.value='';
+   const wanted=locRows.some(x=>String(x.id)===String(lid))?String(lid):String(locRows[0]?.id||'');
+   if(ls.value!==wanted)ls.value=wanted;
+   ls.disabled=!isAdmin&&locRows.length<=1;
  }
  if(ws){
-   const rows=d.warehouses.filter(x=>x.active!==false&&(!lid||String(x.location_id)===lid));
+   let rows=d.warehouses.filter(x=>x&&x.active!==false&&(!lid||String(x.location_id)===String(lid)));
+   if(!isAdmin)rows=rows.filter(x=>assignedWh.has(String(x.id)));
    const sig=rows.map(x=>x.id+'|'+x.name).join('¦');
    if(ws.dataset.sig!==sig){
      ws.dataset.sig=sig;
-     ws.innerHTML='<option value="">ODABERI SKLADIŠTE</option>'+rows.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+     ws.innerHTML=rows.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
    }
-   if([...ws.options].some(o=>o.value===wid))ws.value=wid;else ws.value='';
-   ws.disabled=!rows.length;
+   const wanted=rows.some(x=>String(x.id)===String(wid))?String(wid):String(rows[0]?.id||'');
+   if(ws.value!==wanted)ws.value=wanted;
+   ws.disabled=!rows.length||(!isAdmin&&rows.length<=1);
  }
 }
 function paintHeader(){renderContextSelectors()}
@@ -57779,36 +57819,117 @@ window.YardivoDeliveryPassV1={dpMeta,cleanDp,loadGate,wallLink};
 </script>
 
 
-<style id="yardivo-manager-final-v1-style">
-/* VODITELJ: fixed requested menu */
+<style id="yardivo-manager-scope-popup-v2-style">
+/* ===========================
+   VODITELJ · FINAL AUTHORITY
+   =========================== */
+
+/* Exact left menu. Settings are intentionally NOT a manager menu item. */
 body[data-yardivo-role="manager"] .nav-btn[data-view]:not([data-view="homeMenu"]):not([data-view="dashboard"]):not([data-view="controlTower"]):not([data-view="myYard"]):not([data-view="suppliers"]):not([data-view="overview"]):not([data-view="dailyMap"]):not([data-view="weeklyMap"]){
+  display:none!important;visibility:hidden!important;
+}
+body[data-yardivo-role="manager"] .nav-btn[data-view="homeMenu"],
+body[data-yardivo-role="manager"] .nav-btn[data-view="dashboard"],
+body[data-yardivo-role="manager"] .nav-btn[data-view="controlTower"],
+body[data-yardivo-role="manager"] .nav-btn[data-view="myYard"],
+body[data-yardivo-role="manager"] .nav-btn[data-view="suppliers"],
+body[data-yardivo-role="manager"] .nav-btn[data-view="overview"],
+body[data-yardivo-role="manager"] .nav-btn[data-view="dailyMap"],
+body[data-yardivo-role="manager"] .nav-btn[data-view="weeklyMap"]{
+  display:flex!important;visibility:visible!important;opacity:1!important;
+}
+
+/* Exact Home cards immediately; no several-second blank screen. */
+body[data-yardivo-role="manager"] #homeMenuGrid{
+  display:grid!important;visibility:visible!important;opacity:1!important;
+}
+body[data-yardivo-role="manager"] #homeMenuGrid [data-home-target]{
   display:none!important;
 }
-body[data-yardivo-role="manager"] [data-view="homeMenu"],
-body[data-yardivo-role="manager"] [data-view="dashboard"],
-body[data-yardivo-role="manager"] [data-view="controlTower"],
-body[data-yardivo-role="manager"] [data-view="myYard"],
-body[data-yardivo-role="manager"] [data-view="suppliers"],
-body[data-yardivo-role="manager"] [data-view="overview"],
-body[data-yardivo-role="manager"] [data-view="dailyMap"],
-body[data-yardivo-role="manager"] [data-view="weeklyMap"]{
-  display:flex!important;visibility:visible!important;
+body[data-yardivo-role="manager"] #homeMenuGrid [data-home-target="dashboard"],
+body[data-yardivo-role="manager"] #homeMenuGrid [data-home-target="controlTower"],
+body[data-yardivo-role="manager"] #homeMenuGrid [data-home-target="controltower"],
+body[data-yardivo-role="manager"] #homeMenuGrid [data-home-target="myYard"],
+body[data-yardivo-role="manager"] #homeMenuGrid [data-home-target="suppliers"],
+body[data-yardivo-role="manager"] #homeMenuGrid [data-home-target="overview"],
+body[data-yardivo-role="manager"] #homeMenuGrid [data-home-target="dailyMap"],
+body[data-yardivo-role="manager"] #homeMenuGrid [data-home-target="weeklyMap"]{
+  display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;
 }
+
+/* Critical: Home can NEVER leak above another manager section. */
+body[data-yardivo-role="manager"]:not(.home-menu-mode) #homeMenu{
+  display:none!important;
+}
+body[data-yardivo-role="manager"]:not(.home-menu-mode) .view:not(.active){
+  display:none!important;
+}
+body[data-yardivo-role="manager"].home-menu-mode .view:not(#homeMenu){
+  display:none!important;
+}
+
+/* Manager account owns only assigned context. */
+body[data-yardivo-role="manager"] #homeLocationSelect:disabled,
+body[data-yardivo-role="manager"] #yscLocationSelect:disabled,
+body[data-yardivo-role="manager"] #yscWarehouseSelect:disabled{
+  opacity:1!important;cursor:not-allowed!important;
+}
+body[data-yardivo-role="manager"] [data-view="settings"],
+body[data-yardivo-role="manager"] [data-home-target="settings"]{
+  display:none!important;
+}
+
+/* Reception ramp settings are retired for everybody. */
 #receptionRampSettings{display:none!important}
 
-/* Manager/Admin ramp settings card */
+/* Dedicated manager popups — never open the Admin Settings page. */
+#yardivoManagerPopupV2{
+  display:none;position:fixed;inset:0;z-index:2147483000;
+  background:rgba(0,8,15,.76);backdrop-filter:blur(5px);
+  align-items:center;justify-content:center;padding:24px;
+}
+#yardivoManagerPopupV2.open{display:flex!important}
+#yardivoManagerPopupV2 .ymp-card{
+  width:min(980px,96vw);max-height:90vh;overflow:hidden;
+  border:1px solid #31536a;border-radius:14px;background:#071722;
+  box-shadow:0 28px 90px rgba(0,0,0,.62);
+}
+#yardivoManagerPopupV2 .ymp-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 16px;border-bottom:1px solid #274458;background:#0a1c29;
+}
+#yardivoManagerPopupV2 .ymp-head h2{margin:0;font-size:14px}
+#yardivoManagerPopupV2 .ymp-head small{display:block;margin-top:3px;color:#8099aa;font-size:8px}
+#yardivoManagerPopupV2 .ymp-close{
+  width:38px;height:38px;border-radius:9px;border:1px solid #704149;
+  background:#2d1519;color:#ffabb1;font-size:20px;font-weight:1000;cursor:pointer;
+}
+#yardivoManagerPopupV2 .ymp-body{max-height:calc(90vh - 68px);overflow:auto;padding:14px}
+#yardivoManagerPopupV2 .ymp-body > #yardivoNonWorkingDaysSettings,
+#yardivoManagerPopupV2 .ymp-body > #yardivoManagerRampSettingsV1{
+  display:block!important;visibility:visible!important;margin:0!important;
+}
+#yardivoManagerPopupV2 .ymp-body .panel{border-radius:10px}
+
+/* Manager/Admin ramp management */
 #yardivoManagerRampSettingsV1 .ymrs-body{padding:14px}
 #yardivoManagerRampSettingsV1 .ymrs-wh{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:12px}
 #yardivoManagerRampSettingsV1 .ymrs-wh label{min-width:260px;flex:1}
 #yardivoManagerRampSettingsV1 .ymrs-list{display:grid;gap:8px}
-#yardivoManagerRampSettingsV1 .ymrs-row{display:grid;grid-template-columns:minmax(150px,1fr) auto auto;gap:10px;align-items:center;padding:10px;border:1px solid #29485d;border-radius:9px;background:#0a1b27}
-#yardivoManagerRampSettingsV1 .ymrs-state{font-size:9px;font-weight:1000;padding:5px 8px;border-radius:999px;border:1px solid #2d7f51;color:#6fe69e;background:#0d2b1d}
+#yardivoManagerRampSettingsV1 .ymrs-row{
+  display:grid;grid-template-columns:minmax(150px,1fr) auto auto;gap:10px;align-items:center;
+  padding:10px;border:1px solid #294b5d;border-radius:9px;background:#0b2030
+}
+#yardivoManagerRampSettingsV1 .ymrs-state{
+  font-size:9px;font-weight:1000;padding:5px 8px;border-radius:999px;
+  border:1px solid #2d7f51;color:#6fe69e;background:#0d2b1d
+}
 #yardivoManagerRampSettingsV1 .ymrs-state.off{border-color:#93424b;color:#ff9da7;background:#35181d}
 #yardivoManagerRampSettingsV1 .ymrs-toggle{min-width:110px;font-weight:1000}
 #yardivoManagerRampSettingsV1 .ymrs-toggle.turn-off{background:#6e2530!important;border-color:#a84d57!important;color:#fff!important}
 #yardivoManagerRampSettingsV1 .ymrs-toggle.turn-on{background:#12633b!important;border-color:#2a9b5d!important;color:#fff!important}
 
-/* TODAY TIMELINE peak graph */
+/* Today timeline peak graph from prior build stays active. */
 .yv-peak-chart{height:145px;border:1px solid #294455;border-radius:11px;background:#0c1c27;padding:5px 8px 0;overflow:hidden}
 .yv-peak-chart svg{width:100%;height:100%;display:block;overflow:visible}
 .yv-peak-grid{stroke:rgba(135,165,184,.18);stroke-width:1}
@@ -57820,159 +57941,381 @@ body[data-yardivo-role="manager"] [data-view="weeklyMap"]{
 .yv-peak-callout line{stroke:#ff7c84;stroke-width:1.5;stroke-dasharray:4 3}
 .yv-peak-callout text{fill:#ff9aa1;font-size:8px;font-weight:1000}
 body.yv-timeline-expanded .yv-peak-chart{height:245px}
-html[data-yardivo-main-theme="light"] .yv-peak-chart{background:#f7fafc;border-color:#d4e0e8}
-html[data-yardivo-main-theme="light"] .yv-peak-y,
-html[data-yardivo-main-theme="light"] .yv-peak-x{fill:#668092}
 </style>
-
-<script id="yardivo-manager-final-v1">
+<script id="yardivo-manager-scope-popup-v2">
 (function(){
 'use strict';
-if(window.__YARDIVO_MANAGER_FINAL_V1__)return;
-window.__YARDIVO_MANAGER_FINAL_V1__=true;
+if(window.__YARDIVO_MANAGER_SCOPE_POPUP_V2__)return;
+window.__YARDIVO_MANAGER_SCOPE_POPUP_V2__=true;
 
-const MENU=new Set(['homeMenu','dashboard','controlTower','myYard','suppliers','overview','dailyMap','weeklyMap']);
 const MASTER='yardivo_master_data_registry_v583';
+const ALLOWED=new Set(['homeMenu','dashboard','controlTower','myYard','suppliers','overview','dailyMap','weeklyMap']);
 
-function role(){
- let r=String(window.currentSession?.role||window.currentSession?.app_role||document.body?.dataset?.yardivoRole||'').trim().toLowerCase();
- if(r==='management'||r==='voditelj')r='manager';
- return r;
-}
+function session(){try{return (typeof currentSession!=='undefined'?currentSession:window.currentSession)||null}catch(_){return window.currentSession||null}}
+function role(){let r=String(session()?.role||session()?.app_role||'').trim().toLowerCase();if(r==='management'||r==='voditelj')r='manager';return r}
 function isManager(){return role()==='manager'}
 function canManageRamps(){return ['admin','manager'].includes(role())}
-function readMaster(){try{const d=JSON.parse(localStorage.getItem(MASTER)||'{}');return d&&typeof d==='object'?d:{}}catch(_){return{}}}
+function master(){try{const d=JSON.parse(localStorage.getItem(MASTER)||'{}');return {locations:Array.isArray(d.locations)?d.locations:[],warehouses:Array.isArray(d.warehouses)?d.warehouses:[],...d}}catch(_){return{locations:[],warehouses:[]}}}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function activeLocations(d=master()){return d.locations.filter(x=>x&&x.active!==false)}
+function activeWarehouses(d=master()){return d.warehouses.filter(x=>x&&x.active!==false)}
+function assignedWarehouseIds(d=master()){
+ const s=session();if(!s)return[];
+ const ids=new Set((Array.isArray(s.warehouses)?s.warehouses:[]).map(String));
+ return activeWarehouses(d).filter(w=>ids.has(String(w.id))).map(w=>String(w.id));
+}
+function assignedLocationIds(d=master()){
+ const s=session();if(!s)return[];
+ const fixed=String(s.location||'').trim();
+ const rows=activeLocations(d);
+ if(fixed&&fixed!=='ALL'&&rows.some(x=>String(x.id)===fixed))return[fixed];
+ const explicit=Array.isArray(s.locations)?s.locations.map(String):[];
+ if(explicit.length)return rows.filter(x=>explicit.includes(String(x.id))).map(x=>String(x.id));
+ const whIds=new Set(assignedWarehouseIds(d));
+ const ids=new Set(activeWarehouses(d).filter(w=>whIds.has(String(w.id))).map(w=>String(w.location_id)));
+ return rows.filter(x=>ids.has(String(x.id))).map(x=>String(x.id));
+}
+function locationName(id,d=master()){return activeLocations(d).find(x=>String(x.id)===String(id))?.name||String(id||'')}
+function warehouseName(id,d=master()){return activeWarehouses(d).find(x=>String(x.id)===String(id))?.name||String(id||'')}
+function persistSession(){
+ const s=session();if(!s)return;
+ try{window.currentSession=s;if(typeof currentSession!=='undefined')currentSession=s}catch(_){}
+ try{
+   if(s.rememberMe)localStorage.setItem('yardivo_remembered_session',JSON.stringify(s));
+   else sessionStorage.setItem('studenac_demo_session',JSON.stringify(s));
+ }catch(_){}
+}
+function setRoleAttrs(){
+ if(!isManager())return;
+ document.body.dataset.yardivoRole='manager';
+ document.documentElement.dataset.yardivoRole='manager';
+ document.body.classList.add('yv-role-manager-v2');
+}
+
+function setTextNode(button,label){
+ if(!button)return;
+ const text=[...button.childNodes].find(n=>n.nodeType===Node.TEXT_NODE);
+ if(text)text.nodeValue=' '+label+' ';
+ else button.appendChild(document.createTextNode(' '+label));
+}
+function enforceMenu(){
+ if(!isManager())return;
+ setRoleAttrs();
+ const labels={homeMenu:'Početni izbornik',dashboard:'Nadzorna ploča',controlTower:'Control Tower',myYard:'My Yard',suppliers:'Dobavljači',overview:'Overview dobavljača',dailyMap:'Dnevna mapa',weeklyMap:'Tjedna mapa'};
+ document.querySelectorAll('.nav-btn[data-view]').forEach(b=>{
+   const id=String(b.dataset.view||''),ok=ALLOWED.has(id);
+   b.classList.toggle('role-hidden',!ok);
+   b.style.setProperty('display',ok?'flex':'none','important');
+   b.style.setProperty('visibility',ok?'visible':'hidden','important');
+   if(ok&&labels[id])setTextNode(b,labels[id]);
+ });
+ document.querySelectorAll('#homeMenuGrid [data-home-target]').forEach(card=>{
+   let id=String(card.dataset.homeTarget||'');if(id==='controltower')id='controlTower';
+   const ok=ALLOWED.has(id)&&id!=='homeMenu';
+   card.classList.toggle('role-hidden',!ok);
+   card.style.setProperty('display',ok?'block':'none','important');
+   card.style.setProperty('visibility',ok?'visible':'hidden','important');
+   card.style.setProperty('opacity',ok?'1':'0','important');
+ });
+ const grid=document.getElementById('homeMenuGrid');
+ if(grid){grid.style.setProperty('display','grid','important');grid.style.setProperty('visibility','visible','important');grid.style.setProperty('opacity','1','important')}
+ document.documentElement.classList.add('yardivo-home-ready');
+}
+
+function enforceScope(){
+ if(!isManager())return;
+ setRoleAttrs();
+ const d=master(),s=session();if(!s)return;
+ const locIds=assignedLocationIds(d);
+ let loc=String(s.location||'').trim();
+ if(!locIds.includes(loc))loc=String(locIds[0]||'');
+ if(loc&&s.location!==loc){s.location=loc;persistSession()}
+ const whIds=assignedWarehouseIds(d).filter(id=>{
+   const w=activeWarehouses(d).find(x=>String(x.id)===String(id));
+   return !loc||String(w?.location_id)===loc;
+ });
+ let wh=String(window.YardivoAppStateV583?.warehouse?.()||window.activeWarehouse||'');
+ if(!whIds.includes(wh))wh=String(whIds[0]||'');
+
+ const locRows=activeLocations(d).filter(x=>locIds.includes(String(x.id)));
+ const home=document.getElementById('homeLocationSelect');
+ if(home){
+   const sig=locRows.map(x=>x.id+'|'+x.name).join('¦');
+   if(home.dataset.managerScopeSig!==sig){
+     home.dataset.managerScopeSig=sig;
+     home.innerHTML=locRows.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+   }
+   home.value=loc;
+   home.disabled=locRows.length<=1;
+ }
+ const yloc=document.getElementById('yscLocationSelect');
+ if(yloc){
+   const sig=locRows.map(x=>x.id+'|'+x.name).join('¦');
+   if(yloc.dataset.managerScopeSig!==sig){
+     yloc.dataset.managerScopeSig=sig;
+     yloc.innerHTML=locRows.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+   }
+   yloc.value=loc;
+   yloc.disabled=locRows.length<=1;
+ }
+
+ const whRows=activeWarehouses(d).filter(x=>whIds.includes(String(x.id)));
+ for(const sel of [document.getElementById('yscWarehouseSelect'),document.getElementById('globalWarehouse')]){
+   if(!sel)continue;
+   const sig=whRows.map(x=>x.id+'|'+x.name).join('¦');
+   if(sel.dataset.managerScopeSig!==sig){
+     sel.dataset.managerScopeSig=sig;
+     sel.innerHTML=whRows.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+   }
+   if(whRows.some(x=>String(x.id)===wh))sel.value=wh;else if(whRows.length)sel.value=String(whRows[0].id);
+   sel.disabled=whRows.length<=1;
+ }
+ const status=document.getElementById('homeLocationStatus');
+ if(status&&loc){status.textContent='Dodijeljena lokacija: '+locationName(loc,d);status.classList.add('ready')}
+ const big=document.getElementById('homeSelectedLocation');
+ if(big&&loc){big.textContent=locationName(loc,d).toUpperCase();big.classList.add('selected')}
+ const info=document.getElementById('globalWarehouseInfo');
+ if(info)info.textContent=wh?`${locationName(loc,d)} · ${warehouseName(wh,d)}`:locationName(loc,d);
+
+ try{
+   if(loc&&String(window.YardivoAppStateV583?.location?.()||'')!==loc)window.YardivoAppStateV583?.setLocation?.(loc);
+   if(wh&&String(window.YardivoAppStateV583?.warehouse?.()||'')!==wh)window.YardivoAppStateV583?.setWarehouse?.(wh);
+ }catch(_){}
+ try{window.activeWarehouse=wh;if(typeof activeWarehouse!=='undefined')activeWarehouse=wh}catch(_){}
+}
+
+function renderView(id){
+ const calls={
+  dashboard:['renderDashboardSimple','renderDashboard'],
+  controlTower:['renderControlTower'],
+  myYard:['renderYard','renderRampe','renderDockOverview'],
+  suppliers:['renderSupplierProfiles'],
+  overview:['renderOverview'],
+  dailyMap:['renderDailyMap'],
+  weeklyMap:['renderWeeklyMap']
+ };
+ (calls[id]||[]).forEach(n=>{try{if(typeof window[n]==='function')window[n]()}catch(_){}});
+}
+function openView(raw){
+ if(!isManager())return;
+ let id=String(raw||'');if(id==='controltower')id='controlTower';
+ if(!ALLOWED.has(id))id='homeMenu';
+ closePopup();
+ enforceScope();enforceMenu();
+
+ document.body.classList.toggle('home-menu-mode',id==='homeMenu');
+ document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+ const target=document.getElementById(id);
+ if(target)target.classList.add('active');
+
+ document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.toggle('active',String(b.dataset.view)===id));
+ const titles={homeMenu:'Početni izbornik',dashboard:'Nadzorna ploča',controlTower:'Control Tower',myYard:'My Yard',suppliers:'Dobavljači',overview:'Overview dobavljača',dailyMap:'Dnevna mapa',weeklyMap:'Tjedna mapa'};
+ const pt=document.getElementById('pageTitle');if(pt)pt.textContent=titles[id]||'YARDIVO';
+ if(id==='homeMenu'){
+   try{updateHomeLocationUI?.()}catch(_){}
+   enforceScope();enforceMenu();
+ }else{
+   /* Absolute guarantee against the old Home leaking above the selected section. */
+   const home=document.getElementById('homeMenu');if(home)home.classList.remove('active');
+   renderView(id);
+ }
+ try{window.scrollTo(0,0);document.querySelector('.main')?.scrollTo?.(0,0)}catch(_){}
+ try{window.dispatchEvent(new CustomEvent('yardivo:view-opened',{detail:{view:id,source:'manager-v2'}}))}catch(_){}
+}
+
+/* ---------------- Ramp popup content ---------------- */
 function saveMaster(d,reason){
  localStorage.setItem(MASTER,JSON.stringify(d));
  try{window.YardivoMasterDataV583?.save?.(JSON.parse(JSON.stringify(d)))}catch(_){}
  try{window.YardivoSupabase?.flushQueue?.()}catch(_){}
- window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{source:'manager-ramp-settings',reason}}));
+ window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{source:'manager-ramp-settings-v2',reason}}));
 }
-function assignedWarehouseIds(d){
- const all=(d.warehouses||[]).filter(w=>w&&w.active!==false);
- if(role()==='admin')return all.map(w=>String(w.id));
- const s=window.currentSession||{};
- if(s.all_warehouses===true)return all.filter(w=>s.all_locations===true||!s.location||s.location==='ALL'||String(w.location_id)===String(s.location)).map(w=>String(w.id));
- const arr=Array.isArray(s.warehouses)?s.warehouses.map(String):[];
- return all.filter(w=>arr.includes(String(w.id))).map(w=>String(w.id));
-}
-function forceManagerMenu(){
- if(!isManager())return;
- document.body.dataset.yardivoRole='manager';
- document.documentElement.dataset.yardivoRole='manager';
- document.querySelectorAll('[data-view]').forEach(el=>{
-   const id=String(el.dataset.view||'');
-   const ok=MENU.has(id);
-   el.hidden=!ok;el.classList.toggle('role-hidden',!ok);
-   if(ok){el.style.setProperty('display','flex','important');el.style.removeProperty('visibility');el.removeAttribute('aria-disabled')}
-   else el.style.setProperty('display','none','important');
- });
- document.querySelectorAll('[data-home-target]').forEach(el=>{
-   const id=String(el.dataset.homeTarget||'');
-   const ok=MENU.has(id);
-   el.hidden=!ok;el.classList.toggle('role-hidden',!ok);
-   if(ok){el.style.setProperty('display','block','important');el.style.removeProperty('visibility');el.removeAttribute('aria-disabled')}
-   else el.style.setProperty('display','none','important');
- });
-}
-
 function ensureRampSettings(){
- const grid=document.querySelector('#settings .settings-grid');if(!grid)return null;
  let p=document.getElementById('yardivoManagerRampSettingsV1');
  if(!p){
-  p=document.createElement('section');p.className='panel';p.id='yardivoManagerRampSettingsV1';p.dataset.yardivoSettings='managerRamps';
-  p.innerHTML=`<div class="panel-head"><div><h2>UPRAVLJAJ RAMPAMA</h2><small>Samo Admin i Voditelj mogu uključiti ili isključiti rampu</small></div></div>
-  <div class="ymrs-body"><div class="ymrs-wh"><label>SKLADIŠTE<select id="ymrsWarehouse"></select></label></div><div class="ymrs-list" id="ymrsList"></div></div>`;
-  const holiday=document.getElementById('yardivoNonWorkingDaysSettings');
-  if(holiday)holiday.insertAdjacentElement('afterend',p);else grid.prepend(p);
-  p.querySelector('#ymrsWarehouse').addEventListener('change',renderRamps);
-  p.addEventListener('click',e=>{
-    const b=e.target.closest('[data-ymrs-toggle]');if(!b||!canManageRamps())return;
-    const [wid,num]=String(b.dataset.ymrsToggle).split(':');
-    const d=readMaster(),w=(d.warehouses||[]).find(x=>String(x.id)===wid);if(!w)return;
-    w.ramp_settings=Array.isArray(w.ramp_settings)?w.ramp_settings:[];
-    let rr=w.ramp_settings.find(x=>Number(x.number)===Number(num));
-    if(!rr){rr={number:Number(num),name:'Rampa '+num,active:true,from:'',to:'',pallets_per_hour:null,max_pallets:null};w.ramp_settings.push(rr)}
-    rr.active=rr.active===false;
-    saveMaster(d,'ramp.toggle');
-    renderRamps();
-  });
+   p=document.createElement('section');p.className='panel';p.id='yardivoManagerRampSettingsV1';
+   p.innerHTML=`<div class="panel-head"><div><h2>UPRAVLJAJ RAMPAMA</h2><small>Voditelj upravlja samo rampama skladišta dodijeljenih njegovom accountu</small></div></div>
+   <div class="ymrs-body"><div class="ymrs-wh"><label>SKLADIŠTE<select id="ymrsWarehouse"></select></label></div><div class="ymrs-list" id="ymrsList"></div></div>`;
+   document.body.appendChild(p);
+   p.querySelector('#ymrsWarehouse').addEventListener('change',renderRamps);
+   p.addEventListener('click',e=>{
+     const b=e.target.closest('[data-ymrs-toggle]');if(!b||!canManageRamps())return;
+     const [wid,num]=String(b.dataset.ymrsToggle||'').split(':');
+     const d=master(),allowed=new Set(assignedWarehouseIds(d));if(role()==='manager'&&!allowed.has(wid))return;
+     const w=(d.warehouses||[]).find(x=>String(x.id)===wid);if(!w)return;
+     w.ramp_settings=Array.isArray(w.ramp_settings)?w.ramp_settings:[];
+     let rr=w.ramp_settings.find(x=>Number(x.number)===Number(num));
+     if(!rr){rr={number:Number(num),name:'Rampa '+num,active:true,from:'',to:'',pallets_per_hour:null,max_pallets:null};w.ramp_settings.push(rr)}
+     rr.active=rr.active===false;
+     saveMaster(d,'ramp.toggle');
+     renderRamps();
+   });
  }
- renderRamps();
- return p;
+ renderRamps();return p;
 }
 function renderRamps(){
  const p=document.getElementById('yardivoManagerRampSettingsV1');if(!p)return;
- const d=readMaster(),allowed=new Set(assignedWarehouseIds(d));
- const rows=(d.warehouses||[]).filter(w=>w&&w.active!==false&&allowed.has(String(w.id)));
- const sel=p.querySelector('#ymrsWarehouse'),prev=sel.value;
- sel.innerHTML=rows.map(w=>`<option value="${String(w.id).replace(/"/g,'&quot;')}">${String(w.name||w.id)}</option>`).join('');
- if(rows.some(w=>String(w.id)===prev))sel.value=prev;
- const w=rows.find(x=>String(x.id)===String(sel.value))||rows[0],host=p.querySelector('#ymrsList');
+ const d=master();
+ const allowed=role()==='admin'
+   ?new Set(activeWarehouses(d).map(w=>String(w.id)))
+   :new Set(assignedWarehouseIds(d));
+ const rows=activeWarehouses(d).filter(w=>allowed.has(String(w.id)));
+ const sel=p.querySelector('#ymrsWarehouse'),prev=sel?.value||'';
+ if(sel){
+   sel.innerHTML=rows.map(w=>`<option value="${esc(w.id)}">${esc(w.name||w.id)}</option>`).join('');
+   if(rows.some(w=>String(w.id)===prev))sel.value=prev;
+ }
+ const w=rows.find(x=>String(x.id)===String(sel?.value||''))||rows[0],host=p.querySelector('#ymrsList');
+ if(!host)return;
  if(!w){host.innerHTML='<div class="overview-empty">Nema dodijeljenih skladišta.</div>';return}
  const count=Math.max(Number(w.ramps)||0,...(Array.isArray(w.ramp_settings)?w.ramp_settings.map(x=>Number(x.number)||0):[0]));
- if(!count){host.innerHTML='<div class="overview-empty">Za ovo skladište još nisu kreirane rampe.</div>';return}
+ if(!count){host.innerHTML='<div class="overview-empty">Za ovo skladište nema kreiranih rampi.</div>';return}
  w.ramp_settings=Array.isArray(w.ramp_settings)?w.ramp_settings:[];
  host.innerHTML=Array.from({length:count},(_,i)=>i+1).map(n=>{
    const rr=w.ramp_settings.find(x=>Number(x.number)===n),on=rr?.active!==false,name=rr?.name||('Rampa '+n);
-   return `<div class="ymrs-row"><strong>${name}</strong><span class="ymrs-state ${on?'':'off'}">${on?'ON':'OFF'}</span><button type="button" class="ymrs-toggle ${on?'turn-off':'turn-on'}" data-ymrs-toggle="${w.id}:${n}">${on?'ISKLJUČI':'UKLJUČI'}</button></div>`;
+   return `<div class="ymrs-row"><strong>${esc(name)}</strong><span class="ymrs-state ${on?'':'off'}">${on?'ON':'OFF'}</span><button type="button" class="ymrs-toggle ${on?'turn-off':'turn-on'}" data-ymrs-toggle="${esc(w.id)}:${n}">${on?'ISKLJUČI':'UKLJUČI'}</button></div>`;
  }).join('');
 }
 
-function showManagerSettings(target){
+/* ---------------- Dedicated popup ---------------- */
+let moved=null;
+function ensurePopup(){
+ let p=document.getElementById('yardivoManagerPopupV2');
+ if(!p){
+   p=document.createElement('div');p.id='yardivoManagerPopupV2';
+   p.innerHTML=`<div class="ymp-card" role="dialog" aria-modal="true"><div class="ymp-head"><div><h2 id="ympTitle">POSTAVKE</h2><small id="ympSub"></small></div><button type="button" class="ymp-close" aria-label="Zatvori">×</button></div><div class="ymp-body" id="ympBody"></div></div>`;
+   document.body.appendChild(p);
+   p.addEventListener('click',e=>{if(e.target===p||e.target.closest('.ymp-close'))closePopup()});
+ }
+ return p;
+}
+function restoreMoved(){
+ if(!moved)return;
+ try{
+   if(moved.marker?.parentNode)moved.marker.parentNode.insertBefore(moved.node,moved.marker);
+   moved.marker?.remove();
+ }catch(_){}
+ moved=null;
+}
+function closePopup(){
+ const p=document.getElementById('yardivoManagerPopupV2');if(p)p.classList.remove('open');
+ restoreMoved();
+}
+function openPopup(kind){
  if(!isManager())return;
- ensureRampSettings();
- document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
- const s=document.getElementById('settings');if(!s)return;
- s.classList.add('active');s.style.removeProperty('display');
- s.querySelectorAll('.settings-grid > section,.settings-grid > .panel,.settings-grid > .danger-zone').forEach(x=>x.style.setProperty('display','none','important'));
- const holiday=document.getElementById('yardivoNonWorkingDaysSettings');
- const ramps=document.getElementById('yardivoManagerRampSettingsV1');
- if(holiday)holiday.style.setProperty('display','block','important');
- if(ramps)ramps.style.setProperty('display','block','important');
- setTimeout(()=>document.getElementById(target)?.scrollIntoView({behavior:'smooth',block:'start'}),80);
+ closePopup();
+ const p=ensurePopup(),body=p.querySelector('#ympBody'),title=p.querySelector('#ympTitle'),sub=p.querySelector('#ympSub');
+ let node=null;
+ if(kind==='holidays'){
+   node=document.getElementById('yardivoNonWorkingDaysSettings');
+   if(title)title.textContent='NERADNI DANI';
+   if(sub)sub.textContent='Iste postavke neradnih dana koje koristi Admin';
+   try{renderHolidayAdmin?.()}catch(_){}
+ }else{
+   node=ensureRampSettings();
+   if(title)title.textContent='UPRAVLJAJ RAMPAMA';
+   if(sub)sub.textContent='Samo skladišta dodijeljena ovom Voditelju';
+ }
+ if(!node||!body)return;
+ const marker=document.createComment('yardivo-manager-popup-origin');
+ node.parentNode?.insertBefore(marker,node);
+ moved={node,marker};
+ body.appendChild(node);
+ node.style.setProperty('display','block','important');
+ p.classList.add('open');
+ if(kind==='holidays'){try{renderHolidayAdmin?.();enableDatePickers?.()}catch(_){}}
+ if(kind==='ramps')renderRamps();
 }
 
-function patchRightDrawer(){
+/* Right settings drawer: ONLY two manager shortcuts. */
+function patchDrawer(){
  if(!isManager())return;
  const list=document.querySelector('#yardivoRightSettingsDrawer .yv-rs-list');if(!list)return;
- if(!list.querySelector('[data-yv-manager-setting="holidays"]')){
-   list.insertAdjacentHTML('beforeend',`
-    <button type="button" class="yv-rs-item" data-yv-manager-setting="holidays">
-      <span class="yv-rs-icon">📅</span><span class="yv-rs-copy"><strong>NERADNI DANI</strong><small>Blagdani i interne iznimke prijama</small></span><span class="yv-rs-arrow">›</span>
-    </button>
-    <button type="button" class="yv-rs-item" data-yv-manager-setting="ramps">
-      <span class="yv-rs-icon">▥</span><span class="yv-rs-copy"><strong>UPRAVLJAJ RAMPAMA</strong><small>Uključi / isključi rampe</small></span><span class="yv-rs-arrow">›</span>
-    </button>`);
- }
+ list.querySelectorAll('[data-yv-manager-setting]').forEach(x=>x.remove());
+ list.insertAdjacentHTML('beforeend',`
+   <button type="button" class="yv-rs-item" data-yv-manager-setting="holidays">
+     <span class="yv-rs-icon">📅</span><span class="yv-rs-copy"><strong>NERADNI DANI</strong><small>Blagdani i interne iznimke</small></span><span class="yv-rs-arrow">›</span>
+   </button>
+   <button type="button" class="yv-rs-item" data-yv-manager-setting="ramps">
+     <span class="yv-rs-icon">▥</span><span class="yv-rs-copy"><strong>UPRAVLJAJ RAMPAMA</strong><small>Uključi / isključi dodijeljene rampe</small></span><span class="yv-rs-arrow">›</span>
+   </button>`);
 }
+
+/* Manager owns navigation so legacy handlers cannot leave two views active. */
 document.addEventListener('click',e=>{
- const b=e.target.closest?.('[data-yv-manager-setting]');if(!b||!isManager())return;
- e.preventDefault();e.stopPropagation();
- document.body.classList.remove('yv-right-settings-open');
- if(b.dataset.yvManagerSetting==='holidays')showManagerSettings('yardivoNonWorkingDaysSettings');
- if(b.dataset.yvManagerSetting==='ramps')showManagerSettings('yardivoManagerRampSettingsV1');
+ if(!isManager())return;
+ const setting=e.target.closest?.('[data-yv-manager-setting]');
+ if(setting){
+   e.preventDefault();e.stopImmediatePropagation();
+   document.body.classList.remove('yv-right-settings-open');
+   openPopup(setting.dataset.yvManagerSetting);
+   return;
+ }
+ const nav=e.target.closest?.('.nav-btn[data-view]');
+ if(nav){
+   e.preventDefault();e.stopImmediatePropagation();
+   openView(nav.dataset.view);
+   return;
+ }
+ const card=e.target.closest?.('#homeMenuGrid [data-home-target]');
+ if(card){
+   e.preventDefault();e.stopImmediatePropagation();
+   openView(card.dataset.homeTarget);
+   return;
+ }
+},true);
+
+document.addEventListener('change',e=>{
+ if(!isManager())return;
+ if(['homeLocationSelect','yscLocationSelect'].includes(e.target?.id||'')){
+   const allowed=assignedLocationIds(master());
+   if(!allowed.includes(String(e.target.value||'')))e.target.value=String(allowed[0]||'');
+   enforceScope();
+ }
+ if(['yscWarehouseSelect','globalWarehouse'].includes(e.target?.id||'')){
+   const allowed=assignedWarehouseIds(master());
+   if(!allowed.includes(String(e.target.value||'')))e.target.value=String(allowed[0]||'');
+   enforceScope();
+ }
 },true);
 
 function refresh(){
- if(isManager()){forceManagerMenu();ensureRampSettings();patchRightDrawer()}
- if(role()==='admin')ensureRampSettings();
- const old=document.getElementById('receptionRampSettings');if(old)old.style.setProperty('display','none','important');
+ if(!isManager()){
+   closePopup();
+   return;
+ }
+ setRoleAttrs();enforceMenu();enforceScope();patchDrawer();
+ /* If legacy code ever left Home active while another view is active, remove it now. */
+ if(!document.body.classList.contains('home-menu-mode')){
+   const h=document.getElementById('homeMenu');if(h)h.classList.remove('active');
+ }
 }
-['yardivo:login','yardivo:data-synced','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(refresh,80)));
-document.addEventListener('click',e=>{
- if(isManager()&&e.target.closest?.('[data-view],[data-home-target]'))setTimeout(forceManagerMenu,0);
-},true);
-document.addEventListener('DOMContentLoaded',()=>setTimeout(refresh,300),{once:true});
-window.addEventListener('load',()=>setTimeout(refresh,900),{once:true});
-setTimeout(refresh,500);
 
-/* Fixed manager section authority: menu no longer depends on accidentally empty section assignment. */
+/* Immediate, then event-driven. No multi-second timer is needed. */
+window.addEventListener('yardivo:login',()=>{refresh();queueMicrotask(refresh)});
+window.addEventListener('yardivo:data-synced',()=>queueMicrotask(refresh));
+window.addEventListener('yardivo:master-data-changed',()=>queueMicrotask(refresh));
+window.addEventListener('yardivo:context-changed',()=>queueMicrotask(enforceScope));
+document.addEventListener('DOMContentLoaded',refresh,{once:true});
+window.addEventListener('load',refresh,{once:true});
+
+/* Watch only UI surfaces that legacy renderers may rebuild. */
+const observer=new MutationObserver(ms=>{
+ if(!isManager())return;
+ if(ms.some(m=>m.target?.closest?.('#homeMenu,#yardivoStableContextV583,#yardivoRightSettingsDrawer,.nav'))){
+   queueMicrotask(refresh);
+ }
+});
+document.addEventListener('DOMContentLoaded',()=>observer.observe(document.body,{childList:true,subtree:true}),{once:true});
+
+/* Settings page is NOT a manager destination anymore. */
 window.yardivoManagerSectionAllowed=function(section){
  if(!isManager())return null;
- return MENU.has(String(section||'')) || ['settings','myYard'].includes(String(section||''));
+ return ALLOWED.has(String(section||''));
 };
-window.YardivoManagerFinalV1={refresh,openHolidays:()=>showManagerSettings('yardivoNonWorkingDaysSettings'),openRamps:()=>showManagerSettings('yardivoManagerRampSettingsV1')};
+window.YardivoManagerFinalV2={refresh,openView,openHolidays:()=>openPopup('holidays'),openRamps:()=>openPopup('ramps'),scope:()=>({locations:assignedLocationIds(master()),warehouses:assignedWarehouseIds(master())})};
+
+refresh();
 })();
 </script>
 </body>
