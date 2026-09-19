@@ -56483,6 +56483,8 @@ if(window.__YV_RIGHT_SETTINGS_DRAWER_V583__)return;
 window.__YV_RIGHT_SETTINGS_DRAWER_V583__=true;
 
 const SOUND_KEY='yardivo_notification_sound_v1';
+const SOUND_MODE_KEY='yardivo_notification_sound_mode_v2';
+const SOUND_VOLUME_KEY='yardivo_notification_voice_volume_v583';
 const FONT_KEY='yardivo_master_font_v1';
 const THEME_KEY='yardivo_main_theme_v2';
 const PALETTE_KEY='yardivo_dark_palette_v583';
@@ -56512,8 +56514,24 @@ function closeDrawerSoon(){
 function esc(v){
   return String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 }
-function soundEnabled(){
-  try{return localStorage.getItem(SOUND_KEY)!=='off'}catch(_){return true}
+function soundMode(){
+  try{
+    const v=localStorage.getItem(SOUND_MODE_KEY);
+    if(v==='off'||v==='ai')return v;
+    if(v==='classic'||localStorage.getItem(SOUND_KEY)!=='off')return'ai';
+    return'off';
+  }catch(_){return'ai'}
+}
+function soundEnabled(){return soundMode()==='ai'}
+function soundVolume(){
+  let v=85;
+  try{v=Number(localStorage.getItem(SOUND_VOLUME_KEY)||85)}catch(_){}
+  return Math.max(0,Math.min(100,Number.isFinite(v)?v:85));
+}
+function applySoundVolume(v){
+  v=Math.max(0,Math.min(100,Number(v)||0));
+  try{localStorage.setItem(SOUND_VOLUME_KEY,String(v))}catch(_){}
+  try{window.YardivoAIVoiceNotifications?.setVolume?.(v)}catch(_){}
 }
 function fontValue(){
   let p=100;try{p=Number(localStorage.getItem(FONT_KEY)||100)}catch(_){}
@@ -56573,10 +56591,16 @@ function applyPalette(v){
   }
   updateThemePaletteVisibility();
 }
-function applySound(v){
-  try{localStorage.setItem(SOUND_KEY,v?'on':'off')}catch(_){}
-  try{document.getElementById('yardivoNotifSoundToggle')?.click?.()}catch(_){}
+function applySoundMode(v){
+  v=v==='ai'?'ai':'off';
+  try{
+    localStorage.setItem(SOUND_MODE_KEY,v);
+    localStorage.setItem(SOUND_KEY,'off');
+  }catch(_){}
+  try{window.YardivoAIVoiceNotifications?.setMode?.(v)}catch(_){}
+  try{window.YardivoNotificationSound?.setEnabled?.(false)}catch(_){}
 }
+function applySound(v){applySoundMode(v?'ai':'off')}
 function applyFont(p){
   p=Math.max(80,Math.min(150,Number(p)||100));
   try{localStorage.setItem(FONT_KEY,String(p))}catch(_){}
@@ -56608,7 +56632,7 @@ function applyTheme(theme){
   updateThemePaletteVisibility();
 }
 function statusText(type){
-  if(type==='sound')return soundEnabled()?'UKLJUČEN':'ISKLJUČEN';
+  if(type==='sound')return soundMode()==='ai'?'ON · AI GLAS':'OFF';
   if(type==='font')return fontValue()+'%';
   if(type==='theme')return themeValue()==='light'?'LIGHT':'DARK';
   if(type==='palette')return paletteLabel();
@@ -56706,12 +56730,20 @@ function openSetting(type){
   if(!title||!body)return;
 
   if(type==='sound'){
-    const on=soundEnabled();
+    const m=soundMode(),vol=soundVolume();
     title.textContent='ZVUK';
-    body.innerHTML=`<p class="yv-qsm-help">Uključi ili isključi zvuk YARDIVO notifikacija na ovom uređaju.</p><div class="yv-qsm-options">
-      ${optionButton('🔊 UKLJUČEN','on',on,'sound')}
-      ${optionButton('🔇 ISKLJUČEN','off',!on,'sound')}
-    </div>`;
+    body.innerHTML=`<p class="yv-qsm-help">Kad je uključeno, YARDIVO odmah pročita novu notifikaciju Gemini ženskim glasom.</p>
+      <div class="yv-qsm-options">
+        ${optionButton('🔊 ON','ai',m==='ai','sound')}
+        ${optionButton('🔇 OFF','off',m==='off','sound')}
+      </div>
+      <div class="yv-voice-volume">
+        <div class="yv-voice-volume-head"><strong>GLASNOĆA</strong><span data-yv-volume-label>${vol}%</span></div>
+        <input type="range" min="0" max="100" step="5" value="${vol}" data-yv-volume aria-label="Glasnoća glasovnih notifikacija">
+      </div>`;
+    const range=body.querySelector('[data-yv-volume]');
+    const label=body.querySelector('[data-yv-volume-label]');
+    range?.addEventListener('input',()=>{const v=Number(range.value)||0;if(label)label.textContent=v+'%';applySoundVolume(v)});
   }else if(type==='font'){
     const p=fontValue();
     title.textContent='VELIČINA SLOVA';
@@ -56743,7 +56775,7 @@ function openSetting(type){
     const b=e.target.closest?.('[data-yv-qsm-kind]');
     if(!b)return;
     const kind=b.dataset.yvQsmKind,val=b.dataset.yvQsmValue;
-    if(kind==='sound')applySound(val==='on');
+    if(kind==='sound')applySoundMode(val);
     else if(kind==='font')applyFont(Number(val));
     else if(kind==='theme')applyTheme(val);
     else if(kind==='palette')applyPalette(val);
@@ -56799,7 +56831,7 @@ setTimeout(ensure,120);
 
 window.YardivoQuickSettingsV583={
   open:openSetting,
-  sound:applySound,
+  sound:applySound, soundMode:applySoundMode, soundVolume:applySoundVolume,
   font:applyFont,
   theme:applyTheme,
   palette:applyPalette,
@@ -57991,7 +58023,7 @@ setTimeout(stampRole,0);
 #documentArchive .yda-row{display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(130px,.8fr) minmax(120px,.7fr) minmax(150px,.9fr) auto;gap:10px;align-items:center;border:1px solid #20384b;background:#091722;border-radius:9px;padding:11px 12px}
 #documentArchive .yda-doc{display:flex;gap:10px;align-items:center;min-width:0}.yda-folder{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;background:#0e3550;border:1px solid #4c83a7;font-size:17px}
 #documentArchive .yda-doc strong{display:block;color:#eaf3f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.yda-doc small,#documentArchive .yda-cell small{display:block;color:#7f98aa;font-size:8px;margin-bottom:3px}.yda-cell strong{font-size:10px}
-#documentArchive .yda-actions{display:flex;gap:6px;justify-content:flex-end}.yda-actions button{white-space:nowrap}
+#documentArchive .yda-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.yda-actions button{white-space:nowrap}#documentArchive .yda-top-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}#documentArchive [data-yda-delete],#documentArchive [data-yda-delete-all]{border-color:#9f3541!important;color:#ffd9dd!important;background:#2a1015!important}body.light-mode #documentArchive [data-yda-delete],body.light-mode #documentArchive [data-yda-delete-all]{background:#fff2f3!important;color:#9c2633!important;border-color:#d69aa1!important}
 #documentArchive .yda-empty{padding:28px;text-align:center;color:#8ca2b3;border:1px dashed #29485b;border-radius:9px}
 #yardivoDocumentViewerV583 [data-ydv-archive]{border-color:#4d819e!important}
 body.light-mode #documentArchive .yda-row{background:#fff;border-color:#d6e0e9}body.light-mode #documentArchive .yda-doc strong,body.light-mode #documentArchive .yda-cell strong{color:#182536}body.light-mode #documentArchive .yda-doc small,body.light-mode #documentArchive .yda-cell small{color:#63778a}body.light-mode #documentArchive .yda-folder{background:#eef6fb;border-color:#b7cddd}
@@ -58018,7 +58050,7 @@ function ensureView(){
  if(document.getElementById('documentArchive'))return;
  const main=document.querySelector('.main');if(!main)return;
  const sec=document.createElement('section');sec.id='documentArchive';sec.className='view';sec.innerHTML=`
-  <div class="section-title"><div><h1>ARHIVA DOKUMENATA</h1><p>PDF dokumenti spremljeni iz potvrđenih Supplier najava</p></div><button type="button" class="secondary" data-yda-refresh>OSVJEŽI</button></div>
+  <div class="section-title"><div><h1>ARHIVA DOKUMENATA</h1><p>PDF dokumenti spremljeni iz potvrđenih Supplier najava</p></div><div class="yda-top-actions"><button type="button" class="secondary" data-yda-refresh>OSVJEŽI</button><button type="button" class="danger" data-yda-delete-all>OBRIŠI SVE U ARHIVI</button></div></div>
   <section class="panel"><div class="panel-head"><div><h2>DOKUMENTI</h2><small id="ydaCount">0 dokumenata</small></div></div>
    <div class="yda-toolbar"><input id="ydaSearch" type="search" placeholder="Dobavljač ili dokument..."><input id="ydaDate" type="date"><select id="ydaWarehouse"><option value="">Sva skladišta</option></select><button type="button" class="secondary" data-yda-reset>RESET</button></div>
    <div id="ydaList" class="yda-list"><div class="yda-empty">Arhiva nije učitana.</div></div>
@@ -58045,10 +58077,34 @@ function render(){
  const q=String(document.getElementById('ydaSearch')?.value||'').trim().toLowerCase(),d=document.getElementById('ydaDate')?.value||'',w=document.getElementById('ydaWarehouse')?.value||'';
  const rows=archiveRows.filter(x=>(!q||String(x.supplier_name||'').toLowerCase().includes(q)||String(x.document_name||'').toLowerCase().includes(q))&&(!d||String(x.delivery_date||'')===d)&&(!w||String(x.warehouse||'')===w));
  const count=document.getElementById('ydaCount');if(count)count.textContent=rows.length+' '+(rows.length===1?'dokument':'dokumenata');
- host.innerHTML=rows.length?rows.map(x=>`<article class="yda-row" data-yda-id="${esc(x.id)}"><div class="yda-doc"><span class="yda-folder">📁</span><div><strong>${esc(x.document_name||'dokument.pdf')}</strong><small>${esc(x.supplier_name||'Dobavljač')}</small></div></div><div class="yda-cell"><small>ISPORUKA</small><strong>${esc(fmtDate(x.delivery_date))} · ${esc(String(x.appointment_time||'').slice(0,5)||'—')}</strong></div><div class="yda-cell"><small>SKLADIŠTE / RAMPA</small><strong>${esc((typeof warehouseOptionLabel==='function'?warehouseOptionLabel(x.warehouse):x.warehouse)||x.warehouse||'—')} · ${esc(x.dock||'—')}</strong></div><div class="yda-cell"><small>ARHIVIRAO</small><strong>${esc(x.archived_by_username||'—')}</strong><small>${esc(fmtDate(x.archived_at))}</small></div><div class="yda-actions"><button type="button" class="secondary" data-yda-open="${esc(x.id)}">OTVORI</button><button type="button" class="secondary" data-yda-download="${esc(x.id)}">PREUZMI</button></div></article>`).join(''):'<div class="yda-empty">Nema dokumenata za odabrane filtre.</div>';
+ host.innerHTML=rows.length?rows.map(x=>`<article class="yda-row" data-yda-id="${esc(x.id)}"><div class="yda-doc"><span class="yda-folder">📁</span><div><strong>${esc(x.document_name||'dokument.pdf')}</strong><small>${esc(x.supplier_name||'Dobavljač')}</small></div></div><div class="yda-cell"><small>ISPORUKA</small><strong>${esc(fmtDate(x.delivery_date))} · ${esc(String(x.appointment_time||'').slice(0,5)||'—')}</strong></div><div class="yda-cell"><small>SKLADIŠTE / RAMPA</small><strong>${esc((typeof warehouseOptionLabel==='function'?warehouseOptionLabel(x.warehouse):x.warehouse)||x.warehouse||'—')} · ${esc(x.dock||'—')}</strong></div><div class="yda-cell"><small>ARHIVIRAO</small><strong>${esc(x.archived_by_username||'—')}</strong><small>${esc(fmtDate(x.archived_at))}</small></div><div class="yda-actions"><button type="button" class="secondary" data-yda-open="${esc(x.id)}">OTVORI</button><button type="button" class="secondary" data-yda-download="${esc(x.id)}">PREUZMI</button><button type="button" class="danger" data-yda-delete="${esc(x.id)}">OBRIŠI</button></div></article>`).join(''):'<div class="yda-empty">Nema dokumenata za odabrane filtre.</div>';
 }
 async function fetchDoc(id){const x=await window.YardivoSupplierLiveSync.call('get_archive_document',{id});if(!x?.document_base64)throw new Error('PDF nije dostupan.');return {name:x.document_name||'dokument.pdf',size:Math.floor(String(x.document_base64).length*3/4),uploadedAt:x.archived_at||x.created_at||'',dataUrl:'data:'+(x.document_mime||'application/pdf')+';base64,'+x.document_base64}}
 async function openArchived(id,download){try{const doc=await fetchDoc(id);currentAnnouncement=null;window.__yardivoCurrentDocAnnouncementV583=null;if(download)window.YardivoSupplierAttachments?.download?.(doc);else window.YardivoSupplierAttachments?.open?.({attachmentDataUrl:doc.dataUrl,attachmentName:doc.name,attachmentSize:doc.size,attachmentUploadedAt:doc.uploadedAt});requestAnimationFrame(updateArchiveButton)}catch(e){alert('Dokument nije moguće otvoriti:\n'+(e?.message||e))}}
+async function deleteArchived(id){
+ const row=archiveRows.find(x=>String(x.id)===String(id));
+ const name=row?.document_name||'ovaj PDF';
+ if(!confirm('Obrisati \"'+name+'\" iz Arhive dokumenata?\n\nOva radnja briše arhiviranu kopiju dokumenta. Originalni PDF na Supplier najavi ostaje sačuvan.'))return;
+ try{
+   await window.YardivoSupplierLiveSync.call('delete_archive_document',{id});
+   archiveRows=archiveRows.filter(x=>String(x.id)!==String(id));render();
+   try{showYmsToast?.('success','ARHIVA DOKUMENATA','Dokument je obrisan iz arhive.',2400)}catch(_){}
+ }catch(e){alert('Brisanje dokumenta nije uspjelo:\n'+(e?.message||e))}
+}
+async function deleteAllArchived(){
+ if(!archiveRows.length){alert('Arhiva je već prazna.');return}
+ if(!confirm('Obrisati SVE dokumente iz Arhive dokumenata dostupne ovom korisniku?\n\nOriginalni PDF dokumenti na Supplier najavama ostaju sačuvani.'))return;
+ if(!confirm('Potvrdi još jednom: obrisati sve arhivirane PDF dokumente?'))return;
+ const btn=document.querySelector('[data-yda-delete-all]');
+ if(btn){btn.disabled=true;btn.textContent='BRIŠEM...'}
+ try{
+   const res=await window.YardivoSupplierLiveSync.call('delete_archive_all',{});
+   await load(true);
+   const n=Number(res?.deleted||0);
+   try{showYmsToast?.('success','ARHIVA DOKUMENATA','Obrisano iz arhive: '+n,2600)}catch(_){}
+ }catch(e){alert('Brisanje cijele arhive nije uspjelo:\n'+(e?.message||e))}
+ finally{if(btn){btn.disabled=false;btn.textContent='OBRIŠI SVE U ARHIVI'}}
+}
 function ensureArchiveButton(){
  const viewer=document.getElementById('yardivoDocumentViewerV583');if(!viewer)return null;
  const actions=viewer.querySelector('.ydv-actions');if(!actions)return null;
@@ -58063,15 +58119,17 @@ async function archiveCurrent(){
 document.addEventListener('click',e=>{
  const docBtn=e.target.closest?.('[data-yardivo-doc]');if(docBtn){try{currentAnnouncement=(Array.isArray(announcements)?announcements:[]).find(x=>String(x.id)===String(docBtn.dataset.yardivoDoc))||null;window.__yardivoCurrentDocAnnouncementV583=currentAnnouncement}catch(_){currentAnnouncement=null}requestAnimationFrame(updateArchiveButton);return}
  if(e.target.closest?.('[data-ydv-archive]')){e.preventDefault();e.stopPropagation();archiveCurrent();return}
- const o=e.target.closest?.('[data-yda-open]');if(o){openArchived(o.dataset.ydaOpen,false);return}
- const d=e.target.closest?.('[data-yda-download]');if(d){openArchived(d.dataset.ydaDownload,true);return}
+ const o=e.target.closest?.('[data-yda-open]');if(o){e.preventDefault();e.stopPropagation();openArchived(o.dataset.ydaOpen,false);return}
+ const d=e.target.closest?.('[data-yda-download]');if(d){e.preventDefault();e.stopPropagation();openArchived(d.dataset.ydaDownload,true);return}
+ const del=e.target.closest?.('[data-yda-delete]');if(del){e.preventDefault();e.stopPropagation();deleteArchived(del.dataset.ydaDelete);return}
+ const delAll=e.target.closest?.('[data-yda-delete-all]');if(delAll){e.preventDefault();e.stopPropagation();deleteAllArchived();return}
  const nav=e.target.closest?.('[data-view="documentArchive"]');if(nav){setTimeout(()=>load(true),30)}
 },true);
 window.addEventListener('yardivo:login',()=>{stampRole();ensureView();setTimeout(()=>{if(document.getElementById('documentArchive')?.classList.contains('active'))load(true)},200)});
 window.addEventListener('yardivo:view-opened',e=>{if(e?.detail?.view==='documentArchive')load(true)});
 window.addEventListener('load',()=>{stampRole();ensureView();updateArchiveButton()});
 const mo=new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes){if(n.nodeType===1&&(n.id==='yardivoDocumentViewerV583'||n.querySelector?.('#yardivoDocumentViewerV583')))requestAnimationFrame(updateArchiveButton)}});if(document.body)mo.observe(document.body,{childList:true,subtree:true});
-window.YardivoDocumentArchiveV583={load,render,archiveCurrent};
+window.YardivoDocumentArchiveV583={load,render,archiveCurrent,deleteArchived,deleteAllArchived};
 })();
 </script>
 
@@ -58143,6 +58201,48 @@ document.addEventListener('keydown',function(e){
   e.stopImmediatePropagation();
   openPdfFromButton(b);
 },true);
+})();
+</script>
+
+
+<style id="yardivo-v583-gemini-voice-volume-style">
+#yardivoQuickSettingModal .yv-voice-volume{margin-top:14px;padding:14px;border:1px solid rgba(128,145,160,.28);border-radius:12px;background:rgba(255,255,255,.035)}
+#yardivoQuickSettingModal .yv-voice-volume-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;font-size:12px;letter-spacing:.04em}
+#yardivoQuickSettingModal .yv-voice-volume-head span{font-variant-numeric:tabular-nums;opacity:.82}
+#yardivoQuickSettingModal .yv-voice-volume input[type="range"]{width:100%;accent-color:#7ea6c0;cursor:pointer}
+body.light-mode #yardivoQuickSettingModal .yv-voice-volume{background:#f7f9fb;border-color:#d7dee5}
+</style>
+
+<script id="yardivo-ai-voice-notifications-v583">
+(()=>{'use strict';
+if(window.__YARDIVO_AI_VOICE_NOTIFICATIONS_V583__)return;
+window.__YARDIVO_AI_VOICE_NOTIFICATIONS_V583__=true;
+const MODE_KEY='yardivo_notification_sound_mode_v2';
+const LEGACY_KEY='yardivo_notification_sound_v1';
+const VOLUME_KEY='yardivo_notification_voice_volume_v583';
+const EDGE='https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-voice';
+const APIKEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
+const SEEN='yardivo_ai_voice_seen_v583';
+let activeAudio=null,currentSpeakSeq=0;
+function normRole(v){v=String(v||'').toLowerCase().trim();if(v==='prijam')return'reception';if(v==='zalihe'||v.includes('zalih'))return'inventory';if(v==='voditelj'||v==='management')return'manager';if(v==='porta'||v==='portir')return'gate';return v}
+function role(){return normRole(window.currentSession?.app_role||window.currentSession?.role||document.body.dataset.yardivoRole||'')}
+function allowed(){const r=role();return !['supplier','gate',''].includes(r)}
+function mode(){try{const v=localStorage.getItem(MODE_KEY);if(v==='ai'||v==='off')return v;if(v==='classic')return'ai';return localStorage.getItem(LEGACY_KEY)==='off'?'off':'ai'}catch(_){return'ai'}}
+function volume(){let v=85;try{v=Number(localStorage.getItem(VOLUME_KEY)||85)}catch(_){};return Math.max(0,Math.min(100,Number.isFinite(v)?v:85))}
+function setVolume(v){v=Math.max(0,Math.min(100,Number(v)||0));try{localStorage.setItem(VOLUME_KEY,String(v))}catch(_){};if(activeAudio)activeAudio.volume=v/100}
+function stopCurrent(){currentSpeakSeq++;try{speechSynthesis.cancel()}catch(_){};try{activeAudio?.pause?.()}catch(_){};activeAudio=null}
+function setMode(v){v=v==='ai'?'ai':'off';try{localStorage.setItem(MODE_KEY,v);localStorage.setItem(LEGACY_KEY,'off')}catch(_){};if(v!=='ai')stopCurrent()}
+function seen(){try{return new Set(JSON.parse(sessionStorage.getItem(SEEN)||'[]'))}catch(_){return new Set()}}
+function markSeen(id){const s=seen();s.add(String(id));try{sessionStorage.setItem(SEEN,JSON.stringify([...s].slice(-300)))}catch(_){}}
+function clean(v){return String(v||'').replace(/\s+/g,' ').trim()}
+function speechText(n){const title=clean(n?.title||'Nova YARDIVO notifikacija');const body=clean(n?.body||'');return (title+(body?'. '+body:'')).slice(0,850)}
+async function token(){const direct=String(window.__yardivoSupplierAccessToken||'').trim();if(direct)return direct;const c=await window.YardivoAuth?.client?.();if(!c)throw new Error('AUTH_CLIENT');let s=null;try{s=(await c.auth.getSession())?.data?.session||null}catch(_){};if(!s?.access_token){try{s=(await c.auth.refreshSession())?.data?.session||null}catch(_){}};if(!s?.access_token)throw new Error('AUTH_SESSION');return s.access_token}
+function fallbackTTS(text,seq){return new Promise(resolve=>{try{if(!('speechSynthesis'in window)||seq!==currentSpeakSeq)return resolve();speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='hr-HR';u.rate=.94;u.pitch=1.02;u.volume=volume()/100;const vs=speechSynthesis.getVoices?.()||[];u.voice=vs.find(v=>/^hr/i.test(v.lang)&&/female|žena|lana|iva|microsoft|google/i.test(v.name))||vs.find(v=>/^hr/i.test(v.lang))||null;u.onend=u.onerror=()=>resolve();speechSynthesis.speak(u)}catch(_){resolve()}})}
+async function aiSpeak(text,seq){const t=await token();if(seq!==currentSpeakSeq)return;const r=await fetch(EDGE,{method:'POST',headers:{apikey:APIKEY,Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({text})});if(!r.ok)throw new Error('VOICE_API_'+r.status);const blob=await r.blob();if(!blob.size||seq!==currentSpeakSeq)throw new Error('VOICE_CANCELLED');const url=URL.createObjectURL(blob);try{if(seq!==currentSpeakSeq)return;activeAudio=new Audio(url);activeAudio.preload='auto';activeAudio.volume=volume()/100;await activeAudio.play();await new Promise(res=>{activeAudio.onended=activeAudio.onerror=()=>res()})}finally{URL.revokeObjectURL(url);if(seq===currentSpeakSeq)activeAudio=null}}
+async function speakNotification(n){if(mode()!=='ai'||!allowed())return;const id=String(n?.id||'');if(id&&seen().has(id))return;if(id)markSeen(id);const text=speechText(n);if(!text)return;stopCurrent();const seq=currentSpeakSeq;try{await aiSpeak(text,seq)}catch(e){if(seq!==currentSpeakSeq)return;console.warn('YARDIVO Gemini voice fallback',e);await fallbackTTS(text,seq)}}
+window.addEventListener('yardivo:visible-toast',e=>{const n=e?.detail?.notification;if(!n||mode()!=='ai'||!allowed())return;speakNotification(n).catch(()=>{})});
+window.addEventListener('load',()=>{try{localStorage.setItem(LEGACY_KEY,'off');const m=localStorage.getItem(MODE_KEY);if(m==='classic')localStorage.setItem(MODE_KEY,'ai')}catch(_){}},{once:true});
+window.YardivoAIVoiceNotifications={mode,setMode,volume,setVolume,speak:speakNotification,test:(text='YARDIVO glasovne notifikacije su uključene.')=>{stopCurrent();const seq=currentSpeakSeq;return aiSpeak(String(text),seq).catch(()=>fallbackTTS(String(text),seq))}};
 })();
 </script>
 </body>
