@@ -56455,13 +56455,38 @@ function applyPalette(v){
   v=['original','black','silver','steel'].includes(v)?v:'original';
   try{
     localStorage.setItem(PALETTE_KEY,v);
-    /* Keep legacy dark-style controller on original so custom palettes can safely override only paint, never layout. */
+    /* Keep legacy controller fixed on original; this palette layer owns paint only. */
     localStorage.setItem('yardivo_dark_look_v2','original');
     localStorage.setItem('yardivo_dark_style','original');
   }catch(_){}
   try{window.YardivoDarkPaletteIsolation?.apply?.()}catch(_){}
-  document.documentElement.dataset.yardivoDarkPalette=v;
-  document.body.dataset.yardivoDarkPalette=v;
+  const html=document.documentElement,body=document.body;
+  html.dataset.yardivoDarkPalette=v;
+  if(body) body.dataset.yardivoDarkPalette=v;
+
+  /* Hard paint variables: no dimensions/layout are touched. This defeats older theme layers
+     that were winning on specificity and made palette clicks look like they did nothing. */
+  const palettes={
+    black:{bg:'#050607',bg2:'#090a0b',surface:'#0d0f11',surface2:'#111315',line:'#30353a',text:'#f4f6f7',muted:'#9aa1a7',brand:'#5f7f98',brand2:'#3e5c73',soft:'#151a1e'},
+    silver:{bg:'#171b1f',bg2:'#1d2227',surface:'#23292e',surface2:'#2a3137',line:'#4b555e',text:'#f5f7f8',muted:'#b3bbc2',brand:'#8da3b2',brand2:'#657b8a',soft:'#30373d'},
+    steel:{bg:'#0d1216',bg2:'#12191f',surface:'#172028',surface2:'#1c2730',line:'#374852',text:'#eef3f5',muted:'#9dafb8',brand:'#5f8da6',brand2:'#3f687d',soft:'#22303a'}
+  };
+  const varNames=['--yv-bg','--yv-surface','--yv-surface2','--yv-line','--yv-text','--yv-muted','--yv-brand','--yv-brand2','--yv-soft','--bg','--bg2','--panel','--panel2','--line','--line2','--text','--muted','--theme-bg','--theme-bg-2','--theme-panel','--theme-panel-2','--theme-card','--theme-border','--theme-border-soft','--theme-text','--theme-muted'];
+  if(body){
+    if(v==='original'){
+      varNames.forEach(n=>body.style.removeProperty(n));
+      html.style.removeProperty('--yv-bg');html.style.removeProperty('--yv-surface');html.style.removeProperty('--yv-surface2');html.style.removeProperty('--yv-line');html.style.removeProperty('--yv-text');html.style.removeProperty('--yv-muted');
+    }else{
+      const p=palettes[v];
+      const vars={
+        '--yv-bg':p.bg,'--yv-surface':p.surface,'--yv-surface2':p.surface2,'--yv-line':p.line,'--yv-text':p.text,'--yv-muted':p.muted,'--yv-brand':p.brand,'--yv-brand2':p.brand2,'--yv-soft':p.soft,
+        '--bg':p.bg,'--bg2':p.bg2,'--panel':p.surface,'--panel2':p.surface2,'--line':p.line,'--line2':p.line,'--text':p.text,'--muted':p.muted,
+        '--theme-bg':p.bg,'--theme-bg-2':p.bg2,'--theme-panel':p.surface,'--theme-panel-2':p.surface2,'--theme-card':p.surface,'--theme-border':p.line,'--theme-border-soft':p.line,'--theme-text':p.text,'--theme-muted':p.muted
+      };
+      Object.entries(vars).forEach(([n,val])=>body.style.setProperty(n,val,'important'));
+      ['--yv-bg','--yv-surface','--yv-surface2','--yv-line','--yv-text','--yv-muted'].forEach(n=>html.style.setProperty(n,vars[n],'important'));
+    }
+  }
   updateThemePaletteVisibility();
 }
 function applySound(v){
@@ -57621,6 +57646,30 @@ html[data-yardivo-main-theme="light"] body.light-mode :is(.sidebar,#sidebar) :is
 /* Theme palette choice is a dark-mode-only quick setting. */
 #yardivoRightSettingsDrawer [data-yv-setting="palette"]{transition:opacity .14s ease,background-color .14s ease,border-color .14s ease}
 #yardivoQuickSettingModal .yv-theme-palette-options .yv-qsm-option{text-align:left}
+</style>
+
+
+<style id="yardivo-v583-dark-theme-palette-fix2-css">
+/* V5.8.3 palette fix 2 — paint only, never geometry/layout. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="black"] body:not(.light-mode) :is(.main,.main-content,#mainContent,.view,.app-view){background:#050607!important;color:#f4f6f7!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="silver"] body:not(.light-mode) :is(.main,.main-content,#mainContent,.view,.app-view){background:#171b1f!important;color:#f5f7f8!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="steel"] body:not(.light-mode) :is(.main,.main-content,#mainContent,.view,.app-view){background:#0d1216!important;color:#eef3f5!important}
+
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="black"] body:not(.light-mode) :is(.sidebar,#sidebar,.topbar,.top-bar,#topbar,.panel,.panel-head,.panel-body,.card,.home-menu-card,.section-card,.settings-card,.modal-content,.modal-card,.dialog-card,.data-wrap,.data-table,.performance-kpi,.ops-kpi,.control-tower-kpi,.receiving-kpi,.overview-exec-kpi,.overview-focus-card,.dash-chart-panel,.ysp-card){background:#0d0f11!important;background-image:none!important;color:#f4f6f7!important;border-color:#30353a!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="silver"] body:not(.light-mode) :is(.sidebar,#sidebar,.topbar,.top-bar,#topbar,.panel,.panel-head,.panel-body,.card,.home-menu-card,.section-card,.settings-card,.modal-content,.modal-card,.dialog-card,.data-wrap,.data-table,.performance-kpi,.ops-kpi,.control-tower-kpi,.receiving-kpi,.overview-exec-kpi,.overview-focus-card,.dash-chart-panel,.ysp-card){background:#23292e!important;background-image:none!important;color:#f5f7f8!important;border-color:#4b555e!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="steel"] body:not(.light-mode) :is(.sidebar,#sidebar,.topbar,.top-bar,#topbar,.panel,.panel-head,.panel-body,.card,.home-menu-card,.section-card,.settings-card,.modal-content,.modal-card,.dialog-card,.data-wrap,.data-table,.performance-kpi,.ops-kpi,.control-tower-kpi,.receiving-kpi,.overview-exec-kpi,.overview-focus-card,.dash-chart-panel,.ysp-card){background:#172028!important;background-image:none!important;color:#eef3f5!important;border-color:#374852!important}
+
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="black"] body:not(.light-mode) :is(input,select,textarea,table,thead,tbody,tr,th,td){background:#0d0f11!important;color:#f4f6f7!important;border-color:#30353a!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="silver"] body:not(.light-mode) :is(input,select,textarea,table,thead,tbody,tr,th,td){background:#23292e!important;color:#f5f7f8!important;border-color:#4b555e!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="steel"] body:not(.light-mode) :is(input,select,textarea,table,thead,tbody,tr,th,td){background:#172028!important;color:#eef3f5!important;border-color:#374852!important}
+
+/* Keep operational status colors intact; only neutral chrome follows selected palette. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="black"] #yardivoRightSettingsDrawer,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="black"] #yardivoQuickSettingModal .yv-qsm-card{background:#0d0f11!important;border-color:#30353a!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="silver"] #yardivoRightSettingsDrawer,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="silver"] #yardivoQuickSettingModal .yv-qsm-card{background:#23292e!important;border-color:#4b555e!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="steel"] #yardivoRightSettingsDrawer,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="steel"] #yardivoQuickSettingModal .yv-qsm-card{background:#172028!important;border-color:#374852!important}
 </style>
 
 </body>
