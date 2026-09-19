@@ -7293,6 +7293,724 @@ html[data-yardivo-main-theme="light"] #yardivoQuickSettingModal .yv-qsm-help{
   }
 }
 </style>
+
+<style id="yardivo-v583-live-yard-pro-final-css">
+/* ==========================================================
+   LIVE YARD · PROFESSIONAL OPERATIONS VIEW
+   Clean top-down control board, no game-like 3D styling.
+   ========================================================== */
+#liveYard{
+  --ly-bg:#0b141c;
+  --ly-panel:#111c25;
+  --ly-panel2:#16232d;
+  --ly-line:#2a3c49;
+  --ly-text:#e9f1f6;
+  --ly-muted:#8298a8;
+  --ly-green:#25cf6b;
+  --ly-red:#ef4d55;
+  --ly-amber:#f2ad43;
+}
+#liveYard .section-title{
+  margin-bottom:12px!important;
+}
+#liveYard .live-yard-top{
+  background:var(--ly-panel)!important;
+  border:1px solid var(--ly-line)!important;
+  border-radius:10px!important;
+  padding:10px!important;
+  box-shadow:none!important;
+}
+#liveYard .ly-strip{
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(95px,1fr))!important;
+  gap:8px!important;
+  margin:10px 0!important;
+}
+#liveYard .ly-kpi{
+  background:var(--ly-panel)!important;
+  border:1px solid var(--ly-line)!important;
+  border-radius:9px!important;
+  padding:10px 12px!important;
+  box-shadow:none!important;
+  transition:border-color .12s ease,background-color .12s ease!important;
+}
+#liveYard .ly-kpi strong{font-size:18px!important;color:#fff!important}
+#liveYard .ly-kpi small{color:var(--ly-muted)!important;letter-spacing:.05em!important}
+#liveYard .ly-layout{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 300px!important;
+  gap:12px!important;
+}
+#liveYard .ly-stage,
+#liveYard .ly-side{
+  background:var(--ly-panel)!important;
+  border:1px solid var(--ly-line)!important;
+  border-radius:11px!important;
+  box-shadow:none!important;
+}
+#liveYard .ly-stage{
+  overflow:hidden!important;
+}
+#liveYard .ly-stage-head{
+  min-height:42px!important;
+  display:flex!important;
+  align-items:center!important;
+  padding:0 14px!important;
+  background:#0e1922!important;
+  color:#9eb0bd!important;
+  border-bottom:1px solid var(--ly-line)!important;
+  font-size:9px!important;
+  font-weight:900!important;
+  letter-spacing:.04em!important;
+}
+
+/* Disable game-like 3D presentation. 2D and 3D toggle now share professional top-down language. */
+#liveYardStage[data-viewmode="2d"] .ly-yard,
+#liveYardStage[data-viewmode="3d"] .ly-yard{
+  position:relative!important;
+  min-height:600px!important;
+  overflow:hidden!important;
+  transform:none!important;
+  perspective:none!important;
+  background:
+    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px),
+    #0b151d!important;
+  background-size:28px 28px!important;
+  border:0!important;
+}
+
+/* Facility */
+#liveYard .ly-warehouse{
+  position:absolute!important;
+  left:5%!important;right:5%!important;top:4%!important;height:74px!important;
+  background:#17232c!important;
+  border:1px solid #314754!important;
+  border-radius:8px!important;
+  box-shadow:none!important;
+  transform:none!important;
+}
+#liveYard .ly-warehouse-title{
+  color:#c8d5de!important;
+  font-size:10px!important;
+  font-weight:950!important;
+  letter-spacing:.06em!important;
+}
+
+/* Dock row */
+#liveYard .ly-docks{
+  position:absolute!important;
+  left:8%!important;right:8%!important;top:14%!important;
+  height:72px!important;
+  display:grid!important;
+  gap:9px!important;
+  z-index:8!important;
+}
+#liveYard .ly-dock{
+  position:relative!important;
+  min-height:58px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border-radius:8px!important;
+  font-size:11px!important;
+  font-weight:1000!important;
+  letter-spacing:.04em!important;
+  color:#eaf7ef!important;
+  background:#103322!important;
+  border:2px solid #22b95e!important;
+  box-shadow:0 0 0 1px rgba(37,207,107,.08)!important;
+  animation:yvDockFreePulse 1.8s ease-in-out infinite!important;
+  transform:none!important;
+}
+#liveYard .ly-dock::after{
+  content:"SLOBODNA";
+  position:absolute;
+  bottom:5px;left:0;right:0;
+  color:#68e79b;
+  font-size:6px;
+  font-weight:1000;
+  letter-spacing:.09em;
+}
+#liveYard .ly-dock.busy{
+  color:#fff!important;
+  background:#3a1519!important;
+  border-color:#e84b53!important;
+  box-shadow:0 0 0 1px rgba(239,77,85,.12)!important;
+  animation:yvDockBusyPulse 1.35s ease-in-out infinite!important;
+}
+#liveYard .ly-dock.busy::after{
+  content:"ZAUZETA";
+  color:#ff8c92;
+}
+#liveYard .ly-dock .dock-timer{
+  position:absolute!important;
+  top:5px!important;right:7px!important;
+  color:#ffb6ba!important;
+  font-size:6px!important;
+}
+@keyframes yvDockFreePulse{
+  0%,100%{box-shadow:0 0 0 1px rgba(37,207,107,.08),0 0 0 rgba(37,207,107,0)}
+  50%{box-shadow:0 0 0 1px rgba(37,207,107,.22),0 0 16px rgba(37,207,107,.22)}
+}
+@keyframes yvDockBusyPulse{
+  0%,100%{box-shadow:0 0 0 1px rgba(239,77,85,.10),0 0 0 rgba(239,77,85,0)}
+  50%{box-shadow:0 0 0 1px rgba(239,77,85,.24),0 0 15px rgba(239,77,85,.20)}
+}
+
+/* Operational road / gate / parking zone */
+#liveYard .ly-road{
+  position:absolute!important;
+  left:7%!important;right:7%!important;top:34%!important;height:30%!important;
+  background:#18232a!important;
+  border:1px solid #2f404a!important;
+  border-radius:10px!important;
+  box-shadow:none!important;
+}
+#liveYard .ly-road::after{
+  content:"";
+  position:absolute;left:4%;right:4%;top:50%;height:2px;
+  background:repeating-linear-gradient(90deg,#66747d 0 20px,transparent 20px 38px);
+  opacity:.6;
+}
+#liveYard .ly-gate{
+  position:absolute!important;
+  left:5%!important;bottom:7%!important;
+  width:128px!important;height:44px!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  border:1px solid #3f6075!important;
+  border-radius:8px!important;
+  background:#10202c!important;
+  color:#9fc2d8!important;
+  font-size:8px!important;font-weight:1000!important;
+  box-shadow:none!important;
+}
+#liveYard .ly-wait-zone{
+  position:absolute!important;
+  right:6%!important;bottom:7%!important;
+  width:36%!important;height:126px!important;
+  border:1px dashed #526774!important;
+  border-radius:9px!important;
+  background:#101a21!important;
+  color:#8fa2af!important;
+  box-shadow:none!important;
+}
+#liveYard .ly-wait-zone::before{
+  content:"PARKING / BUFFER";
+  position:absolute;left:10px;top:8px;
+  font-size:7px;font-weight:1000;letter-spacing:.08em;color:#93a8b6;
+}
+#liveYard .ly-wait-zone>span{display:none!important}
+
+/* Trucks become clean operations markers instead of game pieces. */
+#liveYard .ly-truck{
+  min-width:132px!important;
+  max-width:170px!important;
+  min-height:48px!important;
+  padding:8px 10px!important;
+  border-radius:8px!important;
+  background:#172631!important;
+  border:1px solid #3a5364!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.18)!important;
+  color:#eaf1f5!important;
+  transform:none!important;
+  transition:border-color .12s ease,background-color .12s ease!important;
+  z-index:20!important;
+}
+#liveYard .ly-truck::before{
+  content:"";
+  position:absolute;left:0;top:0;bottom:0;width:4px;
+  border-radius:8px 0 0 8px;
+  background:#6f8fa3;
+}
+#liveYard .ly-truck strong{
+  display:block!important;
+  font-size:8px!important;
+  font-weight:1000!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+#liveYard .ly-truck small{
+  display:block!important;
+  margin-top:3px!important;
+  color:#9aafbd!important;
+  font-size:7px!important;
+  white-space:nowrap!important;
+}
+#liveYard .ly-truck.late{border-color:#e69b3a!important}
+#liveYard .ly-truck.late::before{background:#e69b3a!important}
+#liveYard .ly-truck.incident{border-color:#e84b53!important}
+#liveYard .ly-truck.incident::before{background:#e84b53!important}
+#liveYard .ly-truck.done{opacity:.5!important}
+
+/* Planned route from parked truck to dock. */
+#liveYard .yv-yard-route-layer{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index:14;
+  overflow:visible;
+}
+#liveYard .yv-yard-route-path{
+  fill:none;
+  stroke:#57a7d8;
+  stroke-width:3;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-dasharray:9 8;
+  opacity:.92;
+  animation:yvRouteDash 1.35s linear infinite;
+}
+#liveYard .yv-yard-route-label{
+  position:absolute;
+  z-index:18;
+  pointer-events:none;
+  padding:4px 7px;
+  border:1px solid #447795;
+  border-radius:6px;
+  background:#102638;
+  color:#a9d8f6;
+  font-size:6px;
+  font-weight:1000;
+  letter-spacing:.05em;
+  white-space:nowrap;
+}
+@keyframes yvRouteDash{to{stroke-dashoffset:-34}}
+
+/* Side details */
+#liveYard .ly-side{overflow:hidden!important}
+#liveYard .ly-side-head{
+  padding:13px 14px!important;
+  background:#0e1922!important;
+  border-bottom:1px solid var(--ly-line)!important;
+}
+#liveYard .ly-side-head h3{font-size:10px!important;color:#e6eef3!important}
+#liveYard .ly-side-head small{color:#7f95a5!important}
+#liveYard .ly-detail{padding:14px!important}
+#liveYard .ly-detail-grid{
+  display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;
+}
+#liveYard .ly-detail-grid>div,
+#liveYard .ly-next-row{
+  background:#121f29!important;
+  border:1px solid #293d4b!important;
+  border-radius:7px!important;
+  padding:9px!important;
+}
+
+/* Light theme: professional white control board. */
+html[data-yardivo-main-theme="light"] #liveYard{
+  --ly-bg:#f3f6f9;--ly-panel:#fff;--ly-panel2:#f7fafc;--ly-line:#d6e1e9;--ly-text:#183247;--ly-muted:#6c8191;
+}
+html[data-yardivo-main-theme="light"] #liveYard .live-yard-top,
+html[data-yardivo-main-theme="light"] #liveYard .ly-kpi,
+html[data-yardivo-main-theme="light"] #liveYard .ly-stage,
+html[data-yardivo-main-theme="light"] #liveYard .ly-side,
+html[data-yardivo-main-theme="light"] #liveYard .ly-stage-head,
+html[data-yardivo-main-theme="light"] #liveYard .ly-side-head{
+  background:#fff!important;color:#183247!important;border-color:#d6e1e9!important;
+}
+html[data-yardivo-main-theme="light"] #liveYardStage .ly-yard{
+  background:
+    linear-gradient(rgba(32,61,80,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(32,61,80,.035) 1px,transparent 1px),
+    #f4f7f9!important;
+  background-size:28px 28px!important;
+}
+html[data-yardivo-main-theme="light"] #liveYard .ly-warehouse{background:#eef3f6!important;border-color:#c8d5de!important}
+html[data-yardivo-main-theme="light"] #liveYard .ly-warehouse-title{color:#29465a!important}
+html[data-yardivo-main-theme="light"] #liveYard .ly-road{background:#e9eef1!important;border-color:#cbd7df!important}
+html[data-yardivo-main-theme="light"] #liveYard .ly-wait-zone{background:#f7f9fa!important;border-color:#aebec9!important;color:#637887!important}
+html[data-yardivo-main-theme="light"] #liveYard .ly-gate{background:#f1f6f9!important;color:#41657c!important;border-color:#bfd0dc!important}
+html[data-yardivo-main-theme="light"] #liveYard .ly-truck{
+  background:#fff!important;color:#1d374a!important;border-color:#aebfcb!important;box-shadow:0 4px 14px rgba(27,56,76,.08)!important;
+}
+html[data-yardivo-main-theme="light"] #liveYard .ly-truck small{color:#657d8d!important}
+html[data-yardivo-main-theme="light"] #liveYard .ly-detail-grid>div,
+html[data-yardivo-main-theme="light"] #liveYard .ly-next-row{background:#f7fafc!important;border-color:#d6e1e9!important}
+
+@media(max-width:1050px){
+  #liveYard .ly-layout{grid-template-columns:1fr!important}
+  #liveYard .ly-side{min-height:220px}
+}
+</style>
+
+<style id="yardivo-v583-live-yard-3d-twin-css">
+/* ==========================================================
+   YARDIVO LIVE YARD · 3D DIGITAL TWIN ENGINE
+   Original visual language: professional isometric YMS view.
+   ========================================================== */
+
+#liveYardStage[data-viewmode="3d"]{
+  background:#0b141c!important;
+}
+#liveYardStage[data-viewmode="3d"] #lyCanvas{
+  min-height:690px!important;
+  background:#08121a!important;
+  overflow:hidden!important;
+  position:relative!important;
+}
+.yv3-scene{
+  position:relative;
+  min-height:690px;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(38,105,147,.18),transparent 36%),
+    linear-gradient(180deg,#0b1822 0%,#071018 100%);
+  color:#e9f1f6;
+  perspective:1500px;
+  isolation:isolate;
+}
+.yv3-hud{
+  position:absolute;left:18px;right:18px;top:16px;
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  z-index:50;pointer-events:none;
+}
+.yv3-hud-left,.yv3-hud-right{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.yv3-title{
+  display:grid;gap:3px;
+  padding:10px 13px;
+  border:1px solid #294252;
+  border-radius:9px;
+  background:rgba(8,20,29,.88);
+  backdrop-filter:blur(8px);
+}
+.yv3-title strong{font-size:10px;color:#fff;letter-spacing:.08em}
+.yv3-title small{font-size:7px;color:#7f9aaa}
+.yv3-chip{
+  min-height:34px;padding:0 10px;border-radius:8px;
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(9,23,33,.90);
+  border:1px solid #294252;
+  color:#a8bbc8;font-size:7px;font-weight:950;
+  backdrop-filter:blur(8px);
+}
+.yv3-chip b{font-size:11px;color:#fff}
+.yv3-live i{
+  width:7px;height:7px;border-radius:50%;background:#2dd36f;
+  box-shadow:0 0 12px rgba(45,211,111,.65);
+  animation:yv3Live 1.5s ease-in-out infinite;
+}
+@keyframes yv3Live{50%{opacity:.45;box-shadow:0 0 4px rgba(45,211,111,.25)}}
+
+/* Camera/world */
+.yv3-camera{
+  position:absolute;
+  left:50%;
+  top:51%;
+  width:1030px;
+  height:610px;
+  transform:translate(-50%,-50%);
+  perspective:1400px;
+  z-index:5;
+}
+.yv3-world{
+  position:absolute;
+  left:50%;top:50%;
+  width:900px;height:500px;
+  transform-style:preserve-3d;
+  transform:translate(-50%,-45%) rotateX(58deg) rotateZ(-29deg);
+  transform-origin:center center;
+}
+.yv3-ground{
+  position:absolute;inset:0;
+  transform-style:preserve-3d;
+  border:1px solid #314652;
+  border-radius:16px;
+  background:
+    linear-gradient(rgba(255,255,255,.017) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.017) 1px,transparent 1px),
+    #18242b;
+  background-size:28px 28px;
+  box-shadow:0 52px 90px rgba(0,0,0,.48),inset 0 0 65px rgba(0,0,0,.18);
+}
+
+/* Roads */
+.yv3-road{
+  position:absolute;
+  background:#242f34;
+  border:1px solid #34444c;
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.008);
+}
+.yv3-road.main{left:6%;right:6%;top:55%;height:21%;border-radius:8px}
+.yv3-road.spine{left:64%;top:12%;width:13%;height:72%;border-radius:8px}
+.yv3-road.main::after{
+  content:"";position:absolute;left:3%;right:3%;top:50%;height:2px;
+  background:repeating-linear-gradient(90deg,#c4ac50 0 18px,transparent 18px 39px);
+  opacity:.55;
+}
+.yv3-road.spine::after{
+  content:"";position:absolute;top:4%;bottom:4%;left:50%;width:2px;
+  background:repeating-linear-gradient(180deg,#c4ac50 0 18px,transparent 18px 39px);
+  opacity:.55;
+}
+
+/* Parking */
+.yv3-parking{
+  position:absolute;
+  left:4%;top:15%;width:49%;height:31%;
+  transform:translateZ(2px);
+  border:1px solid #344953;
+  border-radius:8px;
+  background:#1d292f;
+  padding:8px;
+}
+.yv3-parking-title{
+  position:absolute;left:9px;top:7px;
+  font-size:7px;font-weight:1000;color:#849aa6;letter-spacing:.08em;
+}
+.yv3-parking-grid{
+  position:absolute;left:8px;right:8px;top:27px;bottom:8px;
+  display:grid;grid-template-columns:repeat(8,1fr);gap:5px;
+}
+.yv3-slot{
+  position:relative;
+  border:1px solid #566a74;
+  border-top:0;
+  background:rgba(255,255,255,.01);
+}
+.yv3-slot::after{
+  content:attr(data-slot);
+  position:absolute;left:3px;bottom:2px;
+  font-size:5px;color:#617984;font-weight:900;
+}
+
+/* Gate */
+.yv3-gate{
+  position:absolute;
+  left:5%;bottom:7%;
+  width:115px;height:42px;
+  transform:translateZ(5px);
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid #40667c;
+  border-radius:7px;
+  background:#10202a;
+  color:#8fb9cf;
+  font-size:7px;font-weight:1000;letter-spacing:.08em;
+}
+
+/* Warehouse 3D volume */
+.yv3-building{
+  position:absolute;
+  right:4%;top:6%;
+  width:27%;height:43%;
+  transform-style:preserve-3d;
+  transform:translateZ(10px);
+}
+.yv3-building-front{
+  position:absolute;left:0;right:0;top:14%;bottom:0;
+  background:linear-gradient(180deg,#38474e,#29363c);
+  border:1px solid #56666d;
+  transform:translateZ(34px);
+  box-shadow:9px 12px 18px rgba(0,0,0,.24);
+}
+.yv3-building-side{
+  position:absolute;right:-38px;top:14%;width:38px;bottom:0;
+  transform-origin:left center;
+  transform:rotateY(90deg) translateZ(34px);
+  background:#222e34;border:1px solid #45565e;
+}
+.yv3-building-roof{
+  position:absolute;left:0;right:0;top:0;height:55px;
+  transform-origin:bottom center;
+  transform:rotateX(90deg) translateZ(21px);
+  background:linear-gradient(145deg,#7b898e,#515f65);
+  border:1px solid #8f9ca1;
+}
+.yv3-building-name{
+  position:absolute;left:0;right:0;top:24%;
+  transform:translateZ(38px) rotateX(-58deg) rotateZ(29deg);
+  text-align:center;
+  color:#dce6ea;font-size:8px;font-weight:1000;letter-spacing:.07em;
+  pointer-events:none;
+}
+
+/* Docks attached to warehouse face */
+.yv3-docks{
+  position:absolute;
+  right:31%;top:12%;
+  width:11%;height:39%;
+  display:grid;
+  gap:5px;
+  transform:translateZ(12px);
+}
+.yv3-dock{
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+  min-height:0;
+  border-radius:3px;
+  color:#eaf6ee;
+  font-size:6px;font-weight:1000;
+  background:#103522;
+  border:2px solid #26c968;
+  box-shadow:0 0 12px rgba(38,201,104,.16),inset 0 -5px 0 rgba(0,0,0,.15);
+  animation:yv3DockFree 1.7s ease-in-out infinite;
+}
+.yv3-dock::before{
+  content:"";position:absolute;left:4px;top:4px;width:6px;height:6px;border-radius:50%;
+  background:#38e27a;box-shadow:0 0 9px rgba(56,226,122,.9);
+}
+.yv3-dock.busy{
+  background:#3b1519;
+  border-color:#ef5058;
+  color:#fff;
+  animation:yv3DockBusy 1.35s ease-in-out infinite;
+}
+.yv3-dock.busy::before{
+  background:#ff626a;box-shadow:0 0 9px rgba(255,98,106,.9);
+}
+.yv3-dock.closed{
+  background:#272c30;border-color:#69747a;color:#98a4aa;animation:none;
+}
+.yv3-dock.closed::before{background:#77838a;box-shadow:none}
+@keyframes yv3DockFree{50%{box-shadow:0 0 20px rgba(38,201,104,.28),inset 0 -5px 0 rgba(0,0,0,.15)}}
+@keyframes yv3DockBusy{50%{box-shadow:0 0 20px rgba(239,80,88,.28),inset 0 -5px 0 rgba(0,0,0,.15)}}
+
+/* Trucks */
+.yv3-truck{
+  position:absolute;
+  width:76px;height:25px;
+  transform-style:preserve-3d;
+  transform:translateZ(12px);
+  z-index:15;
+  cursor:pointer;
+}
+.yv3-trailer{
+  position:absolute;left:0;top:2px;width:54px;height:21px;
+  border:1px solid #e1e7ea;
+  border-radius:2px;
+  background:linear-gradient(145deg,#f3f5f6,#aebbc1);
+  box-shadow:6px 7px 9px rgba(0,0,0,.20);
+}
+.yv3-trailer::after{
+  content:"YARDIVO";
+  position:absolute;left:5px;top:7px;
+  color:#34546a;font-size:5px;font-weight:1000;letter-spacing:.06em;
+}
+.yv3-cab{
+  position:absolute;right:1px;top:6px;width:22px;height:16px;
+  border-radius:2px 5px 4px 2px;
+  border:1px solid #dce7eb;
+  background:linear-gradient(145deg,#d9e5ea,#829aa6);
+  box-shadow:5px 6px 8px rgba(0,0,0,.22);
+}
+.yv3-cab::before{
+  content:"";position:absolute;left:4px;top:2px;width:11px;height:5px;
+  background:#17384a;border-radius:1px;
+}
+.yv3-wheel{
+  position:absolute;bottom:-3px;width:7px;height:7px;border-radius:50%;
+  background:#0d1113;border:2px solid #303b40;
+}
+.yv3-wheel.w1{left:8px}.yv3-wheel.w2{left:40px}.yv3-wheel.w3{right:4px}
+.yv3-truck-tag{
+  position:absolute;
+  left:50%;bottom:29px;
+  min-width:90px;
+  transform:translateX(-50%) translateZ(18px) rotateX(-58deg) rotateZ(29deg);
+  padding:4px 6px;
+  border:1px solid #395569;
+  border-radius:5px;
+  background:rgba(8,20,29,.94);
+  color:#eaf2f6;
+  font-size:5px;font-weight:900;
+  text-align:center;white-space:nowrap;
+  pointer-events:none;
+}
+.yv3-truck-tag b{display:block;font-size:6px;color:#fff}
+.yv3-truck-tag span{display:block;margin-top:1px;color:#89a8ba}
+.yv3-truck.at-dock .yv3-trailer{border-color:#ff7c82}
+.yv3-truck.parked .yv3-trailer{border-color:#d4a554}
+.yv3-truck.gate .yv3-trailer{border-color:#5ca9d7}
+
+/* Route guidance */
+.yv3-route{
+  position:absolute;height:4px;border-radius:999px;
+  background:#55b8ef;
+  box-shadow:0 0 9px rgba(85,184,239,.55);
+  transform-origin:left center;
+  transform:translateZ(8px);
+  z-index:10;
+}
+.yv3-route::before{
+  content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.9) 0 8px,transparent 8px 15px);
+  opacity:.8;
+  animation:yv3RouteFlow .85s linear infinite;
+}
+.yv3-route::after{
+  content:"";position:absolute;right:-10px;top:-5px;
+  border-left:12px solid #55b8ef;border-top:7px solid transparent;border-bottom:7px solid transparent;
+  filter:drop-shadow(0 0 5px rgba(85,184,239,.6));
+}
+@keyframes yv3RouteFlow{to{background-position:15px 0}}
+.yv3-route-label{
+  position:absolute;z-index:18;
+  transform:translateZ(12px) rotateX(-58deg) rotateZ(29deg);
+  padding:4px 6px;border-radius:5px;
+  background:#0d2c40;border:1px solid #3d83ad;
+  color:#a9ddfb;font-size:5px;font-weight:1000;white-space:nowrap;
+}
+
+/* Detail floating panel */
+.yv3-detail{
+  position:absolute;right:18px;bottom:18px;
+  width:235px;min-height:115px;
+  z-index:45;
+  border:1px solid #2b4353;
+  border-radius:10px;
+  background:rgba(8,20,29,.92);
+  backdrop-filter:blur(9px);
+  padding:12px;
+  box-shadow:0 16px 34px rgba(0,0,0,.22);
+}
+.yv3-detail h4{margin:0 0 8px;font-size:9px;color:#fff}
+.yv3-detail p{margin:5px 0;font-size:7px;color:#9db0bc}
+.yv3-detail b{color:#e9f1f6}
+.yv3-empty{color:#78909e;font-size:7px;line-height:1.5}
+
+/* Light mode */
+html[data-yardivo-main-theme="light"] .yv3-scene{
+  background:linear-gradient(180deg,#edf3f7,#dfe8ee);
+  color:#1d3748;
+}
+html[data-yardivo-main-theme="light"] .yv3-title,
+html[data-yardivo-main-theme="light"] .yv3-chip,
+html[data-yardivo-main-theme="light"] .yv3-detail{
+  background:rgba(255,255,255,.93);
+  border-color:#c4d3dd;
+  color:#1d3748;
+}
+html[data-yardivo-main-theme="light"] .yv3-title strong,
+html[data-yardivo-main-theme="light"] .yv3-chip b,
+html[data-yardivo-main-theme="light"] .yv3-detail h4,
+html[data-yardivo-main-theme="light"] .yv3-detail b{color:#183247!important}
+html[data-yardivo-main-theme="light"] .yv3-ground{
+  background:
+    linear-gradient(rgba(30,55,70,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(30,55,70,.025) 1px,transparent 1px),
+    #d9e2e7;
+  background-size:28px 28px;
+  border-color:#aebfc9;
+  box-shadow:0 40px 75px rgba(37,62,78,.20),inset 0 0 55px rgba(255,255,255,.28);
+}
+html[data-yardivo-main-theme="light"] .yv3-road{background:#c7d0d5;border-color:#abbac2}
+html[data-yardivo-main-theme="light"] .yv3-parking{background:#d3dde2;border-color:#aebfc8}
+html[data-yardivo-main-theme="light"] .yv3-gate{background:#eef5f8;color:#365c73;border-color:#a8bdca}
+
+@media(max-width:1100px){
+  .yv3-camera{transform:translate(-50%,-50%) scale(.82)}
+}
+@media(max-width:850px){
+  .yv3-camera{transform:translate(-50%,-50%) scale(.65)}
+  .yv3-detail{width:205px}
+}
+</style>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -54940,7 +55658,7 @@ window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-reception-ui-scope-smooth';
 
 
 
-<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-right-settings-drawer-final';</script>
+<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-live-yard-3d-twin-final';</script>
 <script id="yardivo-v583-sidebar-hover-drawer-js">
 (()=>{'use strict';
 if(window.__YV_SIDEBAR_HOVER_DRAWER_V583__)return;
@@ -55445,6 +56163,161 @@ window.YardivoQuickSettingsV583={
   theme:applyTheme,
   refresh:updateStatuses
 };
+})();
+</script>
+
+
+
+<script id="yardivo-v583-live-yard-3d-twin-js">
+(()=>{'use strict';
+if(window.__YV_LIVE_YARD_3D_TWIN__)return;
+window.__YV_LIVE_YARD_3D_TWIN__=true;
+
+let selectedId=null;
+let renderTimer=0;
+
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function data(){try{return Array.isArray(announcements)?announcements:[]}catch(_){return[]}}
+function wh(){return document.getElementById('lyWarehouse')?.value||window.yardivoCanonicalWarehouseV583?.()||window.activeWarehouse||''}
+function date(){return document.getElementById('lyDate')?.value||window.yardivoLocalDateV583?.()||new Date().toISOString().slice(0,10)}
+function master(){
+  try{return JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){return{}}
+}
+function whCfg(){
+  const id=wh(),m=master(),w=(m.warehouses||[]).find(x=>String(x.id)===String(id));
+  let ramps=Number(w?.ramps||w?.ramp_count||0);
+  try{if(!ramps)ramps=Number(WAREHOUSES?.[id]?.ramps||0)}catch(_){}
+  return {id,name:w?.name||id,ramps:Math.max(1,ramps||6)};
+}
+function locked(r){
+  try{return !!window.YardivoRampConfig?.isLocked?.(wh(),r)}catch(_){return false}
+}
+function state(a){
+  const s=String(a?.status||'').toLowerCase();
+  if(a?.receivedAt||a?.rejectedAt||/zaprim|odbij|zavr|izasao|izašao/.test(s))return'done';
+  if(a?.dockArrivalAt||/rampi/.test(s))return'dock';
+  if(a?.yardArrivalAt||/dvori|parking|parkiran|buffer|ceka|čeka/.test(s))return'yard';
+  if(a?.gateCheckedAt||a?.gateEntryApprovedAt||a?.actualDate||a?.actualTime||/ulaz|port/.test(s))return'gate';
+  return'incoming';
+}
+function plate(a){
+  try{return effectivePlate(a)||a?.plannedPlate||a?.arrivalPlate||'—'}catch(_){return a?.plannedPlate||a?.arrivalPlate||'—'}
+}
+function list(){
+  const W=wh(),D=date();
+  return data().filter(a=>String(a.warehouse||window.yardivoCanonicalWarehouseV583?.()||'')===String(W)&&String(a.date||'')===String(D));
+}
+function pos(a,i,ramps){
+  const s=state(a),dock=Math.max(1,Math.min(ramps,Number(a?.dock||1)));
+  if(s==='dock'){
+    const y=15 + ((dock-.5)/ramps)*34;
+    return {x:60,y,cls:'at-dock',rot:0};
+  }
+  if(s==='yard'){
+    const slot=i%8,row=Math.floor(i/8)%2;
+    return {x:8+slot*5.55,y:25+row*11,cls:'parked',rot:0};
+  }
+  if(s==='gate'){
+    return {x:9+(i%3)*10,y:80-Math.floor(i/3)*7,cls:'gate',rot:0};
+  }
+  if(s==='done'){
+    return {x:73+(i%3)*8,y:78,cls:'done',rot:0};
+  }
+  return {x:3+(i%2)*8,y:66+Math.floor(i/2)*8,cls:'incoming',rot:0};
+}
+function truckHtml(a,i,ramps){
+  const p=pos(a,i,ramps),s=state(a);
+  return `<div class="yv3-truck ${p.cls}" data-yv3-id="${esc(a.id)}" style="left:${p.x}%;top:${p.y}%">
+    <div class="yv3-trailer"></div><div class="yv3-cab"></div>
+    <i class="yv3-wheel w1"></i><i class="yv3-wheel w2"></i><i class="yv3-wheel w3"></i>
+    <div class="yv3-truck-tag"><b>${esc(a.supplier||'DOBAVLJAČ')}</b><span>${esc(plate(a))} · ${s==='yard'&&a.dock?'PLAN R'+a.dock:s==='dock'?'R'+(a.dock||'—'):s.toUpperCase()}</span></div>
+  </div>`;
+}
+function routeHtml(a,i,ramps){
+  if(state(a)!=='yard'||!a.dock)return'';
+  const p=pos(a,i,ramps);
+  const dock=Math.max(1,Math.min(ramps,Number(a.dock||1)));
+  const target={x:64,y:15+((dock-.5)/ramps)*34};
+  const dx=target.x-p.x,dy=target.y-p.y;
+  const len=Math.sqrt(dx*dx+dy*dy);
+  const ang=Math.atan2(dy,dx)*180/Math.PI;
+  return `<div class="yv3-route" style="left:${p.x+4}%;top:${p.y+3}%;width:${len}%;transform:translateZ(8px) rotate(${ang}deg)"></div>
+          <div class="yv3-route-label" style="left:${(p.x+target.x)/2}%;top:${(p.y+target.y)/2}%">PARKING → R${dock}</div>`;
+}
+function detailHtml(items){
+  const a=items.find(x=>String(x.id)===String(selectedId));
+  if(!a)return `<h4>OPERATIVNI DETALJ</h4><div class="yv3-empty">Klikni kamion za detalje.<br>Plava ruta prikazuje planirano kretanje s parkinga prema dodijeljenoj rampi.</div>`;
+  const s=state(a);
+  return `<h4>${esc(a.supplier||'DOBAVLJAČ')}</h4>
+    <p><b>STATUS</b> · ${esc(s==='yard'?'PARKING / ČEKANJE':s==='dock'?'NA RAMPI':s==='gate'?'NA PORTI':s.toUpperCase())}</p>
+    <p><b>REGISTRACIJA</b> · ${esc(plate(a))}</p>
+    <p><b>TERMIN</b> · ${esc(a.date||'')} ${esc(a.time||'—')}</p>
+    <p><b>PLANIRANA RAMPA</b> · ${a.dock?'R'+esc(a.dock):'—'}</p>`;
+}
+function render3d(){
+  const stage=document.getElementById('liveYardStage');
+  const canvas=document.getElementById('lyCanvas');
+  if(!stage||!canvas||stage.dataset.viewmode!=='3d')return;
+  const c=whCfg(),items=list(),ramps=c.ramps;
+  const counts={incoming:0,gate:0,yard:0,dock:0,done:0};
+  items.forEach(a=>counts[state(a)]++);
+
+  let h=`<div class="yv3-scene">
+    <div class="yv3-hud">
+      <div class="yv3-hud-left">
+        <div class="yv3-title"><strong>YARDIVO · 3D DIGITAL TWIN</strong><small>${esc(c.name)} · ${esc(date())}</small></div>
+        <div class="yv3-chip"><b>${items.length}</b> NAJAVA</div>
+        <div class="yv3-chip"><b>${counts.yard}</b> PARKING</div>
+        <div class="yv3-chip"><b>${counts.dock}</b> NA RAMPI</div>
+      </div>
+      <div class="yv3-hud-right"><div class="yv3-chip yv3-live"><i></i> LIVE</div></div>
+    </div>
+    <div class="yv3-camera"><div class="yv3-world"><div class="yv3-ground">
+      <div class="yv3-road main"></div><div class="yv3-road spine"></div>
+      <div class="yv3-parking"><div class="yv3-parking-title">PARKING / BUFFER ZONA</div><div class="yv3-parking-grid">
+        ${Array.from({length:16},(_,i)=>`<div class="yv3-slot" data-slot="P${i+1}"></div>`).join('')}
+      </div></div>
+      <div class="yv3-gate">ULAZ / IZLAZ</div>
+      <div class="yv3-building"><div class="yv3-building-front"></div><div class="yv3-building-side"></div><div class="yv3-building-roof"></div><div class="yv3-building-name">${esc(c.name)}</div></div>
+      <div class="yv3-docks" style="grid-template-rows:repeat(${ramps},1fr)">`;
+
+  for(let r=1;r<=ramps;r++){
+    const busy=items.some(a=>Number(a.dock)===r&&state(a)==='dock');
+    h+=`<div class="yv3-dock ${busy?'busy':''} ${locked(r)?'closed':''}" data-yv3-dock="${r}">R${r}</div>`;
+  }
+  h+=`</div>`;
+  items.forEach((a,i)=>{h+=routeHtml(a,i,ramps)});
+  items.forEach((a,i)=>{h+=truckHtml(a,i,ramps)});
+  h+=`</div></div></div><div class="yv3-detail">${detailHtml(items)}</div></div>`;
+  canvas.innerHTML=h;
+}
+function schedule(ms=0){clearTimeout(renderTimer);renderTimer=setTimeout(render3d,ms)}
+function ensureButton(){
+  const b=document.querySelector('#liveYard [data-ly-view="3d"]');
+  if(b){b.textContent='3D DIGITAL TWIN';b.title='3D digital twin dvorišta'}
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest?.('#liveYard [data-ly-view="3d"]');
+  if(b){setTimeout(()=>{const s=document.getElementById('liveYardStage');if(s)s.dataset.viewmode='3d';ensureButton();render3d()},20);return}
+  const b2=e.target.closest?.('#liveYard [data-ly-view="2d"]');
+  if(b2)return;
+  const t=e.target.closest?.('.yv3-truck[data-yv3-id]');
+  if(t){selectedId=t.dataset.yv3Id;render3d()}
+},true);
+document.addEventListener('change',e=>{
+  if(['lyWarehouse','lyDate'].includes(e.target?.id))schedule(40);
+},true);
+window.addEventListener('yardivo:data-synced',()=>schedule(80));
+window.addEventListener('yardivo:login',()=>setTimeout(()=>{ensureButton();schedule(0)},100));
+window.addEventListener('resize',()=>schedule(50),{passive:true});
+document.addEventListener('click',e=>{
+  if(e.target?.closest?.('[data-view="liveYard"],[data-home-target="liveYard"]'))setTimeout(()=>{ensureButton();schedule(0)},80);
+},true);
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureButton,{once:true});else ensureButton();
+window.addEventListener('load',()=>setTimeout(ensureButton,1700),{once:true});
+
+window.YardivoLiveYard3DTwinV583={render:render3d};
 })();
 </script>
 </body>
