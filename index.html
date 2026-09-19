@@ -8459,6 +8459,20 @@ body.yv-minimap-open #yardivoMiniMapDock{
   #yardivoSmartAssistant{width:min(430px,46vw)!important}
 }
 </style>
+
+<style id="yardivo-v583-real-ai-assistant-final-css">
+#yardivoSmartAssistant .yv-ai-suggestions{display:none!important}
+#yardivoSmartAssistant .yv-ai-body:empty::before{
+  content:"";
+  display:none!important;
+}
+#yardivoSmartAssistant .yv-ai-msg.assistant{
+  font-size:12px!important;
+}
+#yardivoAssistantInput{
+  font-size:12px!important;
+}
+</style>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -56106,7 +56120,7 @@ window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-reception-ui-scope-smooth';
 
 
 
-<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-minimap-assistant-ux-fix-final';</script>
+<script id="yardivo-v583-notification-sidebar-smooth-final-marker">window.YARDIVO_DEV_BUILD='20260919-dev-v5.8.3-real-ai-assistant-final';</script>
 <script id="yardivo-v583-sidebar-hover-drawer-js">
 (()=>{'use strict';
 if(window.__YV_SIDEBAR_HOVER_DRAWER_V583__)return;
@@ -56929,13 +56943,7 @@ function ensureAssistant(){
   const box=document.createElement('section');box.id='yardivoSmartAssistant';
   box.innerHTML=`<div class="yv-ai-head"><div><strong>YARDIVO SMART ASSISTANT</strong><small class="yv-ai-live"><i></i> LIVE YARDIVO DATA · SCOPE AWARE</small></div><button type="button" class="yv-ai-close">×</button></div>
     <div class="yv-ai-body" id="yardivoAssistantMessages"></div>
-    <div class="yv-ai-suggestions">
-      <button type="button" data-yv-ai-q="Koja skladišta vidim?">MOJA SKLADIŠTA</button>
-      <button type="button" data-yv-ai-q="Što je trenutno na rampi?">NA RAMPI</button>
-      <button type="button" data-yv-ai-q="Koliko je danas paleta?">PALETE DANAS</button>
-      <button type="button" data-yv-ai-q="Koje su rampe slobodne?">SLOBODNE RAMPE</button>
-    </div>
-    <div class="yv-ai-inputbar"><textarea id="yardivoAssistantInput" placeholder="Pitaj YARDIVO..."></textarea><button id="yardivoAssistantSend" type="button">POŠALJI</button></div>`;
+    <div class="yv-ai-inputbar"><textarea id="yardivoAssistantInput" placeholder="Napiši poruku YARDIVO Assistantu..."></textarea><button id="yardivoAssistantSend" type="button">POŠALJI</button></div>`;
   document.body.appendChild(box);
   zone.addEventListener('pointerenter',openAssistant,{passive:true});
   zone.addEventListener('mousemove',openAssistant,{passive:true});
@@ -56944,32 +56952,42 @@ function ensureAssistant(){
   box.querySelector('.yv-ai-close').onclick=()=>document.body.classList.remove('yv-assistant-open');
   box.querySelector('#yardivoAssistantSend').onclick=sendAssistant;
   box.querySelector('#yardivoAssistantInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAssistant()}});
-  box.querySelectorAll('[data-yv-ai-q]').forEach(b=>b.onclick=()=>ask(b.dataset.yvAiQ));
 }
 function openAssistant(){
   if(!assistantEnabled())return;
-  clearTimeout(aiTimer);document.body.classList.add('yv-assistant-open');
-  const m=document.getElementById('yardivoAssistantMessages');
-  if(m&&!m.children.length){
-    addMsg('assistant',welcome());
-  }
-}
-function welcome(){
-  const rows=warehouseRows();
-  return `Pozdrav. Vidim samo YARDIVO podatke dopuštene ovom korisniku.\nTrenutni scope: ${rows.length?rows.map(w=>w.name||w.id).join(', '):'nema dodijeljenih skladišta'}.\nPitaj me za rampe, parking, palete, današnje najave, incidente ili svoja skladišta.`;
+  clearTimeout(aiTimer);
+  document.body.classList.add('yv-assistant-open');
+  setTimeout(()=>document.getElementById('yardivoAssistantInput')?.focus?.({preventScroll:true}),20);
 }
 function addMsg(kind,text){
   const m=document.getElementById('yardivoAssistantMessages');if(!m)return;
   const d=document.createElement('div');d.className='yv-ai-msg '+kind;d.textContent=text;m.appendChild(d);m.scrollTop=m.scrollHeight;
 }
 const aiConversation=[];
-let browserAiSession=null;
+const YARDIVO_AI_EDGE='https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-ai';
+const YARDIVO_AI_ANON='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
+
 function aiContext(){
   const rows=warehouseRows(),todayRows=scopedToday();
-  const compact=todayRows.slice(0,80).map(a=>({
-    supplier:a.supplier||'',warehouse:whName(a.warehouse),warehouseId:a.warehouse||'',
-    date:a.date||'',time:a.time||'',dock:a.dock||'',pallets:Number(a.pallets||0),
-    status:a.status||state(a),phase:state(a),order:a.orderNumber||a.order||''
+  const compact=todayRows.slice(0,100).map(a=>({
+    supplier:a.supplier||'',
+    warehouse:whName(a.warehouse),
+    warehouseId:a.warehouse||'',
+    date:a.date||'',
+    time:a.time||'',
+    dock:a.dock||'',
+    pallets:Number(a.pallets||0),
+    status:a.status||state(a),
+    phase:state(a),
+    order:a.orderNumber||a.order||''
+  }));
+  const allowed=allowedWarehouseIds();
+  const incidentRows=inc().filter(x=>!allowed||allowed.has(String(x.warehouse||x.warehouseId||''))).slice(0,40).map(x=>({
+    warehouseId:x.warehouse||x.warehouseId||'',
+    warehouse:whName(x.warehouse||x.warehouseId||''),
+    title:x.title||x.type||'Incident',
+    status:x.status||'',
+    createdAt:x.createdAt||x.created_at||''
   }));
   return {
     language:'hr',
@@ -56977,59 +56995,73 @@ function aiContext(){
     user:session()?.username||session()?.user||'',
     assignedWarehouses:rows.map(w=>({id:w.id,name:w.name||w.id,location:locName(w.location_id)})),
     today:today(),
-    deliveries:compact
+    deliveries:compact,
+    incidents:incidentRows
   };
 }
-async function getBrowserAi(){
-  if(browserAiSession)return browserAiSession;
-  try{
-    if(window.LanguageModel?.create){
-      browserAiSession=await window.LanguageModel.create({
-        systemPrompt:'Ti si YARDIVO Smart Assistant. Odgovaraj prirodno na hrvatskom jeziku. Koristi isključivo YARDIVO podatke koje dobiješ u kontekstu i nikada ne izmišljaj podatke. Poštuj korisnikov warehouse scope. Budi kratak i operativan.'
-      });
-      return browserAiSession;
-    }
-    if(window.ai?.languageModel?.create){
-      browserAiSession=await window.ai.languageModel.create({
-        systemPrompt:'Ti si YARDIVO Smart Assistant. Odgovaraj prirodno na hrvatskom jeziku. Koristi isključivo YARDIVO podatke koje dobiješ u kontekstu i nikada ne izmišljaj podatke. Poštuj korisnikov warehouse scope. Budi kratak i operativan.'
-      });
-      return browserAiSession;
-    }
-  }catch(_){}
-  return null;
+async function aiAccessToken(){
+  const direct=String(window.__yardivoSupplierAccessToken||'').trim();
+  if(direct)return direct;
+  const c=await window.YardivoAuth?.client?.();
+  if(!c)throw new Error('YARDIVO Auth nije dostupan.');
+  let ss=null;
+  try{ss=(await c.auth.getSession())?.data?.session||null}catch(_){}
+  if(!ss?.access_token){
+    try{ss=(await c.auth.refreshSession())?.data?.session||null}catch(_){}
+  }
+  if(!ss?.access_token)throw new Error('ONLINE PRIJAVA NIJE AKTIVNA.');
+  return ss.access_token;
 }
-async function browserAiAnswer(q){
-  const model=await getBrowserAi();if(!model)return null;
-  const history=aiConversation.slice(-8).map(x=>`${x.role==='user'?'Korisnik':'YARDIVO'}: ${x.text}`).join('\n');
-  const prompt=`YARDIVO KONTEKST:\n${JSON.stringify(aiContext())}\n\nDOSADAŠNJI RAZGOVOR:\n${history}\n\nKORISNIK: ${q}\nOdgovori na hrvatskom. Ako podatak nije u kontekstu, reci da ga ne vidiš.`;
-  try{
-    if(typeof model.prompt==='function')return String(await model.prompt(prompt)||'').trim()||null;
-    if(typeof model.promptStreaming==='function'){
-      let out='';for await(const chunk of model.promptStreaming(prompt))out+=String(chunk||'');return out.trim()||null;
-    }
-  }catch(_){}
-  return null;
-}
-async function smartAiAnswer(q){
-  const real=await browserAiAnswer(q);
-  if(real)return real;
-  return answer(q);
+async function realAiAnswer(q){
+  const token=await aiAccessToken();
+  const history=aiConversation.slice(-10);
+  const r=await fetch(YARDIVO_AI_EDGE,{
+    method:'POST',
+    headers:{
+      apikey:YARDIVO_AI_ANON,
+      Authorization:'Bearer '+token,
+      'Content-Type':'application/json'
+    },
+    body:JSON.stringify({
+      message:q,
+      history,
+      context:aiContext()
+    })
+  });
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok||d?.ok===false||!d?.reply){
+    const code=String(d?.error||'AI_ERROR');
+    if(code==='AI_NOT_CONFIGURED')throw new Error('YARDIVO AI još nema konfiguriran AI provider.');
+    if(code==='AUTH_REQUIRED'||code==='AUTH_INVALID')throw new Error('AI zahtijeva aktivnu YARDIVO prijavu.');
+    throw new Error('YARDIVO AI trenutno nije dostupan.');
+  }
+  return String(d.reply).trim();
 }
 function sendAssistant(){
   const i=document.getElementById('yardivoAssistantInput');if(!i)return;
-  const q=String(i.value||'').trim();if(!q)return;i.value='';ask(q);
+  const q=String(i.value||'').trim();if(!q)return;
+  i.value='';
+  ask(q);
 }
 async function ask(q){
+  q=String(q||'').trim();
+  if(!q)return;
   addMsg('user',q);
-  aiConversation.push({role:'user',text:q});
-  addMsg('assistant','Razmišljam…');
+  const thinking=document.createElement('div');
+  thinking.className='yv-ai-msg assistant';
+  thinking.textContent='…';
   const box=document.getElementById('yardivoAssistantMessages');
-  const thinking=box?.lastElementChild;
-  let a='';
-  try{a=await smartAiAnswer(q)}catch(_){a=answer(q)}
-  if(thinking?.classList.contains('assistant')&&thinking.textContent==='Razmišljam…')thinking.remove();
-  aiConversation.push({role:'assistant',text:a});
-  addMsg('assistant',a);
+  box?.appendChild(thinking);
+  if(box)box.scrollTop=box.scrollHeight;
+  try{
+    const a=await realAiAnswer(q);
+    aiConversation.push({role:'user',text:q},{role:'assistant',text:a});
+    thinking.remove();
+    addMsg('assistant',a);
+  }catch(e){
+    thinking.remove();
+    addMsg('assistant',String(e?.message||'YARDIVO AI trenutno nije dostupan.'));
+  }
 }
 function scopedToday(){
   const D=today();return scopedAnnouncements().filter(a=>String(a.date||'')===D);
@@ -57280,6 +57312,25 @@ document.addEventListener('DOMContentLoaded',ensure,{once:true});
 setTimeout(ensure,300);
 
 window.YardivoMiniAssistantUxFixFinalV583={refresh:ensure,closeMini:closeMiniNow};
+})();
+</script>
+
+<script id="yardivo-v583-real-ai-assistant-dom-final-js">
+(()=>{'use strict';
+function clean(){
+  document.querySelectorAll('#yardivoSmartAssistant .yv-ai-suggestions').forEach(x=>x.remove());
+  const input=document.getElementById('yardivoAssistantInput');
+  if(input)input.placeholder='Napiši poruku YARDIVO Assistantu...';
+  const msgs=document.getElementById('yardivoAssistantMessages');
+  if(msgs && msgs.children.length===1){
+    const t=String(msgs.firstElementChild?.textContent||'').toLowerCase();
+    if(t.includes('pozdrav. vidim samo yardivo podatke dopuštene')||t.includes('probajte:'))msgs.replaceChildren();
+  }
+}
+window.addEventListener('yardivo:login',()=>setTimeout(clean,80));
+window.addEventListener('load',()=>setTimeout(clean,500),{once:true});
+document.addEventListener('DOMContentLoaded',clean,{once:true});
+setTimeout(clean,300);
 })();
 </script>
 </body>
