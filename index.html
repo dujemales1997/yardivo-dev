@@ -56401,6 +56401,7 @@ window.__YV_RIGHT_SETTINGS_DRAWER_V583__=true;
 const SOUND_KEY='yardivo_notification_sound_v1';
 const FONT_KEY='yardivo_master_font_v1';
 const THEME_KEY='yardivo_main_theme_v2';
+const PALETTE_KEY='yardivo_dark_palette_v583';
 let closeTimer=0;
 
 function normRole(v){
@@ -56441,6 +56442,28 @@ function themeValue(){
   }catch(_){}
   return document.body.classList.contains('light-mode')?'light':'dark';
 }
+function paletteValue(){
+  try{
+    const v=localStorage.getItem(PALETTE_KEY)||'original';
+    return ['original','black','silver','steel'].includes(v)?v:'original';
+  }catch(_){return 'original'}
+}
+function paletteLabel(v=paletteValue()){
+  return ({original:'DARK BLUE',black:'DARK BLACK',silver:'GREY SILVER',steel:'GRAPHITE STEEL'})[v]||'DARK BLUE';
+}
+function applyPalette(v){
+  v=['original','black','silver','steel'].includes(v)?v:'original';
+  try{
+    localStorage.setItem(PALETTE_KEY,v);
+    /* Keep legacy dark-style controller on original so custom palettes can safely override only paint, never layout. */
+    localStorage.setItem('yardivo_dark_look_v2','original');
+    localStorage.setItem('yardivo_dark_style','original');
+  }catch(_){}
+  try{window.YardivoDarkPaletteIsolation?.apply?.()}catch(_){}
+  document.documentElement.dataset.yardivoDarkPalette=v;
+  document.body.dataset.yardivoDarkPalette=v;
+  updateThemePaletteVisibility();
+}
 function applySound(v){
   try{localStorage.setItem(SOUND_KEY,v?'on':'off')}catch(_){}
   try{document.getElementById('yardivoNotifSoundToggle')?.click?.()}catch(_){}
@@ -56472,11 +56495,14 @@ function applyTheme(theme){
   try{window.YardivoSimpleTheme?.apply?.()}catch(_){}
   try{window.YardivoDarkPaletteIsolation?.apply?.()}catch(_){}
   if(theme==='light'){try{window.YardivoAbsoluteWhite?.apply?.()}catch(_){}}
+  applyPalette(paletteValue());
+  updateThemePaletteVisibility();
 }
 function statusText(type){
   if(type==='sound')return soundEnabled()?'UKLJUČEN':'ISKLJUČEN';
   if(type==='font')return fontValue()+'%';
   if(type==='theme')return themeValue()==='light'?'LIGHT':'DARK';
+  if(type==='palette')return paletteLabel();
   return '';
 }
 function ensureDrawer(){
@@ -56511,6 +56537,11 @@ function ensureDrawer(){
         <button type="button" class="yv-rs-item" data-yv-setting="theme">
           <span class="yv-rs-icon">◐</span>
           <span class="yv-rs-copy"><strong>LIGHT / DARK MODE</strong><small data-yv-setting-status="theme"></small></span>
+          <span class="yv-rs-arrow">›</span>
+        </button>
+        <button type="button" class="yv-rs-item" data-yv-setting="palette">
+          <span class="yv-rs-icon">◈</span>
+          <span class="yv-rs-copy"><strong>THEME</strong><small data-yv-setting-status="palette"></small></span>
           <span class="yv-rs-arrow">›</span>
         </button>
       </div>
@@ -56581,14 +56612,24 @@ function openSetting(type){
       ${optionButton('VEĆE · 115%','115',p===115,'font')}
       ${optionButton('NAJVEĆE · 130%','130',p===130,'font')}
     </div>`;
-  }else{
+  }else if(type==='theme'){
     const t=themeValue();
     title.textContent='LIGHT / DARK MODE';
-    body.innerHTML=`<p class="yv-qsm-help">Odaberi izgled YARDIVO sučelja. Lijevi i desni drawer ostaju u YARDIVO dark bojama.</p><div class="yv-qsm-options">
+    body.innerHTML=`<p class="yv-qsm-help">Odaberi izgled YARDIVO sučelja. U Light modu glavni sadržaj ostaje bijel, a lijevi YARDIVO izbornik ostaje dark blue.</p><div class="yv-qsm-options">
       ${optionButton('☀️ LIGHT MODE','light',t==='light','theme')}
       ${optionButton('🌙 DARK MODE','dark',t==='dark','theme')}
     </div>`;
-  }
+  }else if(type==='palette'){
+    if(themeValue()!=='dark'){closeModal();return}
+    const v=paletteValue();
+    title.textContent='THEME';
+    body.innerHTML=`<p class="yv-qsm-help">Boja tamnog YARDIVO sučelja. Mijenja samo paletu boja — raspored, veličine i funkcije ostaju isti.</p><div class="yv-qsm-options yv-theme-palette-options">
+      ${optionButton('DARK BLUE · ORIGINAL','original',v==='original','palette')}
+      ${optionButton('DARK BLACK','black',v==='black','palette')}
+      ${optionButton('GREY SILVER','silver',v==='silver','palette')}
+      ${optionButton('GRAPHITE STEEL','steel',v==='steel','palette')}
+    </div>`;
+  }else{return}
   body.onclick=e=>{
     const b=e.target.closest?.('[data-yv-qsm-kind]');
     if(!b)return;
@@ -56596,15 +56637,24 @@ function openSetting(type){
     if(kind==='sound')applySound(val==='on');
     else if(kind==='font')applyFont(Number(val));
     else if(kind==='theme')applyTheme(val);
+    else if(kind==='palette')applyPalette(val);
     updateStatuses();
     openSetting(kind);
   };
   modal.classList.add('open');
 }
+function updateThemePaletteVisibility(){
+  const item=document.querySelector('#yardivoRightSettingsDrawer [data-yv-setting="palette"]');
+  if(!item)return;
+  const show=themeValue()==='dark';
+  item.style.display=show?'grid':'none';
+  item.setAttribute('aria-hidden',show?'false':'true');
+}
 function updateStatuses(){
   document.querySelectorAll('[data-yv-setting-status]').forEach(el=>{
     el.textContent=statusText(el.dataset.yvSettingStatus);
   });
+  updateThemePaletteVisibility();
 }
 function applyRoleUi(){
   const admin=isAdmin();
@@ -56626,6 +56676,7 @@ function applyRoleUi(){
 function ensure(){
   ensureDrawer();
   applyRoleUi();
+  applyPalette(paletteValue());
   updateStatuses();
 }
 document.addEventListener('keydown',e=>{
@@ -56642,6 +56693,7 @@ window.YardivoQuickSettingsV583={
   sound:applySound,
   font:applyFont,
   theme:applyTheme,
+  palette:applyPalette,
   refresh:updateStatuses
 };
 })();
@@ -57487,6 +57539,89 @@ function boot(){ensure();window.addEventListener('yardivo:data-synced',renderAll
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 </script>
+
+
+<style id="yardivo-v583-dark-theme-palette-safe-css">
+/* ==========================================================
+   V5.8.3 DARK PALETTE SAFE LAYER
+   Paint-only overrides. No geometry/layout dimensions changed.
+   ========================================================== */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="black"] body,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="black"] :is(.app-shell,.main,.main-content,main,.content,.view){
+  --bg:#050607!important;--bg2:#090a0b!important;--panel:#0d0f11!important;--panel2:#111315!important;
+  --line:#2b2f33!important;--line2:#373c41!important;--text:#f4f6f7!important;--muted:#9aa1a7!important;
+  --theme-bg:#050607!important;--theme-bg-2:#090a0b!important;--theme-panel:#0d0f11!important;--theme-panel-2:#111315!important;
+  --theme-card:#101214!important;--theme-border:#30353a!important;--theme-border-soft:#24282c!important;--theme-text:#f4f6f7!important;--theme-muted:#9aa1a7!important;
+  background:#070809!important;background-image:none!important;color:#f4f6f7!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="black"] :is(.sidebar,.topbar,.top-bar,.panel,.card,.home-menu-card,.home-card,.control-card,.settings-card,.settings-section,.overview-card,.overview-panel,.kpi-card,.ops-kpi,.performance-kpi,.modal-card,.dialog-card,.toolbar,.controls,.filter-box,.terminal-panel,.supplier-card,.announcement-card,.incident-card,.dock-card,.ramp-card,.yard-card,.truck-card,.report-card,.calendar-card,.heat-card,.tower-card,.receiving-card,.gate-card,.order-card,.epal-card,.unannounced-card,.operation-card,.planner-card,.overview-kpi,.ranking-row,.user-card,.role-card,.permission-card,.admin-card){
+  background:#0d0f11!important;background-image:none!important;color:#f4f6f7!important;border-color:#2f3438!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="black"] :is(input,select,textarea,table,thead,tbody,tr,th,td){border-color:#30353a!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="black"] :is(input,select,textarea){background:#08090a!important;color:#fff!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="black"] :is(table,thead,tbody,tr,th,td){background:#0d0f11!important;color:#f3f5f6!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="black"] .nav-btn:hover{background:#171a1d!important;border-color:#363b40!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="black"] .nav-btn.active{background:#24282c!important;border-color:#555d63!important;color:#fff!important}
+
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="silver"] body,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="silver"] :is(.app-shell,.main,.main-content,main,.content,.view){
+  --bg:#171b1f!important;--bg2:#1d2227!important;--panel:#23292e!important;--panel2:#2a3137!important;
+  --line:#4a535b!important;--line2:#5b6670!important;--text:#f5f7f8!important;--muted:#b3bbc2!important;
+  --theme-bg:#171b1f!important;--theme-bg-2:#1d2227!important;--theme-panel:#23292e!important;--theme-panel-2:#2a3137!important;
+  --theme-card:#262d33!important;--theme-border:#4b555e!important;--theme-border-soft:#3d464e!important;--theme-text:#f5f7f8!important;--theme-muted:#b3bbc2!important;
+  background:#1a1f23!important;background-image:none!important;color:#f5f7f8!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="silver"] :is(.sidebar,.topbar,.top-bar,.panel,.card,.home-menu-card,.home-card,.control-card,.settings-card,.settings-section,.overview-card,.overview-panel,.kpi-card,.ops-kpi,.performance-kpi,.modal-card,.dialog-card,.toolbar,.controls,.filter-box,.terminal-panel,.supplier-card,.announcement-card,.incident-card,.dock-card,.ramp-card,.yard-card,.truck-card,.report-card,.calendar-card,.heat-card,.tower-card,.receiving-card,.gate-card,.order-card,.epal-card,.unannounced-card,.operation-card,.planner-card,.overview-kpi,.ranking-row,.user-card,.role-card,.permission-card,.admin-card){
+  background:#242a2f!important;background-image:none!important;color:#f5f7f8!important;border-color:#4c565f!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="silver"] :is(input,select,textarea){background:#1b2024!important;color:#fff!important;border-color:#56616b!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="silver"] :is(table,thead,tbody,tr,th,td){background:#242a2f!important;color:#f5f7f8!important;border-color:#4c565f!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="silver"] .nav-btn:hover{background:#30373d!important;border-color:#5b6670!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="silver"] .nav-btn.active{background:#5e6871!important;border-color:#89939b!important;color:#fff!important}
+
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="steel"] body,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="steel"] :is(.app-shell,.main,.main-content,main,.content,.view){
+  --bg:#0d1216!important;--bg2:#12191f!important;--panel:#172028!important;--panel2:#1c2730!important;
+  --line:#35444f!important;--line2:#455863!important;--text:#eef3f5!important;--muted:#9dafb8!important;
+  --theme-bg:#0d1216!important;--theme-bg-2:#12191f!important;--theme-panel:#172028!important;--theme-panel-2:#1c2730!important;
+  --theme-card:#19232b!important;--theme-border:#374852!important;--theme-border-soft:#2a3942!important;--theme-text:#eef3f5!important;--theme-muted:#9dafb8!important;
+  background:#10161b!important;background-image:none!important;color:#eef3f5!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="steel"] :is(.sidebar,.topbar,.top-bar,.panel,.card,.home-menu-card,.home-card,.control-card,.settings-card,.settings-section,.overview-card,.overview-panel,.kpi-card,.ops-kpi,.performance-kpi,.modal-card,.dialog-card,.toolbar,.controls,.filter-box,.terminal-panel,.supplier-card,.announcement-card,.incident-card,.dock-card,.ramp-card,.yard-card,.truck-card,.report-card,.calendar-card,.heat-card,.tower-card,.receiving-card,.gate-card,.order-card,.epal-card,.unannounced-card,.operation-card,.planner-card,.overview-kpi,.ranking-row,.user-card,.role-card,.permission-card,.admin-card){
+  background:#172028!important;background-image:none!important;color:#eef3f5!important;border-color:#374852!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="steel"] :is(input,select,textarea){background:#10171c!important;color:#fff!important;border-color:#3d505b!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="steel"] :is(table,thead,tbody,tr,th,td){background:#172028!important;color:#eef3f5!important;border-color:#374852!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="steel"] .nav-btn:hover{background:#22303a!important;border-color:#465b67!important}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="steel"] .nav-btn.active{background:#334650!important;border-color:#667b86!important;color:#fff!important}
+
+/* Light mode: ONLY the main content becomes light; left navigation stays original YARDIVO dark blue. */
+html[data-yardivo-main-theme="light"] body.light-mode :is(.sidebar,#sidebar){
+  background:linear-gradient(180deg,#091827,#07131f)!important;
+  background-color:#091827!important;
+  color:#edf6ff!important;
+  border-color:#26435a!important;
+  box-shadow:12px 0 38px rgba(0,0,0,.16)!important;
+}
+html[data-yardivo-main-theme="light"] body.light-mode :is(.sidebar,#sidebar) :is(.sidebar-head,.sidebar-header,.sidebar-logo,.brand,.brand-box){
+  background:transparent!important;color:#edf6ff!important;border-color:#26435a!important;
+}
+html[data-yardivo-main-theme="light"] body.light-mode :is(.sidebar,#sidebar) .nav-btn{
+  background:transparent!important;color:#d8e8f4!important;border-color:transparent!important;
+}
+html[data-yardivo-main-theme="light"] body.light-mode :is(.sidebar,#sidebar) .nav-btn span{color:#d8e8f4!important}
+html[data-yardivo-main-theme="light"] body.light-mode :is(.sidebar,#sidebar) .nav-btn:hover{
+  background:#102b42!important;color:#fff!important;border-color:#214d70!important;
+}
+html[data-yardivo-main-theme="light"] body.light-mode :is(.sidebar,#sidebar) .nav-btn.active{
+  background:#126fc9!important;color:#fff!important;border-color:#2489eb!important;
+}
+html[data-yardivo-main-theme="light"] body.light-mode :is(.sidebar,#sidebar) :is(small,.muted,.nav-section-title){color:#8fa7ba!important}
+
+/* Theme palette choice is a dark-mode-only quick setting. */
+#yardivoRightSettingsDrawer [data-yv-setting="palette"]{transition:opacity .14s ease,background-color .14s ease,border-color .14s ease}
+#yardivoQuickSettingModal .yv-theme-palette-options .yv-qsm-option{text-align:left}
+</style>
 
 </body>
 </html>
