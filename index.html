@@ -54427,6 +54427,8 @@ function applyPalette(v){
     }
   }
   updateThemePaletteVisibility();
+  try{window.YardivoThemeFullAuthorityV4?.apply?.()}catch(_){}
+  try{window.YardivoFullPalettePaint?.apply?.()}catch(_){}
 }
 function applySoundMode(v){
   v=v==='ai'?'ai':'off';
@@ -54603,7 +54605,7 @@ function openSetting(type){
   }else if(type==='theme'){
     const t=themeValue();
     title.textContent='LIGHT / DARK MODE';
-    body.innerHTML=`<p class="yv-qsm-help">Odaberi izgled YARDIVO sučelja. U Light modu glavni sadržaj ostaje bijel, a lijevi YARDIVO izbornik ostaje dark blue.</p><div class="yv-qsm-options">
+    body.innerHTML=`<p class="yv-qsm-help">Odaberi izgled YARDIVO sučelja. Odabrani izgled primjenjuje se kroz cijeli YARDIVO.</p><div class="yv-qsm-options">
       ${optionButton('☀️ LIGHT MODE','light',t==='light','theme')}
       ${optionButton('🌙 DARK MODE','dark',t==='dark','theme')}
     </div>`;
@@ -54611,7 +54613,7 @@ function openSetting(type){
     if(themeValue()!=='dark'){closeModal();return}
     const v=paletteValue();
     title.textContent='THEME';
-    body.innerHTML=`<p class="yv-qsm-help">Boja tamnog YARDIVO sučelja. Mijenja samo paletu boja — raspored, veličine i funkcije ostaju isti.</p><div class="yv-qsm-options yv-theme-palette-options">
+    body.innerHTML=`<p class="yv-qsm-help">Odaberi punu paletu tamnog YARDIVO sučelja. Cijeli UI koristi odabranu paletu; operativne statusne boje ostaju sačuvane radi sigurnog čitanja statusa.</p><div class="yv-qsm-options yv-theme-palette-options">
       ${optionButton('DARK BLUE · ORIGINAL','original',v==='original','palette')}
       ${optionButton('DARK BLACK','black',v==='black','palette')}
       ${optionButton('GREY SILVER','silver',v==='silver','palette')}
@@ -54636,7 +54638,13 @@ function openSetting(type){
     else if(kind==='theme')applyTheme(val);
     else if(kind==='palette')applyPalette(val);
     updateStatuses();
-    openSetting(kind);
+    /* Theme selection is an immediate action: close overlay + drawer so it never blocks YARDIVO. */
+    if(kind==='theme'||kind==='palette'){
+      closeModal();
+      document.body.classList.remove('yv-right-settings-open');
+    }else{
+      openSetting(kind);
+    }
   };
   modal.classList.add('open');
 }
@@ -59586,7 +59594,668 @@ window.addEventListener('yardivo:data-synced',refreshVisibleMap);
 })();
 </script>
 
-<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260921-v5.8.3-manager-settings-map-live-status-v3';</script>
+
+<style id="yardivo-theme-full-authority-v4">
+/* ============================================================
+   YARDIVO V5.8.3 · FULL THEME AUTHORITY V4
+   Selected theme owns ALL neutral UI chrome. Operational semantic
+   colors (arrival/status/alerts) remain intentionally untouched.
+   ============================================================ */
+
+/* Full LIGHT means full light — including left navigation. */
+html[data-yardivo-main-theme="light"] body,
+html[data-theme="light"] body.light-mode{
+  --yv-full-bg:#f3f6f8;
+  --yv-full-bg2:#eef3f6;
+  --yv-full-s1:#ffffff;
+  --yv-full-s2:#f7fafc;
+  --yv-full-s3:#edf3f6;
+  --yv-full-line:#cad6de;
+  --yv-full-line2:#b6c6d0;
+  --yv-full-text:#172833;
+  --yv-full-muted:#657b89;
+  --yv-full-accent:#678ca4;
+  --yv-full-accent2:#dbe7ee;
+  background:var(--yv-full-bg)!important;
+  background-image:none!important;
+  color:var(--yv-full-text)!important;
+}
+html[data-yardivo-main-theme="light"] body :is(.app-shell,.main,.main-content,#mainContent,.content,.view,section.view),
+html[data-theme="light"] body.light-mode :is(.app-shell,.main,.main-content,#mainContent,.content,.view,section.view){
+  background:var(--yv-full-bg)!important;
+  background-image:none!important;
+  color:var(--yv-full-text)!important;
+}
+html[data-yardivo-main-theme="light"] body :is(
+  .sidebar,.topbar,.top-bar,#topbar,.header,
+  .panel,.panel-head,.panel-body,.card,.box,.tile,.widget,.surface,.section-card,.settings-card,.settings-section,
+  .home-menu-card,.home-card,.control-card,.overview-card,.overview-panel,.kpi-card,.ops-kpi,.performance-kpi,.overview-kpi,
+  .modal-card,.modal-content,.dialog-card,.drawer-card,.popover,.popup-card,.sheet,
+  .toolbar,.controls,.filter-box,.filter-panel,.table-wrap,.table-card,.table-container,
+  .terminal-panel,.supplier-card,.announcement-card,.incident-card,.dock-card,.ramp-card,.yard-card,.truck-card,.report-card,.calendar-card,.heat-card,.tower-card,
+  .receiving-card,.gate-card,.order-card,.epal-card,.unannounced-card,.operation-card,.planner-card,.ranking-row,.user-card,.role-card,.permission-card,.admin-card,
+  [class*="settings-card" i],[class*="modal-card" i],[class*="modal-content" i],[class*="dialog-card" i],[class*="drawer-card" i],
+  [class*="popup-card" i],[class*="popover-card" i],[class*="toolbar" i],[class*="filter-panel" i]
+),
+html[data-theme="light"] body.light-mode :is(
+  .sidebar,.topbar,.top-bar,#topbar,.header,
+  .panel,.panel-head,.panel-body,.card,.box,.tile,.widget,.surface,.section-card,.settings-card,.settings-section,
+  .home-menu-card,.home-card,.control-card,.overview-card,.overview-panel,.kpi-card,.ops-kpi,.performance-kpi,.overview-kpi,
+  .modal-card,.modal-content,.dialog-card,.drawer-card,.popover,.popup-card,.sheet,
+  .toolbar,.controls,.filter-box,.filter-panel,.table-wrap,.table-card,.table-container,
+  .terminal-panel,.supplier-card,.announcement-card,.incident-card,.dock-card,.ramp-card,.yard-card,.truck-card,.report-card,.calendar-card,.heat-card,.tower-card,
+  .receiving-card,.gate-card,.order-card,.epal-card,.unannounced-card,.operation-card,.planner-card,.ranking-row,.user-card,.role-card,.permission-card,.admin-card,
+  [class*="settings-card" i],[class*="modal-card" i],[class*="modal-content" i],[class*="dialog-card" i],[class*="drawer-card" i],
+  [class*="popup-card" i],[class*="popover-card" i],[class*="toolbar" i],[class*="filter-panel" i]
+){
+  background:var(--yv-full-s1)!important;
+  background-image:none!important;
+  border-color:var(--yv-full-line)!important;
+  color:var(--yv-full-text)!important;
+  box-shadow:none!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar,
+html[data-theme="light"] body.light-mode .sidebar{
+  background:#ffffff!important;
+  background-image:none!important;
+  border-right-color:var(--yv-full-line)!important;
+  color:var(--yv-full-text)!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar :is(.brand-mark,.brand-sub,.nav-btn,.nav-btn span,.sidebar-footer,.sidebar-footer p),
+html[data-theme="light"] body.light-mode .sidebar :is(.brand-mark,.brand-sub,.nav-btn,.nav-btn span,.sidebar-footer,.sidebar-footer p){
+  color:var(--yv-full-text)!important;
+}
+html[data-yardivo-main-theme="light"] body .nav-btn:hover,
+html[data-theme="light"] body.light-mode .nav-btn:hover{
+  background:var(--yv-full-s3)!important;border-color:var(--yv-full-line)!important;
+}
+html[data-yardivo-main-theme="light"] body .nav-btn.active,
+html[data-theme="light"] body.light-mode .nav-btn.active{
+  background:var(--yv-full-accent2)!important;
+  background-image:none!important;
+  border-color:var(--yv-full-accent)!important;
+  color:#172833!important;
+  box-shadow:none!important;
+}
+html[data-yardivo-main-theme="light"] body :is(input,select,textarea),
+html[data-theme="light"] body.light-mode :is(input,select,textarea){
+  background:#fff!important;color:var(--yv-full-text)!important;-webkit-text-fill-color:var(--yv-full-text)!important;border-color:var(--yv-full-line)!important;
+}
+html[data-yardivo-main-theme="light"] body :is(table,thead,tbody,tr,th,td),
+html[data-theme="light"] body.light-mode :is(table,thead,tbody,tr,th,td){
+  border-color:var(--yv-full-line)!important;color:var(--yv-full-text)!important;
+}
+html[data-yardivo-main-theme="light"] body :is(th,td),
+html[data-theme="light"] body.light-mode :is(th,td){background:#fff!important}
+html[data-yardivo-main-theme="light"] #yardivoRightSettingsDrawer,
+html[data-theme="light"] body.light-mode #yardivoRightSettingsDrawer{
+  background:#fff!important;color:var(--yv-full-text)!important;border-left-color:var(--yv-full-line)!important;
+}
+html[data-yardivo-main-theme="light"] #yardivoRightSettingsDrawer .yv-rs-item,
+html[data-theme="light"] body.light-mode #yardivoRightSettingsDrawer .yv-rs-item{
+  background:var(--yv-full-s2)!important;border-color:var(--yv-full-line)!important;color:var(--yv-full-text)!important;
+}
+html[data-yardivo-main-theme="light"] #yardivoRightSettingsDrawer .yv-rs-icon,
+html[data-theme="light"] body.light-mode #yardivoRightSettingsDrawer .yv-rs-icon{
+  background:var(--yv-full-s3)!important;color:var(--yv-full-text)!important;
+}
+
+/* DARK PALETTES */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="black"]{
+  --yv-p-bg:#050607;--yv-p-bg2:#090a0b;--yv-p-s1:#0d0f11;--yv-p-s2:#111315;--yv-p-s3:#161a1d;
+  --yv-p-line:#30353a;--yv-p-line2:#465058;--yv-p-text:#f4f6f7;--yv-p-muted:#9aa1a7;--yv-p-accent:#74828c;--yv-p-accent2:#28343c;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="silver"]{
+  --yv-p-bg:#171b1f;--yv-p-bg2:#1d2227;--yv-p-s1:#23292e;--yv-p-s2:#2a3137;--yv-p-s3:#303840;
+  --yv-p-line:#4b555e;--yv-p-line2:#697680;--yv-p-text:#f5f7f8;--yv-p-muted:#b3bbc2;--yv-p-accent:#a5b0b8;--yv-p-accent2:#4d5a63;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette="steel"]{
+  --yv-p-bg:#0d1216;--yv-p-bg2:#12191f;--yv-p-s1:#172028;--yv-p-s2:#1c2730;--yv-p-s3:#22303a;
+  --yv-p-line:#374852;--yv-p-line2:#4d6471;--yv-p-text:#eef3f5;--yv-p-muted:#9dafb8;--yv-p-accent:#7897a8;--yv-p-accent2:#314956;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) body,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) body :is(.app-shell,.main,.main-content,#mainContent,.content,.view,section.view){
+  background:var(--yv-p-bg)!important;
+  background-image:none!important;
+  color:var(--yv-p-text)!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) body :is(
+  .sidebar,.topbar,.top-bar,#topbar,.header,
+  .panel,.panel-head,.panel-body,.card,.box,.tile,.widget,.surface,.section-card,.settings-card,.settings-section,
+  .home-menu-card,.home-card,.control-card,.overview-card,.overview-panel,.kpi-card,.ops-kpi,.performance-kpi,.overview-kpi,
+  .modal-card,.modal-content,.dialog-card,.drawer-card,.popover,.popup-card,.sheet,
+  .toolbar,.controls,.filter-box,.filter-panel,.table-wrap,.table-card,.table-container,
+  .terminal-panel,.supplier-card,.announcement-card,.incident-card,.dock-card,.ramp-card,.yard-card,.truck-card,.report-card,.calendar-card,.heat-card,.tower-card,
+  .receiving-card,.gate-card,.order-card,.epal-card,.unannounced-card,.operation-card,.planner-card,.ranking-row,.user-card,.role-card,.permission-card,.admin-card,
+  [class*="settings-card" i],[class*="modal-card" i],[class*="modal-content" i],[class*="dialog-card" i],[class*="drawer-card" i],
+  [class*="popup-card" i],[class*="popover-card" i],[class*="toolbar" i],[class*="filter-panel" i]
+):not(.dmv-booked):not(.week-map-item):not(.appointment):not(.booking):not([class*="status-" i]){
+  background:var(--yv-p-s1)!important;
+  background-image:none!important;
+  border-color:var(--yv-p-line)!important;
+  color:var(--yv-p-text)!important;
+  box-shadow:none!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) body :is(
+  .panel-head,.card-head,.section-head,.toolbar,.controls,.table-tools,.filter-box,.filter-panel,
+  thead,th,.schedule-header,.dmv-head,.week-map-head
+){
+  background:var(--yv-p-s2)!important;
+  background-image:none!important;
+  border-color:var(--yv-p-line)!important;
+  color:var(--yv-p-text)!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) body .sidebar{
+  background:var(--yv-p-bg2)!important;background-image:none!important;border-right-color:var(--yv-p-line)!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) body .topbar{
+  background:var(--yv-p-s1)!important;background-image:none!important;border-color:var(--yv-p-line)!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) body :is(input,select,textarea){
+  background:var(--yv-p-bg2)!important;color:var(--yv-p-text)!important;-webkit-text-fill-color:var(--yv-p-text)!important;border-color:var(--yv-p-line)!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) body :is(table,thead,tbody,tr,th,td){
+  border-color:var(--yv-p-line)!important;color:var(--yv-p-text)!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) body :is(th,td):not(.dmv-booked):not(.week-map-item){
+  background:var(--yv-p-s1)!important;background-image:none!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) body button:not(
+  .danger,.success,.warning,.error,.destructive,.unannounced-approve,.unannounced-reject,
+  [data-status="danger"],[data-status="success"],[data-status="warning"]
+){
+  background:var(--yv-p-s2)!important;
+  background-image:none!important;
+  border-color:var(--yv-p-line)!important;
+  color:var(--yv-p-text)!important;
+  box-shadow:none!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) body :is(.primary,.nav-btn.active,.yv-qsm-option.active){
+  background:var(--yv-p-accent2)!important;background-image:none!important;border-color:var(--yv-p-accent)!important;color:#fff!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) body :is(a,.panel-head a,.brand-slash){
+  color:var(--yv-p-accent)!important;
+}
+
+/* Component-local variable families must also inherit the selected palette. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) #liveYard{
+  --ly-bg:var(--yv-p-bg)!important;--ly-panel:var(--yv-p-s1)!important;--ly-panel2:var(--yv-p-s2)!important;
+  --ly-line:var(--yv-p-line)!important;--ly-text:var(--yv-p-text)!important;--ly-muted:var(--yv-p-muted)!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) #yardivoSupplierPortal{
+  --ysp-bg:var(--yv-p-bg)!important;--ysp-card:var(--yv-p-s1)!important;--ysp-text:var(--yv-p-text)!important;
+  --ysp-muted:var(--yv-p-muted)!important;--ysp-border:var(--yv-p-line)!important;--ysp-blue:var(--yv-p-accent)!important;
+  --ysa-ink:var(--yv-p-text)!important;--ysa-muted:var(--yv-p-muted)!important;--ysa-blue:var(--yv-p-accent)!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) body{
+  --yv58-bg:var(--yv-p-bg)!important;--yv58-surface:var(--yv-p-s1)!important;--yv58-surface-soft:var(--yv-p-s2)!important;
+  --yv58-line:var(--yv-p-line)!important;--yv58-line-strong:var(--yv-p-line2)!important;--yv58-text:var(--yv-p-text)!important;--yv58-muted:var(--yv-p-muted)!important;
+}
+
+/* Generated quick settings always exactly follow selected palette. */
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) #yardivoRightSettingsDrawer{
+  background:var(--yv-p-bg2)!important;background-image:none!important;border-left-color:var(--yv-p-line)!important;color:var(--yv-p-text)!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) #yardivoRightSettingsDrawer .yv-rs-item,
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) #yardivoQuickSettingModal :is(.yv-qsm-card,.yv-qsm-option,.yv-qsm-close){
+  background:var(--yv-p-s1)!important;background-image:none!important;border-color:var(--yv-p-line)!important;color:var(--yv-p-text)!important;
+}
+html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardivo-dark-palette="original"]) #yardivoQuickSettingModal .yv-qsm-option.active{
+  background:var(--yv-p-accent2)!important;border-color:var(--yv-p-accent)!important;color:#fff!important;
+}
+</style>
+
+
+<script id="yardivo-theme-full-authority-v4-js">
+(function(){
+'use strict';
+if(window.__YARDIVO_THEME_FULL_AUTHORITY_V4__)return;
+window.__YARDIVO_THEME_FULL_AUTHORITY_V4__=true;
+
+const root=document.documentElement;
+const touched=new WeakMap();
+
+function activePalette(){
+  if(root.dataset.yardivoMainTheme!=='dark')return null;
+  const v=root.dataset.yardivoDarkPalette||'original';
+  if(!['black','silver','steel'].includes(v))return null;
+  if(v==='black')return{bg:'#050607',s1:'#0d0f11',s2:'#111315',line:'#30353a',text:'#f4f6f7',muted:'#9aa1a7',accent:'#74828c'};
+  if(v==='silver')return{bg:'#171b1f',s1:'#23292e',s2:'#2a3137',line:'#4b555e',text:'#f5f7f8',muted:'#b3bbc2',accent:'#a5b0b8'};
+  return{bg:'#0d1216',s1:'#172028',s2:'#1c2730',line:'#374852',text:'#eef3f5',muted:'#9dafb8',accent:'#7897a8'};
+}
+function semantic(el){
+  return !!el.closest?.(
+    '.dmv-booked,.week-map-item,.appointment,.booking,.badge,.pill,.legend,.slotbar,'+
+    '.status-green,.status-red,.status-amber,[class*="status-" i],'+
+    '.success,.danger,.warning,.error,.destructive,.alert,.priority,'+
+    '[data-status="success"],[data-status="danger"],[data-status="warning"]'
+  );
+}
+function rgbList(s){
+  return [...String(s||'').matchAll(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/gi)].map(m=>m.slice(1,4).map(Number));
+}
+function navy([r,g,b]){
+  const max=Math.max(r,g,b),min=Math.min(r,g,b);
+  return b>=20 && b>=g+5 && b>=r+8 && (max-min)>=12;
+}
+function hasNavy(s){return rgbList(s).some(navy)}
+function save(el,prop){
+  let rec=touched.get(el);
+  if(!rec){rec={};touched.set(el,rec)}
+  if(!(prop in rec))rec[prop]=el.style.getPropertyValue(prop);
+  return rec;
+}
+function set(el,prop,val){
+  save(el,prop);
+  el.style.setProperty(prop,val,'important');
+}
+function neutralSurface(el){
+  return el.matches?.(
+    '.sidebar,.topbar,.top-bar,#topbar,.panel,.panel-head,.panel-body,.card,.box,.tile,.widget,.surface,'+
+    '.section-card,.settings-card,.home-menu-card,.home-card,.control-card,.overview-card,.overview-panel,'+
+    '.modal-card,.modal-content,.dialog-card,.drawer-card,.popup-card,.popover,.toolbar,.controls,'+
+    '.filter-box,.filter-panel,.table-wrap,.table-card,.table-container,.terminal-panel,.supplier-card,'+
+    '.announcement-card,.incident-card,.dock-card,.ramp-card,.yard-card,.truck-card,.report-card,.calendar-card,'+
+    '.heat-card,.tower-card,.receiving-card,.gate-card,.order-card,.epal-card,.unannounced-card,.operation-card,'+
+    '.planner-card,.ranking-row,.user-card,.role-card,.permission-card,.admin-card'
+  );
+}
+function paint(el){
+  const p=activePalette();
+  if(!p||!el||el.nodeType!==1||semantic(el))return;
+  const cs=getComputedStyle(el);
+  if(neutralSurface(el)){
+    set(el,'background-color',el.matches('.sidebar')?p.bg:p.s1);
+    if(cs.backgroundImage&&cs.backgroundImage!=='none')set(el,'background-image','none');
+    set(el,'border-color',p.line);
+  }else{
+    if(hasNavy(cs.backgroundColor))set(el,'background-color',p.s1);
+    if(cs.backgroundImage&&cs.backgroundImage!=='none'&&/gradient/i.test(cs.backgroundImage)&&hasNavy(cs.backgroundImage)){
+      set(el,'background-image','none');
+      set(el,'background-color',p.s1);
+    }
+    if(hasNavy(cs.borderTopColor)||hasNavy(cs.borderRightColor)||hasNavy(cs.borderBottomColor)||hasNavy(cs.borderLeftColor))set(el,'border-color',p.line);
+  }
+  if(hasNavy(cs.color)&&!el.matches('a,.brand-slash'))set(el,'color',p.muted);
+}
+function restore(){
+  document.querySelectorAll('*').forEach(el=>{
+    const rec=touched.get(el);if(!rec)return;
+    Object.entries(rec).forEach(([prop,val])=>{if(val)el.style.setProperty(prop,val);else el.style.removeProperty(prop)});
+    touched.delete(el);
+  });
+}
+function apply(){
+  const p=activePalette();
+  if(!p){restore();return}
+  if(!document.body)return;
+  paint(document.body);
+  document.body.querySelectorAll('*').forEach(paint);
+}
+let scheduled=0;
+function schedule(){
+  cancelAnimationFrame(scheduled);
+  scheduled=requestAnimationFrame(apply);
+}
+const mo=new MutationObserver(ms=>{
+  if(!activePalette())return;
+  for(const m of ms){
+    for(const n of m.addedNodes){
+      if(n.nodeType===1){paint(n);n.querySelectorAll?.('*').forEach(paint)}
+    }
+  }
+});
+function boot(){
+  if(!document.body)return;
+  mo.observe(document.body,{subtree:true,childList:true});
+  apply();
+}
+const rootObs=new MutationObserver(schedule);
+rootObs.observe(root,{attributes:true,attributeFilter:['data-yardivo-main-theme','data-yardivo-dark-palette','data-theme']});
+window.addEventListener('yardivo:view-opened',schedule);
+window.addEventListener('yardivo:data-synced',schedule);
+window.addEventListener('yardivo:master-data-changed',schedule);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+
+window.YardivoThemeFullAuthorityV4={apply};
+})();
+</script>
+
+
+<style id="yardivo-light-full-white-v5">
+/* ============================================================
+   YARDIVO · LIGHT MODE FULL WHITE V5
+   Full light means every neutral app surface is white.
+   Semantic operational colors remain untouched.
+   ============================================================ */
+html[data-yardivo-main-theme="light"],
+html[data-theme="light"]{
+  color-scheme:light!important;
+  background:#ffffff!important;
+}
+html[data-yardivo-main-theme="light"] body,
+html[data-theme="light"] body.light-mode{
+  --yv-light-bg:#ffffff;
+  --yv-light-surface:#ffffff;
+  --yv-light-soft:#ffffff;
+  --yv-light-line:#d8e0e6;
+  --yv-light-line-strong:#c7d1d9;
+  --yv-light-text:#172833;
+  --yv-light-muted:#6b7f8c;
+  --yv-light-accent:#557d96;
+  background:#ffffff!important;
+  background-image:none!important;
+  color:var(--yv-light-text)!important;
+}
+
+/* Root app + every view/section */
+html[data-yardivo-main-theme="light"] body :is(
+  #app,.app,.app-shell,.shell,.layout,.workspace,.main,.main-content,#mainContent,.content,.content-wrap,
+  .page,.page-body,.view,section.view,.section,.section-body,.screen,.screen-body,.dashboard,.dashboard-grid,
+  #homeMenu,#dashboard,#controlTower,#analytics,#myYard,#suppliers,#overview,#dailyMap,#weeklyMap,
+  #reception,#gate,#inventory,#admin,#settings
+),
+html[data-theme="light"] body.light-mode :is(
+  #app,.app,.app-shell,.shell,.layout,.workspace,.main,.main-content,#mainContent,.content,.content-wrap,
+  .page,.page-body,.view,section.view,.section,.section-body,.screen,.screen-body,.dashboard,.dashboard-grid,
+  #homeMenu,#dashboard,#controlTower,#analytics,#myYard,#suppliers,#overview,#dailyMap,#weeklyMap,
+  #reception,#gate,#inventory,#admin,#settings
+){
+  background:#ffffff!important;
+  background-image:none!important;
+  color:var(--yv-light-text)!important;
+}
+
+/* Header, sidebar, cards, panels, tables, drawers, popups — all white */
+html[data-yardivo-main-theme="light"] body :is(
+  .sidebar,.side-nav,.side-menu,.navigation,.topbar,.top-bar,#topbar,.header,.app-header,.page-header,
+  .panel,.panel-head,.panel-body,.panel-footer,.card,.card-head,.card-body,.card-footer,.box,.tile,.widget,.surface,
+  .section-card,.settings-card,.settings-section,.home-menu-card,.home-card,.control-card,.overview-card,.overview-panel,
+  .kpi-card,.ops-kpi,.performance-kpi,.overview-kpi,.metric-card,.stat-card,.summary-card,
+  .modal-card,.modal-content,.modal-body,.modal-header,.dialog-card,.drawer-card,.popover,.popup-card,.sheet,.bottom-sheet,
+  .toolbar,.controls,.filter-box,.filter-panel,.filter-bar,.table-wrap,.table-card,.table-container,.table-tools,
+  .terminal-panel,.supplier-card,.announcement-card,.incident-card,.dock-card,.ramp-card,.yard-card,.truck-card,
+  .report-card,.calendar-card,.heat-card,.tower-card,.receiving-card,.gate-card,.order-card,.epal-card,.unannounced-card,
+  .operation-card,.planner-card,.ranking-row,.user-card,.role-card,.permission-card,.admin-card,
+  .analytics-card,.analytics-panel,.chart-card,.chart-panel,.chart-shell,.legend-card,.compare-card,
+  .map-card,.daily-map-card,.weekly-map-card,.schedule-card,.timeline-card,
+  [class*="settings-card" i],[class*="modal-card" i],[class*="modal-content" i],[class*="dialog-card" i],
+  [class*="drawer-card" i],[class*="popup-card" i],[class*="popover-card" i],[class*="toolbar" i],
+  [class*="filter-panel" i],[class*="analytics-" i],[class*="chart-" i],[class*="overview-" i]
+):not(.dmv-booked):not(.week-map-item):not(.appointment):not(.booking):not([class*="status-" i]){
+  background:#ffffff!important;
+  background-image:none!important;
+  border-color:var(--yv-light-line)!important;
+  color:var(--yv-light-text)!important;
+  box-shadow:none!important;
+}
+
+/* Sidebar + topbar must not retain original dark blue */
+html[data-yardivo-main-theme="light"] body :is(.sidebar,.side-nav,.side-menu,.navigation,.topbar,.top-bar,#topbar,.app-header){
+  background:#ffffff!important;
+  background-image:none!important;
+  border-color:var(--yv-light-line)!important;
+  color:var(--yv-light-text)!important;
+}
+html[data-yardivo-main-theme="light"] body .sidebar :is(*),
+html[data-theme="light"] body.light-mode .sidebar :is(*){
+  --sidebar-bg:#ffffff!important;
+}
+html[data-yardivo-main-theme="light"] body .nav-btn,
+html[data-theme="light"] body.light-mode .nav-btn{
+  background:#ffffff!important;
+  background-image:none!important;
+  border-color:transparent!important;
+  color:var(--yv-light-text)!important;
+  box-shadow:none!important;
+}
+html[data-yardivo-main-theme="light"] body .nav-btn:hover,
+html[data-theme="light"] body.light-mode .nav-btn:hover{
+  background:#f6f8fa!important;
+  border-color:var(--yv-light-line)!important;
+}
+html[data-yardivo-main-theme="light"] body .nav-btn.active,
+html[data-theme="light"] body.light-mode .nav-btn.active{
+  background:#eef4f7!important;
+  border-color:#aec1cc!important;
+  color:#173043!important;
+}
+
+/* Inputs and controls */
+html[data-yardivo-main-theme="light"] body :is(input,select,textarea,.input,.select,.search-box,.search-input),
+html[data-theme="light"] body.light-mode :is(input,select,textarea,.input,.select,.search-box,.search-input){
+  background:#ffffff!important;
+  background-image:none!important;
+  color:var(--yv-light-text)!important;
+  -webkit-text-fill-color:var(--yv-light-text)!important;
+  border-color:var(--yv-light-line)!important;
+  box-shadow:none!important;
+}
+html[data-yardivo-main-theme="light"] body :is(input,textarea)::placeholder,
+html[data-theme="light"] body.light-mode :is(input,textarea)::placeholder{
+  color:#8a9aa5!important;
+}
+
+/* Neutral buttons */
+html[data-yardivo-main-theme="light"] body button:not(
+  .danger,.success,.warning,.error,.destructive,.unannounced-approve,.unannounced-reject,
+  [data-status="danger"],[data-status="success"],[data-status="warning"],
+  .dmv-booked,.week-map-item
+),
+html[data-theme="light"] body.light-mode button:not(
+  .danger,.success,.warning,.error,.destructive,.unannounced-approve,.unannounced-reject,
+  [data-status="danger"],[data-status="success"],[data-status="warning"],
+  .dmv-booked,.week-map-item
+){
+  background:#ffffff!important;
+  background-image:none!important;
+  color:var(--yv-light-text)!important;
+  border-color:var(--yv-light-line)!important;
+  box-shadow:none!important;
+}
+html[data-yardivo-main-theme="light"] body :is(.primary,.nav-btn.active,.yv-qsm-option.active),
+html[data-theme="light"] body.light-mode :is(.primary,.nav-btn.active,.yv-qsm-option.active){
+  background:#eef4f7!important;
+  border-color:#a8bdc9!important;
+  color:#173043!important;
+}
+
+/* Tables: full white */
+html[data-yardivo-main-theme="light"] body :is(table,thead,tbody,tfoot,tr,th,td),
+html[data-theme="light"] body.light-mode :is(table,thead,tbody,tfoot,tr,th,td){
+  background:#ffffff!important;
+  background-image:none!important;
+  border-color:var(--yv-light-line)!important;
+  color:var(--yv-light-text)!important;
+}
+html[data-yardivo-main-theme="light"] body tr:hover td,
+html[data-theme="light"] body.light-mode tr:hover td{
+  background:#fafcfd!important;
+}
+
+/* Settings drawer + modal */
+html[data-yardivo-main-theme="light"] #yardivoRightSettingsDrawer,
+html[data-yardivo-main-theme="light"] #yardivoQuickSettingModal .yv-qsm-card,
+html[data-theme="light"] body.light-mode #yardivoRightSettingsDrawer,
+html[data-theme="light"] body.light-mode #yardivoQuickSettingModal .yv-qsm-card{
+  background:#ffffff!important;
+  background-image:none!important;
+  border-color:var(--yv-light-line)!important;
+  color:var(--yv-light-text)!important;
+}
+html[data-yardivo-main-theme="light"] #yardivoRightSettingsDrawer .yv-rs-item,
+html[data-yardivo-main-theme="light"] #yardivoQuickSettingModal :is(.yv-qsm-option,.yv-qsm-close),
+html[data-theme="light"] body.light-mode #yardivoRightSettingsDrawer .yv-rs-item,
+html[data-theme="light"] body.light-mode #yardivoQuickSettingModal :is(.yv-qsm-option,.yv-qsm-close){
+  background:#ffffff!important;
+  background-image:none!important;
+  border-color:var(--yv-light-line)!important;
+  color:var(--yv-light-text)!important;
+}
+html[data-yardivo-main-theme="light"] #yardivoRightSettingsDrawer .yv-rs-icon,
+html[data-theme="light"] body.light-mode #yardivoRightSettingsDrawer .yv-rs-icon{
+  background:#f4f7f9!important;
+  color:#35566b!important;
+}
+
+/* Analytics neutral chart areas also become white; series colors stay intact. */
+html[data-yardivo-main-theme="light"] body :is(
+  canvas,.chart-container,.chart-wrap,.analytics-chart,.sparkline-wrap,.heatmap-wrap,.analytics-grid,.analytics-toolbar
+){
+  background-color:#ffffff!important;
+}
+
+/* Existing component variable families */
+html[data-yardivo-main-theme="light"] body{
+  --yv58-bg:#ffffff!important;
+  --yv58-surface:#ffffff!important;
+  --yv58-surface-soft:#ffffff!important;
+  --yv58-line:var(--yv-light-line)!important;
+  --yv58-line-strong:var(--yv-light-line-strong)!important;
+  --yv58-text:var(--yv-light-text)!important;
+  --yv58-muted:var(--yv-light-muted)!important;
+}
+html[data-yardivo-main-theme="light"] #liveYard{
+  --ly-bg:#ffffff!important;
+  --ly-panel:#ffffff!important;
+  --ly-panel2:#ffffff!important;
+  --ly-line:var(--yv-light-line)!important;
+  --ly-text:var(--yv-light-text)!important;
+  --ly-muted:var(--yv-light-muted)!important;
+}
+html[data-yardivo-main-theme="light"] #yardivoSupplierPortal{
+  --ysp-bg:#ffffff!important;
+  --ysp-card:#ffffff!important;
+  --ysp-text:var(--yv-light-text)!important;
+  --ysp-muted:var(--yv-light-muted)!important;
+  --ysp-border:var(--yv-light-line)!important;
+  --ysa-ink:var(--yv-light-text)!important;
+  --ysa-muted:var(--yv-light-muted)!important;
+}
+
+/* Keep operational semantic colors untouched. */
+html[data-yardivo-main-theme="light"] body :is(
+  .dmv-booked,.week-map-item,.appointment,.booking,
+  .status-u-dolasku,.status-kasni,.status-u-dvorištu,.status-na-rampi,.status-nije-dosao,
+  .status-no-show,.status-odbijen,.status-zaprimljeno,.status-promijenjena,
+  [class*="yv-delay-level-"]
+){
+  color:#fff!important;
+}
+</style>
+
+
+<script id="yardivo-light-full-white-v5-js">
+(function(){
+'use strict';
+if(window.__YARDIVO_LIGHT_FULL_WHITE_V5__)return;
+window.__YARDIVO_LIGHT_FULL_WHITE_V5__=true;
+
+const root=document.documentElement;
+const changed=new WeakMap();
+
+function isLight(){
+  return root.dataset.yardivoMainTheme==='light' ||
+    root.dataset.theme==='light' ||
+    document.body?.classList.contains('light-mode');
+}
+function semantic(el){
+  return !!el.closest?.(
+    '.dmv-booked,.week-map-item,.appointment,.booking,.badge,.pill,.legend,.slotbar,'+
+    '.status-green,.status-red,.status-amber,[class*="status-" i],'+
+    '.success,.danger,.warning,.error,.destructive,.alert,.priority,'+
+    '[data-status="success"],[data-status="danger"],[data-status="warning"],[class*="yv-delay-level-"]'
+  );
+}
+function save(el,prop){
+  let r=changed.get(el);
+  if(!r){r={};changed.set(el,r)}
+  if(!(prop in r))r[prop]=el.style.getPropertyValue(prop);
+}
+function set(el,prop,val){
+  save(el,prop);
+  el.style.setProperty(prop,val,'important');
+}
+function darkish([r,g,b]){
+  return Math.max(r,g,b)<180 || (b>r+8 && b>g+5);
+}
+function rgbs(s){
+  return [...String(s||'').matchAll(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/gi)]
+    .map(m=>m.slice(1,4).map(Number));
+}
+function containsDark(s){return rgbs(s).some(darkish)}
+function shouldWhite(el){
+  if(semantic(el))return false;
+  if(el.matches?.('svg,svg *,canvas,img,video,iframe'))return false;
+  const cs=getComputedStyle(el);
+  const bg=cs.backgroundColor;
+  const bi=cs.backgroundImage;
+  return containsDark(bg) || (bi&&bi!=='none'&&containsDark(bi));
+}
+function paint(el){
+  if(!isLight()||!el||el.nodeType!==1||semantic(el))return;
+  const cs=getComputedStyle(el);
+
+  if(shouldWhite(el)){
+    set(el,'background-color','#ffffff');
+    if(cs.backgroundImage&&cs.backgroundImage!=='none')set(el,'background-image','none');
+  }
+  if(containsDark(cs.borderTopColor)||containsDark(cs.borderRightColor)||containsDark(cs.borderBottomColor)||containsDark(cs.borderLeftColor)){
+    set(el,'border-color','#d8e0e6');
+  }
+  const c=rgbs(cs.color)[0];
+  if(c && Math.min(...c)>185){
+    set(el,'color','#172833');
+    set(el,'-webkit-text-fill-color','#172833');
+  }
+}
+function restore(){
+  document.querySelectorAll('*').forEach(el=>{
+    const r=changed.get(el); if(!r)return;
+    for(const [p,v] of Object.entries(r)){ if(v)el.style.setProperty(p,v); else el.style.removeProperty(p); }
+    changed.delete(el);
+  });
+}
+function apply(){
+  if(!isLight()){restore();return}
+  if(!document.body)return;
+  document.body.style.setProperty('background','#ffffff','important');
+  document.body.style.setProperty('background-image','none','important');
+  document.body.querySelectorAll('*').forEach(paint);
+}
+let raf=0;
+function schedule(){
+  cancelAnimationFrame(raf);
+  raf=requestAnimationFrame(apply);
+}
+const obs=new MutationObserver(ms=>{
+  if(!isLight())return;
+  for(const m of ms){
+    for(const n of m.addedNodes){
+      if(n.nodeType===1){paint(n);n.querySelectorAll?.('*').forEach(paint)}
+    }
+  }
+});
+const rootObs=new MutationObserver(schedule);
+
+function boot(){
+  if(!document.body)return;
+  obs.observe(document.body,{subtree:true,childList:true});
+  rootObs.observe(root,{attributes:true,attributeFilter:['data-yardivo-main-theme','data-theme','data-yardivo-dark-palette']});
+  new MutationObserver(schedule).observe(document.body,{attributes:true,attributeFilter:['class']});
+  apply();
+}
+window.addEventListener('yardivo:view-opened',schedule);
+window.addEventListener('yardivo:data-synced',schedule);
+window.addEventListener('yardivo:master-data-changed',schedule);
+window.addEventListener('focus',schedule);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+
+window.YardivoLightFullWhiteV5={apply};
+})();
+</script>
+
+<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260921-v5.8.3-light-full-white-v5';</script>
 
 </body>
 </html>
