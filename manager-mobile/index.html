@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111b">
-<title>YARDIVO Manager Mobile · V2</title>
+<title>YARDIVO Manager Mobile · V3</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
 <style>
 :root{
@@ -149,6 +149,62 @@ button{cursor:pointer}
 
 @media(max-width:390px){.mobile-map-summary{grid-template-columns:repeat(2,1fr)}.wm-summary{grid-template-columns:repeat(2,1fr)}}
 
+
+/* ===== YARDIVO MANAGER MOBILE V3 · MY YARD 2D + ASSISTANT ===== */
+:root{--navh:84px}
+.bottom-nav{grid-template-columns:repeat(6,1fr)}
+.nav-btn span:last-child{font-size:6.7px}
+.yard2d-toolbar{display:flex;gap:7px;overflow:auto;margin-bottom:10px}.yard2d-toolbar::-webkit-scrollbar{display:none}
+.yard2d-toolbar button{white-space:nowrap;border:1px solid #294a60;background:#0b1b28;color:#9db6c5;border-radius:11px;padding:9px 11px;font-size:8px;font-weight:1000}.yard2d-toolbar button.active{background:#143c58;border-color:#3d8fc5;color:#effaff}
+.yard2d-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.yard2d-kpis div{padding:8px 4px;border:1px solid #244257;border-radius:11px;background:#091925;text-align:center}
+.yard2d-kpis small{display:block;color:#7894a4;font-size:6.5px;font-weight:1000}.yard2d-kpis strong{display:block;margin-top:2px;font-size:14px}
+.yard2d-stage{position:relative;min-height:470px;border:1px solid #27465a;border-radius:18px;overflow:hidden;background:
+ linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+ linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px),
+ #0a151c;background-size:20px 20px;box-shadow:inset 0 0 45px rgba(0,0,0,.26)}
+.yard2d-road{position:absolute;left:0;right:0;top:44%;height:22%;background:#202b31;border-top:2px dashed #62717a;border-bottom:2px dashed #62717a}
+.yard2d-road:after{content:"SMJER PROMETA →";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:7px;color:#89979e;font-weight:1000;letter-spacing:.18em}
+.yard2d-gate{position:absolute;left:3%;top:48%;width:62px;height:46px;border:1px solid #3a779c;border-radius:8px;background:#0d2d41;display:grid;place-items:center;color:#a8dfff;font-size:7px;font-weight:1000;z-index:5}
+.yard2d-wh{position:absolute;right:6%;top:11%;width:58%;height:32%;border:2px solid #45606d;border-radius:8px;background:linear-gradient(145deg,#36454b,#1d292e);box-shadow:0 10px 20px rgba(0,0,0,.28)}
+.yard2d-wh strong{position:absolute;left:12px;top:10px;font-size:11px;color:#e3eef2}.yard2d-wh small{position:absolute;left:12px;top:28px;color:#92a5ae;font-size:7px}
+.yard2d-docks{position:absolute;right:6%;top:40%;width:58%;display:grid;grid-template-columns:repeat(var(--dock-count,3),1fr);gap:5px;z-index:4}
+.yard2d-dock{height:42px;border:1px solid #48606b;border-radius:6px;background:#18262c;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:7px;font-weight:1000;color:#b9c9d0}
+.yard2d-dock.busy{border-color:#d5a93a;background:#33290d;color:#ffe292}.yard2d-dock.free{border-color:#2e8053;background:#0c2b1b;color:#81efac}.yard2d-dock.off{border-color:#6c343a;background:#291115;color:#ff9da6}
+.yard2d-parking{position:absolute;left:9%;bottom:7%;width:72%;display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.yard2d-park{height:54px;border:1px dashed #566970;border-radius:7px;background:#111d21;position:relative;display:grid;place-items:center;color:#71858c;font-size:7px;font-weight:1000}
+.yard2d-park.occupied{border-style:solid;border-color:#cc783d;background:#2a190e;color:#ffc399}
+.yard2d-truck{position:absolute;width:36px;height:14px;border-radius:3px;background:#d7e4ea;border:2px solid #62747d;box-shadow:0 4px 8px rgba(0,0,0,.35)}
+.yard2d-truck:after{content:"";position:absolute;right:-9px;top:2px;width:9px;height:10px;border-radius:2px;background:#92a6af}
+.yard2d-park .yard2d-truck{position:relative;left:auto;top:auto;margin-bottom:5px}
+.yard2d-park span{position:absolute;bottom:4px;left:5px;right:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.yard2d-wait{position:absolute;left:5%;top:18%;width:24%;height:17%;border:1px dashed #8b6c2e;border-radius:8px;background:rgba(78,59,12,.28);display:grid;place-items:center;color:#d7b765;font-size:7px;font-weight:1000}
+.yard2d-note{margin-top:9px;color:#768f9e;font-size:8px;line-height:1.45;text-align:center}
+.yard2d-legend{display:flex;gap:8px;overflow:auto;margin:10px 0 0;padding-bottom:2px}.yard2d-legend::-webkit-scrollbar{display:none}.yard2d-legend span{white-space:nowrap;color:#829aa8;font-size:7px;font-weight:900}.yard2d-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+
+/* Assistant floating button and chat sheet */
+.ai-fab{position:fixed;z-index:55;right:max(14px,calc((100vw - 760px)/2 + 14px));bottom:calc(var(--navh) + env(safe-area-inset-bottom) + 13px);width:54px;height:54px;border-radius:18px;border:1px solid #3d84b2;background:linear-gradient(145deg,#123b58,#0b2437);color:#dff5ff;box-shadow:0 15px 36px rgba(0,0,0,.36),0 0 0 1px rgba(85,178,235,.08);font-size:21px;font-weight:1000}
+.ai-fab:after{content:"AI";position:absolute;right:7px;bottom:5px;font-size:6px;letter-spacing:.08em;color:#7bc7f3}
+.ai-sheet{position:fixed;inset:0;z-index:80;display:none;align-items:flex-end;background:rgba(2,8,13,.62);backdrop-filter:blur(5px)}
+.ai-sheet.open{display:flex}
+.ai-panel{width:min(760px,100%);margin:0 auto;height:min(82dvh,720px);border-radius:23px 23px 0 0;background:linear-gradient(180deg,#102235,#07141f);border:1px solid #2c5068;border-bottom:0;box-shadow:0 -20px 55px rgba(0,0,0,.38);display:flex;flex-direction:column;overflow:hidden}
+.ai-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 15px;border-bottom:1px solid #244257;background:#0b1d2b}
+.ai-head strong{display:block;font-size:13px}.ai-head span{display:block;margin-top:2px;color:#7fa1b5;font-size:8px}
+.ai-close{width:36px;height:36px;border-radius:12px;border:1px solid #2c4e63;background:#102638;color:#a9c2d0;font-size:18px}
+.ai-quick{display:flex;gap:7px;overflow:auto;padding:9px 12px;border-bottom:1px solid #1b3548}.ai-quick::-webkit-scrollbar{display:none}
+.ai-quick button{white-space:nowrap;border:1px solid #28526c;background:#0c2435;color:#abd0e4;border-radius:999px;padding:8px 10px;font-size:8px;font-weight:950}
+.ai-messages{flex:1;overflow:auto;padding:13px 12px;display:flex;flex-direction:column;gap:9px;-webkit-overflow-scrolling:touch}
+.ai-msg{max-width:88%;padding:10px 11px;border-radius:14px;font-size:10px;line-height:1.5;white-space:pre-wrap}
+.ai-msg.user{align-self:flex-end;background:#17476b;border:1px solid #3178aa;color:#edf8ff;border-bottom-right-radius:5px}
+.ai-msg.assistant{align-self:flex-start;background:#0b2433;border:1px solid #28536c;color:#d8eaf3;border-bottom-left-radius:5px}
+.ai-msg.system{align-self:center;max-width:96%;background:transparent;color:#6f899a;font-size:8px;text-align:center}
+.ai-thinking{display:inline-flex;gap:4px;align-items:center}.ai-thinking i{width:5px;height:5px;border-radius:50%;background:#70bbeb;animation:aidot 1s infinite}.ai-thinking i:nth-child(2){animation-delay:.15s}.ai-thinking i:nth-child(3){animation-delay:.3s}@keyframes aidot{0%,70%,100%{opacity:.25;transform:translateY(0)}35%{opacity:1;transform:translateY(-3px)}}
+.ai-inputbar{display:grid;grid-template-columns:1fr auto;gap:8px;padding:10px 11px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #244257;background:#091926}
+.ai-inputbar textarea{resize:none;min-height:44px;max-height:90px;border:1px solid #2b5067;border-radius:13px;background:#07151f;color:#edf6fb;padding:11px;outline:none;font:inherit;font-size:10px}.ai-inputbar textarea:focus{border-color:#48a7ff}
+.ai-send{min-width:48px;border:0;border-radius:13px;background:linear-gradient(180deg,#5bb5fa,#2d84ca);color:#041018;font-weight:1000}
+.ai-send:disabled{opacity:.45}
+@media(max-width:390px){.yard2d-kpis{grid-template-columns:repeat(2,1fr)}.nav-btn span:last-child{font-size:6px}.nav-btn .ico{font-size:16px}}
+
 </style>
 </head>
 <body>
@@ -223,6 +279,17 @@ button{cursor:pointer}
       </div>
     </section>
 
+    <section id="view-yard" class="view">
+      <div class="page-head"><div><h1>My Yard</h1><p>2D tlocrt · live stanje dvorišta</p></div><span class="scope-pill" id="yardScope">—</span></div>
+      <div class="card">
+        <div id="yardWhToolbar" class="yard2d-toolbar"></div>
+        <div id="yard2dKpis" class="yard2d-kpis"></div>
+        <div id="yard2dStage"></div>
+        <div class="yard2d-legend"><span><i style="background:#2e8053"></i>SLOBODNA RAMPA</span><span><i style="background:#d5a93a"></i>ZAUZETA</span><span><i style="background:#cc783d"></i>PARKING ZAUZET</span></div>
+        <div class="yard2d-note">2D operativni prikaz koristi stvarne YARDIVO statuse. Raspored objekata je pojednostavljen za mobitel.</div>
+      </div>
+    </section>
+
     <section id="view-daily" class="view">
       <div class="page-head"><div><h1>Dnevna mapa</h1><p id="dailyDateText">Danas</p></div><span class="scope-pill" id="dailyScope">—</span></div>
       <div class="card">
@@ -247,21 +314,38 @@ button{cursor:pointer}
   <nav class="bottom-nav">
     <button class="nav-btn active" data-view="home"><span class="ico">⌂</span><span>HOME</span></button>
     <button class="nav-btn" data-view="tower"><span class="ico">◈</span><span>CONTROL</span></button>
+    <button class="nav-btn" data-view="yard"><span class="ico">▱</span><span>MY YARD</span></button>
     <button class="nav-btn" data-view="daily"><span class="ico">▦</span><span>DNEVNA</span></button>
     <button class="nav-btn" data-view="weekly"><span class="ico">▤</span><span>TJEDNA</span></button>
     <button class="nav-btn" data-view="overview"><span class="ico">◎</span><span>OVERVIEW</span></button>
   </nav>
 </div>
 
+
+<button id="aiFab" class="ai-fab hidden" type="button" aria-label="Otvori YARDIVO Assistant">✦</button>
+<div id="aiSheet" class="ai-sheet" aria-hidden="true">
+  <div class="ai-panel">
+    <div class="ai-head"><div><strong>✦ YARDIVO ASSISTANT</strong><span id="aiContextLabel">Manager · live operativni kontekst</span></div><button id="aiClose" class="ai-close" type="button">×</button></div>
+    <div class="ai-quick">
+      <button type="button" data-ai-q="Što trenutno traži moju pažnju?">ŠTO TRAŽI PAŽNJU?</button>
+      <button type="button" data-ai-q="Tko trenutno kasni?">TKO KASNI?</button>
+      <button type="button" data-ai-q="Koje su rampe slobodne?">SLOBODNE RAMPE</button>
+      <button type="button" data-ai-q="Sažmi današnje stanje dvorišta.">SAŽMI DVORIŠTE</button>
+    </div>
+    <div id="aiMessages" class="ai-messages"><div class="ai-msg system">Assistant koristi samo YARDIVO podatke unutar vašeg dopuštenog scopea.</div></div>
+    <div class="ai-inputbar"><textarea id="aiInput" rows="1" placeholder="Pitaj YARDIVO…"></textarea><button id="aiSend" class="ai-send" type="button">➤</button></div>
+  </div>
+</div>
+
 <script>
 (()=>{'use strict';
-window.YARDIVO_MANAGER_MOBILE_BUILD='20260921-v2-maps-search';
+window.YARDIVO_MANAGER_MOBILE_BUILD='20260921-v3-myyard-assistant';
 const BASE='https://rskticdbiovvgyocpzoc.supabase.co';
 const KEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
 const SYNC=BASE+'/functions/v1/yardivo-sync';
 const sb=supabase.createClient(BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
 const $=id=>document.getElementById(id);
-let scope=null,session=null,ann=[],inc=[],state=[],master={locations:[],warehouses:[],suppliers:[]},activeDailyWh='',pollTimer=null,busy=false;
+let scope=null,session=null,ann=[],inc=[],state=[],master={locations:[],warehouses:[],suppliers:[]},activeDailyWh='',activeYardWh='',pollTimer=null,busy=false,currentView='home',aiBusy=false,aiHistory=[];
 
 const pad=n=>String(n).padStart(2,'0');
 function localIso(d=new Date()){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
@@ -355,7 +439,7 @@ async function welcomeThenOpen(){
   const locs=assignedLocs();$('welcomeSub').textContent=locs.length?locs.map(locName).join(' · ')+' · učitavam operativno stanje…':'Učitavam operativno stanje…';
   const fill=$('welcomeFill'),pct=$('welcomePct');let p=0;
   await new Promise(resolve=>{const t=setInterval(()=>{p=Math.min(100,p+5+Math.floor(Math.random()*8));fill.style.width=p+'%';pct.textContent=p+'%';if(p>=100){clearInterval(t);setTimeout(resolve,220)}},90)});
-  $('welcome').classList.remove('show');$('app').classList.remove('hidden');renderAll();setDb(true,'ONLINE');
+  $('welcome').classList.remove('show');$('app').classList.remove('hidden');$('aiFab').classList.remove('hidden');renderAll();setDb(true,'ONLINE');
   clearInterval(pollTimer);pollTimer=setInterval(refresh,3500);
 }
 async function refresh(){
@@ -369,9 +453,9 @@ function scopeLabel(){
   return 'MOJ SCOPE';
 }
 function renderAll(){
-  const sl=scopeLabel();['homeScope','towerScope','dailyScope','weeklyScope','overviewScope'].forEach(id=>{const e=$(id);if(e)e.textContent=sl});
+  const sl=scopeLabel();['homeScope','towerScope','yardScope','dailyScope','weeklyScope','overviewScope'].forEach(id=>{const e=$(id);if(e)e.textContent=sl});
   $('scopeText').textContent=sl.toUpperCase();$('homeHello').textContent='Pozdrav, '+String(scope?.username||'Voditelj')+'. Današnji operativni pregled.';
-  renderHome();renderTower();renderDaily();renderWeekly();renderOverview();
+  renderHome();renderTower();renderYard();renderDaily();renderWeekly();renderOverview();
   $('lastSync').textContent='SYNC '+new Date().toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }
 function renderHome(){
@@ -407,6 +491,46 @@ function renderTower(){
   $('decisionStack').innerHTML=dec.length?dec.slice(0,20).map(x=>`<div class="decision ${x.c}"><div class="decision-head"><strong>${esc(x.t)}</strong><span>${esc(x.tag)}</span></div><p>${esc(x.p)}</p></div>`).join(''):'<div class="decision good"><div class="decision-head"><strong>NEMA AKTIVNIH IZUZETAKA</strong><span>OK</span></div><p>Današnji operativni scope trenutno nema stavki koje traže hitnu pažnju.</p></div>';
 }
 function dailyWhs(){return assignedWhs().filter(id=>(master.warehouses||[]).some(w=>String(w.id)===String(id)&&w?.active!==false))}
+
+function yardRows(wh){
+  const today=localIso();
+  return rows().filter(a=>aDate(a)===today&&aWarehouse(a)===wh);
+}
+function yardRampCount(wh){
+  const w=(master.warehouses||[]).find(x=>String(x.id)===String(wh))||{};
+  return Math.max(0,nr(w.ramps||w.docks||0));
+}
+function renderYard(){
+  const whs=dailyWhs();if(!activeYardWh||!whs.includes(activeYardWh))activeYardWh=whs[0]||'';
+  $('yardWhToolbar').innerHTML=whs.map(w=>`<button data-yard-wh="${esc(w)}" class="${w===activeYardWh?'active':''}">${esc(whName(w))}</button>`).join('');
+  $('yardWhToolbar').querySelectorAll('[data-yard-wh]').forEach(b=>b.onclick=()=>{activeYardWh=b.dataset.yardWh;renderYard()});
+  if(!activeYardWh){$('yard2dStage').innerHTML='<div class="empty">Nema dodijeljenog skladišta.</div>';return}
+
+  const d=yardRows(activeYardWh),ramps=yardRampCount(activeYardWh);
+  const yard=d.filter(a=>status(a)==='U dvorištu'),dock=d.filter(a=>status(a)==='Na rampi'),coming=d.filter(a=>status(a)==='U dolasku');
+  const done=d.filter(a=>status(a)==='Zaprimljeno').length;
+  $('yard2dKpis').innerHTML=`<div><small>U DVORIŠTU</small><strong>${yard.length}</strong></div><div><small>NA RAMPI</small><strong>${dock.length}</strong></div><div><small>U DOLASKU</small><strong>${coming.length}</strong></div><div><small>ZAPRIMLJENO</small><strong>${done}</strong></div>`;
+
+  const occupiedDock=new Map();dock.forEach(a=>occupiedDock.set(nr(aDock(a)),a));
+  const parkingCount=Math.max(8,Math.min(12,Math.max(8,yard.length+3)));
+  const parkItems=Array.from({length:parkingCount},(_,i)=>{
+    const a=yard[i]||null;
+    return `<div class="yard2d-park ${a?'occupied':''}">${a?'<div class="yard2d-truck"></div>':''}<span>P${i+1}${a?' · '+esc(plate(a)):''}</span></div>`;
+  }).join('');
+  const dockItems=Array.from({length:Math.max(1,ramps)},(_,i)=>{
+    const r=i+1,a=occupiedDock.get(r),cls=a?'busy':'free';
+    return `<div class="yard2d-dock ${cls}"><strong>R${r}</strong><span>${a?esc(plate(a)):'SLOBODNA'}</span></div>`;
+  }).join('');
+  $('yard2dStage').innerHTML=`<div class="yard2d-stage">
+    <div class="yard2d-road"></div>
+    <div class="yard2d-gate">PORTA</div>
+    <div class="yard2d-wait">WAITING ZONA<br>${coming.length} U DOLASKU</div>
+    <div class="yard2d-wh"><strong>${esc(whName(activeYardWh))}</strong><small>${esc(scopeLabel())}</small></div>
+    <div class="yard2d-docks" style="--dock-count:${Math.max(1,ramps)}">${dockItems}</div>
+    <div class="yard2d-parking">${parkItems}</div>
+  </div>`;
+}
+
 function renderDaily(){
   const today=localIso(),whs=dailyWhs();if(!activeDailyWh||!whs.includes(activeDailyWh))activeDailyWh=whs[0]||'';
   $('dailyDateText').textContent=new Intl.DateTimeFormat('hr-HR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(today+'T12:00:00'));
@@ -550,7 +674,69 @@ function renderOverview(){
   }).join(''):`<div class="empty">${q?'Nema dobavljača koji odgovara pretrazi.':'Nema dobavljača za prikaz.'}</div>`;
 }
 
+
+function aiContext(){
+  const whs=assignedWhs(),locs=assignedLocs(),visibleRows=rows(),today=localIso();
+  return {
+    currentView,
+    date:today,
+    locations:locs.map(id=>({id,name:locName(id)})),
+    assignedWarehouses:whs.map(id=>({id,name:whName(id),locationId:whLoc(id),ramps:yardRampCount(id)})),
+    deliveries:visibleRows.slice(-250).map(a=>({
+      id:String(a?.announcement_id||a?.id||''),
+      warehouseId:aWarehouse(a),
+      date:aDate(a),
+      time:appointmentTime(a),
+      supplier:supplier(a),
+      plate:plate(a),
+      dock:aDock(a),
+      pallets:aPallets(a),
+      sku:aSku(a),
+      orderNumber:aOrder(a),
+      status:status(a),
+      delayMinutes:delayMin(a)
+    })),
+    incidents:(Array.isArray(inc)?inc:[]).filter(x=>{
+      const wh=String(x?.warehouse||x?.warehouse_id||x?.payload?.warehouse||'');
+      return !wh||whs.includes(wh);
+    }).slice(-100).map(x=>({
+      id:String(x?.incident_id||x?.id||''),
+      warehouseId:String(x?.warehouse||x?.warehouse_id||x?.payload?.warehouse||''),
+      type:String(x?.type||x?.category||x?.payload?.type||'Incident'),
+      status:String(x?.status||x?.payload?.status||''),
+      note:String(x?.note||x?.description||x?.payload?.note||'').slice(0,500)
+    }))
+  };
+}
+function openAi(){
+  $('aiSheet').classList.add('open');$('aiSheet').setAttribute('aria-hidden','false');
+  $('aiContextLabel').textContent=`${scopeLabel()} · ${currentView.toUpperCase()} · live kontekst`;
+  setTimeout(()=>$('aiInput').focus(),120);
+}
+function closeAi(){
+  $('aiSheet').classList.remove('open');$('aiSheet').setAttribute('aria-hidden','true');
+}
+function aiAdd(role,text){
+  const m=document.createElement('div');m.className='ai-msg '+role;m.textContent=text;$('aiMessages').appendChild(m);$('aiMessages').scrollTop=$('aiMessages').scrollHeight;return m;
+}
+async function aiSend(message){
+  const text=String(message||$('aiInput').value||'').trim();if(!text||aiBusy)return;
+  aiBusy=true;$('aiSend').disabled=true;$('aiInput').value='';aiAdd('user',text);
+  const thinking=document.createElement('div');thinking.className='ai-msg assistant';thinking.innerHTML='<span class="ai-thinking"><i></i><i></i><i></i></span>';$('aiMessages').appendChild(thinking);$('aiMessages').scrollTop=$('aiMessages').scrollHeight;
+  try{
+    const t=await token();
+    const r=await fetch(BASE+'/functions/v1/yardivo-ai',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({action:'chat',message:text,history:aiHistory.slice(-8),context:aiContext()})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||d?.ok===false)throw new Error(d?.detail||d?.error||('HTTP '+r.status));
+    thinking.remove();aiAdd('assistant',String(d.reply||'Nema odgovora.'));
+    aiHistory.push({role:'user',text},{role:'assistant',text:String(d.reply||'')});aiHistory=aiHistory.slice(-12);
+  }catch(e){
+    thinking.remove();aiAdd('assistant','Assistant trenutno nije dostupan: '+String(e?.message||e));
+  }finally{aiBusy=false;$('aiSend').disabled=false}
+}
+
 function showView(name){
+  currentView=name;
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+name));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
   window.scrollTo({top:0,behavior:'smooth'});
@@ -558,6 +744,9 @@ function showView(name){
 document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $('supplierSearch').addEventListener('input',renderOverview);
 $('supplierSearchClear')?.addEventListener('click',()=>{$('supplierSearch').value='';renderOverview();$('supplierSearch').focus()});
+$('aiFab').onclick=openAi;$('aiClose').onclick=closeAi;$('aiSheet').addEventListener('click',e=>{if(e.target===$('aiSheet'))closeAi()});
+$('aiSend').onclick=()=>aiSend();$('aiInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();aiSend()}});
+document.querySelectorAll('[data-ai-q]').forEach(b=>b.onclick=()=>aiSend(b.dataset.aiQ));
 $('loginBtn').onclick=login;$('password').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
 window.addEventListener('online',()=>refresh());window.addEventListener('offline',()=>setDb(false,'OFFLINE'));
