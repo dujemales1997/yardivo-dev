@@ -10881,7 +10881,7 @@ document.getElementById('globalWarehouse')?.addEventListener('change',e=>setGlob
 // ===== STUDENAC: dolasci, kašnjenja, overview i incidenti =====
 let incidents=JSON.parse(safeStorage.getItem('yardivo_yms_incidents_v1')||'[]');
 const saveIncidents=()=>safeStorage.setItem('yardivo_yms_incidents_v1',JSON.stringify(incidents));
-const TOLERANCE_MIN=15;
+let TOLERANCE_MIN=15;
 
 function plannedDateTime(a){return new Date(`${a.date}T${a.time}:00`)}
 function actualDateTime(a){return a.actualDate&&a.actualTime?new Date(`${a.actualDate}T${a.actualTime}:00`):null}
@@ -13024,7 +13024,7 @@ function operationalDelayText(a){
 
 
 
-const LATE_GRACE_MINUTES=15;
+let LATE_GRACE_MINUTES=15;
 
 function plannedArrivalDateTime(a){
   if(!a?.date||!a?.time)return null;
@@ -13085,7 +13085,10 @@ function isAfter14NoShow(a,now=new Date()){
   const today=isoLocal(now);
   if(a.date!==today)return false;
   if(hasPhysicallyArrived(a))return false;
-  const cutoff=new Date(`${today}T14:00:00`);
+  let noShowAt='14:00';
+  try{noShowAt=String(window.YardivoDelayRulesV1?.get?.().noShowAt||'14:00')}catch(_){}
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(noShowAt))noShowAt='14:00';
+  const cutoff=new Date(`${today}T${noShowAt}:00`);
   return now>=cutoff;
 }
 function exactDelayTextFromPlan(a,now=new Date()){
@@ -13138,7 +13141,7 @@ function operationalPlanStatus(a){
   if(!actualDateTime(a)){
     const plan=new Date(`${a.date}T${a.time}:00`);
     const mins=Math.floor((new Date()-plan)/60000);
-    if(mins>=30 && mins<120)return 'Kašnjenje';
+    if(mins>=LATE_GRACE_MINUTES)return 'Kašnjenje';
   }
   return normalizedPlanStatus(a);
 }
@@ -13152,11 +13155,13 @@ function yardivoMapDelayVisualClass(a){
   if(typeof hasPhysicallyArrived==='function'&&hasPhysicallyArrived(a))return '';
   const mins=typeof frozenOrLiveLateMinutes==='function'?frozenOrLiveLateMinutes(a):0;
   if(!(mins>0))return '';
-  if(mins<15)return 'yv-delay-level-1';
-  if(mins<30)return 'yv-delay-level-2';
-  if(mins<60)return 'yv-delay-level-3';
-  if(mins<90)return 'yv-delay-level-4';
-  return 'yv-delay-level-5';
+  let r={graceMinutes:15,orangeFrom:30,redFrom:60,criticalFrom:90};
+  try{r={...r,...(window.YardivoDelayRulesV1?.get?.()||{})}}catch(_){}
+  if(mins<Number(r.graceMinutes||15))return '';
+  if(mins<Number(r.orangeFrom||30))return 'yv-delay-level-1';
+  if(mins<Number(r.redFrom||60))return 'yv-delay-level-2';
+  if(mins<Number(r.criticalFrom||90))return 'yv-delay-level-3';
+  return 'yv-delay-level-4';
 }
 function yardivoUnifiedStatusClass(a){
   const s=yardivoUnifiedStatus(a);
@@ -13943,7 +13948,7 @@ function renderCalendar(){
     h+=`<div class="calday ${cls}">
       <div class="daymeta"><b>${d.toLocaleDateString('hr-HR',{weekday:'short',day:'2-digit',month:'2-digit'})}</b><small>${iso}</small></div>
       ${holiday?`<span class="holiday-name">${holiday}</span>`:weekend?'<span class="weekend-name">VIKEND · NEMA PRIJAMA</span>':''}
-      ${a.map(x=>`<div class="calitem">${x.time} · ${x.warehouse||yardivoCanonicalWarehouseV583()} · ${x.supplier}<br>R${x.dock} · ${x.pallets} pal.</div>`).join('')}
+      ${a.map(x=>`<div class="calitem">${x.time} · ${warehouseOptionLabel(x.warehouse||yardivoCanonicalWarehouseV583())} · ${x.supplier}<br>R${x.dock} · ${x.pallets} pal.</div>`).join('')}
     </div>`;
   }
   host.innerHTML=h;
@@ -13960,7 +13965,7 @@ function renderTruckHistory(){
   const a=announcements
     .filter(x=>normalizePlate(x.arrivalPlate||x.plannedPlate)===np)
     .sort((x,y)=>String(y.actualDate||y.date).localeCompare(String(x.actualDate||x.date)));
-  host.innerHTML=a.length?a.slice(0,10).map(x=>`<div class="smart-note"><strong>${x.actualDate||x.date}</strong> · ${x.supplier} · ${x.warehouse||yardivoCanonicalWarehouseV583()} · ${operationalPlanStatus(x)} ${operationalDelayText(x)?`· ${operationalDelayText(x)}`:''}</div>`).join(''):'Nema prethodnih dolazaka za ovu registraciju.';
+  host.innerHTML=a.length?a.slice(0,10).map(x=>`<div class="smart-note"><strong>${x.actualDate||x.date}</strong> · ${x.supplier} · ${warehouseOptionLabel(x.warehouse||yardivoCanonicalWarehouseV583())} · ${operationalPlanStatus(x)} ${operationalDelayText(x)?`· ${operationalDelayText(x)}`:''}</div>`).join(''):'Nema prethodnih dolazaka za ovu registraciju.';
 }
 
 
@@ -16820,6 +16825,10 @@ body.yardivo-porta-role [data-home-target="notifications"]{
     try{
       activeWarehouse=wh;
       safeStorage?.setItem?.('studenac_active_warehouse',wh);
+      /* Canonical context must follow the header dropdown as well. */
+      if(String(window.YardivoAppStateV583?.warehouse?.()||'')!==String(wh)){
+        window.YardivoAppStateV583?.setWarehouse?.(wh);
+      }
     }catch(e){}
 
     const info=document.getElementById('globalWarehouseInfo');
@@ -17959,27 +17968,11 @@ function renderControlTower(){
 }
 
 function ensureSettings(){
- const host=document.getElementById('settings');if(!host||!admin())return;
- let p=document.getElementById('detentionSettings');if(p)return;
- p=document.createElement('div');p.id='detentionSettings';p.className='panel detention-settings';
- p.innerHTML=`<div class="panel-head"><div><h2>DETENTION / SLA PRAGOVI</h2><small>Automatska upozorenja za čekanje, rampu i ukupni dwell time</small></div></div>
- <div class="detention-settings-grid">
-  <label>Čekanje upozorenje (min)<input data-sla="waitingWarn" type="number" min="1"></label>
-  <label>Čekanje kritično (min)<input data-sla="waitingCritical" type="number" min="1"></label>
-  <label>Rampa upozorenje (min)<input data-sla="dockWarn" type="number" min="1"></label>
-  <label>Rampa kritično (min)<input data-sla="dockCritical" type="number" min="1"></label>
-  <label>Ukupni dwell kritično (min)<input data-sla="totalCritical" type="number" min="1"></label>
-  <label>Tolerancija kašnjenja (min)<input data-sla="lateTolerance" type="number" min="0"></label>
- </div><div class="detention-note">Čekanje = ulaz u dvorište → rampa. Rampa = dolazak na rampu → završetak. Dwell = ulaz u dvorište → završetak/odbijanje.</div>
- <div class="dialog-actions" style="padding:0 14px 14px"><button type="button" class="primary" id="saveDetentionSettings">SPREMI SLA PRAGOVE</button></div>`;
- host.appendChild(p);
- const s=settings();p.querySelectorAll('[data-sla]').forEach(i=>i.value=s[i.dataset.sla]);
- document.getElementById('saveDetentionSettings').onclick=()=>{
-   const x=settings();p.querySelectorAll('[data-sla]').forEach(i=>x[i.dataset.sla]=Math.max(0,Math.floor(Number(i.value||0))));
-   if(x.waitingCritical<x.waitingWarn||x.dockCritical<x.dockWarn)return alert('Kritični prag mora biti jednak ili veći od upozorenja.');
-   x.updatedAt=new Date().toISOString();x.updatedBy=currentSession?.username||currentSession?.user||'Admin';saveSettings(x);
-   showYmsToast?.('success','SLA PRAGOVI SPREMLJENI','Control Tower koristi nove vrijednosti.');renderControlTower();
- };
+ /* Dwell / Detention thresholds are no longer user-configurable.
+    Control Tower may still measure dwell operationally, but Admin Settings
+    now owns only the global delay/no-show rules. */
+ const old=document.getElementById('detentionSettings');
+ if(old)old.remove();
 }
 
 function decorateSupplierProfile(){
@@ -19725,13 +19718,14 @@ function openReceiving(id,allowActions=true){
   const roleEditable=typeof canChangeReceptionStatus==='function' ? canChangeReceptionStatus() : false;
   const editable=allowActions && roleEditable && !qrLocked;
 
-  h.innerHTML=`<div><h3>${esc(a.supplier||'NAJAVA')}</h3><small>${esc(a.date||'')} · ${esc(a.time||'—')} · ${esc(a.warehouse||'')} · R${esc(a.dock||'—')}</small></div><button type="button" class="yod-close">×</button>`;
+  const whDisplay=(typeof warehouseOptionLabel==='function'?warehouseOptionLabel(a.warehouse||''):a.warehouse)||'—';
+  h.innerHTML=`<div><h3>${esc(a.supplier||'NAJAVA')}</h3><small>${esc(a.date||'')} · ${esc(a.time||'—')} · ${esc(whDisplay)} · R${esc(a.dock||'—')}</small></div><button type="button" class="yod-close">×</button>`;
   b.innerHTML=`<div class="yod-grid">
     ${field('Dobavljač',a.supplier)}
     ${field('Datum',a.date)}
     ${field('Planirani termin',a.time)}
     ${field('Status',st)}
-    ${field('Skladište',a.warehouse)}
+    ${field('Skladište',whDisplay)}
     ${field('Rampa',a.dock?'R'+a.dock:'—')}
     ${field('Narudžba',a.orderNumber)}
     ${field('Tip dolaska',a.arrivalType==='UNANNOUNCED'?'Nenajavljeni':'Najavljeni')}
@@ -22301,7 +22295,7 @@ function render(){
    const a=dayData.find(x=>stateOf(x,d)==='yard'&&String(x.yardPosition||'').toUpperCase()===slot);
    return `<div class="myy-park ${a?'occupied':''}" data-parking="${slot}" style="--pc:${i%21};--pr:${Math.floor(i/21)}"><b>${slot}</b>${a?'<i></i>':''}</div>`;
  }).join('');
- s.querySelector('.myy-meta').textContent=`${w} · ${dayData.length} NAJAVA · ${isToday?'LIVE':'PLAN DANA'}`;
+ s.querySelector('.myy-meta').textContent=`${(typeof warehouseOptionLabel==='function'?warehouseOptionLabel(w):w)} · ${dayData.length} NAJAVA · ${isToday?'LIVE':'PLAN DANA'}`;
  const docks=s.querySelector('.myy-docks');
  docks.innerHTML=Array.from({length:n},(_,i)=>{
    const busy=dayData.some(a=>stateOf(a,d)==='dock'&&Number(a.dock)===i+1);
@@ -22331,7 +22325,8 @@ function openTruckInfo(id){
  const driver=a.plannedDriver||a.arrivalDriver||a.driver||'—';
  const trailer=a.plannedTrailer||a.trailer||'—';
  const phone=a.plannedPhone||a.phone||'—';
- const vals=[['DOBAVLJAČ',a.supplier||'—'],['STATUS',a.status||'—'],['DATUM',a.date||'—'],['TERMIN',a.time||'—'],['SKLADIŠTE',a.warehouse||'—'],['RAMPA',a.dock?('R'+a.dock):'—'],['PALETE',a.pallets??'—'],['SKU',a.sku??'—'],['TABLICA',plate],['VOZAČ',driver],['PRIKOLICA',trailer],['TELEFON',phone],['NARUDŽBA',a.orderNumber||'—'],['ODGOVORNA OSOBA',a.responsible||'—']];
+ const whDisplay=(typeof warehouseOptionLabel==='function'?warehouseOptionLabel(a.warehouse||''):a.warehouse)||'—';
+ const vals=[['DOBAVLJAČ',a.supplier||'—'],['STATUS',a.status||'—'],['DATUM',a.date||'—'],['TERMIN',a.time||'—'],['SKLADIŠTE',whDisplay],['RAMPA',a.dock?('R'+a.dock):'—'],['PALETE',a.pallets??'—'],['SKU',a.sku??'—'],['TABLICA',plate],['VOZAČ',driver],['PRIKOLICA',trailer],['TELEFON',phone],['NARUDŽBA',a.orderNumber||'—'],['ODGOVORNA OSOBA',a.responsible||'—']];
  m.querySelector('.yai-grid').innerHTML=vals.map(([k,v])=>`<div class="yai-item"><small>${esc(k)}</small><b>${k==='STATUS'?'<span class="yai-status">'+esc(v)+'</span>':esc(v)}</b></div>`).join('');
  m.classList.add('open');
 }
@@ -44798,7 +44793,7 @@ function renderSystem(){
  if(!host){host=document.createElement('section');host.id='yardivoMasterSystemAuthorityV583';pane.appendChild(host)}
  const d=master(),whs=d.warehouses.filter(w=>w&&w.active!==false);
  host.innerHTML=`<div class="yms-master-head">
-   <div><h3>SKLADIŠTA · PALETE · DETENTION SLA · RAMPE</h3>
+   <div><h3>SKLADIŠTA · KAPACITET · RADNO VRIJEME · RAMPE</h3>
    <p>Sve vrijednosti iz ovog sektora koriste Planner, Daily/Weekly Map, Prijam, Gate, kapaciteti i My Yard. Nema zasebnog legacy izvora.</p></div>
    <span class="yms-safe">SIGURNO SPREMANJE MASTER PODATAKA</span>
  </div>
@@ -44806,11 +44801,9 @@ function renderSystem(){
    const h=hours(w.id),de=detention(w.id),n=Math.max(0,Number(w.ramps)||0);
    return `<article class="yms-wh" data-yms-wh="${esc(w.id)}">
     <div class="yms-wh-title"><div><strong>${esc(w.name)}</strong><small>${esc(locName(w.location_id,d))}</small></div><span>${n} ${n===1?'RAMPA':'RAMPI'}</span></div>
-    <div class="yms-sector"><h4>PALETE & DETENTION SLA</h4>
+    <div class="yms-sector"><h4>KAPACITET I RADNO VRIJEME</h4>
       <div class="yms-fields">
        <label>DNEVNI KAPACITET · PALETE<input type="number" min="0" step="1" data-yms-cap="${esc(w.id)}" value="${cap(w.id)}"></label>
-       <label>DETENTION SLA · ČEKANJE (MIN)<input type="number" min="0" step="5" data-yms-det-wait="${esc(w.id)}" value="${de.wait}"></label>
-       <label>DETENTION SLA · NA RAMPI (MIN)<input type="number" min="0" step="5" data-yms-det-dock="${esc(w.id)}" value="${de.dock}"></label>
        <label>BROJ RAMPI<input type="number" min="0" max="50" step="1" data-yms-ramp-count="${esc(w.id)}" value="${n}"></label>
        <label>PRIJAM OD<input type="time" data-yms-from="${esc(w.id)}" value="${h.from}"></label>
        <label>PRIJAM DO<input type="time" data-yms-to="${esc(w.id)}" value="${h.to}"></label>
@@ -44842,19 +44835,16 @@ document.addEventListener('click',e=>{
   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
   const code=b.dataset.ymsSaveWh,d=master(),w=d.warehouses.find(x=>String(x.id)===code);if(!w)return;
   const capacity=Math.max(0,Math.floor(+document.querySelector(`[data-yms-cap="${code}"]`)?.value||0));
-  const wait=Math.max(0,Math.floor(+document.querySelector(`[data-yms-det-wait="${code}"]`)?.value||0));
-  const dock=Math.max(0,Math.floor(+document.querySelector(`[data-yms-det-dock="${code}"]`)?.value||0));
   const n=Math.max(0,Math.min(50,Math.floor(+document.querySelector(`[data-yms-ramp-count="${code}"]`)?.value||0)));
   const from=document.querySelector(`[data-yms-from="${code}"]`)?.value||'',to=document.querySelector(`[data-yms-to="${code}"]`)?.value||'';
   if(!from||!to||from>=to){alert('Radno vrijeme: DO mora biti nakon OD.');return}
   w.ramps=n;commit(d,'warehouse.operational');
   const c=jget(CAP,{});c[code]=c[code]||{ramps:{}};c[code].warehousePallets=capacity;c[code].ramps=c[code].ramps||{};jset(CAP,c);
   const h=jget(HOURS,{});h[code]={from,to};jset(HOURS,h);
-  const de=jget(DET,{});de[code]={waitMin:wait,dockMin:dock};jset(DET,de);
   try{window.YardivoMasterWarehouseRampsV583?.setRampCount?.(code,n)}catch(_){}
   try{if(typeof WAREHOUSES!=='undefined'&&WAREHOUSES?.[code]){WAREHOUSES[code].ramps=n;WAREHOUSES[code].receptionStart=from;WAREHOUSES[code].receptionEnd=to}}catch(_){}
   serverFlush();propagate();
-  try{showYmsToast?.('success','SKLADIŠTE SPREMLJENO',`${capacity} paleta · ${n} rampi · SLA ${wait}/${dock} min`)}catch(_){}
+  try{showYmsToast?.('success','SKLADIŠTE SPREMLJENO',`${capacity} paleta · ${n} rampi`)}catch(_){}
   return;
  }
  const rbtn=e.target.closest?.('[data-yms-save-ramp]');
@@ -45267,8 +45257,6 @@ function setRampCount(code,n){
 }
 function saveWarehouseOps(code){
  const capEl=document.querySelector(`[data-mf-cap="${code}"]`);
- const waitEl=document.querySelector(`[data-mf-det-wait="${code}"]`);
- const dockEl=document.querySelector(`[data-mf-det-dock="${code}"]`);
  const from=document.querySelector(`[data-mf-wh-from="${code}"]`)?.value||'';
  const to=document.querySelector(`[data-mf-wh-to="${code}"]`)?.value||'';
  const capVal=String(capEl?.value||'').trim();
@@ -45343,13 +45331,11 @@ function render(){
       return `<article class="ymf-wh">
        <div class="ymf-wh-head"><div><strong>${esc(w.name)}</strong><small>${esc(locationName(w.location_id,d))}</small></div>
         <div class="${cp==null?'ymf-cap-unknown':''}">${cp==null?'KAPACITET NEPOZNAT':cp+' PALETA / DAN'}</div></div>
-       <div class="ymf-sector"><h4>SKLADIŠTE · KAPACITET · RADNO VRIJEME · DETENTION SLA</h4>
+       <div class="ymf-sector"><h4>SKLADIŠTE · KAPACITET · RADNO VRIJEME</h4>
         <div class="ymf-fields">
          <label>DNEVNI KAPACITET PALETA<input ${disabled} data-mf-cap="${esc(w.id)}" type="number" min="1" placeholder="NEPOZNAT" value="${cp??''}"></label>
          <label>PRIJAM OD<input ${disabled} data-mf-wh-from="${esc(w.id)}" type="time" value="${esc(h.x)}"></label>
          <label>PRIJAM DO<input ${disabled} data-mf-wh-to="${esc(w.id)}" type="time" value="${esc(h.y)}"></label>
-         <label>DETENTION · ČEKANJE MIN<input ${disabled} data-mf-det-wait="${esc(w.id)}" type="number" min="0" placeholder="NEPOZNAT" value="${de.wait??''}"></label>
-         <label>DETENTION · NA RAMPI MIN<input ${disabled} data-mf-det-dock="${esc(w.id)}" type="number" min="0" placeholder="NEPOZNAT" value="${de.dock??''}"></label>
         </div>
         <button ${disabled} class="primary" data-mf-save-ops="${esc(w.id)}">SPREMI PODATKE SKLADIŠTA</button>
        </div>
@@ -51002,18 +50988,7 @@ function canonicalMaster(){
  if(rp&&rp.parentElement!==pane)pane.appendChild(rp);
 }
 function renderDwell(){
- const pane=$('yardivoSettingsMasterPaneV583');if(!pane)return;
- let host=$('yardivoMasterDwellV583');if(!host){host=document.createElement('section');host.id='yardivoMasterDwellV583'}
- const d=master(),de=json(DET,{});
- host.innerHTML=`<div class="panel-head"><div><h2>DWELL / DETENTION SLA</h2><p>Jedino mjesto za pragove čekanja i vremena na rampi. Vrijednosti su vezane uz skladište i koriste ih operativa, upozorenja i analitika.</p></div></div>
- <div class="panel-body"><div class="yvd-grid">${d.warehouses.filter(w=>w&&w.active!==false).map(w=>{
-   const loc=d.locations.find(l=>String(l.id)===String(w.location_id));
-   const wait=w.detention_wait_min??de?.[w.id]?.waitMin??'',dock=w.detention_dock_min??de?.[w.id]?.dockMin??'';
-   return `<article class="yvd-wh"><strong>${esc(w.name)}</strong><small>${esc(loc?.name||'')}</small><div class="yvd-fields">
-    <label>ČEKANJE PRIJE RAMPE · MIN<input type="number" min="0" data-yvd-wait="${esc(w.id)}" value="${esc(wait)}" placeholder="NEPOZNAT"></label>
-    <label>VRIJEME NA RAMPI · MIN<input type="number" min="0" data-yvd-dock="${esc(w.id)}" value="${esc(dock)}" placeholder="NEPOZNAT"></label>
-   </div><button type="button" class="primary" data-yvd-save="${esc(w.id)}">SPREMI DWELL</button></article>`}).join('')||'<div>Nema aktivnih skladišta.</div>'}</div></div>`;
- const stable=$('yardivoStableMasterEditorV583');if(stable)stable.insertAdjacentElement('afterend',host);else pane.appendChild(host);
+ const old=$('yardivoMasterDwellV583');if(old)old.remove();
 }
 async function saveDwell(id){
  const d=master(),w=d.warehouses.find(x=>String(x.id)===String(id));if(!w)return;
@@ -58746,14 +58721,58 @@ window.addEventListener('click',e=>{
  }
 },true);
 
-/* Reject attempts to select a location/warehouse outside account scope. */
+/* Manager context selector: accept allowed choices and reject only out-of-scope values.
+   Previous build always called enforceAccountScope() before saving the user's new selection,
+   which snapped W203 straight back to W201. */
 window.addEventListener('change',e=>{
  if(!isManager())return;
  const id=String(e.target?.id||'');
- if(['globalLocationV583','homeLocationSelect','yscLocationSelect','globalWarehouse','yscWarehouseSelect'].includes(id)){
-   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+ if(!['globalLocationV583','homeLocationSelect','yscLocationSelect','globalWarehouse','yscWarehouseSelect'].includes(id))return;
+
+ e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+
+ const sc=accountScope();
+ const requested=String(e.target?.value||'').trim();
+
+ if(['globalWarehouse','yscWarehouseSelect'].includes(id)){
+   const allowed=sc.whs.map(x=>String(x.id));
+   if(!allowed.includes(requested)){
+     enforceAccountScope();
+     return;
+   }
+   try{window.YardivoAppStateV583?.setWarehouse?.(requested)}catch(_){}
+   try{
+     window.activeWarehouse=requested;
+     if(typeof activeWarehouse!=='undefined')activeWarehouse=requested;
+     localStorage.setItem('studenac_active_warehouse',requested);
+   }catch(_){}
+   /* Keep every dependent operational selector on the same warehouse. */
+   ['globalWarehouse','yscWarehouseSelect','savedWarehouseFilter','dailyMapWarehouseSelect','weeklyMapWarehouse',
+    'receivingWarehouse','receivingWarehouseSelect','receivingWarehouseFilter','incWarehouse'].forEach(selId=>{
+      const sel=document.getElementById(selId);
+      if(sel&&[...sel.options].some(o=>String(o.value)===requested))sel.value=requested;
+   });
    enforceAccountScope();
+   try{window.YardivoWarehouseSync?.apply?.()}catch(_){}
+   try{
+     const current=String(document.body.dataset.managerView||'homeMenu');
+     if(current!=='homeMenu')renderTarget(current);
+   }catch(_){}
+   return;
  }
+
+ const allowed=sc.locs.map(x=>String(x.id));
+ if(!allowed.includes(requested)){
+   enforceAccountScope();
+   return;
+ }
+ try{window.YardivoAppStateV583?.setLocation?.(requested)}catch(_){}
+ try{
+   const s=sess();
+   if(s){s.location=requested;window.currentSession=s;if(typeof currentSession!=='undefined')currentSession=s}
+ }catch(_){}
+ enforceAccountScope();
+ try{window.YardivoWarehouseSync?.apply?.()}catch(_){}
 },true);
 
 function scheduleRepair(){
@@ -59211,7 +59230,13 @@ function num(v){const n=Number(v);return Number.isFinite(n)?n:0}
 function payload(a){return a?.payload&&typeof a.payload==='object'?a.payload:a||{}}
 function anns(){try{if(Array.isArray(window.announcements))return window.announcements.filter(a=>a&&a.deleted!==true);if(typeof announcements!=='undefined'&&Array.isArray(announcements))return announcements.filter(a=>a&&a.deleted!==true)}catch(_){}return[]}
 function master(){try{return JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{}}catch(_){return{}}}
-function whId(){let w='';try{w=String(window.YardivoAppStateV583?.warehouse?.()||'')}catch(_){};if(!w)w=String(window.activeWarehouse||document.getElementById('globalWarehouse')?.value||'');return w||'ALL'}
+function whId(){
+ const header=String(document.getElementById('globalWarehouse')?.value||'').trim();
+ if(header&&header!=='ALL')return header;
+ let w='';try{w=String(window.YardivoAppStateV583?.warehouse?.()||'')}catch(_){}
+ if(!w||w==='ALL')w=String(window.activeWarehouse||'');
+ return w||'ALL'
+}
 function locId(){let l='';try{l=String(window.YardivoAppStateV583?.location?.()||'')}catch(_){};if(!l)l=String(window.currentSession?.location||'');return l}
 function whName(id){const d=master(),w=(d.warehouses||[]).find(x=>String(x?.id)===String(id));return String(w?.name||id||'Sva skladišta')}
 function locName(id){const d=master(),l=(d.locations||[]).find(x=>String(x?.id)===String(id));return String(l?.name||id||'')}
@@ -60255,7 +60280,281 @@ window.YardivoLightFullWhiteV5={apply};
 })();
 </script>
 
-<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260921-v5.8.3-light-full-white-v5';</script>
+
+<script id="yardivo-master-warehouse-display-shield-v6">
+(function(){
+'use strict';
+if(window.__YARDIVO_MASTER_WAREHOUSE_DISPLAY_SHIELD_V6__)return;
+window.__YARDIVO_MASTER_WAREHOUSE_DISPLAY_SHIELD_V6__=true;
+
+function master(){
+ try{
+   const d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{};
+   return Array.isArray(d.warehouses)?d.warehouses:[];
+ }catch(_){return[]}
+}
+function map(){
+ const m=new Map();
+ master().forEach(w=>{
+   if(!w||w.active===false)return;
+   const id=String(w.id||'').trim(),name=String(w.name||'').trim();
+   if(id&&name&&id!==name)m.set(id,name);
+ });
+ return m;
+}
+function replaceText(s,mp){
+ let out=String(s??'');
+ mp.forEach((name,id)=>{
+   const safe=id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+   const re=new RegExp('(^|[^A-Za-z0-9_])'+safe+'(?=$|[^A-Za-z0-9_])','g');
+   out=out.replace(re,(m,prefix)=>prefix+name);
+ });
+ return out;
+}
+function skip(el){
+ return !el||!!el.closest?.('script,style,noscript,textarea,input,select');
+}
+function cleanTextNode(n,mp){
+ const p=n.parentElement;if(skip(p))return;
+ const before=n.nodeValue||'',after=replaceText(before,mp);
+ if(after!==before)n.nodeValue=after;
+}
+function cleanElement(root,mp){
+ if(!root||root.nodeType!==1)return;
+ if(!skip(root)){
+   ['title','aria-label'].forEach(a=>{
+     if(root.hasAttribute?.(a)){
+       const before=root.getAttribute(a)||'',after=replaceText(before,mp);
+       if(after!==before)root.setAttribute(a,after);
+     }
+   });
+ }
+ const tw=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+ let n;while((n=tw.nextNode()))cleanTextNode(n,mp);
+}
+function clean(root=document.body){
+ if(!root)return;
+ const mp=map();if(!mp.size)return;
+ if(root.nodeType===3){cleanTextNode(root,mp);return}
+ cleanElement(root,mp);
+}
+let queued=false;
+function schedule(){
+ if(queued)return;queued=true;
+ queueMicrotask(()=>{queued=false;clean(document.body)});
+}
+const mo=new MutationObserver(ms=>{
+ const mp=map();if(!mp.size)return;
+ for(const m of ms){
+   if(m.type==='characterData'){cleanTextNode(m.target,mp);continue}
+   for(const n of m.addedNodes){
+     if(n.nodeType===3)cleanTextNode(n,mp);
+     else if(n.nodeType===1)cleanElement(n,mp);
+   }
+ }
+});
+function boot(){
+ if(!document.body)return;
+ clean(document.body);
+ mo.observe(document.body,{subtree:true,childList:true,characterData:true});
+}
+['yardivo:master-data-changed','yardivo:data-synced','yardivo:context-changed','yardivo:view-opened']
+ .forEach(ev=>window.addEventListener(ev,schedule));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+window.addEventListener('load',schedule,{once:true});
+
+window.YardivoWarehouseDisplayShieldV6={clean,map};
+})();
+</script>
+
+
+<style id="yardivo-remove-dwell-settings-v7">
+#detentionSettings,
+#yardivoMasterDwellV583,
+[data-yms-det-wait],
+[data-yms-det-dock],
+[data-mf-det-wait],
+[data-mf-det-dock],
+[data-yvd-wait],
+[data-yvd-dock],
+[data-yvd-save]{display:none!important}
+</style>
+
+
+<style id="yardivo-delay-settings-v1-style">
+#yardivoDelaySettingsV1 .yds-body{padding:16px}
+#yardivoDelaySettingsV1 .yds-grid{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:10px}
+#yardivoDelaySettingsV1 .yds-field{display:grid;gap:6px;padding:12px;border:1px solid #29485e;border-radius:9px;background:#081823}
+#yardivoDelaySettingsV1 .yds-field label{font-size:8px;font-weight:950;letter-spacing:.45px;color:#91a9bb}
+#yardivoDelaySettingsV1 .yds-field input{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #2b4d65;border-radius:7px;background:#06131d;color:#fff;font-weight:900}
+#yardivoDelaySettingsV1 .yds-field small{color:#7892a6;font-size:8px;line-height:1.45}
+#yardivoDelaySettingsV1 .yds-preview{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+#yardivoDelaySettingsV1 .yds-chip{padding:7px 9px;border-radius:999px;font-size:8px;font-weight:950;border:1px solid transparent}
+#yardivoDelaySettingsV1 .yds-chip.blue{background:#0e5fa8;color:#fff;border-color:#238ce9}
+#yardivoDelaySettingsV1 .yds-chip.yellow{background:#665715;color:#fff;border-color:#f4d24b}
+#yardivoDelaySettingsV1 .yds-chip.orange{background:#973413;color:#fff;border-color:#ff7a35}
+#yardivoDelaySettingsV1 .yds-chip.red{background:#b52222;color:#fff;border-color:#ff4e4e}
+#yardivoDelaySettingsV1 .yds-chip.critical{background:#c61d2b;color:#fff;border-color:#ff5060}
+#yardivoDelaySettingsV1 .yds-actions{display:flex;align-items:center;gap:10px;margin-top:14px}
+#yardivoDelaySettingsV1 .yds-status{font-size:9px;color:#86a0b3;font-weight:850}
+body[data-yardivo-role="manager"] #yardivoDelaySettingsV1,
+body:not([data-yardivo-role="admin"]) #yardivoDelaySettingsV1{display:none!important}
+html[data-yardivo-main-theme="light"] #yardivoDelaySettingsV1 .yds-field,
+body.light-mode #yardivoDelaySettingsV1 .yds-field{background:#fff!important;border-color:#d8e0e6!important;color:#172833!important}
+html[data-yardivo-main-theme="light"] #yardivoDelaySettingsV1 .yds-field input,
+body.light-mode #yardivoDelaySettingsV1 .yds-field input{background:#fff!important;color:#172833!important;border-color:#d8e0e6!important}
+@media(max-width:1100px){#yardivoDelaySettingsV1 .yds-grid{grid-template-columns:repeat(2,minmax(150px,1fr))}}
+</style>
+
+
+<script id="yardivo-delay-settings-v1">
+(function(){
+'use strict';
+if(window.__YARDIVO_DELAY_SETTINGS_V1__)return;
+window.__YARDIVO_DELAY_SETTINGS_V1__=true;
+
+const KEY='yardivo_delay_settings_v1';
+const URL='https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-sync';
+const APIKEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
+const DEF={graceMinutes:15,orangeFrom:30,redFrom:60,criticalFrom:90,noShowAt:'14:00'};
+
+function role(){
+ let r='';try{r=String(currentSession?.role||currentSession?.app_role||'').trim().toLowerCase()}catch(_){}
+ if(r==='voditelj'||r==='management')r='manager';
+ return r;
+}
+function sanitize(x){
+ x={...DEF,...(x&&typeof x==='object'?x:{})};
+ x.graceMinutes=Math.max(0,Math.floor(Number(x.graceMinutes)||0));
+ x.orangeFrom=Math.max(x.graceMinutes+1,Math.floor(Number(x.orangeFrom)||30));
+ x.redFrom=Math.max(x.orangeFrom+1,Math.floor(Number(x.redFrom)||60));
+ x.criticalFrom=Math.max(x.redFrom+1,Math.floor(Number(x.criticalFrom)||90));
+ x.noShowAt=/^([01]\d|2[0-3]):[0-5]\d$/.test(String(x.noShowAt||''))?String(x.noShowAt):'14:00';
+ return x;
+}
+function get(){
+ try{return sanitize(JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(_){return {...DEF}}
+}
+function apply(x){
+ x=sanitize(x);localStorage.setItem(KEY,JSON.stringify(x));
+ try{TOLERANCE_MIN=x.graceMinutes}catch(_){}
+ try{LATE_GRACE_MINUTES=x.graceMinutes}catch(_){}
+ try{window.renderDailyMap?.()}catch(_){}
+ try{window.renderWeeklyMap?.()}catch(_){}
+ try{window.renderOverview?.()}catch(_){}
+ try{window.YardivoAnalyticsV1?.render?.()}catch(_){}
+ try{window.YardivoControlTower?.render?.()}catch(_){}
+ render();
+ return x;
+}
+async function token(){
+ const raw=String(window.__yardivoSupplierAccessToken||'').trim();if(raw)return raw;
+ try{
+   const c=await window.YardivoAuth?.client?.();
+   let s=(await c?.auth?.getSession?.())?.data?.session||null;
+   if(!s?.access_token)s=(await c?.auth?.refreshSession?.())?.data?.session||null;
+   return String(s?.access_token||'');
+ }catch(_){return''}
+}
+async function bootstrap(){
+ const t=await token();if(!t)return;
+ try{
+   const r=await fetch(URL,{method:'POST',headers:{apikey:APIKEY,Authorization:'Bearer '+t,'Content-Type':'application/json'},
+     body:JSON.stringify({action:'bootstrap',clientId:'yardivo-delay-settings-read-v1'})});
+   const d=await r.json().catch(()=>({}));if(!r.ok||d?.ok===false)return;
+   const row=(Array.isArray(d?.state)?d.state:[]).find(x=>String(x?.key||'')===KEY&&!x?.deleted);
+   if(row){
+     let x={};try{x=JSON.parse(String(row.value_json||'{}'))||{}}catch(_){}
+     apply(x);
+   }else apply(get());
+ }catch(_){apply(get())}
+}
+async function persist(x){
+ if(role()!=='admin')throw new Error('Samo Admin može mijenjati postavke kašnjenja.');
+ const t=await token();if(!t)throw new Error('ONLINE PRIJAVA NIJE AKTIVNA.');
+ const clean=sanitize(x);
+ const r=await fetch(URL,{method:'POST',headers:{apikey:APIKEY,Authorization:'Bearer '+t,'Content-Type':'application/json'},
+   body:JSON.stringify({action:'set_state',key:KEY,value:JSON.stringify(clean),clientId:'yardivo-delay-settings-v1'})});
+ const d=await r.json().catch(()=>({}));if(!r.ok||d?.ok===false)throw new Error(d?.error||('HTTP '+r.status));
+ apply(clean);return clean;
+}
+function ensure(){
+ const settings=document.getElementById('settings');if(!settings)return null;
+ const grid=settings.querySelector('.settings-grid')||settings;
+ let p=document.getElementById('yardivoDelaySettingsV1');
+ if(!p){
+   p=document.createElement('section');p.id='yardivoDelaySettingsV1';p.className='panel';p.dataset.yardivoSettings='admin';
+   p.innerHTML=`<div class="panel-head"><div><h2>POSTAVKE KAŠNJENJA</h2><small>Jedina Admin postavka za kašnjenje, boje Dnevne/Tjedne mape i automatski NO-SHOW</small></div></div>
+   <div class="yds-body">
+    <div class="yds-grid">
+     <div class="yds-field"><label>KAŠNJENJE POČINJE NAKON · MIN</label><input id="ydsGrace" type="number" min="0" step="1"><small>Do ovog praga najava ostaje normalno plava.</small></div>
+     <div class="yds-field"><label>NARANČASTO OD · MIN</label><input id="ydsOrange" type="number" min="1" step="1"><small>Prije ovog praga kasna najava ima žuti glow.</small></div>
+     <div class="yds-field"><label>CRVENO OD · MIN</label><input id="ydsRed" type="number" min="2" step="1"><small>Od ovog praga kašnjenje postaje jasno crveno.</small></div>
+     <div class="yds-field"><label>KRITIČNO CRVENO OD · MIN</label><input id="ydsCritical" type="number" min="3" step="1"><small>Najjača razina upozorenja prije NO-SHOW statusa.</small></div>
+     <div class="yds-field"><label>AUTOMATSKI NO-SHOW POSLIJE</label><input id="ydsNoShow" type="time"><small>Za današnju najavu koja do tog vremena nije fizički stigla.</small></div>
+    </div>
+    <div class="yds-preview">
+      <span class="yds-chip blue">U DOLASKU</span>
+      <span class="yds-chip yellow">POČETNO KAŠNJENJE</span>
+      <span class="yds-chip orange">NARANČASTO</span>
+      <span class="yds-chip red">CRVENO</span>
+      <span class="yds-chip critical">NO-SHOW / KRITIČNO</span>
+    </div>
+    <div class="yds-actions"><button type="button" class="primary" id="ydsSave">SPREMI POSTAVKE KAŠNJENJA</button><span class="yds-status" id="ydsStatus">—</span></div>
+   </div>`;
+   grid.insertBefore(p,grid.querySelector('.danger-zone')||null);
+   p.querySelector('#ydsSave').addEventListener('click',saveFromUi);
+ }
+ return p;
+}
+function render(){
+ const p=ensure();if(!p)return;
+ p.style.display=role()==='admin'?'block':'none';
+ if(role()!=='admin')return;
+ const x=get();
+ p.querySelector('#ydsGrace').value=x.graceMinutes;
+ p.querySelector('#ydsOrange').value=x.orangeFrom;
+ p.querySelector('#ydsRed').value=x.redFrom;
+ p.querySelector('#ydsCritical').value=x.criticalFrom;
+ p.querySelector('#ydsNoShow').value=x.noShowAt;
+ const s=p.querySelector('#ydsStatus');
+ if(s)s.textContent=`Aktivno: ${x.graceMinutes} / ${x.orangeFrom} / ${x.redFrom} / ${x.criticalFrom} min · NO-SHOW ${x.noShowAt}`;
+}
+async function saveFromUi(){
+ const p=ensure();if(!p)return;
+ const x=sanitize({
+   graceMinutes:p.querySelector('#ydsGrace').value,
+   orangeFrom:p.querySelector('#ydsOrange').value,
+   redFrom:p.querySelector('#ydsRed').value,
+   criticalFrom:p.querySelector('#ydsCritical').value,
+   noShowAt:p.querySelector('#ydsNoShow').value
+ });
+ const st=p.querySelector('#ydsStatus');
+ try{
+   if(st)st.textContent='Spremam…';
+   await persist(x);
+   if(st)st.textContent=`Spremljeno · ${new Date().toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'})}`;
+   try{window.showYmsToast?.('success','POSTAVKE KAŠNJENJA SPREMLJENE',`Kašnjenje ${x.graceMinutes} min · NO-SHOW ${x.noShowAt}`)}catch(_){}
+ }catch(e){
+   if(st)st.textContent='Greška pri spremanju';
+   alert(String(e?.message||e));
+ }
+}
+
+function boot(){
+ ensure();apply(get());bootstrap();
+}
+document.addEventListener('click',e=>{
+ if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"],#navSettings'))setTimeout(render,20);
+},true);
+['yardivo:login','yardivo:data-synced'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(bootstrap,80)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+
+window.YardivoDelayRulesV1={get,apply,bootstrap,persist,noShowAt:()=>get().noShowAt};
+})();
+</script>
+
+<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260921-v5.8.3-admin-delay-settings-v7';</script>
 
 </body>
 </html>
