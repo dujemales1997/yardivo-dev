@@ -11220,7 +11220,7 @@ function renderDailyMap(){
           <small>${a.pallets} pal. · ${truckCountForPallets(a.pallets)} kam.</small>
           ${(a.hasAttachment||a.attachmentDataUrl||window.YardivoSupplierAttachments?.has?.(a))?`<button type="button" class="yardivo-doc-icon" data-yardivo-doc="${a.id}" title="Otvori priloženi PDF dokument" aria-label="Otvori priloženi PDF dokument">📁</button>`:''}
           <span class="booking-status">${operationalPlanStatus(a).toUpperCase()}</span>
-          ${operationalDelayText(a)?`<span class="booking-delay-detail">${operationalDelayText(a)}</span>`:''}
+          ${yardivoMapDelayLabel(a)?`<span class="booking-delay-detail">${yardivoMapDelayLabel(a)}</span>`:''}
         </div>`;
       }else if(block){
         out+=`<div class="dmv-cell dmv-blocked" data-move-date="${date}" data-move-warehouse="${wh}" data-move-dock="${dock}" data-move-time="${label}" data-move-blocked="1" title="${block.reason||'Blokirano'}">BLOKIRANO</div>`;
@@ -11353,7 +11353,7 @@ function renderWeeklyMap(){
                   <strong>${a.time} · ${a.supplier}</strong>
                   <div class="meta">R${a.dock} · ${a.pallets} pal. · ${truckCountForPallets(a.pallets)} kam. · ${a.sku} SKU</div>
                   ${(a.hasAttachment||a.attachmentDataUrl||window.YardivoSupplierAttachments?.has?.(a))?`<button type="button" class="yardivo-doc-icon" data-yardivo-doc="${a.id}" title="Otvori priloženi PDF dokument" aria-label="Otvori priloženi PDF dokument">📁</button>`:''}
-                  <div class="statusline">${status}${operationalDelayText(a)?' · '+operationalDelayText(a):''}</div>
+                  <div class="statusline">${status}${yardivoMapDelayLabel(a)?' · '+yardivoMapDelayLabel(a):''}</div>
                 </div>`;
               }).join('')
             : '<div class="week-map-empty">Nema najavljenih dobavljača</div>'
@@ -13146,16 +13146,30 @@ function operationalPlanStatus(a){
 function yardivoUnifiedStatus(a){
   return operationalPlanStatus(a);
 }
+function yardivoMapDelayVisualClass(a){
+  const s=yardivoUnifiedStatus(a);
+  if(['NIJE DOŠAO','NO-SHOW','Zaprimljeno','Odbijen','Odbijeno','U dvorištu','Na rampi','Promijenjena nakon NO-SHOW'].includes(s))return '';
+  if(typeof hasPhysicallyArrived==='function'&&hasPhysicallyArrived(a))return '';
+  const mins=typeof frozenOrLiveLateMinutes==='function'?frozenOrLiveLateMinutes(a):0;
+  if(!(mins>0))return '';
+  if(mins<15)return 'yv-delay-level-1';
+  if(mins<30)return 'yv-delay-level-2';
+  if(mins<60)return 'yv-delay-level-3';
+  if(mins<90)return 'yv-delay-level-4';
+  return 'yv-delay-level-5';
+}
 function yardivoUnifiedStatusClass(a){
   const s=yardivoUnifiedStatus(a);
-  if(s==='Promijenjena nakon NO-SHOW')return 'status-promijenjena';
-  if(s==='NIJE DOŠAO')return 'status-nije-dosao';
-  if(s==='Kasni'||s==='Kašnjenje')return 'status-kasni';
-  if(s==='U dvorištu')return 'status-u-dvorištu';
-  if(s==='Na rampi')return 'status-na-rampi';
-  if(s==='Zaprimljeno')return 'status-zaprimljeno';
-  if(s==='Odbijen'||s==='Odbijeno')return 'status-odbijen';
-  return 'status-u-dolasku';
+  let base='status-u-dolasku';
+  if(s==='Promijenjena nakon NO-SHOW')base='status-promijenjena';
+  else if(s==='NIJE DOŠAO'||s==='NO-SHOW')base='status-nije-dosao status-no-show';
+  else if(s==='Kasni'||s==='Kašnjenje')base='status-kasni';
+  else if(s==='U dvorištu')base='status-u-dvorištu';
+  else if(s==='Na rampi')base='status-na-rampi';
+  else if(s==='Zaprimljeno')base='status-zaprimljeno';
+  else if(s==='Odbijen'||s==='Odbijeno')base='status-odbijen';
+  const delay=yardivoMapDelayVisualClass(a);
+  return (base+(delay?' '+delay:'')).trim();
 }
 function yardivoStatusLegendHtml(){
   return `<div class="yardivo-status-legend">
@@ -13172,6 +13186,15 @@ function yardivoStatusLegendHtml(){
 
 function operationalPlanClass(a){
   return yardivoUnifiedStatusClass(a);
+}
+function yardivoMapDelayLabel(a){
+  try{
+    const s=yardivoUnifiedStatus(a);
+    if(['NIJE DOŠAO','NO-SHOW'].includes(s))return 'NO-SHOW';
+    if(typeof hasPhysicallyArrived==='function'&&hasPhysicallyArrived(a))return operationalDelayText(a)||'';
+    const m=typeof frozenOrLiveLateMinutes==='function'?frozenOrLiveLateMinutes(a):0;
+    return m>0?`KASNI ${compactLateDuration(m)}`:(operationalDelayText(a)||'');
+  }catch(_){return operationalDelayText(a)||''}
 }
 
 function normalizedPlanStatus(a){
@@ -32302,7 +32325,13 @@ function activate(view){
  document.querySelectorAll('.view').forEach(v=>{
    const on=v===target;
    v.classList.toggle('active',on);
-   if(!on)v.style.removeProperty('display');
+   /* Never allow Home + selected section to stack for Voditelj. */
+   if(role()==='manager'){
+     v.style.setProperty('display',on?'block':'none','important');
+     if(on)v.removeAttribute('hidden');
+   }else if(!on){
+     v.style.removeProperty('display');
+   }
  });
  document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
 
@@ -58231,16 +58260,9 @@ function openPopup(kind){
 
 /* Right settings drawer: ONLY two manager shortcuts. */
 function patchDrawer(){
- if(!isManager())return;
- const list=document.querySelector('#yardivoRightSettingsDrawer .yv-rs-list');if(!list)return;
- list.querySelectorAll('[data-yv-manager-setting]').forEach(x=>x.remove());
- list.insertAdjacentHTML('beforeend',`
-   <button type="button" class="yv-rs-item" data-yv-manager-setting="holidays">
-     <span class="yv-rs-icon">📅</span><span class="yv-rs-copy"><strong>NERADNI DANI</strong><small>Blagdani i interne iznimke</small></span><span class="yv-rs-arrow">›</span>
-   </button>
-   <button type="button" class="yv-rs-item" data-yv-manager-setting="ramps">
-     <span class="yv-rs-icon">▥</span><span class="yv-rs-copy"><strong>UPRAVLJAJ RAMPAMA</strong><small>Uključi / isključi dodijeljene rampe</small></span><span class="yv-rs-arrow">›</span>
-   </button>`);
+ /* Superseded by YardivoManagerFinalV4.
+    Keep legacy function harmless so it cannot create duplicate shortcuts. */
+ return;
 }
 
 /* Manager owns navigation so legacy handlers cannot leave two views active. */
@@ -58548,6 +58570,10 @@ function forceView(raw){
    const on=String(v.id)===id;
    v.classList.toggle('manager-force-active',on);
    v.classList.toggle('active',on);
+   /* Hard single-view lock: older Home logic can leave display:block!important inline.
+      Always overwrite the inline display for every manager view. */
+   v.style.setProperty('display',on?'block':'none','important');
+   if(on)v.removeAttribute('hidden');
  });
  document.querySelectorAll('.nav-btn[data-view]').forEach(b=>{
    const bid=String(b.dataset.view||'');
@@ -58606,15 +58632,20 @@ function ensureRampPanel(){
    const b=e.target.closest('[data-manager-ramp-toggle]');if(!b||!isManager())return;
    const [wid,num]=String(b.dataset.managerRampToggle||'').split(':');
    const sc=accountScope();if(!sc.whIds.includes(wid))return;
-   const d=JSON.parse(localStorage.getItem(MASTER)||'{}'),w=(d.warehouses||[]).find(x=>String(x.id)===wid);if(!w)return;
-   w.ramp_settings=Array.isArray(w.ramp_settings)?w.ramp_settings:[];
-   let rr=w.ramp_settings.find(x=>Number(x.number)===Number(num));
-   if(!rr){rr={number:Number(num),name:'Rampa '+num,active:true,from:'',to:'',pallets_per_hour:null,max_pallets:null};w.ramp_settings.push(rr)}
-   rr.active=rr.active===false;
-   localStorage.setItem(MASTER,JSON.stringify(d));
-   try{window.YardivoMasterDataV583?.save?.(JSON.parse(JSON.stringify(d)))}catch(_){}
+   /* Same canonical Master ramp action used by Admin. */
+   if(typeof window.YardivoStableMasterV583?.toggleRampActive==='function'){
+     window.YardivoStableMasterV583.toggleRampActive(wid,Number(num));
+   }else{
+     const d=JSON.parse(localStorage.getItem(MASTER)||'{}'),w=(d.warehouses||[]).find(x=>String(x.id)===wid);if(!w)return;
+     w.ramp_settings=Array.isArray(w.ramp_settings)?w.ramp_settings:[];
+     let rr=w.ramp_settings.find(x=>Number(x.number)===Number(num));
+     if(!rr){rr={number:Number(num),name:'Rampa '+num,active:true,from:'',to:'',pallets_per_hour:null,max_pallets:null};w.ramp_settings.push(rr)}
+     rr.active=rr.active===false;
+     localStorage.setItem(MASTER,JSON.stringify(d));
+     try{window.YardivoMasterDataV583?.save?.(JSON.parse(JSON.stringify(d)))}catch(_){}
+   }
    try{window.YardivoSupabase?.flushQueue?.()}catch(_){}
-   renderRampPanel();
+   setTimeout(renderRampPanel,30);
  });
  return p;
 }
@@ -58652,7 +58683,7 @@ function openPopup(kind){
  }else{
    node=ensureRampPanel();
    title.textContent='UPRAVLJAJ RAMPAMA';
-   sub.textContent='Samo rampe skladišta dodijeljenih ovom accountu';
+   sub.textContent='Iste canonical Master rampe kao Admin · samo dodijeljena skladišta';
    renderRampPanel();
  }
  if(!node)return;
@@ -58671,7 +58702,7 @@ function openPopup(kind){
 function patchDrawer(){
  if(!isManager())return;
  const list=document.querySelector('#yardivoRightSettingsDrawer .yv-rs-list');if(!list)return;
- list.querySelectorAll('[data-manager-popup-v4]').forEach(x=>x.remove());
+ list.querySelectorAll('[data-manager-popup-v4],[data-yv-manager-setting]').forEach(x=>x.remove());
  list.insertAdjacentHTML('beforeend',`
    <button type="button" class="yv-rs-item" data-manager-popup-v4="holidays">
      <span class="yv-rs-icon">📅</span><span class="yv-rs-copy"><strong>NERADNI DANI</strong><small>Blagdani i interne iznimke</small></span><span class="yv-rs-arrow">›</span>
@@ -59281,7 +59312,281 @@ window.renderYardivoAnalytics=render;
 window.YardivoAnalyticsV1={render,rangeFor,currentData,exportCsv};
 })();
 </script>
-<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260921-v5.8.3-analytics-admin-manager-v1';</script>
+
+<style id="yardivo-manager-single-view-hard-lock-v5-style">
+/* VODITELJ: exactly one app section on screen. */
+body[data-yardivo-role="manager"][data-manager-view]:not([data-manager-view="homeMenu"]) #homeMenu{
+  display:none!important;
+}
+</style>
+<script id="yardivo-manager-single-view-hard-lock-v5">
+(function(){
+'use strict';
+if(window.__YARDIVO_MANAGER_SINGLE_VIEW_HARD_LOCK_V5__)return;
+window.__YARDIVO_MANAGER_SINGLE_VIEW_HARD_LOCK_V5__=true;
+
+const ALLOWED=new Set(['homeMenu','dashboard','controlTower','analytics','myYard','suppliers','overview','dailyMap','weeklyMap']);
+
+function role(){
+  let r='';
+  try{r=String(window.currentSession?.role||window.currentSession?.app_role||document.body?.dataset?.yardivoRole||'').trim().toLowerCase()}catch(_){}
+  if(r==='management'||r==='voditelj')r='manager';
+  return r;
+}
+function currentView(){
+  let id=String(document.body?.dataset?.managerView||'').trim();
+  if(!ALLOWED.has(id)){
+    const active=[...document.querySelectorAll('.view.active,.view.manager-force-active')].find(v=>ALLOWED.has(String(v.id)));
+    id=active?.id||'homeMenu';
+  }
+  return ALLOWED.has(id)?id:'homeMenu';
+}
+let repairing=false;
+function lock(id=currentView()){
+  if(role()!=='manager'||repairing)return;
+  repairing=true;
+  try{
+    if(!ALLOWED.has(id))id='homeMenu';
+    document.body.dataset.yardivoRole='manager';
+    document.body.dataset.managerView=id;
+    document.body.classList.toggle('home-menu-mode',id==='homeMenu');
+
+    document.querySelectorAll('.view').forEach(v=>{
+      const on=String(v.id)===id;
+      v.classList.toggle('active',on);
+      v.classList.toggle('manager-force-active',on);
+      v.style.setProperty('display',on?'block':'none','important');
+      if(on)v.removeAttribute('hidden');
+    });
+
+    document.querySelectorAll('.nav-btn[data-view]').forEach(b=>{
+      b.classList.toggle('active',String(b.dataset.view||'')===id);
+    });
+
+    const titles={
+      homeMenu:'Početni izbornik',
+      dashboard:'Nadzorna ploča',
+      controlTower:'Control Tower',
+      analytics:'Analytics',
+      myYard:'My Yard',
+      suppliers:'Dobavljači',
+      overview:'Overview dobavljača',
+      dailyMap:'Dnevna mapa',
+      weeklyMap:'Tjedna mapa'
+    };
+    const title=document.getElementById('pageTitle');
+    if(title)title.textContent=titles[id]||'YARDIVO';
+  }finally{
+    repairing=false;
+  }
+}
+
+function schedule(){
+  queueMicrotask(()=>lock());
+}
+
+/* The manager authority already changes data-manager-view.
+   We only repair visual state if any legacy code later touches view classes/styles. */
+const obs=new MutationObserver(records=>{
+  if(role()!=='manager'||repairing)return;
+  if(records.some(r=>{
+    const el=r.target instanceof Element?r.target:r.target?.parentElement;
+    return el?.matches?.('.view,#homeMenu')||el?.closest?.('.view,#homeMenu');
+  }))schedule();
+});
+
+function init(){
+  if(role()!=='manager')return;
+  lock();
+  try{obs.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class','style','hidden']})}catch(_){}
+}
+
+['yardivo:login','yardivo:view-opened','yardivo:data-synced','yardivo:context-changed'].forEach(ev=>{
+  window.addEventListener(ev,()=>setTimeout(lock,0));
+});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+window.addEventListener('load',()=>setTimeout(init,0),{once:true});
+
+window.YardivoManagerSingleViewV5={lock,currentView};
+})();
+</script>
+
+
+<style id="yardivo-map-live-delay-visual-v1">
+/* ==========================================================
+   DNEVNA + TJEDNA MAPA · LIVE STATUS VISUALS
+   U dolasku = plava
+   Kašnjenje = plava kartica + progresivni glow (žuto → narančasto → crveno)
+   NO-SHOW = puna crvena
+   Odbijen = puna bordo
+   Zaprimljen = puna zelena
+   ========================================================== */
+
+@keyframes yardivoDelayPulseSoft{
+  0%,100%{filter:saturate(1);transform:translateZ(0)}
+  50%{filter:saturate(1.14);transform:translateZ(0)}
+}
+@keyframes yardivoDelayPulseHard{
+  0%,100%{filter:brightness(1);transform:translateZ(0)}
+  50%{filter:brightness(1.08);transform:translateZ(0)}
+}
+
+/* Clean baseline */
+#dailyMapBoard .dmv-booked,
+#weeklyMapBoard .week-map-item{
+  transition:background .22s ease,border-color .22s ease,box-shadow .22s ease,color .22s ease!important;
+}
+
+/* In transit remains blue. */
+#dailyMapBoard .dmv-booked.status-u-dolasku:not([class*="yv-delay-level-"]),
+#weeklyMapBoard .week-map-item.status-u-dolasku:not([class*="yv-delay-level-"]){
+  background:#0e5fa8!important;
+  border-color:#238ce9!important;
+  color:#fff!important;
+  box-shadow:none!important;
+}
+
+/* Delay level 1: just started — blue remains dominant, yellow perimeter glow. */
+#dailyMapBoard .dmv-booked.yv-delay-level-1,
+#weeklyMapBoard .week-map-item.yv-delay-level-1{
+  background:linear-gradient(135deg,#0e5fa8 0%,#0e5fa8 76%,#665715 100%)!important;
+  border:2px solid #f4d24b!important;
+  color:#fff!important;
+  box-shadow:0 0 0 1px rgba(244,210,75,.25),0 0 9px rgba(244,210,75,.30)!important;
+  animation:yardivoDelayPulseSoft 2.2s ease-in-out infinite!important;
+}
+/* Delay level 2: amber. */
+#dailyMapBoard .dmv-booked.yv-delay-level-2,
+#weeklyMapBoard .week-map-item.yv-delay-level-2{
+  background:linear-gradient(135deg,#0d568f 0%,#715213 78%,#8a5a10 100%)!important;
+  border:2px solid #f2ae38!important;
+  color:#fff!important;
+  box-shadow:0 0 0 1px rgba(242,174,56,.27),0 0 11px rgba(242,174,56,.38)!important;
+  animation:yardivoDelayPulseSoft 1.9s ease-in-out infinite!important;
+}
+/* Delay level 3: orange/red. */
+#dailyMapBoard .dmv-booked.yv-delay-level-3,
+#weeklyMapBoard .week-map-item.yv-delay-level-3{
+  background:linear-gradient(135deg,#744114 0%,#973413 72%,#a72c18 100%)!important;
+  border:2px solid #ff7a35!important;
+  color:#fff!important;
+  box-shadow:0 0 0 1px rgba(255,122,53,.28),0 0 13px rgba(255,98,45,.43)!important;
+  animation:yardivoDelayPulseSoft 1.6s ease-in-out infinite!important;
+}
+/* Delay level 4: strong red. */
+#dailyMapBoard .dmv-booked.yv-delay-level-4,
+#weeklyMapBoard .week-map-item.yv-delay-level-4{
+  background:linear-gradient(135deg,#8e2719 0%,#b52222 72%,#bd1e28 100%)!important;
+  border:2px solid #ff4e4e!important;
+  color:#fff!important;
+  box-shadow:0 0 0 1px rgba(255,78,78,.30),0 0 15px rgba(255,55,55,.48)!important;
+  animation:yardivoDelayPulseHard 1.35s ease-in-out infinite!important;
+}
+/* Delay level 5: near NO-SHOW — deepest live-red glow. */
+#dailyMapBoard .dmv-booked.yv-delay-level-5,
+#weeklyMapBoard .week-map-item.yv-delay-level-5{
+  background:linear-gradient(135deg,#991b22 0%,#c31726 68%,#d1182b 100%)!important;
+  border:2px solid #ff3b4e!important;
+  color:#fff!important;
+  box-shadow:0 0 0 1px rgba(255,59,78,.34),0 0 19px rgba(255,35,55,.56)!important;
+  animation:yardivoDelayPulseHard 1.08s ease-in-out infinite!important;
+}
+
+/* NO-SHOW = clearly red, full card. */
+#dailyMapBoard .dmv-booked.status-no-show,
+#dailyMapBoard .dmv-booked.status-nije-dosao,
+#weeklyMapBoard .week-map-item.status-no-show,
+#weeklyMapBoard .week-map-item.status-nije-dosao{
+  background:#c61d2b!important;
+  border:2px solid #ff5060!important;
+  color:#fff!important;
+  box-shadow:0 0 0 1px rgba(255,80,96,.26),0 0 14px rgba(220,28,45,.32)!important;
+  animation:none!important;
+}
+
+/* ODBIJEN = bordo, intentionally distinct from NO-SHOW red. */
+#dailyMapBoard .dmv-booked.status-odbijen,
+#weeklyMapBoard .week-map-item.status-odbijen{
+  background:#64151d!important;
+  border:2px solid #9f3c48!important;
+  color:#ffecee!important;
+  box-shadow:inset 4px 0 0 #bd4b58!important;
+  animation:none!important;
+}
+
+/* ZAPRIMLJEN = green. */
+#dailyMapBoard .dmv-booked.status-zaprimljeno,
+#weeklyMapBoard .week-map-item.status-zaprimljeno{
+  background:#126b34!important;
+  border:2px solid #32bc67!important;
+  color:#fff!important;
+  box-shadow:0 0 0 1px rgba(50,188,103,.15)!important;
+  animation:none!important;
+}
+
+/* Existing operational states remain clear. */
+#dailyMapBoard .dmv-booked.status-u-dvorištu,
+#weeklyMapBoard .week-map-item.status-u-dvorištu{
+  background:#a94f0d!important;border-color:#f28a2d!important;color:#fff!important;
+}
+#dailyMapBoard .dmv-booked.status-na-rampi,
+#weeklyMapBoard .week-map-item.status-na-rampi{
+  background:#8b6d0a!important;border-color:#e8c238!important;color:#fff!important;
+}
+#dailyMapBoard .dmv-booked.status-promijenjena,
+#weeklyMapBoard .week-map-item.status-promijenjena{
+  background:#6340a8!important;border-color:#9a74e4!important;color:#fff!important;
+}
+
+/* Make live delay text legible on all intensities. */
+#dailyMapBoard .booking-delay-detail,
+#weeklyMapBoard .statusline{
+  font-weight:950!important;
+}
+#dailyMapBoard .booking-delay-detail{
+  display:inline-flex!important;
+  width:max-content!important;
+  max-width:100%!important;
+  padding:2px 6px!important;
+  border-radius:999px!important;
+  background:rgba(0,0,0,.24)!important;
+  color:#fff!important;
+  font-size:7px!important;
+}
+
+/* Respect reduced motion while keeping the severity color. */
+@media (prefers-reduced-motion:reduce){
+  #dailyMapBoard [class*="yv-delay-level-"],
+  #weeklyMapBoard [class*="yv-delay-level-"]{animation:none!important}
+}
+</style>
+
+
+<script id="yardivo-map-live-delay-refresh-v1">
+(function(){
+'use strict';
+if(window.__YARDIVO_MAP_LIVE_DELAY_REFRESH_V1__)return;
+window.__YARDIVO_MAP_LIVE_DELAY_REFRESH_V1__=true;
+
+function refreshVisibleMap(){
+  if(document.hidden)return;
+  const daily=document.getElementById('dailyMap');
+  const weekly=document.getElementById('weeklyMap');
+  try{
+    if(daily?.classList.contains('active')||daily?.classList.contains('manager-force-active')){
+      if(typeof renderDailyMap==='function')renderDailyMap();
+    }else if(weekly?.classList.contains('active')||weekly?.classList.contains('manager-force-active')){
+      if(typeof renderWeeklyMap==='function')renderWeeklyMap();
+    }
+  }catch(_){}
+}
+window.__yardivoMapLiveDelayTimerV1=setInterval(refreshVisibleMap,15000);
+window.addEventListener('focus',refreshVisibleMap);
+window.addEventListener('yardivo:data-synced',refreshVisibleMap);
+})();
+</script>
+
+<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260921-v5.8.3-manager-settings-map-live-status-v3';</script>
 
 </body>
 </html>
