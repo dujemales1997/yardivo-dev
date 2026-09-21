@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111b">
-<title>YARDIVO Manager Mobile · V4</title>
+<title>YARDIVO Manager Mobile · V6</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
 <style>
 :root{
@@ -378,11 +378,11 @@ button{cursor:pointer}
 
 <script>
 (()=>{'use strict';
-window.YARDIVO_MANAGER_MOBILE_BUILD='20260921-v4-global-master-scope';
+window.YARDIVO_MANAGER_MOBILE_BUILD='20260921-v6-explicit-login';
 const BASE='https://rskticdbiovvgyocpzoc.supabase.co';
 const KEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
 const SYNC=BASE+'/functions/v1/yardivo-sync';
-const sb=supabase.createClient(BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+const sb=supabase.createClient(BASE,KEY,{auth:{persistSession:false,autoRefreshToken:true,detectSessionInUrl:false}});
 const $=id=>document.getElementById(id);
 let scope=null,session=null,ann=[],inc=[],state=[],master={locations:[],warehouses:[],suppliers:[]},activeDailyWh='',activeYardWh='',selectedLocation='all',selectedWarehouse='all',pollTimer=null,busy=false,currentView='home',aiBusy=false,aiHistory=[];
 
@@ -397,16 +397,28 @@ function parse(v,fallback){try{return JSON.parse(v)}catch(_){return fallback}}
 function whName(id){const w=(master.warehouses||[]).find(x=>String(x.id)===String(id));return String(w?.name||w?.code||id||'—')}
 function locName(id){const l=(master.locations||[]).find(x=>String(x.id)===String(id));return String(l?.name||id||'—')}
 function whLoc(id){const w=(master.warehouses||[]).find(x=>String(x.id)===String(id));return String(w?.location_id||w?.location||'')}
+function scopeIds(v,explicit){
+  const e=Array.isArray(explicit)?explicit.map(x=>String(x||'').trim()).filter(Boolean):[];
+  if(e.length)return [...new Set(e)];
+  if(!Array.isArray(v))return [];
+  return [...new Set(v.map(x=>{
+    if(x&&typeof x==='object')return String(x.id||x.location_id||x.warehouse_id||'').trim();
+    return String(x||'').trim();
+  }).filter(Boolean))];
+}
 function assignedLocs(){
-  let a=Array.isArray(scope?.locations)?scope.locations.map(String).filter(Boolean):[];
-  const one=String(scope?.location||'').trim();if(one&&!a.includes(one))a.unshift(one);
+  if(scope?.all_locations===true)return (master.locations||[]).filter(x=>x?.active!==false).map(x=>String(x.id));
+  let a=scopeIds(scope?.locations,scope?.location_ids);
+  const one=String(scope?.location||'').trim();
+  if(one&&one!=='ALL'&&!a.includes(one))a.unshift(one);
   return [...new Set(a)];
 }
 function assignedWhs(){
-  let a=Array.isArray(scope?.warehouses)?scope.warehouses.map(String).filter(Boolean):[];
   if(scope?.all_warehouses===true)return (master.warehouses||[]).filter(x=>x?.active!==false).map(x=>String(x.id));
+  let a=scopeIds(scope?.warehouses,scope?.warehouse_ids);
   if(!a.length){
-    const ls=new Set(assignedLocs());a=(master.warehouses||[]).filter(x=>x?.active!==false&&ls.has(String(x.location_id||x.location||''))).map(x=>String(x.id));
+    const ls=new Set(assignedLocs());
+    a=(master.warehouses||[]).filter(x=>x?.active!==false&&ls.has(String(x.location_id||x.location||''))).map(x=>String(x.id));
   }
   return [...new Set(a)];
 }
@@ -453,7 +465,14 @@ function delayMin(a){
   }return 0;
 }
 function badgeClass(s){return s==='Zaprimljeno'?'done':s==='Na rampi'?'dock':s==='U dvorištu'?'yard':(s==='Odbijen'||s==='Nije došao')?'bad':''}
-async function token(){let s=(await sb.auth.getSession()).data.session;if(!s?.access_token)s=(await sb.auth.refreshSession()).data.session;if(!s?.access_token)throw new Error('Prijava je istekla.');return s.access_token}
+async function token(){
+  let s=session;
+  if(!s?.access_token)s=(await sb.auth.getSession()).data.session;
+  if(!s?.access_token)s=(await sb.auth.refreshSession()).data.session;
+  if(!s?.access_token)throw new Error('Prijava je istekla.');
+  session=s;
+  return s.access_token;
+}
 async function getScope(){
   const {data,error}=await sb.functions.invoke('yardivo-user-scope',{body:{fresh:true}});
   if(error)throw error;if(!data?.ok)throw new Error(data?.error||'Profil nije dostupan.');return data.data||{};
@@ -538,7 +557,12 @@ function renderScopeControls(){
   const whs=selectableWarehouses(selectedLocation);
   if(selectedWarehouse!=='all'&&!whs.some(w=>w.id===selectedWarehouse))selectedWarehouse='all';
 
-  if(whs.length===1){
+  if(whs.length===0){
+    selectedWarehouse='all';
+    ws.innerHTML='<option value="all">NEMA DODIJELJENIH SKLADIŠTA</option>';
+    ws.value='all';
+    ws.disabled=true;
+  }else if(whs.length===1){
     /* Keep the warehouse control visible as requested, but show the only available warehouse. */
     selectedWarehouse=whs[0].id;
     ws.innerHTML=`<option value="${esc(whs[0].id)}">${esc(whs[0].name)}</option>`;
@@ -871,14 +895,15 @@ document.querySelectorAll('[data-ai-q]').forEach(b=>b.onclick=()=>aiSend(b.datas
 $('loginBtn').onclick=login;$('password').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
 window.addEventListener('online',()=>refresh());window.addEventListener('offline',()=>setDb(false,'OFFLINE'));
-(async()=>{
-  try{
-    const s=(await sb.auth.getSession()).data.session;if(!s)return;
-    session=s;scope=await getScope();
-    if(normRole(scope?.app_role||scope?.role)!=='manager')return;
-    await bootstrap();await welcomeThenOpen();
-  }catch(_){}
-})();
+/* Manager Mobile always starts on the login screen. No silent/automatic login. */
+session=null;scope=null;
+$('auth').classList.remove('hidden');
+$('welcome').classList.remove('show');
+$('app').classList.add('hidden');
+$('aiFab').classList.add('hidden');
+$('username').value='';
+$('password').value='';
+
 })();
 </script>
 </body>
