@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07111b">
+<title>YARDIVO Manager Mobile</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --bg:#07111b;--panel:#0c1926;--panel2:#102235;--line:#203b50;--text:#edf6fb;--muted:#829cad;
+  --blue:#48a7ff;--blue2:#247dd5;--green:#42dd82;--yellow:#f5c44d;--orange:#ff914d;--red:#ff5f6d;
+  --shadow:0 16px 40px rgba(0,0,0,.25);--navh:82px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{overscroll-behavior-y:none}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.app{min-height:100dvh;max-width:760px;margin:auto;background:
+ radial-gradient(900px 420px at 50% -140px,rgba(45,125,210,.20),transparent 65%),var(--bg)}
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:rgba(7,17,27,.91);backdrop-filter:blur(16px);border-bottom:1px solid rgba(80,120,148,.18)}
+.brand strong{display:block;font-size:15px;letter-spacing:.045em}
+.brand span{display:block;margin-top:2px;color:#5fb5ff;font-size:8px;font-weight:1000;letter-spacing:.10em}
+.top-status{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid #244257;border-radius:999px;color:#a8bfce;font-size:9px;font-weight:1000}
+.top-status i{width:7px;height:7px;border-radius:50%;background:#f5c44d;box-shadow:0 0 12px rgba(245,196,77,.5)}
+.top-status.ok{color:#aef5ca;border-color:#296a49;background:#0a2418}
+.top-status.ok i{background:var(--green);box-shadow:0 0 13px rgba(66,221,130,.62)}
+.top-status.bad{color:#ffc1c7;border-color:#74343b;background:#281116}
+.top-status.bad i{background:var(--red)}
+.main{padding:12px 12px calc(var(--navh) + 22px)}
+.view{display:none}.view.active{display:block;animation:viewIn .18s ease}
+@keyframes viewIn{from{opacity:.3;transform:translateY(4px)}to{opacity:1;transform:none}}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:4px 2px 14px}
+.page-head h1{margin:0;font-size:24px;letter-spacing:-.03em}.page-head p{margin:5px 0 0;color:var(--muted);font-size:11px;line-height:1.45}
+.scope-pill{padding:7px 9px;border-radius:999px;background:#0d2334;border:1px solid #28516a;color:#b8dbed;font-size:9px;font-weight:1000;white-space:nowrap}
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow);margin-bottom:11px}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:11px}
+.card-head strong{font-size:12px;letter-spacing:.025em}.card-head span{color:var(--muted);font-size:9px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:11px}
+.kpi{min-height:104px;padding:13px;border:1px solid #24445a;border-radius:17px;background:linear-gradient(145deg,#0b1e2c,#0a1722);position:relative;overflow:hidden}
+.kpi:after{content:"";position:absolute;right:-24px;bottom:-30px;width:78px;height:78px;border-radius:50%;background:var(--accent,#48a7ff);opacity:.08}
+.kpi small{display:block;color:#8ba4b4;font-size:9px;font-weight:1000;letter-spacing:.055em}
+.kpi strong{display:block;margin-top:6px;font-size:32px;line-height:1;font-weight:1000}
+.kpi span{display:block;margin-top:8px;color:#94aebb;font-size:9px;line-height:1.35}
+.kpi.blue{--accent:var(--blue)}.kpi.green{--accent:var(--green)}.kpi.yellow{--accent:var(--yellow)}.kpi.red{--accent:var(--red)}
+.health{padding:14px;border-radius:17px;border:1px solid #2b4c61;background:#0a1b28}
+.health-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.health-badge{padding:6px 9px;border-radius:999px;font-size:9px;font-weight:1000;background:#0d2b1c;border:1px solid #2d8355;color:#83f0ac}
+.health-badge.warn{background:#33260b;border-color:#886c24;color:#ffe08c}.health-badge.bad{background:#341317;border-color:#9c3943;color:#ff9da6}
+.health-line{height:7px;background:#122635;border-radius:999px;overflow:hidden;margin-top:12px}.health-line i{display:block;height:100%;width:0;background:linear-gradient(90deg,#43db82,#53b6ff);border-radius:999px;transition:width .35s ease}
+.pulse-list{display:grid;gap:8px}
+.pulse{display:flex;align-items:center;gap:10px;padding:11px;border-radius:14px;border:1px solid #234155;background:#091925}
+.pulse .ico{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:#102c40;border:1px solid #285674;font-size:16px}
+.pulse .copy{min-width:0;flex:1}.pulse .copy strong{display:block;font-size:11px}.pulse .copy span{display:block;margin-top:3px;color:#8ba5b6;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pulse .time{font-size:9px;color:#7890a0;font-weight:900}
+.empty{padding:18px;text-align:center;color:#7f98a8;font-size:11px;border:1px dashed #28465a;border-radius:14px}
+
+/* Control tower */
+.decision-stack{display:grid;gap:9px}
+.decision{padding:13px;border-radius:16px;border:1px solid #29485c;background:#0a1a27}
+.decision.warn{border-color:#765d26;background:#261f0d}.decision.bad{border-color:#7b3139;background:#271015}.decision.good{border-color:#285b42;background:#0b2118}
+.decision-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.decision-head strong{font-size:12px}.decision-head span{font-size:8px;font-weight:1000;padding:5px 7px;border-radius:999px;border:1px solid currentColor}
+.decision p{margin:8px 0 0;color:#a9bfcc;font-size:10px;line-height:1.5}
+.timeline{display:flex;gap:8px;overflow:auto;padding-bottom:5px;scroll-snap-type:x mandatory}.timeline::-webkit-scrollbar{display:none}
+.time-card{min-width:98px;scroll-snap-align:start;border:1px solid #244459;background:#091a27;border-radius:14px;padding:11px}
+.time-card strong{display:block;font-size:14px}.time-card small{display:block;margin-top:4px;color:#83a0b1;font-size:8px}.loadbar{height:6px;border-radius:999px;background:#152a38;overflow:hidden;margin-top:9px}.loadbar i{display:block;height:100%;background:#4aa6ff;border-radius:999px}
+
+/* Maps */
+.map-toolbar{display:flex;gap:8px;margin-bottom:10px}.map-toolbar button{flex:1;border:1px solid #2a4b61;background:#0b1b28;color:#b5cad8;border-radius:12px;padding:10px;font-weight:950;font-size:9px}.map-toolbar button.active{background:#153d5a;border-color:#3d8cc0;color:#eaf8ff}
+.schedule{display:grid;gap:8px}
+.schedule-row{display:grid;grid-template-columns:52px 1fr auto;gap:9px;align-items:center;padding:11px;border:1px solid #244257;border-radius:14px;background:#091925}
+.schedule-row .tm{font-size:13px;font-weight:1000}.schedule-row .info{min-width:0}.schedule-row .info strong{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.schedule-row .info span{display:block;margin-top:3px;color:#829dac;font-size:9px}
+.status-pill{font-size:8px;font-weight:1000;border:1px solid #315871;padding:5px 7px;border-radius:999px;color:#9dc4dc;white-space:nowrap}
+.status-pill.done{color:#79eea6;border-color:#327e53;background:#0a2418}.status-pill.dock{color:#ffe089;border-color:#816c2d;background:#2a210c}.status-pill.yard{color:#ffb47e;border-color:#94572d;background:#301b0d}.status-pill.bad{color:#ff9ca5;border-color:#8e3640;background:#301116}
+.week-days{display:flex;gap:7px;overflow:auto;padding-bottom:5px}.week-days::-webkit-scrollbar{display:none}
+.day-chip{min-width:70px;border:1px solid #29485e;background:#0a1a27;border-radius:14px;padding:10px;text-align:center}.day-chip.active{border-color:#3c90c8;background:#10314a}.day-chip small{display:block;color:#809aaa;font-size:8px}.day-chip strong{display:block;margin-top:3px;font-size:14px}
+.week-grid{display:grid;gap:9px;margin-top:11px}.week-card{border:1px solid #244257;background:#091925;border-radius:16px;padding:12px}.week-card-top{display:flex;justify-content:space-between;gap:10px}.week-card-top strong{font-size:12px}.week-card-top span{font-size:9px;color:#8aa4b4}.week-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}.week-stat{padding:8px;border-radius:10px;background:#0d2130;text-align:center}.week-stat small{display:block;color:#7894a4;font-size:7px}.week-stat strong{display:block;margin-top:2px;font-size:13px}
+
+/* Overview */
+.search{display:flex;gap:8px;margin-bottom:10px}.search input{flex:1;background:#091a27;border:1px solid #284a60;border-radius:13px;color:#edf6fb;padding:12px;outline:none}.search input:focus{border-color:#48a7ff}
+.supplier-list{display:grid;gap:8px}.supplier{padding:12px;border:1px solid #244257;border-radius:15px;background:#091925}
+.supplier-top{display:flex;justify-content:space-between;gap:10px}.supplier-top strong{font-size:11px}.supplier-top span{font-size:9px;color:#7fa0b1}
+.supplier-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:9px}.supplier-kpis div{text-align:center;padding:7px 4px;border-radius:10px;background:#0d2231}.supplier-kpis small{display:block;color:#7894a4;font-size:7px}.supplier-kpis strong{display:block;margin-top:2px;font-size:12px}
+
+/* Bottom nav */
+.bottom-nav{position:fixed;z-index:40;left:50%;bottom:0;transform:translateX(-50%);width:min(760px,100%);height:calc(var(--navh) + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(5,1fr);padding:9px 7px calc(9px + env(safe-area-inset-bottom));background:rgba(7,17,27,.95);backdrop-filter:blur(18px);border-top:1px solid rgba(73,111,136,.25)}
+.nav-btn{border:0;background:transparent;color:#668092;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0}
+.nav-btn .ico{font-size:18px;line-height:1}.nav-btn span:last-child{font-size:7.5px;font-weight:1000;white-space:nowrap}
+.nav-btn.active{color:#dff3ff;background:#0e2638}.nav-btn.active .ico{color:#58b2ff}
+
+/* Login / Welcome */
+.auth{position:fixed;inset:0;z-index:100;background:
+ radial-gradient(700px 380px at 50% 0,rgba(52,139,226,.22),transparent 70%),#07111b;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{width:min(430px,100%)}
+.login-brand{text-align:center;margin-bottom:22px}.login-logo{width:74px;height:74px;margin:0 auto 14px;border-radius:23px;display:grid;place-items:center;background:linear-gradient(145deg,#122b40,#0b1a28);border:1px solid #2f5f7d;box-shadow:0 18px 50px rgba(0,0,0,.35);font-size:28px;font-weight:1000;color:#68bdff}
+.login-brand h1{margin:0;font-size:25px;letter-spacing:-.02em}.login-brand p{margin:6px 0 0;color:#7895a7;font-size:11px}
+.login-panel{padding:17px;border-radius:20px;background:linear-gradient(180deg,#102235,#0b1825);border:1px solid #24465c;box-shadow:0 22px 60px rgba(0,0,0,.32)}
+.login-panel label{display:block;color:#839dac;font-size:9px;font-weight:1000;margin:10px 0 6px}.login-panel input{width:100%;padding:14px;border-radius:13px;border:1px solid #2a4c63;background:#081824;color:#fff;outline:none}.login-panel input:focus{border-color:#4aa7e7;box-shadow:0 0 0 3px rgba(74,167,231,.11)}
+.login-panel button{width:100%;margin-top:14px;border:0;border-radius:14px;padding:14px;background:linear-gradient(180deg,#62baff,#2c86d7);color:#04111a;font-weight:1000}
+.login-error{margin-top:10px;padding:11px;border:1px solid #8b3842;background:#2d1115;color:#ffbbc1;border-radius:12px;font-size:10px;font-weight:900;line-height:1.45}
+.welcome{position:fixed;inset:0;z-index:110;background:linear-gradient(180deg,#0b1d2d,#07111b);display:none;align-items:center;justify-content:center;padding:22px;text-align:center}
+.welcome.show{display:flex}.welcome-inner{width:min(420px,100%)}.welcome-logo{width:86px;height:86px;border-radius:28px;margin:0 auto 20px;display:grid;place-items:center;background:linear-gradient(145deg,#12324c,#0b1b2a);border:1px solid #3478a4;font-size:34px;font-weight:1000;color:#6bc0ff;box-shadow:0 20px 55px rgba(0,0,0,.35)}
+.welcome h2{margin:0;font-size:26px}.welcome p{margin:8px 0 0;color:#8ca6b7;font-size:12px}.welcome-progress{margin-top:24px;height:9px;border-radius:999px;background:#132b3a;overflow:hidden}.welcome-progress i{display:block;width:0;height:100%;background:linear-gradient(90deg,#45a6ff,#45e487);border-radius:999px}.welcome small{display:block;margin-top:9px;color:#6f899a;font-size:9px;font-weight:900;letter-spacing:.06em}
+</style>
+</head>
+<body>
+<div id="auth" class="auth">
+  <div class="login-box">
+    <div class="login-brand">
+      <div class="login-logo">Y</div>
+      <h1>YARDIVO MANAGER</h1>
+      <p>Mobile Operations</p>
+    </div>
+    <div class="login-panel">
+      <label>KORISNIČKO IME</label>
+      <input id="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="username">
+      <label>LOZINKA</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+      <button id="loginBtn">PRIJAVI SE</button>
+      <div id="loginError" class="login-error hidden"></div>
+    </div>
+  </div>
+</div>
+
+<div id="welcome" class="welcome">
+  <div class="welcome-inner">
+    <div class="welcome-logo">Y</div>
+    <h2 id="welcomeTitle">DOBRODOŠLI</h2>
+    <p id="welcomeSub">Učitavam vašu lokaciju i operativne podatke…</p>
+    <div class="welcome-progress"><i id="welcomeFill"></i></div>
+    <small id="welcomePct">0%</small>
+  </div>
+</div>
+
+<div id="app" class="app hidden">
+  <header class="topbar">
+    <div class="brand"><strong>YARDIVO MANAGER</strong><span id="scopeText">MOBILE OPERATIONS</span></div>
+    <div id="dbStatus" class="top-status"><i></i><span>SPAJANJE</span></div>
+  </header>
+
+  <main class="main">
+    <section id="view-home" class="view active">
+      <div class="page-head">
+        <div><h1>Home</h1><p id="homeHello">Današnji operativni pregled</p></div>
+        <span class="scope-pill" id="homeScope">—</span>
+      </div>
+      <div class="kpis">
+        <div class="kpi blue"><small>DANAS</small><strong id="kpiToday">0</strong><span>najava</span></div>
+        <div class="kpi yellow"><small>U DVORIŠTU</small><strong id="kpiYard">0</strong><span>aktivna vozila</span></div>
+        <div class="kpi green"><small>NA RAMPI</small><strong id="kpiDock">0</strong><span>aktivni prijami</span></div>
+        <div class="kpi red"><small>TRAŽI PAŽNJU</small><strong id="kpiAttention">0</strong><span>kašnjenja / odbijeno</span></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><strong>STANJE LOKACIJE</strong><span id="lastSync">—</span></div>
+        <div class="health">
+          <div class="health-top"><div><strong id="healthTitle">NORMALNO</strong><div style="margin-top:4px;color:#829dac;font-size:9px" id="healthText">Nema kritičnih odstupanja.</div></div><span id="healthBadge" class="health-badge">STABILNO</span></div>
+          <div class="health-line"><i id="healthLine"></i></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><strong>LIVE PULSE</strong><span>najnovije prvo</span></div>
+        <div id="homePulse" class="pulse-list"></div>
+      </div>
+    </section>
+
+    <section id="view-tower" class="view">
+      <div class="page-head"><div><h1>Control Tower</h1><p>Samo stvari koje traže pažnju.</p></div><span class="scope-pill" id="towerScope">—</span></div>
+      <div class="card">
+        <div class="card-head"><strong>DANAŠNJI LOAD</strong><span id="peakLabel">Peak —</span></div>
+        <div id="hourTimeline" class="timeline"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><strong>DECISION STACK</strong><span id="decisionCount">0 stavki</span></div>
+        <div id="decisionStack" class="decision-stack"></div>
+      </div>
+    </section>
+
+    <section id="view-daily" class="view">
+      <div class="page-head"><div><h1>Dnevna mapa</h1><p id="dailyDateText">Danas</p></div><span class="scope-pill" id="dailyScope">—</span></div>
+      <div class="card">
+        <div class="map-toolbar" id="dailyWhToolbar"></div>
+        <div id="dailySchedule" class="schedule"></div>
+      </div>
+    </section>
+
+    <section id="view-weekly" class="view">
+      <div class="page-head"><div><h1>Tjedna mapa</h1><p>7 dana unaprijed</p></div><span class="scope-pill" id="weeklyScope">—</span></div>
+      <div id="weekDays" class="week-days"></div>
+      <div id="weekGrid" class="week-grid"></div>
+    </section>
+
+    <section id="view-overview" class="view">
+      <div class="page-head"><div><h1>Overview</h1><p>Dobavljači u vašem scopeu.</p></div><span class="scope-pill" id="overviewScope">—</span></div>
+      <div class="search"><input id="supplierSearch" placeholder="Pretraži dobavljača…"></div>
+      <div id="supplierList" class="supplier-list"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-view="home"><span class="ico">⌂</span><span>HOME</span></button>
+    <button class="nav-btn" data-view="tower"><span class="ico">◈</span><span>CONTROL</span></button>
+    <button class="nav-btn" data-view="daily"><span class="ico">▦</span><span>DNEVNA</span></button>
+    <button class="nav-btn" data-view="weekly"><span class="ico">▤</span><span>TJEDNA</span></button>
+    <button class="nav-btn" data-view="overview"><span class="ico">◎</span><span>OVERVIEW</span></button>
+  </nav>
+</div>
+
+<script>
+(()=>{'use strict';
+const BASE='https://rskticdbiovvgyocpzoc.supabase.co';
+const KEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
+const SYNC=BASE+'/functions/v1/yardivo-sync';
+const sb=supabase.createClient(BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+const $=id=>document.getElementById(id);
+let scope=null,session=null,ann=[],inc=[],state=[],master={locations:[],warehouses:[],suppliers:[]},activeDailyWh='',pollTimer=null,busy=false;
+
+const pad=n=>String(n).padStart(2,'0');
+function localIso(d=new Date()){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function nr(v){const n=Number(v);return Number.isFinite(n)?n:0}
+function normRole(r){r=String(r||'').toLowerCase().trim();if(r==='management'||r==='voditelj')return'manager';return r}
+function setDb(ok,text){const e=$('dbStatus');e.className='top-status '+(ok?'ok':'bad');e.querySelector('span').textContent=text}
+function stateValue(key){const r=state.find(x=>String(x?.key||'')===key&&!x?.deleted);return r?.value_json}
+function parse(v,fallback){try{return JSON.parse(v)}catch(_){return fallback}}
+function whName(id){const w=(master.warehouses||[]).find(x=>String(x.id)===String(id));return String(w?.name||w?.code||id||'—')}
+function locName(id){const l=(master.locations||[]).find(x=>String(x.id)===String(id));return String(l?.name||id||'—')}
+function whLoc(id){const w=(master.warehouses||[]).find(x=>String(x.id)===String(id));return String(w?.location_id||w?.location||'')}
+function assignedLocs(){
+  let a=Array.isArray(scope?.locations)?scope.locations.map(String).filter(Boolean):[];
+  const one=String(scope?.location||'').trim();if(one&&!a.includes(one))a.unshift(one);
+  return [...new Set(a)];
+}
+function assignedWhs(){
+  let a=Array.isArray(scope?.warehouses)?scope.warehouses.map(String).filter(Boolean):[];
+  if(scope?.all_warehouses===true)return (master.warehouses||[]).filter(x=>x?.active!==false).map(x=>String(x.id));
+  if(!a.length){
+    const ls=new Set(assignedLocs());a=(master.warehouses||[]).filter(x=>x?.active!==false&&ls.has(String(x.location_id||x.location||''))).map(x=>String(x.id));
+  }
+  return [...new Set(a)];
+}
+function visible(a){
+  const wh=String(a?.warehouse||a?.warehouse_id||'');const whs=assignedWhs();
+  if(whs.length)return whs.includes(wh);
+  const loc=String(a?.location||a?.location_id||whLoc(wh));const ls=assignedLocs();
+  return !ls.length||ls.includes(loc);
+}
+function rows(){return ann.filter(visible)}
+function status(a){
+  const s=String(a?.status||a?.planStatus||'').trim().toLowerCase();
+  if(a?.rejectedAt||s.includes('odbij')||s==='rejected')return'Odbijen';
+  if(a?.receivedAt||s.includes('zaprim')||s.includes('zavr')||s==='completed')return'Zaprimljeno';
+  if(a?.dockArrivalAt||s.includes('rampi')||s==='dock'||s==='receiving')return'Na rampi';
+  if(a?.yardArrivalAt||s.includes('dvori'))return'U dvorištu';
+  if(s.includes('nije')||s.includes('no-show'))return'Nije došao';
+  return'U dolasku';
+}
+function appointmentTime(a){return String(a?.time||a?.plannedTime||'—')}
+function supplier(a){return String(a?.supplier||a?.supplier_name||'—')}
+function plate(a){return String(a?.arrivalPlate||a?.plannedPlate||a?.plate||'—')}
+function delayMin(a){
+  const raw=nr(a?.delayMinutes||a?.delay_min||0);if(raw)return raw;
+  if(a?.date&&a?.time&&a.date===localIso()&&!['Zaprimljeno','Odbijen','Na rampi','U dvorištu'].includes(status(a))){
+    const [h,m]=String(a.time).split(':').map(Number);if(Number.isFinite(h)&&Number.isFinite(m)){
+      const now=new Date(),mins=now.getHours()*60+now.getMinutes()-(h*60+m);return Math.max(0,mins);
+    }
+  }return 0;
+}
+function badgeClass(s){return s==='Zaprimljeno'?'done':s==='Na rampi'?'dock':s==='U dvorištu'?'yard':(s==='Odbijen'||s==='Nije došao')?'bad':''}
+async function token(){let s=(await sb.auth.getSession()).data.session;if(!s?.access_token)s=(await sb.auth.refreshSession()).data.session;if(!s?.access_token)throw new Error('Prijava je istekla.');return s.access_token}
+async function getScope(){
+  const {data,error}=await sb.functions.invoke('yardivo-user-scope',{body:{fresh:true}});
+  if(error)throw error;if(!data?.ok)throw new Error(data?.error||'Profil nije dostupan.');return data.data||{};
+}
+async function bootstrap(){
+  const t=await token();
+  const r=await fetch(SYNC,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({action:'bootstrap',clientId:'yardivo-manager-mobile-v1'})});
+  const d=await r.json().catch(()=>({}));if(!r.ok||d?.ok===false)throw new Error(d?.error||('HTTP '+r.status));
+  ann=Array.isArray(d.announcements)?d.announcements:[];
+  inc=Array.isArray(d.incidents)?d.incidents:[];
+  state=Array.isArray(d.state)?d.state:[];
+  master=parse(stateValue('yardivo_master_data_registry_v583'),{locations:[],warehouses:[],suppliers:[]})||{locations:[],warehouses:[],suppliers:[]};
+  if(!Array.isArray(master.locations))master.locations=[];if(!Array.isArray(master.warehouses))master.warehouses=[];if(!Array.isArray(master.suppliers))master.suppliers=[];
+}
+async function login(){
+  if(busy)return;busy=true;const b=$('loginBtn'),err=$('loginError');err.classList.add('hidden');b.disabled=true;b.textContent='PROVJERA…';
+  try{
+    const u=$('username').value.trim().toLowerCase(),p=$('password').value;if(!u||!p)throw new Error('Upiši korisničko ime i lozinku.');
+    const {data,error}=await sb.auth.signInWithPassword({email:u+'@yardivo.local',password:p});
+    if(error||!data?.session)throw error||new Error('Prijava nije uspjela.');
+    session=data.session;scope=await getScope();
+    if(normRole(scope?.app_role||scope?.role)!=='manager'){await sb.auth.signOut();throw new Error('Ovaj Mobile UI je dostupan samo Voditeljima.');}
+    await bootstrap();await welcomeThenOpen();
+  }catch(e){err.textContent=String(e?.message||e);err.classList.remove('hidden')}
+  finally{b.disabled=false;b.textContent='PRIJAVI SE';busy=false}
+}
+async function welcomeThenOpen(){
+  $('auth').classList.add('hidden');$('welcome').classList.add('show');
+  $('welcomeTitle').textContent='DOBRODOŠLI, '+String(scope?.username||'VODITELJ').toUpperCase();
+  const locs=assignedLocs();$('welcomeSub').textContent=locs.length?locs.map(locName).join(' · ')+' · učitavam operativno stanje…':'Učitavam operativno stanje…';
+  const fill=$('welcomeFill'),pct=$('welcomePct');let p=0;
+  await new Promise(resolve=>{const t=setInterval(()=>{p=Math.min(100,p+5+Math.floor(Math.random()*8));fill.style.width=p+'%';pct.textContent=p+'%';if(p>=100){clearInterval(t);setTimeout(resolve,220)}},90)});
+  $('welcome').classList.remove('show');$('app').classList.remove('hidden');renderAll();setDb(true,'ONLINE');
+  clearInterval(pollTimer);pollTimer=setInterval(refresh,3500);
+}
+async function refresh(){
+  if(document.hidden||busy)return;busy=true;
+  try{await bootstrap();renderAll();setDb(true,'ONLINE')}catch(e){setDb(false,'PONOVNO SPAJAM')}finally{busy=false}
+}
+function scopeLabel(){
+  const ls=assignedLocs(),ws=assignedWhs();
+  if(ls.length===1)return locName(ls[0])+(ws.length===1?' · '+whName(ws[0]):'');
+  if(ls.length>1)return ls.length+' LOKACIJE';
+  return 'MOJ SCOPE';
+}
+function renderAll(){
+  const sl=scopeLabel();['homeScope','towerScope','dailyScope','weeklyScope','overviewScope'].forEach(id=>{const e=$(id);if(e)e.textContent=sl});
+  $('scopeText').textContent=sl.toUpperCase();$('homeHello').textContent='Pozdrav, '+String(scope?.username||'Voditelj')+'. Današnji operativni pregled.';
+  renderHome();renderTower();renderDaily();renderWeekly();renderOverview();
+  $('lastSync').textContent='SYNC '+new Date().toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+function renderHome(){
+  const today=localIso(),d=rows().filter(a=>a.date===today);
+  const yard=d.filter(a=>status(a)==='U dvorištu').length,dock=d.filter(a=>status(a)==='Na rampi').length;
+  const attention=d.filter(a=>['Odbijen','Nije došao'].includes(status(a))||delayMin(a)>=20).length;
+  $('kpiToday').textContent=d.length;$('kpiYard').textContent=yard;$('kpiDock').textContent=dock;$('kpiAttention').textContent=attention;
+  const score=Math.max(12,Math.min(100,100-attention*14-Math.max(0,yard+dock-10)*3));
+  $('healthLine').style.width=score+'%';
+  const hb=$('healthBadge');hb.className='health-badge '+(attention>=4?'bad':attention?'warn':'');
+  hb.textContent=attention>=4?'KRITIČNO':attention?'POJAČANO':'STABILNO';
+  $('healthTitle').textContent=attention>=4?'TRAŽI PAŽNJU':attention?'POJAČANO':'NORMALNO';
+  $('healthText').textContent=attention?attention+' stavki traži pažnju Voditelja.':'Nema kritičnih odstupanja u današnjem scopeu.';
+  const pulse=d.slice().sort((a,b)=>String(b.statusUpdatedAt||b.updatedAt||b.time||'').localeCompare(String(a.statusUpdatedAt||a.updatedAt||a.time||''))).slice(0,6);
+  $('homePulse').innerHTML=pulse.length?pulse.map(a=>`<div class="pulse"><div class="ico">${status(a)==='Na rampi'?'▣':status(a)==='U dvorištu'?'🚛':status(a)==='Zaprimljeno'?'✓':'•'}</div><div class="copy"><strong>${esc(supplier(a))}</strong><span>${esc(plate(a))} · ${esc(whName(a.warehouse))} · ${esc(status(a))}</span></div><div class="time">${esc(appointmentTime(a))}</div></div>`).join(''):'<div class="empty">Nema današnjih najava u vašem scopeu.</div>';
+}
+function renderTower(){
+  const today=localIso(),d=rows().filter(a=>a.date===today);
+  const hours={};for(const a of d){const h=String(a.time||'').slice(0,2);if(/^\d\d$/.test(h)){hours[h]??={count:0,pallets:0};hours[h].count++;hours[h].pallets+=nr(a.pallets)}}
+  const keys=Object.keys(hours).sort(),max=Math.max(1,...keys.map(h=>hours[h].count*55+hours[h].pallets*0.45));
+  let peak='',peakVal=-1;$('hourTimeline').innerHTML=keys.length?keys.map(h=>{const v=hours[h].count*55+hours[h].pallets*.45;if(v>peakVal){peakVal=v;peak=h}const pct=Math.round(v/max*100);return `<div class="time-card"><strong>${h}:00</strong><small>${hours[h].count} najava · ${hours[h].pallets} pal</small><div class="loadbar"><i style="width:${pct}%"></i></div></div>`}).join(''):'<div class="empty" style="min-width:100%">Nema današnjeg load-a.</div>';
+  $('peakLabel').textContent=peak?'Peak '+peak+':00':'Peak —';
+
+  const dec=[];
+  d.forEach(a=>{
+    const dm=delayMin(a),s=status(a);
+    if(dm>=30)dec.push({c:'bad',tag:'KASNI',t:supplier(a),p:`${plate(a)} kasni ${dm} min · ${whName(a.warehouse)} · termin ${appointmentTime(a)}`});
+    else if(dm>=15)dec.push({c:'warn',tag:'PAŽNJA',t:supplier(a),p:`${plate(a)} kasni ${dm} min · termin ${appointmentTime(a)}`});
+    if(s==='Odbijen')dec.push({c:'bad',tag:'ODBIJENO',t:supplier(a),p:`${plate(a)} · ${whName(a.warehouse)} · provjeri razlog odbijanja.`});
+    if(s==='Na rampi'&&a.dockArrivalAt){const m=Math.floor((Date.now()-new Date(a.dockArrivalAt))/60000);if(m>nr(a.duration||90))dec.push({c:'warn',tag:'DETENTION',t:supplier(a),p:`Na rampi ${m} min · planirano ${nr(a.duration||90)} min.`})}
+  });
+  $('decisionCount').textContent=dec.length+' stavki';
+  $('decisionStack').innerHTML=dec.length?dec.slice(0,20).map(x=>`<div class="decision ${x.c}"><div class="decision-head"><strong>${esc(x.t)}</strong><span>${esc(x.tag)}</span></div><p>${esc(x.p)}</p></div>`).join(''):'<div class="decision good"><div class="decision-head"><strong>NEMA AKTIVNIH IZUZETAKA</strong><span>OK</span></div><p>Današnji operativni scope trenutno nema stavki koje traže hitnu pažnju.</p></div>';
+}
+function dailyWhs(){return assignedWhs().filter(id=>(master.warehouses||[]).some(w=>String(w.id)===String(id)&&w?.active!==false))}
+function renderDaily(){
+  const today=localIso(),whs=dailyWhs();if(!activeDailyWh||!whs.includes(activeDailyWh))activeDailyWh=whs[0]||'';
+  $('dailyDateText').textContent=new Intl.DateTimeFormat('hr-HR',{weekday:'long',day:'2-digit',month:'2-digit'}).format(new Date(today+'T12:00:00'));
+  $('dailyWhToolbar').innerHTML=whs.map(w=>`<button data-wh="${esc(w)}" class="${w===activeDailyWh?'active':''}">${esc(whName(w))}</button>`).join('');
+  $('dailyWhToolbar').querySelectorAll('button').forEach(b=>b.onclick=()=>{activeDailyWh=b.dataset.wh;renderDaily()});
+  const d=rows().filter(a=>a.date===today&&(!activeDailyWh||String(a.warehouse)===activeDailyWh)).sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')));
+  $('dailySchedule').innerHTML=d.length?d.map(a=>`<div class="schedule-row"><div class="tm">${esc(appointmentTime(a))}</div><div class="info"><strong>${esc(supplier(a))}</strong><span>${esc(plate(a))} · R${esc(a.dock||'—')} · ${nr(a.pallets)} paleta</span></div><span class="status-pill ${badgeClass(status(a))}">${esc(status(a).toUpperCase())}</span></div>`).join(''):'<div class="empty">Nema najava za odabrano skladište danas.</div>';
+}
+function renderWeekly(){
+  const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()+i);return localIso(d)});
+  $('weekDays').innerHTML=days.map((x,i)=>`<div class="day-chip ${i===0?'active':''}"><small>${new Intl.DateTimeFormat('hr-HR',{weekday:'short'}).format(new Date(x+'T12:00:00'))}</small><strong>${x.slice(8,10)}.${x.slice(5,7)}</strong></div>`).join('');
+  $('weekGrid').innerHTML=days.map(x=>{const d=rows().filter(a=>a.date===x),pal=d.reduce((s,a)=>s+nr(a.pallets),0),att=d.filter(a=>['Odbijen','Nije došao'].includes(status(a))||delayMin(a)>=20).length;return `<div class="week-card"><div class="week-card-top"><strong>${new Intl.DateTimeFormat('hr-HR',{weekday:'long',day:'2-digit',month:'2-digit'}).format(new Date(x+'T12:00:00'))}</strong><span>${x}</span></div><div class="week-stats"><div class="week-stat"><small>NAJAVE</small><strong>${d.length}</strong></div><div class="week-stat"><small>PALETE</small><strong>${pal}</strong></div><div class="week-stat"><small>PAŽNJA</small><strong>${att}</strong></div></div></div>`}).join('');
+}
+function supplierCatalog(){
+  const out=[],ops=rows();
+  for(const s of master.suppliers||[]){
+    if(s?.active===false)continue;
+    const sid=String(s.id||''),name=String(s.name||s.supplier_name||s.supplier_code||sid);
+    const sl=Array.isArray(s.locations)?s.locations.map(String):[],sw=Array.isArray(s.warehouses)?s.warehouses.map(String):[];
+    const locOk=s.all_locations===true||!sl.length||sl.some(x=>assignedLocs().includes(x));
+    const whOk=s.all_warehouses===true||!sw.length||sw.some(x=>assignedWhs().includes(x));
+    if(locOk&&whOk)out.push({id:sid,name,code:String(s.supplier_code||s.code||'')});
+  }
+  if(!out.length){[...new Set(ops.map(a=>supplier(a)).filter(x=>x&&x!=='—'))].forEach(n=>out.push({id:n,name:n,code:''}))}
+  return out;
+}
+function renderOverview(){
+  const q=$('supplierSearch').value.trim().toLowerCase(),ops=rows(),cats=supplierCatalog().filter(s=>!q||[s.name,s.code].join(' ').toLowerCase().includes(q));
+  $('supplierList').innerHTML=cats.length?cats.map(s=>{const a=ops.filter(x=>supplier(x)===s.name||String(x.supplierId||x.supplier_id||'')===s.id),received=a.filter(x=>status(x)==='Zaprimljeno').length,rejected=a.filter(x=>status(x)==='Odbijen').length,late=a.filter(x=>delayMin(x)>=15).length;const pal=a.reduce((n,x)=>n+nr(x.pallets),0);return `<div class="supplier"><div class="supplier-top"><strong>${esc(s.name)}</strong><span>${esc(s.code||'MASTER')}</span></div><div class="supplier-kpis"><div><small>DOLASCI</small><strong>${a.length}</strong></div><div><small>ZAPR.</small><strong>${received}</strong></div><div><small>KASNI</small><strong>${late}</strong></div><div><small>PALETE</small><strong>${pal}</strong></div></div>${rejected?`<div style="margin-top:8px;color:#ff9ca5;font-size:9px;font-weight:900">${rejected} odbijeno</div>`:''}</div>`}).join(''):'<div class="empty">Nema dobavljača za prikaz.</div>';
+}
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+name));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));
+$('supplierSearch').addEventListener('input',renderOverview);
+$('loginBtn').onclick=login;$('password').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+window.addEventListener('online',()=>refresh());window.addEventListener('offline',()=>setDb(false,'OFFLINE'));
+(async()=>{
+  try{
+    const s=(await sb.auth.getSession()).data.session;if(!s)return;
+    session=s;scope=await getScope();
+    if(normRole(scope?.app_role||scope?.role)!=='manager')return;
+    await bootstrap();await welcomeThenOpen();
+  }catch(_){}
+})();
+})();
+</script>
+</body>
+</html>
