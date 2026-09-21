@@ -14177,6 +14177,7 @@ function openAppView(viewId){
   if(viewId==='dailyMap'&&typeof renderDailyMap==='function')renderDailyMap();
   if(viewId==='weeklyMap'&&typeof renderWeeklyMap==='function')renderWeeklyMap();
   if(viewId==='weeklyDeliveries'&&typeof renderWeeklyDeliveries==='function')renderWeeklyDeliveries();
+  if(viewId==='analytics'&&typeof window.renderYardivoAnalytics==='function')window.renderYardivoAnalytics();
   if(viewId==='settings'){
     if(typeof renderHolidayAdmin==='function')renderHolidayAdmin();
     if(typeof enableDatePickers==='function')enableDatePickers();
@@ -57949,7 +57950,7 @@ if(window.__YARDIVO_MANAGER_SCOPE_POPUP_V2__)return;
 window.__YARDIVO_MANAGER_SCOPE_POPUP_V2__=true;
 
 const MASTER='yardivo_master_data_registry_v583';
-const ALLOWED=new Set(['homeMenu','dashboard','controlTower','myYard','suppliers','overview','dailyMap','weeklyMap']);
+const ALLOWED=new Set(['homeMenu','dashboard','controlTower','analytics','myYard','suppliers','overview','dailyMap','weeklyMap']);
 
 function session(){try{return (typeof currentSession!=='undefined'?currentSession:window.currentSession)||null}catch(_){return window.currentSession||null}}
 function role(){let r=String(session()?.role||session()?.app_role||'').trim().toLowerCase();if(r==='management'||r==='voditelj')r='manager';return r}
@@ -58001,7 +58002,7 @@ function setTextNode(button,label){
 function enforceMenu(){
  if(!isManager())return;
  setRoleAttrs();
- const labels={homeMenu:'Početni izbornik',dashboard:'Nadzorna ploča',controlTower:'Control Tower',myYard:'My Yard',suppliers:'Dobavljači',overview:'Overview dobavljača',dailyMap:'Dnevna mapa',weeklyMap:'Tjedna mapa'};
+ const labels={homeMenu:'Početni izbornik',dashboard:'Nadzorna ploča',controlTower:'Control Tower',analytics:'Analytics',myYard:'My Yard',suppliers:'Dobavljači',overview:'Overview dobavljača',dailyMap:'Dnevna mapa',weeklyMap:'Tjedna mapa'};
  document.querySelectorAll('.nav-btn[data-view]').forEach(b=>{
    const id=String(b.dataset.view||''),ok=ALLOWED.has(id);
    b.classList.toggle('role-hidden',!ok);
@@ -58088,6 +58089,7 @@ function renderView(id){
  const calls={
   dashboard:['renderDashboardSimple','renderDashboard'],
   controlTower:['renderControlTower'],
+  analytics:['renderYardivoAnalytics'],
   myYard:['renderYard','renderRampe','renderDockOverview'],
   suppliers:['renderSupplierProfiles'],
   overview:['renderOverview'],
@@ -58109,7 +58111,7 @@ function openView(raw){
  if(target)target.classList.add('active');
 
  document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.toggle('active',String(b.dataset.view)===id));
- const titles={homeMenu:'Početni izbornik',dashboard:'Nadzorna ploča',controlTower:'Control Tower',myYard:'My Yard',suppliers:'Dobavljači',overview:'Overview dobavljača',dailyMap:'Dnevna mapa',weeklyMap:'Tjedna mapa'};
+ const titles={homeMenu:'Početni izbornik',dashboard:'Nadzorna ploča',controlTower:'Control Tower',analytics:'Analytics',myYard:'My Yard',suppliers:'Dobavljači',overview:'Overview dobavljača',dailyMap:'Dnevna mapa',weeklyMap:'Tjedna mapa'};
  const pt=document.getElementById('pageTitle');if(pt)pt.textContent=titles[id]||'YARDIVO';
  if(id==='homeMenu'){
    try{updateHomeLocationUI?.()}catch(_){}
@@ -58414,7 +58416,7 @@ if(window.__YARDIVO_MANAGER_FINAL_AUTHORITY_V4__)return;
 window.__YARDIVO_MANAGER_FINAL_AUTHORITY_V4__=true;
 
 const MASTER='yardivo_master_data_registry_v583';
-const ALLOWED=new Set(['homeMenu','dashboard','controlTower','myYard','suppliers','overview','dailyMap','weeklyMap']);
+const ALLOWED=new Set(['homeMenu','dashboard','controlTower','analytics','myYard','suppliers','overview','dailyMap','weeklyMap']);
 let applying=false;
 let popupMoved=null;
 let scheduled=false;
@@ -58518,12 +58520,13 @@ function enforceAccountScope(){
 }
 
 function labelFor(id){
- return ({homeMenu:'POČETNI IZBORNIK',dashboard:'NADZORNA PLOČA',controlTower:'CONTROL TOWER',myYard:'MY YARD',suppliers:'DOBAVLJAČI',overview:'OVERVIEW DOBAVLJAČA',dailyMap:'DNEVNA MAPA',weeklyMap:'TJEDNA MAPA'})[id]||id;
+ return ({homeMenu:'POČETNI IZBORNIK',dashboard:'NADZORNA PLOČA',controlTower:'CONTROL TOWER',analytics:'ANALYTICS',myYard:'MY YARD',suppliers:'DOBAVLJAČI',overview:'OVERVIEW DOBAVLJAČA',dailyMap:'DNEVNA MAPA',weeklyMap:'TJEDNA MAPA'})[id]||id;
 }
 function renderTarget(id){
  const names={
    dashboard:['renderDashboardSimple','renderDashboard'],
    controlTower:['renderControlTower'],
+   analytics:['renderYardivoAnalytics'],
    myYard:['renderYard','renderRampe','renderDockOverview'],
    suppliers:['renderSupplierProfiles'],
    overview:['renderOverview'],
@@ -59077,5 +59080,208 @@ window.addEventListener('load',()=>queueMicrotask(render),{once:true});
 window.YardivoOverviewMasterV5={render,catalog,dataRows,choose};
 })();
 </script>
+
+<style id="yardivo-analytics-v1-style">
+/* ==========================================================
+   YARDIVO ANALYTICS V1 · ADMIN + VODITELJ
+   Header warehouse is the single warehouse source of truth.
+   ========================================================== */
+#analytics{padding:0!important}
+#analytics .ya-shell{padding:14px 16px 28px;min-height:calc(100vh - 78px);background:
+  radial-gradient(900px 360px at 35% -180px,rgba(24,127,211,.12),transparent 70%),#06131e;color:#eaf5fb}
+#analytics .ya-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+#analytics .ya-periods{display:flex;align-items:center;gap:5px;padding:4px;border:1px solid #203c50;background:#091b29;border-radius:10px;overflow:auto}
+#analytics .ya-period-btn{border:0;background:transparent;color:#8da7b8;padding:8px 11px;border-radius:7px;font-size:9px;font-weight:950;white-space:nowrap;cursor:pointer}
+#analytics .ya-period-btn.active{background:linear-gradient(180deg,#2189db,#176caf);color:#fff;box-shadow:0 4px 14px rgba(31,132,210,.28)}
+#analytics .ya-toolbar-right{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-left:auto}
+#analytics .ya-filter,#analytics .ya-date,#analytics .ya-export{height:36px;border:1px solid #294a60;background:#0b2030;color:#dbeaf2;border-radius:9px;padding:0 10px;font-size:8px;font-weight:900;outline:none}
+#analytics .ya-filter{min-width:180px}
+#analytics .ya-export{cursor:pointer;background:#0f3c5c;border-color:#2a79aa;color:#dff4ff}
+#analytics .ya-export:hover{background:#154c71}
+#analytics .ya-scope{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #28495d;border-radius:9px;background:#081a27;color:#9eb8c7;font-size:8px;font-weight:900;white-space:nowrap}
+#analytics .ya-scope i{width:7px;height:7px;border-radius:50%;background:#39d987;box-shadow:0 0 10px rgba(57,217,135,.45)}
+#analytics .ya-custom{display:none;align-items:center;gap:6px}.ya-custom.show{display:flex!important}
+#analytics .ya-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:10px}
+#analytics .ya-kpi{position:relative;overflow:hidden;min-height:132px;padding:13px;border:1px solid #203d51;border-radius:11px;background:linear-gradient(180deg,#0b2030,#081824);box-shadow:0 12px 28px rgba(0,0,0,.16)}
+#analytics .ya-kpi:after{content:"";position:absolute;inset:auto -30px -42px auto;width:105px;height:105px;border-radius:50%;background:var(--ya-accent,#3ca5ed);opacity:.055}
+#analytics .ya-kpi-head{display:flex;align-items:center;gap:7px;color:#b6cad6;font-size:8px;font-weight:900}
+#analytics .ya-kpi-ico{width:23px;height:23px;border-radius:7px;display:grid;place-items:center;background:color-mix(in srgb,var(--ya-accent,#3ca5ed) 13%,transparent);color:var(--ya-accent,#3ca5ed);font-size:13px}
+#analytics .ya-kpi-main{display:flex;align-items:baseline;justify-content:space-between;gap:6px;margin-top:11px}
+#analytics .ya-kpi-value{font-size:23px;line-height:1;font-weight:1000;letter-spacing:-.7px}
+#analytics .ya-change{font-size:8px;font-weight:1000;white-space:nowrap}.ya-change.good{color:#4be093}.ya-change.bad{color:#ff707b}.ya-change.neutral{color:#7895a7}
+#analytics .ya-kpi-sub{margin-top:5px;color:#708d9e;font-size:7px;font-weight:800}
+#analytics .ya-spark{height:32px;margin-top:8px}.ya-spark svg{width:100%;height:100%;overflow:visible}
+#analytics .ya-grid-main{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(330px,.9fr);gap:10px;margin-bottom:10px}
+#analytics .ya-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px}
+#analytics .ya-grid-bottom{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(360px,1.05fr) minmax(330px,1fr);gap:10px}
+#analytics .ya-card{position:relative;border:1px solid #203e52;border-radius:11px;background:linear-gradient(180deg,#0a1d2c,#071722);padding:13px;min-width:0;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,.12)}
+#analytics .ya-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+#analytics .ya-card-head h3{margin:0;color:#eaf5fb;font-size:12px;letter-spacing:-.15px}
+#analytics .ya-card-head p{margin:4px 0 0;color:#7392a5;font-size:7.5px;line-height:1.35}
+#analytics .ya-card-metric{text-align:right;font-size:17px;font-weight:1000;white-space:nowrap}.ya-card-metric small{display:block;margin-top:4px;font-size:7px;color:#62e697}
+#analytics .ya-line-wrap{position:relative;height:270px}.ya-line-wrap.small{height:155px}
+#analytics .ya-line-wrap svg{width:100%;height:100%;display:block;overflow:visible}
+#analytics .ya-grid-line{stroke:rgba(117,151,174,.15);stroke-width:1}.ya-axis-text{fill:#69899c;font-size:8px;font-weight:800}
+#analytics .ya-line-primary{fill:none;stroke:#37a5f1;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px rgba(55,165,241,.25))}
+#analytics .ya-line-prev{fill:none;stroke:#6f8ca2;stroke-width:2;stroke-dasharray:6 6;stroke-linecap:round;opacity:.8}
+#analytics .ya-line-purple{fill:none;stroke:#a576ff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+#analytics .ya-line-orange{fill:none;stroke:#ff963f;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+#analytics .ya-area{fill:url(#yaBlueArea)}.ya-area-purple{fill:url(#yaPurpleArea)}.ya-area-orange{fill:url(#yaOrangeArea)}
+#analytics .ya-point{stroke:#071722;stroke-width:2;transition:r .14s ease}.ya-point:hover{r:5.5}
+#analytics .ya-legend{display:flex;align-items:center;gap:13px;flex-wrap:wrap;color:#8da7b8;font-size:7.5px;font-weight:900}.ya-legend i{display:inline-block;width:14px;height:3px;border-radius:999px;margin-right:5px;vertical-align:2px}
+#analytics .ya-empty{height:100%;min-height:110px;display:grid;place-items:center;text-align:center;color:#6e8b9c;font-size:8px;line-height:1.5;padding:20px;border:1px dashed rgba(62,95,117,.55);border-radius:9px}
+#analytics .ya-tooltip{position:absolute;z-index:10;display:none;pointer-events:none;min-width:125px;padding:8px 9px;border:1px solid #2f5972;border-radius:8px;background:#07141f;color:#d9edf7;box-shadow:0 12px 30px rgba(0,0,0,.35);font-size:7.5px;line-height:1.5;transform:translate(-50%,-110%)}
+#analytics .ya-tooltip.show{display:block}
+#analytics .ya-heatmap{display:grid;grid-template-columns:30px repeat(17,minmax(12px,1fr));gap:4px;align-items:center;min-height:250px}
+#analytics .ya-hm-label{font-size:7px;color:#7895a7;font-weight:900;text-align:right;padding-right:3px}
+#analytics .ya-hm-hour{font-size:6.5px;color:#69889a;text-align:center}.ya-hm-cell{aspect-ratio:1.05;border-radius:3px;background:#0b2a42;border:1px solid rgba(61,110,144,.18);transition:transform .12s ease}.ya-hm-cell:hover{transform:scale(1.14);z-index:2}
+#analytics .ya-bars{height:155px;display:flex;align-items:flex-end;gap:8px;padding:12px 6px 20px;position:relative}.ya-bar-col{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;position:relative}.ya-bar{border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,#31d978,#139d53);box-shadow:0 0 10px rgba(49,217,120,.12);min-height:2px}.ya-bar-label{position:absolute;left:50%;bottom:-17px;transform:translateX(-50%);font-size:6.5px;color:#6e8a9c;white-space:nowrap}.ya-bar-value{font-size:6.5px;color:#9ab4c3;text-align:center;margin-bottom:4px;font-weight:900}
+#analytics .ya-donut-row{display:grid;grid-template-columns:145px 1fr;align-items:center;gap:10px}.ya-donut{width:132px;height:132px;margin:auto;border-radius:50%;position:relative}.ya-donut:after{content:"";position:absolute;inset:25px;border-radius:50%;background:#091a27;border:1px solid #1f3a4d}.ya-donut-center{position:absolute;inset:0;z-index:2;display:grid;place-items:center;text-align:center;pointer-events:none}.ya-donut-center strong{display:block;font-size:17px}.ya-donut-center small{display:block;color:#6f8da0;font-size:7px;margin-top:2px}.ya-status-list{display:grid;gap:7px}.ya-status-item{display:grid;grid-template-columns:9px 1fr auto;gap:7px;align-items:center;font-size:7.5px;color:#9ab4c4}.ya-status-item i{width:9px;height:9px;border-radius:50%}.ya-status-item strong{color:#d7e7ef}
+#analytics .ya-table{width:100%;border-collapse:collapse;font-size:7.5px}.ya-table th{text-align:left;color:#6f8d9f;font-size:6.5px;font-weight:900;padding:0 6px 7px;border-bottom:1px solid #1e394c}.ya-table td{padding:8px 6px;border-bottom:1px solid rgba(31,59,77,.65);color:#a9c0cd}.ya-table tr:last-child td{border-bottom:0}.ya-table td strong{color:#e4f0f6}.ya-rank{width:19px;height:19px;border-radius:6px;display:grid;place-items:center;background:#102b3e;color:#7fbce0;font-weight:1000}
+#analytics .ya-util{display:grid;gap:10px}.ya-util-row{display:grid;grid-template-columns:72px 40px 1fr;gap:8px;align-items:center;font-size:7.5px;color:#94afbe}.ya-util-row strong{color:#e4f1f7;text-align:right}.ya-util-track{height:10px;border-radius:999px;background:#10293b;overflow:hidden}.ya-util-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#1e8ee0,#31b6ff);box-shadow:0 0 12px rgba(49,182,255,.16)}
+#analytics .ya-note{margin-top:10px;padding:8px 10px;border:1px solid #233f52;border-radius:8px;background:#081924;color:#7894a6;font-size:7px;line-height:1.45}
+#analytics .ya-note b{color:#aac2cf}
+body[data-yardivo-role="manager"] .nav-btn[data-view="analytics"]{display:flex!important;visibility:visible!important;opacity:1!important}
+body[data-yardivo-role="manager"] #homeMenuGrid [data-home-target="analytics"]{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+html[data-yardivo-main-theme="light"] #analytics .ya-shell,html[data-theme="light"] #analytics .ya-shell{background:#f3f7fa;color:#102b40}
+html[data-yardivo-main-theme="light"] #analytics .ya-card,html[data-theme="light"] #analytics .ya-card,
+html[data-yardivo-main-theme="light"] #analytics .ya-kpi,html[data-theme="light"] #analytics .ya-kpi{background:#fff;border-color:#cbdbe5;box-shadow:0 10px 26px rgba(52,81,100,.08)}
+html[data-yardivo-main-theme="light"] #analytics .ya-card-head h3,html[data-theme="light"] #analytics .ya-card-head h3,
+html[data-yardivo-main-theme="light"] #analytics .ya-kpi-value,html[data-theme="light"] #analytics .ya-kpi-value{color:#102b40}
+html[data-yardivo-main-theme="light"] #analytics .ya-periods,html[data-theme="light"] #analytics .ya-periods,
+html[data-yardivo-main-theme="light"] #analytics .ya-filter,html[data-theme="light"] #analytics .ya-filter,
+html[data-yardivo-main-theme="light"] #analytics .ya-date,html[data-theme="light"] #analytics .ya-date,
+html[data-yardivo-main-theme="light"] #analytics .ya-scope,html[data-theme="light"] #analytics .ya-scope{background:#fff;border-color:#cbdbe5;color:#425f73}
+@media(max-width:1280px){#analytics .ya-kpis{grid-template-columns:repeat(3,1fr)}#analytics .ya-grid-main{grid-template-columns:1fr}#analytics .ya-grid-bottom{grid-template-columns:1fr 1fr}#analytics .ya-grid-bottom>.ya-card:last-child{grid-column:1/-1}}
+@media(max-width:900px){#analytics .ya-kpis{grid-template-columns:repeat(2,1fr)}#analytics .ya-grid-3,#analytics .ya-grid-bottom{grid-template-columns:1fr}#analytics .ya-grid-bottom>.ya-card:last-child{grid-column:auto}.ya-toolbar-right{width:100%}.ya-filter{flex:1}.ya-donut-row{grid-template-columns:1fr}.ya-heatmap{overflow:auto}}
+</style>
+<script id="yardivo-analytics-v1">
+(function(){
+'use strict';
+if(window.__YARDIVO_ANALYTICS_V1__)return;
+window.__YARDIVO_ANALYTICS_V1__=true;
+
+const S={period:'7D',supplier:'ALL',customFrom:'',customTo:''};
+const PERIODS=['7D','30D','3M','6M','YTD','1Y','CUSTOM'];
+const COLORS={blue:'#36a5f2',prev:'#66879d',purple:'#a576ff',orange:'#ff963f',green:'#35d77a',red:'#ff626f',amber:'#ffad45',slate:'#6f8da2'};
+
+function role(){let r=String(window.currentSession?.role||window.currentSession?.app_role||document.body?.dataset?.yardivoRole||'').toLowerCase();if(r==='management'||r==='voditelj')r='manager';return r}
+function allowed(){return ['admin','manager'].includes(role())}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function num(v){const n=Number(v);return Number.isFinite(n)?n:0}
+function payload(a){return a?.payload&&typeof a.payload==='object'?a.payload:a||{}}
+function anns(){try{if(Array.isArray(window.announcements))return window.announcements.filter(a=>a&&a.deleted!==true);if(typeof announcements!=='undefined'&&Array.isArray(announcements))return announcements.filter(a=>a&&a.deleted!==true)}catch(_){}return[]}
+function master(){try{return JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{}}catch(_){return{}}}
+function whId(){let w='';try{w=String(window.YardivoAppStateV583?.warehouse?.()||'')}catch(_){};if(!w)w=String(window.activeWarehouse||document.getElementById('globalWarehouse')?.value||'');return w||'ALL'}
+function locId(){let l='';try{l=String(window.YardivoAppStateV583?.location?.()||'')}catch(_){};if(!l)l=String(window.currentSession?.location||'');return l}
+function whName(id){const d=master(),w=(d.warehouses||[]).find(x=>String(x?.id)===String(id));return String(w?.name||id||'Sva skladišta')}
+function locName(id){const d=master(),l=(d.locations||[]).find(x=>String(x?.id)===String(id));return String(l?.name||id||'')}
+function aWarehouse(a){const p=payload(a);return String(a?.warehouse||a?.warehouse_id||p.warehouse||'')}
+function aDate(a){const p=payload(a);return String(a?.date||a?.appointment_date||p.date||'').slice(0,10)}
+function aTime(a){const p=payload(a);return String(a?.time||a?.appointment_time||p.time||'').slice(0,5)}
+function aSupplier(a){const p=payload(a);return String(a?.supplier||a?.supplier_name||p.supplier||'—').trim()||'—'}
+function aPallets(a){const p=payload(a);return num(a?.pallets??p.pallets??0)}
+function aDock(a){const p=payload(a);return String(a?.dock||p.dock||'').replace(/^R/i,'')}
+function aDuration(a){const p=payload(a);return Math.max(0,num(a?.duration??p.duration??0))}
+function aStatus(a){const p=payload(a);return String(a?.status||p.status||'Najavljen')}
+function field(a,...keys){const p=payload(a);for(const k of keys){const v=a?.[k]??p?.[k];if(v!==undefined&&v!==null&&v!=='')return v}return null}
+function parseDT(v){if(!v)return null;const d=new Date(v);return Number.isNaN(+d)?null:d}
+function plannedDT(a){const ds=aDate(a);if(!ds)return null;const ts=aTime(a)||'00:00';const d=new Date(`${ds}T${ts}:00`);return Number.isNaN(+d)?null:d}
+function arrivalDT(a){const iso=field(a,'yardArrivalAt','gateCheckedAt','firstArrivalAt','checked_in_at');if(iso)return parseDT(iso);const ds=String(field(a,'actualDate','arrivalDate')||'').slice(0,10),ts=String(field(a,'actualTime','arrivalTime')||'').slice(0,5);if(!ds)return null;return parseDT(`${ds}T${ts||'00:00'}:00`)}
+function dockDT(a){return parseDT(field(a,'dockArrivalAt','dockCheckedAt','receivingStartedAt'))}
+function completeDT(a){return parseDT(field(a,'receivingCompletedAt','receivedAt','completedAt'))}
+function minutes(a,b){if(!a||!b)return null;const n=Math.round((+b-+a)/60000);return Number.isFinite(n)&&n>=0?n:null}
+function waitMin(a){return minutes(arrivalDT(a),dockDT(a))}
+function unloadMin(a){return minutes(dockDT(a),completeDT(a))}
+function turnaroundMin(a){return minutes(arrivalDT(a),completeDT(a))}
+function delayMin(a){const p=plannedDT(a),x=arrivalDT(a);if(!p||!x)return null;return Math.round((+x-+p)/60000)}
+function knownOnTime(a){const d=delayMin(a);return d===null?null:d<=15}
+function statusKind(a){const s=aStatus(a).toLowerCase();if(/zaprim|zavr|completed|received/.test(s))return'received';if(/odbij|reject/.test(s))return'rejected';if(/no.?show|nije do/.test(s))return'noshow';if(/ramp/.test(s))return'dock';if(/dvori|parking/.test(s))return'yard';return'planned'}
+function ymd(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function dayStart(d){const x=new Date(d);x.setHours(0,0,0,0);return x}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function rangeFor(period){
+ const today=dayStart(new Date()),end=today;let start;
+ if(period==='30D')start=addDays(end,-29);else if(period==='3M')start=addDays(end,-89);else if(period==='6M')start=addDays(end,-179);else if(period==='1Y')start=addDays(end,-364);else if(period==='YTD')start=new Date(end.getFullYear(),0,1);else if(period==='CUSTOM'&&S.customFrom&&S.customTo){start=dayStart(new Date(S.customFrom+'T12:00:00'));const e=dayStart(new Date(S.customTo+'T12:00:00'));return normalizeRange(start,e)}else start=addDays(end,-6);
+ return normalizeRange(start,end)
+}
+function normalizeRange(start,end){if(+start>+end){const t=start;start=end;end=t}const days=Math.max(1,Math.round((+end-+start)/86400000)+1);let ps,pe;if(S.period==='YTD'){ps=new Date(start.getFullYear()-1,0,1);pe=addDays(ps,days-1)}else{pe=addDays(start,-1);ps=addDays(pe,-days+1)}return{start,end,prevStart:ps,prevEnd:pe,days}}
+function inRange(a,start,end){const ds=aDate(a);if(!ds)return false;const t=dayStart(new Date(ds+'T12:00:00'));return +t>=+start&&+t<=+end}
+function scopeRows(){const w=whId(),loc=locId(),d=master(),allowedWhByLoc=new Set((d.warehouses||[]).filter(x=>!loc||loc==='ALL'||String(x.location_id)===loc).map(x=>String(x.id)));return anns().filter(a=>{const aw=aWarehouse(a);if(w&&w!=='ALL'&&aw!==w)return false;if((!w||w==='ALL')&&loc&&loc!=='ALL'&&aw&&!allowedWhByLoc.has(aw))return false;return true})}
+function supplierRows(rows){return S.supplier==='ALL'?rows:rows.filter(a=>aSupplier(a)===S.supplier)}
+function currentData(){const r=rangeFor(S.period),base=supplierRows(scopeRows());return{r,cur:base.filter(a=>inRange(a,r.start,r.end)),prev:base.filter(a=>inRange(a,r.prevStart,r.prevEnd)),base}}
+function fmtInt(n){return Math.round(num(n)).toLocaleString('hr-HR')}
+function fmtMin(n){if(n===null||n===undefined||!Number.isFinite(Number(n)))return'—';n=Math.round(Number(n));if(n>=60)return`${Math.floor(n/60)}h ${n%60}m`;return`${n} min`}
+function avg(arr,fn){const v=arr.map(fn).filter(x=>x!==null&&x!==undefined&&Number.isFinite(Number(x)));return v.length?v.reduce((a,b)=>a+Number(b),0)/v.length:null}
+function pctChange(cur,prev,lowerBetter=false){if(cur===null||prev===null||cur===undefined||prev===undefined)return{txt:'—',cls:'neutral'};cur=Number(cur);prev=Number(prev);if(!Number.isFinite(cur)||!Number.isFinite(prev)||prev===0)return{txt:'—',cls:'neutral'};const p=(cur-prev)/Math.abs(prev)*100;const up=p>=0,good=lowerBetter?!up:up;return{txt:`${up?'↑':'↓'} ${Math.abs(Math.round(p))}%`,cls:Math.abs(p)<1?'neutral':good?'good':'bad'}}
+function onTimePct(rows){const k=rows.map(knownOnTime).filter(x=>x!==null);return k.length?k.filter(Boolean).length/k.length*100:null}
+function metrics(rows){return{arrivals:rows.length,pallets:rows.reduce((n,a)=>n+aPallets(a),0),ontime:onTimePct(rows),wait:avg(rows,waitMin),unload:avg(rows,unloadMin),turn:avg(rows,turnaroundMin)}}
+function bucketUnit(days){return days<=31?'day':days<=150?'week':'month'}
+function keyDate(d,unit){if(unit==='day')return ymd(d);if(unit==='week'){const x=dayStart(d),day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);return ymd(x)}return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
+function keyForA(a,unit){const ds=aDate(a);if(!ds)return'';return keyDate(new Date(ds+'T12:00:00'),unit)}
+function bucketSeries(rows,r,metric){
+ const unit=bucketUnit(r.days),map=new Map();let cursor=dayStart(r.start);
+ while(+cursor<=+r.end){const k=keyDate(cursor,unit);if(!map.has(k))map.set(k,[]);cursor=addDays(cursor,1)}
+ rows.forEach(a=>{const k=keyForA(a,unit);if(map.has(k))map.get(k).push(a)});
+ return [...map.entries()].map(([k,v])=>{let value;if(metric==='arrivals')value=v.length;else if(metric==='pallets')value=v.reduce((n,a)=>n+aPallets(a),0);else if(metric==='wait')value=avg(v,waitMin);else if(metric==='unload')value=avg(v,unloadMin);else value=0;return{key:k,label:bucketLabel(k,unit),value:value===null?null:Number(value)}})
+}
+function bucketLabel(k,unit){if(unit==='month'){const [y,m]=k.split('-').map(Number);return new Intl.DateTimeFormat('hr-HR',{month:'short',year:'2-digit'}).format(new Date(y,m-1,1))}const d=new Date(k+'T12:00:00');return new Intl.DateTimeFormat('hr-HR',{day:'2-digit',month:'2-digit'}).format(d)}
+function compareSeries(cur,prev,r,metric){const c=bucketSeries(cur,r,metric);const pr={...r,start:r.prevStart,end:r.prevEnd};const p=bucketSeries(prev,pr,metric);return c.map((x,i)=>({...x,prev:p[i]?.value??null}))}
+function spark(data,color){const vals=data.map(x=>x.value).filter(v=>v!==null);if(!vals.length)return'<div></div>';const max=Math.max(...vals,1),min=Math.min(...vals,0),span=max-min||1,w=180,h=32;const pts=data.map((x,i)=>{const v=x.value??min;return`${i/(Math.max(1,data.length-1))*w},${h-3-(v-min)/span*(h-7)}`}).join(' ');return`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity=".95"/></svg>`}
+function kpiCard(icon,label,value,change,sub,data,color){return`<div class="ya-kpi" style="--ya-accent:${color}"><div class="ya-kpi-head"><span class="ya-kpi-ico">${icon}</span>${esc(label)}</div><div class="ya-kpi-main"><strong class="ya-kpi-value">${esc(value)}</strong><span class="ya-change ${change.cls}">${esc(change.txt)}</span></div><div class="ya-kpi-sub">${esc(sub)}</div><div class="ya-spark">${spark(data,color)}</div></div>`}
+function lineSvg(data,{primary='#36a5f2',secondary=null,area='blue',suffix='',emptyText='Nema podataka za odabrani period.'}={}){
+ const vals=[];data.forEach(x=>{if(x.value!==null)vals.push(x.value);if(secondary&&x.prev!==null)vals.push(x.prev)});if(!vals.length)return`<div class="ya-empty">${esc(emptyText)}</div>`;
+ const W=900,H=250,L=42,R=15,T=12,B=28,max=Math.max(...vals,1),min=Math.min(0,...vals),span=max-min||1;const x=i=>L+i/(Math.max(1,data.length-1))*(W-L-R),y=v=>T+(max-v)/span*(H-T-B);
+ const pathFor=key=>{let d='',started=false;data.forEach((p,i)=>{const v=p[key];if(v===null||v===undefined){started=false;return}d+=(started?' L ':'M ')+x(i).toFixed(1)+' '+y(v).toFixed(1);started=true});return d};
+ const pp=pathFor('value'),sp=secondary?pathFor('prev'):'';let areaPath='';const known=data.map((p,i)=>p.value===null?null:[x(i),y(p.value)]).filter(Boolean);if(known.length){areaPath=`M ${known[0][0]} ${H-B} L `+known.map(p=>p.join(' ')).join(' L ')+` L ${known[known.length-1][0]} ${H-B} Z`}
+ let grid='';for(let i=0;i<5;i++){const yy=T+i*(H-T-B)/4,gv=max-i*span/4;grid+=`<line class="ya-grid-line" x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}"/><text class="ya-axis-text" x="${L-7}" y="${yy+3}" text-anchor="end">${Math.round(gv)}</text>`}
+ const step=Math.max(1,Math.ceil(data.length/7));let labels='';data.forEach((p,i)=>{if(i%step===0||i===data.length-1)labels+=`<text class="ya-axis-text" x="${x(i)}" y="${H-7}" text-anchor="middle">${esc(p.label)}</text>`});
+ const points=data.map((p,i)=>p.value===null?'':`<circle class="ya-point" cx="${x(i)}" cy="${y(p.value)}" r="4" fill="${primary}" data-tip="${esc(p.label)} · ${Math.round(p.value)}${esc(suffix)}"><title>${esc(p.label)} · ${Math.round(p.value)}${esc(suffix)}</title></circle>`).join('');
+ const prevPts=secondary?data.map((p,i)=>p.prev===null?'':`<circle cx="${x(i)}" cy="${y(p.prev)}" r="2.5" fill="${COLORS.prev}" opacity=".9" data-tip="Prethodni period · ${Math.round(p.prev)}${esc(suffix)}"><title>Prethodni period · ${Math.round(p.prev)}${esc(suffix)}</title></circle>`).join(''):'';
+ const cls=area==='purple'?'ya-area-purple':area==='orange'?'ya-area-orange':'ya-area';const lcls=area==='purple'?'ya-line-purple':area==='orange'?'ya-line-orange':'ya-line-primary';
+ return`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="yaBlueArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#36a5f2" stop-opacity=".22"/><stop offset="1" stop-color="#36a5f2" stop-opacity="0"/></linearGradient><linearGradient id="yaPurpleArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a576ff" stop-opacity=".2"/><stop offset="1" stop-color="#a576ff" stop-opacity="0"/></linearGradient><linearGradient id="yaOrangeArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff963f" stop-opacity=".2"/><stop offset="1" stop-color="#ff963f" stop-opacity="0"/></linearGradient></defs>${grid}${areaPath?`<path d="${areaPath}" class="${cls}"/>`:''}${sp?`<path d="${sp}" class="ya-line-prev"/>`:''}<path d="${pp}" class="${lcls}"/>${prevPts}${points}${labels}</svg>`
+}
+function bars(data){const vals=data.map(x=>x.value||0),max=Math.max(...vals,1),step=Math.max(1,Math.ceil(data.length/8));return`<div class="ya-bars">${data.map((p,i)=>`<div class="ya-bar-col" title="${esc(p.label)} · ${fmtInt(p.value||0)} paleta"><div class="ya-bar-value">${p.value?fmtInt(p.value):''}</div><div class="ya-bar" style="height:${Math.max(1,(p.value||0)/max*100)}%"></div>${(i%step===0||i===data.length-1)?`<span class="ya-bar-label">${esc(p.label)}</span>`:''}</div>`).join('')}</div>`}
+function heatmap(rows){const days=['Pon','Uto','Sri','Čet','Pet','Sub','Ned'],hours=Array.from({length:17},(_,i)=>i+6),m=Array.from({length:7},()=>Array(17).fill(0));rows.forEach(a=>{const d=arrivalDT(a)||plannedDT(a);if(!d)return;const di=(d.getDay()+6)%7,hi=d.getHours()-6;if(di>=0&&di<7&&hi>=0&&hi<17)m[di][hi]++});const max=Math.max(1,...m.flat());let h='<div></div>'+hours.map(x=>`<div class="ya-hm-hour">${x%2===0?String(x).padStart(2,'0'):''}</div>`).join('');for(let d=0;d<7;d++){h+=`<div class="ya-hm-label">${days[d]}</div>`;for(let j=0;j<17;j++){const v=m[d][j],o=.10+.8*(v/max);h+=`<div class="ya-hm-cell" style="background:rgba(34,157,235,${o.toFixed(2)})" title="${days[d]} ${hours[j]}:00 · ${v} dolazaka"></div>`}}return`<div class="ya-heatmap">${h}</div>`}
+function statusDonut(rows){const cats=[['received','Zaprimljeno',COLORS.green],['dock','Na rampi',COLORS.amber],['yard','U dvorištu','#ff874b'],['noshow','No-show',COLORS.red],['rejected','Odbijeno','#d9485a'],['planned','Najavljeno',COLORS.blue]];const counts=cats.map(([k])=>rows.filter(a=>statusKind(a)===k).length),total=counts.reduce((a,b)=>a+b,0);let acc=0,parts=[];cats.forEach((c,i)=>{const pct=total?counts[i]/total*100:0;if(pct>0){parts.push(`${c[2]} ${acc}% ${acc+pct}%`);acc+=pct}});const bg=parts.length?`conic-gradient(${parts.join(',')})`:'#102739';return`<div class="ya-donut-row"><div style="position:relative"><div class="ya-donut" style="background:${bg}"></div><div class="ya-donut-center"><div><strong>${fmtInt(total)}</strong><small>ukupno</small></div></div></div><div class="ya-status-list">${cats.map((c,i)=>`<div class="ya-status-item"><i style="background:${c[2]}"></i><span>${c[1]}</span><strong>${counts[i]}${total?` · ${Math.round(counts[i]/total*100)}%`:''}</strong></div>`).join('')}</div></div>`}
+function topSuppliers(rows){const map=new Map();rows.forEach(a=>{const n=aSupplier(a);if(!map.has(n))map.set(n,{name:n,arrivals:0,pallets:0,unloads:[]});const x=map.get(n);x.arrivals++;x.pallets+=aPallets(a);const u=unloadMin(a);if(u!==null)x.unloads.push(u)});const top=[...map.values()].sort((a,b)=>b.arrivals-a.arrivals||b.pallets-a.pallets).slice(0,5);if(!top.length)return'<div class="ya-empty">Nema dobavljača u odabranom periodu.</div>';return`<table class="ya-table"><thead><tr><th>#</th><th>DOBAVLJAČ</th><th>DOLASCI</th><th>PALETE</th><th>PROSJ. ISKRCAJ</th></tr></thead><tbody>${top.map((x,i)=>`<tr><td><span class="ya-rank">${i+1}</span></td><td><strong>${esc(x.name)}</strong></td><td>${x.arrivals}</td><td>${fmtInt(x.pallets)}</td><td>${x.unloads.length?fmtMin(x.unloads.reduce((a,b)=>a+b,0)/x.unloads.length):'—'}</td></tr>`).join('')}</tbody></table>`}
+function dockUtil(rows,r){const d=master(),w=String(whId()),wm=(d.warehouses||[]).find(x=>String(x.id)===w),settings=Array.isArray(wm?.ramp_settings)?wm.ramp_settings:[],count=Math.max(num(wm?.ramps),...settings.map(x=>num(x?.number)),...rows.map(a=>num(aDock(a))),0);if(!count)return'<div class="ya-empty">Za odabrano skladište broj rampi nije definiran.</div>';const days=Math.max(1,r.days);return`<div class="ya-util">${Array.from({length:count},(_,i)=>i+1).map(n=>{const rr=settings.find(x=>num(x.number)===n),from=String(rr?.from||wm?.reception_from||'06:00'),to=String(rr?.to||wm?.reception_to||'14:00');const tm=s=>{const [h,m]=s.split(':').map(Number);return(h||0)*60+(m||0)};const avail=Math.max(60,(tm(to)-tm(from)||480))*days;const used=rows.filter(a=>num(aDock(a))===n).reduce((sum,a)=>sum+(unloadMin(a)??aDuration(a)),0);const pct=Math.max(0,Math.min(100,Math.round(used/avail*100)));return`<div class="ya-util-row"><span>Rampa ${n}</span><strong>${pct}%</strong><div class="ya-util-track"><div class="ya-util-fill" style="width:${pct}%"></div></div></div>`}).join('')}</div>`}
+function scopeText(){const w=whId(),l=locId();return[w&&w!=='ALL'?whName(w):'SVA SKLADIŠTA',l&&l!=='ALL'?locName(l):''].filter(Boolean).join(' · ')}
+function rangeText(r){const f=d=>new Intl.DateTimeFormat('hr-HR',{day:'2-digit',month:'2-digit',year:'numeric'}).format(d);return`${f(r.start)} – ${f(r.end)}`}
+function metricSeries(rows,r,metric){return bucketSeries(rows,r,metric)}
+function setSupplierOptions(base){const sel=document.getElementById('yaSupplier');if(!sel)return;const prev=S.supplier;const names=[...new Set(base.map(aSupplier).filter(x=>x&&x!=='—'))].sort((a,b)=>a.localeCompare(b,'hr'));sel.innerHTML='<option value="ALL">SVI DOBAVLJAČI</option>'+names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');if(names.includes(prev))sel.value=prev;else{S.supplier='ALL';sel.value='ALL'}}
+function ensureUi(){
+ let nav=document.querySelector('.nav-btn[data-view="analytics"]');if(!nav){const anchor=document.querySelector('.nav-btn[data-view="controlTower"]')||document.querySelector('.nav-btn[data-view="dashboard"]');if(anchor){anchor.insertAdjacentHTML('afterend','<button class="nav-btn" data-view="analytics"><span>⌁</span> Analytics</button>');nav=document.querySelector('.nav-btn[data-view="analytics"]')}}
+ if(nav)nav.style.display=allowed()?'flex':'none';
+ let card=document.querySelector('#homeMenuGrid [data-home-target="analytics"]');if(!card){const anchor=document.querySelector('#homeMenuGrid [data-home-target="controlTower"],#homeMenuGrid [data-home-target="controltower"]')||document.querySelector('#homeMenuGrid [data-home-target="dashboard"]');if(anchor){anchor.insertAdjacentHTML('afterend','<button class="home-menu-card" data-home-target="analytics" type="button"><span class="icon">⌁</span><h3>Analytics</h3><p>Trendovi, performanse prijama, dobavljači i iskorištenost rampi.</p><small>OTVORI →</small></button>');card=document.querySelector('#homeMenuGrid [data-home-target="analytics"]')}}
+ if(card)card.style.display=allowed()?'block':'none';
+ if(!document.getElementById('analytics')){const parent=document.getElementById('dashboard')?.parentElement||document.querySelector('main')||document.querySelector('.main');if(parent){const sec=document.createElement('section');sec.id='analytics';sec.className='view';sec.innerHTML=`<div class="ya-shell"><div class="ya-toolbar"><div class="ya-periods" id="yaPeriods">${PERIODS.map(p=>`<button type="button" class="ya-period-btn ${p===S.period?'active':''}" data-ya-period="${p}">${p==='CUSTOM'?'Custom':p}</button>`).join('')}</div><div class="ya-toolbar-right"><div class="ya-custom" id="yaCustom"><input class="ya-date" id="yaFrom" type="date"><span style="color:#6f8da0;font-size:8px">→</span><input class="ya-date" id="yaTo" type="date"></div><select class="ya-filter" id="yaSupplier"><option value="ALL">SVI DOBAVLJAČI</option></select><span class="ya-scope"><i></i><b id="yaScope">—</b></span><button class="ya-export" type="button" id="yaExport">IZVOZ CSV</button></div></div><div id="yaContent"></div></div>`;parent.appendChild(sec)}}
+}
+function render(){
+ ensureUi();const view=document.getElementById('analytics');if(!view||!allowed())return;const all=scopeRows();setSupplierOptions(all);const {r,cur,prev}=currentData(),cm=metrics(cur),pm=metrics(prev);const currentA=compareSeries(cur,prev,r,'arrivals'),pal=metricSeries(cur,r,'pallets'),wait=metricSeries(cur,r,'wait'),unload=metricSeries(cur,r,'unload');
+ const chA=pctChange(cm.arrivals,pm.arrivals),chP=pctChange(cm.pallets,pm.pallets),chO=pctChange(cm.ontime,pm.ontime),chW=pctChange(cm.wait,pm.wait,true),chU=pctChange(cm.unload,pm.unload,true),chT=pctChange(cm.turn,pm.turn,true);
+ const kpis=[kpiCard('▣','Dolasci',fmtInt(cm.arrivals),chA,'vs. prethodni period',metricSeries(cur,r,'arrivals'),COLORS.blue),kpiCard('▦','Palete',fmtInt(cm.pallets),chP,'vs. prethodni period',pal,COLORS.green),kpiCard('◷','On-time %',cm.ontime===null?'—':Math.round(cm.ontime)+'%',chO,'poznati stvarni dolasci',metricSeries(cur,r,'arrivals'),'#39a9ef'),kpiCard('⌛','Prosj. čekanje',fmtMin(cm.wait),chW,'dvorište → rampa',wait,COLORS.purple),kpiCard('◇','Prosj. iskrcaj',fmtMin(cm.unload),chU,'rampa → završetak',unload,COLORS.orange),kpiCard('↻','Turnaround',fmtMin(cm.turn),chT,'ulaz → završetak',metricSeries(cur,r,'arrivals'),'#33d3bf')].join('');
+ const waitAvg=fmtMin(cm.wait),unloadAvg=fmtMin(cm.unload);const note=`<div class="ya-note"><b>Izvor podataka:</b> isti YARDIVO operativni podaci koje koriste Dnevna mapa, Prijam i Control Tower. Analytics uvijek prati skladište odabrano u glavnom headeru. Vrijeme čekanja i iskrcaja prikazuje se samo kada postoje stvarni timestampovi skeniranja.</div>`;
+ document.getElementById('yaScope').textContent=scopeText();const custom=document.getElementById('yaCustom');custom?.classList.toggle('show',S.period==='CUSTOM');
+ const content=document.getElementById('yaContent');if(!content)return;content.innerHTML=`<div class="ya-kpis">${kpis}</div><div class="ya-grid-main"><div class="ya-card"><div class="ya-card-head"><div><h3>Dolasci kroz vrijeme</h3><p>${esc(rangeText(r))} · broj najava / dolazaka po periodu</p></div><div class="ya-legend"><span><i style="background:${COLORS.blue}"></i>Ovaj period</span><span><i style="background:${COLORS.prev}"></i>Prethodni period</span></div></div><div class="ya-line-wrap">${lineSvg(currentA,{secondary:true})}</div><div class="ya-tooltip"></div></div><div class="ya-card"><div class="ya-card-head"><div><h3>Gužva u dvorištu (heatmap)</h3><p>Intenzitet dolazaka po danu i satu</p></div><div class="ya-legend"><span>Manje → Više</span></div></div>${heatmap(cur)}</div></div><div class="ya-grid-3"><div class="ya-card"><div class="ya-card-head"><div><h3>Vrijeme čekanja na rampu</h3><p>Prosječno dvorište → rampa</p></div><div class="ya-card-metric">${waitAvg}<small>${chW.txt}</small></div></div><div class="ya-line-wrap small">${lineSvg(wait,{primary:COLORS.purple,area:'purple',suffix:' min',emptyText:'Još nema dovoljno stvarnih ulaz/rampa timestampova.'})}</div></div><div class="ya-card"><div class="ya-card-head"><div><h3>Vrijeme iskrcaja</h3><p>Prosječno rampa → zaprimljeno</p></div><div class="ya-card-metric">${unloadAvg}<small>${chU.txt}</small></div></div><div class="ya-line-wrap small">${lineSvg(unload,{primary:COLORS.orange,area:'orange',suffix:' min',emptyText:'Vrijeme iskrcaja pojavit će se nakon završenih QR prijama.'})}</div></div><div class="ya-card"><div class="ya-card-head"><div><h3>Protok paleta</h3><p>Broj paleta kroz odabrani period</p></div><div class="ya-card-metric">${fmtInt(cm.pallets)}<small>${chP.txt}</small></div></div>${bars(pal)}</div></div><div class="ya-grid-bottom"><div class="ya-card"><div class="ya-card-head"><div><h3>Status dolazaka</h3><p>Raspodjela po aktualnom ishodu</p></div></div>${statusDonut(cur)}</div><div class="ya-card"><div class="ya-card-head"><div><h3>Top 5 dobavljača</h3><p>Dolasci, palete i stvarno vrijeme iskrcaja</p></div></div>${topSuppliers(cur)}</div><div class="ya-card"><div class="ya-card-head"><div><h3>Iskorištenost rampi</h3><p>Stvarno vrijeme gdje postoji; inače planirani termini</p></div></div>${dockUtil(cur,r)}</div></div>${note}`;
+ wireTips(content)
+}
+function wireTips(root){root.querySelectorAll('[data-tip]').forEach(el=>{el.addEventListener('mouseenter',()=>{const wrap=el.closest('.ya-card'),tip=wrap?.querySelector('.ya-tooltip');if(!tip)return;tip.textContent=el.getAttribute('data-tip')||'';const er=el.getBoundingClientRect(),wr=wrap.getBoundingClientRect();tip.style.left=(er.left-wr.left+er.width/2)+'px';tip.style.top=(er.top-wr.top)+'px';tip.classList.add('show')});el.addEventListener('mouseleave',()=>el.closest('.ya-card')?.querySelector('.ya-tooltip')?.classList.remove('show'))})}
+function exportCsv(){const {cur,r}=currentData();const rows=[['Datum','Vrijeme','Skladište','Dobavljač','Rampa','Palete','Status','Čekanje min','Iskrcaj min','Turnaround min']];cur.forEach(a=>rows.push([aDate(a),aTime(a),whName(aWarehouse(a)),aSupplier(a),aDock(a),aPallets(a),aStatus(a),waitMin(a)??'',unloadMin(a)??'',turnaroundMin(a)??'']));const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\n');const b=new Blob([csv],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=`YARDIVO_ANALYTICS_${String(whId()).replace(/[^a-z0-9_-]/gi,'_')}_${ymd(r.start)}_${ymd(r.end)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(u),500)}
+function bind(){ensureUi();document.getElementById('yaPeriods')?.addEventListener('click',e=>{const b=e.target.closest('[data-ya-period]');if(!b)return;S.period=b.dataset.yaPeriod;document.querySelectorAll('[data-ya-period]').forEach(x=>x.classList.toggle('active',x===b));if(S.period==='CUSTOM'){const t=dayStart(new Date());if(!S.customFrom)S.customFrom=ymd(addDays(t,-6));if(!S.customTo)S.customTo=ymd(t);const f=document.getElementById('yaFrom'),to=document.getElementById('yaTo');if(f)f.value=S.customFrom;if(to)to.value=S.customTo}render()});document.getElementById('yaSupplier')?.addEventListener('change',e=>{S.supplier=e.target.value||'ALL';render()});document.getElementById('yaFrom')?.addEventListener('change',e=>{S.customFrom=e.target.value;render()});document.getElementById('yaTo')?.addEventListener('change',e=>{S.customTo=e.target.value;render()});document.getElementById('yaExport')?.addEventListener('click',exportCsv)}
+function activeAnalytics(){return document.getElementById('analytics')?.classList.contains('active')||document.body?.dataset?.managerView==='analytics'}
+function init(){ensureUi();bind();if(activeAnalytics())render()}
+// Admin navigation bubbles through the legacy nav handler; manager rendering is called directly by manager authority after source patch.
+document.addEventListener('click',e=>{if(e.target.closest?.('[data-view="analytics"],[data-home-target="analytics"]'))setTimeout(render,0)},true);
+document.addEventListener('change',e=>{if(['globalWarehouse','globalLocationV583'].includes(String(e.target?.id||'')))setTimeout(()=>{if(activeAnalytics())render()},20)},true);
+['yardivo:warehouse-changed','yardivo:context-changed','yardivo:data-synced','yardivo:master-data-changed','yardivo:login'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{ensureUi();if(activeAnalytics())render()},40)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+window.addEventListener('load',()=>{ensureUi();if(activeAnalytics())render()},{once:true});
+window.renderYardivoAnalytics=render;
+window.YardivoAnalyticsV1={render,rangeFor,currentData,exportCsv};
+})();
+</script>
+<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260921-v5.8.3-analytics-admin-manager-v1';</script>
+
 </body>
 </html>
