@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111b">
-<title>YARDIVO Manager Mobile</title>
+<title>YARDIVO Manager Mobile · V2</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
 <style>
 :root{
@@ -103,6 +103,52 @@ button{cursor:pointer}
 .welcome{position:fixed;inset:0;z-index:110;background:linear-gradient(180deg,#0b1d2d,#07111b);display:none;align-items:center;justify-content:center;padding:22px;text-align:center}
 .welcome.show{display:flex}.welcome-inner{width:min(420px,100%)}.welcome-logo{width:86px;height:86px;border-radius:28px;margin:0 auto 20px;display:grid;place-items:center;background:linear-gradient(145deg,#12324c,#0b1b2a);border:1px solid #3478a4;font-size:34px;font-weight:1000;color:#6bc0ff;box-shadow:0 20px 55px rgba(0,0,0,.35)}
 .welcome h2{margin:0;font-size:26px}.welcome p{margin:8px 0 0;color:#8ca6b7;font-size:12px}.welcome-progress{margin-top:24px;height:9px;border-radius:999px;background:#132b3a;overflow:hidden}.welcome-progress i{display:block;width:0;height:100%;background:linear-gradient(90deg,#45a6ff,#45e487);border-radius:999px}.welcome small{display:block;margin-top:9px;color:#6f899a;font-size:9px;font-weight:900;letter-spacing:.06em}
+
+/* ===== YARDIVO MOBILE MAPS V2 · desktop-faithful, touch optimized ===== */
+.mobile-map-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
+.mobile-map-summary .ms{padding:9px 7px;border:1px solid #244257;border-radius:12px;background:#091925;text-align:center}
+.mobile-map-summary small{display:block;color:#7894a4;font-size:7px;font-weight:1000;letter-spacing:.04em}
+.mobile-map-summary strong{display:block;margin-top:3px;font-size:15px}
+
+.dm-mobile-shell{overflow:auto;border:1px solid #244257;border-radius:16px;background:#071722;-webkit-overflow-scrolling:touch;max-height:66vh}
+.dm-mobile-grid{display:grid;min-width:max-content;position:relative}
+.dm-corner,.dm-ramp-head{position:sticky;top:0;z-index:7;height:42px;display:flex;align-items:center;justify-content:center;border-right:1px solid #27465a;border-bottom:1px solid #27465a;background:#0b2030;color:#c9e1ee;font-size:9px;font-weight:1000}
+.dm-corner{left:0;z-index:9;background:#0a1a27}
+.dm-time{position:sticky;left:0;z-index:5;width:58px;height:48px;display:flex;align-items:flex-start;justify-content:center;padding-top:6px;border-right:1px solid #27465a;border-bottom:1px solid #173143;background:#081923;color:#7897a8;font-size:8px;font-weight:1000}
+.dm-cell{position:relative;width:126px;height:48px;border-right:1px solid #173143;border-bottom:1px solid #173143;background:#071722;padding:4px}
+.dm-cell:nth-child(even){background:#081925}
+.dm-book{height:100%;border-radius:7px;padding:5px 6px;overflow:hidden;border-left:3px solid #48a7ff;background:#0e3150;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.dm-book strong{display:block;font-size:8px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dm-book small{display:block;margin-top:2px;font-size:7px;color:#c5d8e3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dm-book.done{border-left-color:#42dd82;background:#0d3a25}.dm-book.dock{border-left-color:#f5c44d;background:#3a2d0d}.dm-book.yard{border-left-color:#ff914d;background:#3a200f}.dm-book.bad{border-left-color:#ff5f6d;background:#3a151a}
+.dm-status-dot{position:absolute;right:6px;bottom:5px;width:6px;height:6px;border-radius:50%;background:#48a7ff}.dm-book.done .dm-status-dot{background:#42dd82}.dm-book.dock .dm-status-dot{background:#f5c44d}.dm-book.yard .dm-status-dot{background:#ff914d}.dm-book.bad .dm-status-dot{background:#ff5f6d}
+.dm-now{position:absolute;left:58px;right:0;height:2px;background:#ff626e;z-index:6;pointer-events:none;box-shadow:0 0 8px rgba(255,98,110,.55)}
+.dm-now:before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:#ff626e}
+
+.mobile-legend{display:flex;gap:8px;overflow:auto;margin:8px 0 11px;padding-bottom:2px}.mobile-legend::-webkit-scrollbar{display:none}
+.mobile-legend span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;color:#809bab;font-size:7px;font-weight:900}.mobile-legend i{width:8px;height:8px;border-radius:2px;display:inline-block}
+
+.wm-toolbar{display:flex;gap:7px;overflow:auto;margin-bottom:9px}.wm-toolbar::-webkit-scrollbar{display:none}
+.wm-toolbar button{white-space:nowrap;border:1px solid #294a60;background:#0b1b28;color:#9db6c5;border-radius:11px;padding:9px 11px;font-size:8px;font-weight:1000}.wm-toolbar button.active{background:#143c58;border-color:#3d8fc5;color:#effaff}
+.wm-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}.wm-summary div{padding:8px 5px;border:1px solid #244257;border-radius:11px;background:#091925;text-align:center}.wm-summary small{display:block;color:#7894a4;font-size:6.5px;font-weight:1000}.wm-summary strong{display:block;margin-top:2px;font-size:14px}
+.wm-board{display:flex;gap:9px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px;-webkit-overflow-scrolling:touch}.wm-board::-webkit-scrollbar{display:none}
+.wm-day{min-width:min(86vw,330px);scroll-snap-align:center;border:1px solid #244257;border-radius:16px;background:#091824;overflow:hidden}
+.wm-day.today{border-color:#3b87b8;box-shadow:0 0 0 1px rgba(59,135,184,.12)}
+.wm-day-head{padding:12px;border-bottom:1px solid #20394c;background:#0b1d2b}.wm-day-head h3{margin:0;font-size:12px}.wm-day-head small{display:block;margin-top:4px;color:#7f99a9;font-size:8px}
+.wm-load{padding:9px 11px;border-bottom:1px solid #173143}.wm-load-top{display:flex;justify-content:space-between;gap:8px;color:#829bab;font-size:7px;font-weight:1000}.wm-load-top strong{color:#d4e7f1}.wm-load-bar{height:6px;margin-top:6px;border-radius:999px;background:#132a39;overflow:hidden}.wm-load-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#42dd82,#48a7ff)}
+.wm-day-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:8px}.wm-day-kpis div{text-align:center;background:#071521;border:1px solid #1d3548;border-radius:9px;padding:7px 4px}.wm-day-kpis small{display:block;color:#71899c;font-size:6.5px;font-weight:1000}.wm-day-kpis strong{display:block;margin-top:2px;font-size:12px}
+.wm-list{display:grid;gap:6px;padding:8px}.wm-item{border:1px solid #214158;border-left:3px solid #48a7ff;background:#0a1d2b;border-radius:9px;padding:9px}.wm-item strong{display:block;font-size:9px}.wm-item .meta{margin-top:3px;color:#8da6b5;font-size:7.5px}.wm-item .sl{margin-top:5px;font-size:7px;font-weight:1000;color:#b8ccda}.wm-item.done{border-left-color:#42dd82;background:#0d3020}.wm-item.dock{border-left-color:#f5c44d;background:#30270e}.wm-item.yard{border-left-color:#ff914d;background:#301c0f}.wm-item.bad{border-left-color:#ff5f6d;background:#301216}
+.wm-empty{padding:22px 12px;text-align:center;color:#718b9b;font-size:9px}
+
+/* Overview search */
+.search-wrap{position:relative;margin-bottom:10px}.search-wrap:before{content:"⌕";position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#6f91a5;font-size:17px;pointer-events:none}
+.search-wrap input{width:100%;padding:13px 38px 13px 38px;background:#091a27;border:1px solid #284a60;border-radius:14px;color:#edf6fb;outline:none}.search-wrap input:focus{border-color:#48a7ff;box-shadow:0 0 0 3px rgba(72,167,255,.08)}
+.search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:0;border-radius:9px;background:#10283a;color:#88a4b4;font-weight:1000}
+.search-count{margin:-2px 2px 9px;color:#718c9c;font-size:8px;font-weight:900}
+.search-hit{color:#7ec8ff}
+
+@media(max-width:390px){.mobile-map-summary{grid-template-columns:repeat(2,1fr)}.wm-summary{grid-template-columns:repeat(2,1fr)}}
+
 </style>
 </head>
 <body>
@@ -193,7 +239,7 @@ button{cursor:pointer}
 
     <section id="view-overview" class="view">
       <div class="page-head"><div><h1>Overview</h1><p>Dobavljači u vašem scopeu.</p></div><span class="scope-pill" id="overviewScope">—</span></div>
-      <div class="search"><input id="supplierSearch" placeholder="Pretraži dobavljača…"></div>
+      <div class="search-wrap"><input id="supplierSearch" autocomplete="off" spellcheck="false" placeholder="Traži naziv ili šifru dobavljača…"><button type="button" id="supplierSearchClear" class="search-clear hidden">×</button></div><div id="supplierSearchCount" class="search-count"></div>
       <div id="supplierList" class="supplier-list"></div>
     </section>
   </main>
@@ -209,6 +255,7 @@ button{cursor:pointer}
 
 <script>
 (()=>{'use strict';
+window.YARDIVO_MANAGER_MOBILE_BUILD='20260921-v2-maps-search';
 const BASE='https://rskticdbiovvgyocpzoc.supabase.co';
 const KEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
 const SYNC=BASE+'/functions/v1/yardivo-sync';
@@ -241,9 +288,9 @@ function assignedWhs(){
   return [...new Set(a)];
 }
 function visible(a){
-  const wh=String(a?.warehouse||a?.warehouse_id||'');const whs=assignedWhs();
+  const wh=aWarehouse(a);const whs=assignedWhs();
   if(whs.length)return whs.includes(wh);
-  const loc=String(a?.location||a?.location_id||whLoc(wh));const ls=assignedLocs();
+  const loc=String(a?.location||a?.location_id||aPayload(a)?.location||whLoc(wh));const ls=assignedLocs();
   return !ls.length||ls.includes(loc);
 }
 function rows(){return ann.filter(visible)}
@@ -256,13 +303,20 @@ function status(a){
   if(s.includes('nije')||s.includes('no-show'))return'Nije došao';
   return'U dolasku';
 }
-function appointmentTime(a){return String(a?.time||a?.plannedTime||'—')}
-function supplier(a){return String(a?.supplier||a?.supplier_name||'—')}
-function plate(a){return String(a?.arrivalPlate||a?.plannedPlate||a?.plate||'—')}
+function aPayload(a){return (a?.payload&&typeof a.payload==='object')?a.payload:{}}
+function aDate(a){const p=aPayload(a);return String(a?.date||a?.appointment_date||p.date||p.appointmentDate||'').slice(0,10)}
+function appointmentTime(a){const p=aPayload(a);return String(a?.time||a?.appointment_time||a?.plannedTime||p.time||p.appointmentTime||'—').slice(0,5)}
+function aWarehouse(a){const p=aPayload(a);return String(a?.warehouse||a?.warehouse_id||p.warehouse||'')}
+function aDock(a){const p=aPayload(a);return String(a?.dock||p.dock||'').replace(/^R/i,'')}
+function aPallets(a){const p=aPayload(a);return nr(a?.pallets??p.pallets??0)}
+function aSku(a){const p=aPayload(a);return nr(a?.sku??p.sku??p.sku_count??0)}
+function aOrder(a){const p=aPayload(a);return String(a?.orderNumber||a?.order_number||p.orderNumber||p.order_number||'')}
+function supplier(a){const p=aPayload(a);return String(a?.supplier||a?.supplier_name||p.supplier||p.supplierName||'—')}
+function plate(a){const p=aPayload(a);return String(a?.arrivalPlate||a?.plannedPlate||a?.plate||p.arrivalPlate||p.plannedPlate||p.vehicle_plate||'—')}
 function delayMin(a){
   const raw=nr(a?.delayMinutes||a?.delay_min||0);if(raw)return raw;
-  if(a?.date&&a?.time&&a.date===localIso()&&!['Zaprimljeno','Odbijen','Na rampi','U dvorištu'].includes(status(a))){
-    const [h,m]=String(a.time).split(':').map(Number);if(Number.isFinite(h)&&Number.isFinite(m)){
+  if(aDate(a)&&appointmentTime(a)&&aDate(a)===localIso()&&!['Zaprimljeno','Odbijen','Na rampi','U dvorištu'].includes(status(a))){
+    const [h,m]=appointmentTime(a).split(':').map(Number);if(Number.isFinite(h)&&Number.isFinite(m)){
       const now=new Date(),mins=now.getHours()*60+now.getMinutes()-(h*60+m);return Math.max(0,mins);
     }
   }return 0;
@@ -355,34 +409,147 @@ function renderTower(){
 function dailyWhs(){return assignedWhs().filter(id=>(master.warehouses||[]).some(w=>String(w.id)===String(id)&&w?.active!==false))}
 function renderDaily(){
   const today=localIso(),whs=dailyWhs();if(!activeDailyWh||!whs.includes(activeDailyWh))activeDailyWh=whs[0]||'';
-  $('dailyDateText').textContent=new Intl.DateTimeFormat('hr-HR',{weekday:'long',day:'2-digit',month:'2-digit'}).format(new Date(today+'T12:00:00'));
+  $('dailyDateText').textContent=new Intl.DateTimeFormat('hr-HR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(today+'T12:00:00'));
   $('dailyWhToolbar').innerHTML=whs.map(w=>`<button data-wh="${esc(w)}" class="${w===activeDailyWh?'active':''}">${esc(whName(w))}</button>`).join('');
   $('dailyWhToolbar').querySelectorAll('button').forEach(b=>b.onclick=()=>{activeDailyWh=b.dataset.wh;renderDaily()});
-  const d=rows().filter(a=>a.date===today&&(!activeDailyWh||String(a.warehouse)===activeDailyWh)).sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')));
-  $('dailySchedule').innerHTML=d.length?d.map(a=>`<div class="schedule-row"><div class="tm">${esc(appointmentTime(a))}</div><div class="info"><strong>${esc(supplier(a))}</strong><span>${esc(plate(a))} · R${esc(a.dock||'—')} · ${nr(a.pallets)} paleta</span></div><span class="status-pill ${badgeClass(status(a))}">${esc(status(a).toUpperCase())}</span></div>`).join(''):'<div class="empty">Nema najava za odabrano skladište danas.</div>';
+
+  const d=rows().filter(a=>aDate(a)===today&&(!activeDailyWh||aWarehouse(a)===activeDailyWh)).sort((a,b)=>appointmentTime(a).localeCompare(appointmentTime(b)));
+  const whCfg=(master.warehouses||[]).find(w=>String(w.id)===activeDailyWh)||{};
+  const ramps=Math.max(1,nr(whCfg.ramps||whCfg.docks||3));
+  const totalPal=d.reduce((s,a)=>s+aPallets(a),0),received=d.filter(a=>status(a)==='Zaprimljeno').length;
+  const attention=d.filter(a=>['Odbijen','Nije došao'].includes(status(a))||delayMin(a)>=20).length;
+  const trucks=d.length;
+
+  const summary=`<div class="mobile-map-summary">
+    <div class="ms"><small>NAJAVE</small><strong>${d.length}</strong></div>
+    <div class="ms"><small>PALETE</small><strong>${totalPal}</strong></div>
+    <div class="ms"><small>KAMIONI</small><strong>${trucks}</strong></div>
+    <div class="ms"><small>PAŽNJA</small><strong>${attention}</strong></div>
+    <div class="ms"><small>ZAPRIMLJENO</small><strong>${received}</strong></div>
+    <div class="ms"><small>RAMPE</small><strong>${ramps}</strong></div>
+  </div>
+  <div class="mobile-legend"><span><i style="background:#48a7ff"></i>U DOLASKU</span><span><i style="background:#ff914d"></i>U DVORIŠTU</span><span><i style="background:#f5c44d"></i>NA RAMPI</span><span><i style="background:#42dd82"></i>ZAPRIMLJENO</span><span><i style="background:#ff5f6d"></i>ODBIJENO</span></div>`;
+
+  if(!d.length){
+    $('dailySchedule').innerHTML=summary+'<div class="empty">Nema današnjih najava za '+esc(whName(activeDailyWh))+'.</div>';
+    return;
+  }
+
+  const mins=d.map(a=>{const [h,m]=appointmentTime(a).split(':').map(Number);return h*60+m}).filter(Number.isFinite);
+  const cfgStart=String(whCfg.receptionStart||whCfg.reception_from||'06:00'),cfgEnd=String(whCfg.receptionEnd||whCfg.reception_to||'22:00');
+  const toMin=s=>{const [h,m]=String(s||'00:00').split(':').map(Number);return h*60+m};
+  let ws=Math.min(toMin(cfgStart),mins.length?Math.min(...mins):toMin(cfgStart));
+  let we=Math.max(toMin(cfgEnd),mins.length?Math.max(...mins)+60:toMin(cfgEnd));
+  ws=Math.floor(ws/15)*15;we=Math.min(1440,Math.ceil(we/15)*15);
+  const slots=Math.max(1,Math.ceil((we-ws)/15));
+  const col=`58px repeat(${ramps},126px)`;
+
+  let grid=`<div class="dm-mobile-shell"><div class="dm-mobile-grid" style="grid-template-columns:${col}">`;
+  grid+=`<div class="dm-corner">VRIJEME</div>`;
+  for(let r=1;r<=ramps;r++)grid+=`<div class="dm-ramp-head">RAMPA ${r}</div>`;
+
+  for(let i=0;i<slots;i++){
+    const min=ws+i*15,h=Math.floor(min/60),m=min%60,t=pad(h)+':'+pad(m);
+    grid+=`<div class="dm-time">${t}</div>`;
+    for(let r=1;r<=ramps;r++){
+      const a=d.find(x=>nr(aDock(x))===r&&appointmentTime(x)===t);
+      if(a){
+        const s=status(a),bc=badgeClass(s);
+        grid+=`<div class="dm-cell"><div class="dm-book ${bc}" title="${esc(s)}"><strong>${esc(appointmentTime(a))} · ${esc(supplier(a))}</strong><small>${aPallets(a)} pal. · ${esc(plate(a))}</small><i class="dm-status-dot"></i></div></div>`;
+      }else grid+=`<div class="dm-cell"></div>`;
+    }
+  }
+  grid+='</div></div>';
+  $('dailySchedule').innerHTML=summary+grid;
+
+  /* Current-time marker only if now is within the displayed day/time range. */
+  const now=new Date(),nowM=now.getHours()*60+now.getMinutes();
+  if(today===localIso()&&nowM>=ws&&nowM<=we){
+    const shell=$('dailySchedule').querySelector('.dm-mobile-grid');
+    if(shell){
+      const y=42+((nowM-ws)/15)*48;
+      const line=document.createElement('div');line.className='dm-now';line.style.top=y+'px';shell.appendChild(line);
+      setTimeout(()=>{const sc=$('dailySchedule').querySelector('.dm-mobile-shell');if(sc)sc.scrollTop=Math.max(0,y-160)},60);
+    }
+  }
+}
+
+function startOfWeek(d=new Date()){
+  const x=new Date(d);x.setHours(12,0,0,0);const day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);return x;
 }
 function renderWeekly(){
-  const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()+i);return localIso(d)});
-  $('weekDays').innerHTML=days.map((x,i)=>`<div class="day-chip ${i===0?'active':''}"><small>${new Intl.DateTimeFormat('hr-HR',{weekday:'short'}).format(new Date(x+'T12:00:00'))}</small><strong>${x.slice(8,10)}.${x.slice(5,7)}</strong></div>`).join('');
-  $('weekGrid').innerHTML=days.map(x=>{const d=rows().filter(a=>a.date===x),pal=d.reduce((s,a)=>s+nr(a.pallets),0),att=d.filter(a=>['Odbijen','Nije došao'].includes(status(a))||delayMin(a)>=20).length;return `<div class="week-card"><div class="week-card-top"><strong>${new Intl.DateTimeFormat('hr-HR',{weekday:'long',day:'2-digit',month:'2-digit'}).format(new Date(x+'T12:00:00'))}</strong><span>${x}</span></div><div class="week-stats"><div class="week-stat"><small>NAJAVE</small><strong>${d.length}</strong></div><div class="week-stat"><small>PALETE</small><strong>${pal}</strong></div><div class="week-stat"><small>PAŽNJA</small><strong>${att}</strong></div></div></div>`}).join('');
+  const whs=dailyWhs();if(!activeDailyWh||!whs.includes(activeDailyWh))activeDailyWh=whs[0]||'';
+  const monday=startOfWeek(),days=Array.from({length:5},(_,i)=>{const d=new Date(monday);d.setDate(monday.getDate()+i);return localIso(d)});
+  const data=rows().filter(a=>aWarehouse(a)===activeDailyWh&&days.includes(aDate(a)));
+  const totalPal=data.reduce((s,a)=>s+aPallets(a),0),received=data.filter(a=>status(a)==='Zaprimljeno').length,noShow=data.filter(a=>status(a)==='Nije došao').length;
+
+  const whbar=`<div class="wm-toolbar">${whs.map(w=>`<button data-wm-wh="${esc(w)}" class="${w===activeDailyWh?'active':''}">${esc(whName(w))}</button>`).join('')}</div>`;
+  const sum=`<div class="wm-summary"><div><small>NAJAVA</small><strong>${data.length}</strong></div><div><small>PALETA</small><strong>${totalPal}</strong></div><div><small>ZAPR.</small><strong>${received}</strong></div><div><small>NO-SHOW</small><strong>${noShow}</strong></div></div>`;
+  const dayNames=['PONEDJELJAK','UTORAK','SRIJEDA','ČETVRTAK','PETAK'];
+  let cards='<div class="wm-board">';
+  days.forEach((iso,i)=>{
+    const items=data.filter(a=>aDate(a)===iso).sort((a,b)=>appointmentTime(a).localeCompare(appointmentTime(b)));
+    const pal=items.reduce((s,a)=>s+aPallets(a),0),trucks=items.length;
+    const cap=Math.max(1,nr((master.warehouses||[]).find(w=>String(w.id)===activeDailyWh)?.daily_capacity_pallets||200));
+    const load=Math.min(100,Math.round(pal/cap*100));
+    cards+=`<section class="wm-day ${iso===localIso()?'today':''}">
+      <div class="wm-day-head"><h3>${dayNames[i]} · ${iso.slice(8,10)}.${iso.slice(5,7)}.</h3><small>${iso} · ${esc(whName(activeDailyWh))}</small></div>
+      <div class="wm-load"><div class="wm-load-top"><span>OPTEREĆENOST DANA</span><strong>${load}%</strong></div><div class="wm-load-bar"><i style="width:${load}%"></i></div></div>
+      <div class="wm-day-kpis"><div><small>NAJAVA</small><strong>${items.length}</strong></div><div><small>PALETA</small><strong>${pal}</strong></div><div><small>KAMIONA</small><strong>${trucks}</strong></div></div>
+      <div class="wm-list">${items.length?items.map(a=>`<article class="wm-item ${badgeClass(status(a))}"><strong>${esc(appointmentTime(a))} · ${esc(supplier(a))}</strong><div class="meta">R${esc(aDock(a)||'—')} · ${aPallets(a)} pal. · ${aSku(a)} SKU · ${esc(plate(a))}</div><div class="sl">${esc(status(a).toUpperCase())}${delayMin(a)>=15?' · KASNI '+delayMin(a)+' MIN':''}</div></article>`).join(''):'<div class="wm-empty">Nema najavljenih dobavljača</div>'}</div>
+    </section>`;
+  });
+  cards+='</div>';
+  $('weekDays').innerHTML=whbar;
+  $('weekGrid').innerHTML=sum+cards;
+  $('weekDays').querySelectorAll('[data-wm-wh]').forEach(b=>b.onclick=()=>{activeDailyWh=b.dataset.wmWh;renderWeekly()});
+  setTimeout(()=>{const board=$('weekGrid').querySelector('.wm-board'),today=board?.querySelector('.wm-day.today');if(board&&today)board.scrollLeft=Math.max(0,today.offsetLeft-12)},50);
 }
+
 function supplierCatalog(){
-  const out=[],ops=rows();
+  const out=[],ops=rows(),seen=new Set(),locs=assignedLocs(),whs=assignedWhs();
   for(const s of master.suppliers||[]){
-    if(s?.active===false)continue;
-    const sid=String(s.id||''),name=String(s.name||s.supplier_name||s.supplier_code||sid);
-    const sl=Array.isArray(s.locations)?s.locations.map(String):[],sw=Array.isArray(s.warehouses)?s.warehouses.map(String):[];
-    const locOk=s.all_locations===true||!sl.length||sl.some(x=>assignedLocs().includes(x));
-    const whOk=s.all_warehouses===true||!sw.length||sw.some(x=>assignedWhs().includes(x));
-    if(locOk&&whOk)out.push({id:sid,name,code:String(s.supplier_code||s.code||'')});
+    if(!s||s.active===false)continue;
+    const sid=String(s.id||s.supplier_id||''),code=String(s.supplier_code||s.code||''),name=String(s.name||s.supplier_name||s.display_name||code||sid).trim();
+    if(!name)continue;
+    let sl=Array.isArray(s.locations)?s.locations:String(s.locations||'').split(/[;,]/).map(x=>x.trim()).filter(Boolean);
+    let sw=Array.isArray(s.warehouses)?s.warehouses:String(s.warehouses||'').split(/[;,]/).map(x=>x.trim()).filter(Boolean);
+    sl=sl.map(String);sw=sw.map(String);
+    const locOk=s.all_locations===true||!sl.length||sl.some(x=>locs.includes(x));
+    const whOk=s.all_warehouses===true||!sw.length||sw.some(x=>whs.includes(x));
+    if(locOk&&whOk){out.push({id:sid,name,code});seen.add(name.toLowerCase())}
   }
-  if(!out.length){[...new Set(ops.map(a=>supplier(a)).filter(x=>x&&x!=='—'))].forEach(n=>out.push({id:n,name:n,code:''}))}
-  return out;
+  /* Operational suppliers are also searchable even if the Master catalog was not loaded yet. */
+  for(const a of ops){
+    const name=supplier(a).trim();if(!name||name==='—'||seen.has(name.toLowerCase()))continue;
+    out.push({id:String(a?.supplierId||a?.supplier_id||name),name,code:String(aPayload(a)?.supplierCode||'')});seen.add(name.toLowerCase());
+  }
+  return out.sort((a,b)=>a.name.localeCompare(b.name,'hr'));
 }
 function renderOverview(){
-  const q=$('supplierSearch').value.trim().toLowerCase(),ops=rows(),cats=supplierCatalog().filter(s=>!q||[s.name,s.code].join(' ').toLowerCase().includes(q));
-  $('supplierList').innerHTML=cats.length?cats.map(s=>{const a=ops.filter(x=>supplier(x)===s.name||String(x.supplierId||x.supplier_id||'')===s.id),received=a.filter(x=>status(x)==='Zaprimljeno').length,rejected=a.filter(x=>status(x)==='Odbijen').length,late=a.filter(x=>delayMin(x)>=15).length;const pal=a.reduce((n,x)=>n+nr(x.pallets),0);return `<div class="supplier"><div class="supplier-top"><strong>${esc(s.name)}</strong><span>${esc(s.code||'MASTER')}</span></div><div class="supplier-kpis"><div><small>DOLASCI</small><strong>${a.length}</strong></div><div><small>ZAPR.</small><strong>${received}</strong></div><div><small>KASNI</small><strong>${late}</strong></div><div><small>PALETE</small><strong>${pal}</strong></div></div>${rejected?`<div style="margin-top:8px;color:#ff9ca5;font-size:9px;font-weight:900">${rejected} odbijeno</div>`:''}</div>`}).join(''):'<div class="empty">Nema dobavljača za prikaz.</div>';
+  const input=$('supplierSearch'),q=String(input?.value||'').trim().toLocaleLowerCase('hr-HR'),ops=rows();
+  const tokens=q.split(/\s+/).filter(Boolean);
+  const all=supplierCatalog();
+  const cats=all.filter(s=>{
+    if(!tokens.length)return true;
+    const hay=[s.name,s.code,s.id].join(' ').toLocaleLowerCase('hr-HR');
+    return tokens.every(t=>hay.includes(t));
+  });
+  $('supplierSearchClear')?.classList.toggle('hidden',!q);
+  if($('supplierSearchCount'))$('supplierSearchCount').textContent=q?`${cats.length} rezultata za “${input.value.trim()}”`:`${cats.length} dobavljača u vašem scopeu`;
+
+  $('supplierList').innerHTML=cats.length?cats.map(s=>{
+    const keyName=s.name.toLocaleLowerCase('hr-HR'),keyCode=s.code.toLocaleLowerCase('hr-HR');
+    const a=ops.filter(x=>{
+      const sp=supplier(x).toLocaleLowerCase('hr-HR'),p=aPayload(x);
+      return sp===keyName||String(x.supplierId||x.supplier_id||p.supplierId||'')===s.id||(keyCode&&String(p.supplierCode||'').toLocaleLowerCase('hr-HR')===keyCode);
+    });
+    const received=a.filter(x=>status(x)==='Zaprimljeno').length,rejected=a.filter(x=>status(x)==='Odbijen').length,late=a.filter(x=>delayMin(x)>=15).length,pal=a.reduce((n,x)=>n+aPallets(x),0);
+    const nameHtml=q?esc(s.name).replace(new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig'),'<span class="search-hit">$1</span>'):esc(s.name);
+    return `<div class="supplier"><div class="supplier-top"><strong>${nameHtml}</strong><span>${esc(s.code||'MASTER')}</span></div><div class="supplier-kpis"><div><small>DOLASCI</small><strong>${a.length}</strong></div><div><small>ZAPR.</small><strong>${received}</strong></div><div><small>KASNI</small><strong>${late}</strong></div><div><small>PALETE</small><strong>${pal}</strong></div></div>${rejected?`<div style="margin-top:8px;color:#ff9ca5;font-size:9px;font-weight:900">${rejected} odbijeno</div>`:''}</div>`;
+  }).join(''):`<div class="empty">${q?'Nema dobavljača koji odgovara pretrazi.':'Nema dobavljača za prikaz.'}</div>`;
 }
+
 function showView(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+name));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
@@ -390,6 +557,7 @@ function showView(name){
 }
 document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $('supplierSearch').addEventListener('input',renderOverview);
+$('supplierSearchClear')?.addEventListener('click',()=>{$('supplierSearch').value='';renderOverview();$('supplierSearch').focus()});
 $('loginBtn').onclick=login;$('password').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
 window.addEventListener('online',()=>refresh());window.addEventListener('offline',()=>setDb(false,'OFFLINE'));
