@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111b">
-<title>YARDIVO Manager Mobile · V3</title>
+<title>YARDIVO Manager Mobile · V4</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
 <style>
 :root{
@@ -205,6 +205,35 @@ button{cursor:pointer}
 .ai-send:disabled{opacity:.45}
 @media(max-width:390px){.yard2d-kpis{grid-template-columns:repeat(2,1fr)}.nav-btn span:last-child{font-size:6px}.nav-btn .ico{font-size:16px}}
 
+
+/* ===== V4 GLOBAL LOCATION / WAREHOUSE SCOPE SELECTORS ===== */
+.scope-controls{
+  position:sticky;top:57px;z-index:28;
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  padding:9px 12px 10px;
+  background:rgba(7,17,27,.94);backdrop-filter:blur(16px);
+  border-bottom:1px solid rgba(80,120,148,.16)
+}
+.scope-control{min-width:0}
+.scope-control.hidden-control{display:none}
+.scope-control label{
+  display:block;margin:0 0 4px 2px;
+  color:#6f8a9b;font-size:7px;font-weight:1000;letter-spacing:.08em
+}
+.scope-control select{
+  width:100%;height:38px;padding:0 34px 0 11px;
+  color:#e8f5fb;background:#0c2131;
+  border:1px solid #2a5068;border-radius:12px;
+  outline:none;font-size:9px;font-weight:950;
+  appearance:auto
+}
+.scope-control select:focus{border-color:#4ba8e6;box-shadow:0 0 0 3px rgba(75,168,230,.08)}
+.scope-controls.one{grid-template-columns:1fr}
+@media(max-width:380px){
+  .scope-controls{gap:6px;padding-left:9px;padding-right:9px}
+  .scope-control select{font-size:8px}
+}
+
 </style>
 </head>
 <body>
@@ -241,6 +270,16 @@ button{cursor:pointer}
     <div class="brand"><strong>YARDIVO MANAGER</strong><span id="scopeText">MOBILE OPERATIONS</span></div>
     <div id="dbStatus" class="top-status"><i></i><span>SPAJANJE</span></div>
   </header>
+  <div id="scopeControls" class="scope-controls">
+    <div id="locationControl" class="scope-control">
+      <label>LOKACIJA</label>
+      <select id="locationSelect" aria-label="Odaberi lokaciju"></select>
+    </div>
+    <div id="warehouseControl" class="scope-control">
+      <label>SKLADIŠTE</label>
+      <select id="warehouseSelect" aria-label="Odaberi skladište"></select>
+    </div>
+  </div>
 
   <main class="main">
     <section id="view-home" class="view active">
@@ -339,13 +378,13 @@ button{cursor:pointer}
 
 <script>
 (()=>{'use strict';
-window.YARDIVO_MANAGER_MOBILE_BUILD='20260921-v3-myyard-assistant';
+window.YARDIVO_MANAGER_MOBILE_BUILD='20260921-v4-global-master-scope';
 const BASE='https://rskticdbiovvgyocpzoc.supabase.co';
 const KEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
 const SYNC=BASE+'/functions/v1/yardivo-sync';
 const sb=supabase.createClient(BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
 const $=id=>document.getElementById(id);
-let scope=null,session=null,ann=[],inc=[],state=[],master={locations:[],warehouses:[],suppliers:[]},activeDailyWh='',activeYardWh='',pollTimer=null,busy=false,currentView='home',aiBusy=false,aiHistory=[];
+let scope=null,session=null,ann=[],inc=[],state=[],master={locations:[],warehouses:[],suppliers:[]},activeDailyWh='',activeYardWh='',selectedLocation='all',selectedWarehouse='all',pollTimer=null,busy=false,currentView='home',aiBusy=false,aiHistory=[];
 
 const pad=n=>String(n).padStart(2,'0');
 function localIso(d=new Date()){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
@@ -377,7 +416,15 @@ function visible(a){
   const loc=String(a?.location||a?.location_id||aPayload(a)?.location||whLoc(wh));const ls=assignedLocs();
   return !ls.length||ls.includes(loc);
 }
-function rows(){return ann.filter(visible)}
+function rows(){
+  return ann.filter(a=>{
+    if(!visible(a))return false;
+    const wh=aWarehouse(a),loc=String(a?.location||a?.location_id||aPayload(a)?.location||whLoc(wh));
+    if(selectedLocation!=='all'&&loc!==selectedLocation)return false;
+    if(selectedWarehouse!=='all'&&wh!==selectedWarehouse)return false;
+    return true;
+  })
+}
 function status(a){
   const s=String(a?.status||a?.planStatus||'').trim().toLowerCase();
   if(a?.rejectedAt||s.includes('odbij')||s==='rejected')return'Odbijen';
@@ -447,12 +494,70 @@ async function refresh(){
   try{await bootstrap();renderAll();setDb(true,'ONLINE')}catch(e){setDb(false,'PONOVNO SPAJAM')}finally{busy=false}
 }
 function scopeLabel(){
-  const ls=assignedLocs(),ws=assignedWhs();
-  if(ls.length===1)return locName(ls[0])+(ws.length===1?' · '+whName(ws[0]):'');
-  if(ls.length>1)return ls.length+' LOKACIJE';
+  const rawLocs=assignedLocs(),rawWhs=assignedWhs();
+  if(selectedWarehouse!=='all')return whName(selectedWarehouse);
+  if(selectedLocation!=='all'){
+    const count=rawWhs.filter(w=>whLoc(w)===selectedLocation).length;
+    return locName(selectedLocation)+(count>1?' · SVA SKLADIŠTA':'');
+  }
+  if(rawLocs.length===1)return locName(rawLocs[0])+(rawWhs.length===1?' · '+whName(rawWhs[0]):' · SVA SKLADIŠTA');
+  if(rawLocs.length>1)return 'SVE LOKACIJE';
   return 'MOJ SCOPE';
 }
+
+function selectableLocations(){
+  const allowed=new Set(assignedLocs());
+  return (master.locations||[])
+    .filter(l=>l&&l.active!==false&&allowed.has(String(l.id)))
+    .map(l=>({id:String(l.id),name:String(l.name||l.id)}));
+}
+function selectableWarehouses(loc='all'){
+  const allowed=new Set(assignedWhs());
+  return (master.warehouses||[])
+    .filter(w=>w&&w.active!==false&&allowed.has(String(w.id))&&(loc==='all'||String(w.location_id||w.location||'')===loc))
+    .map(w=>({id:String(w.id),name:String(w.name||w.code||w.id),locationId:String(w.location_id||w.location||'')}));
+}
+function renderScopeControls(){
+  const locs=selectableLocations();
+  const lc=$('locationControl'),wc=$('warehouseControl'),ls=$('locationSelect'),ws=$('warehouseSelect'),wrap=$('scopeControls');
+  if(!lc||!wc||!ls||!ws||!wrap)return;
+
+  /* One assigned location: don't make the manager select something they cannot change. */
+  if(locs.length<=1){
+    selectedLocation=locs[0]?.id||'all';
+    lc.classList.add('hidden-control');
+    wrap.classList.add('one');
+  }else{
+    lc.classList.remove('hidden-control');
+    wrap.classList.remove('one');
+    if(selectedLocation!=='all'&&!locs.some(l=>l.id===selectedLocation))selectedLocation='all';
+    ls.innerHTML='<option value="all">SVE LOKACIJE</option>'+locs.map(l=>`<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('');
+    ls.value=selectedLocation;
+  }
+
+  const whs=selectableWarehouses(selectedLocation);
+  if(selectedWarehouse!=='all'&&!whs.some(w=>w.id===selectedWarehouse))selectedWarehouse='all';
+
+  if(whs.length===1){
+    /* Keep the warehouse control visible as requested, but show the only available warehouse. */
+    selectedWarehouse=whs[0].id;
+    ws.innerHTML=`<option value="${esc(whs[0].id)}">${esc(whs[0].name)}</option>`;
+    ws.value=selectedWarehouse;
+    ws.disabled=true;
+  }else{
+    ws.disabled=false;
+    ws.innerHTML='<option value="all">SVA SKLADIŠTA</option>'+whs.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');
+    ws.value=selectedWarehouse;
+  }
+}
+function onGlobalScopeChange(){
+  activeDailyWh='';
+  activeYardWh='';
+  renderAll();
+}
+
 function renderAll(){
+  renderScopeControls();
   const sl=scopeLabel();['homeScope','towerScope','yardScope','dailyScope','weeklyScope','overviewScope'].forEach(id=>{const e=$(id);if(e)e.textContent=sl});
   $('scopeText').textContent=sl.toUpperCase();$('homeHello').textContent='Pozdrav, '+String(scope?.username||'Voditelj')+'. Današnji operativni pregled.';
   renderHome();renderTower();renderYard();renderDaily();renderWeekly();renderOverview();
@@ -490,7 +595,12 @@ function renderTower(){
   $('decisionCount').textContent=dec.length+' stavki';
   $('decisionStack').innerHTML=dec.length?dec.slice(0,20).map(x=>`<div class="decision ${x.c}"><div class="decision-head"><strong>${esc(x.t)}</strong><span>${esc(x.tag)}</span></div><p>${esc(x.p)}</p></div>`).join(''):'<div class="decision good"><div class="decision-head"><strong>NEMA AKTIVNIH IZUZETAKA</strong><span>OK</span></div><p>Današnji operativni scope trenutno nema stavki koje traže hitnu pažnju.</p></div>';
 }
-function dailyWhs(){return assignedWhs().filter(id=>(master.warehouses||[]).some(w=>String(w.id)===String(id)&&w?.active!==false))}
+function dailyWhs(){
+  let ids=assignedWhs().filter(id=>(master.warehouses||[]).some(w=>String(w.id)===String(id)&&w?.active!==false));
+  if(selectedLocation!=='all')ids=ids.filter(id=>whLoc(id)===selectedLocation);
+  if(selectedWarehouse!=='all')ids=ids.filter(id=>id===selectedWarehouse);
+  return ids;
+}
 
 function yardRows(wh){
   const today=localIso();
@@ -679,6 +789,8 @@ function aiContext(){
   const whs=assignedWhs(),locs=assignedLocs(),visibleRows=rows(),today=localIso();
   return {
     currentView,
+    selectedLocation,
+    selectedWarehouse,
     date:today,
     locations:locs.map(id=>({id,name:locName(id)})),
     assignedWarehouses:whs.map(id=>({id,name:whName(id),locationId:whLoc(id),ramps:yardRampCount(id)})),
@@ -742,6 +854,15 @@ function showView(name){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));
+$('locationSelect')?.addEventListener('change',e=>{
+  selectedLocation=String(e.target.value||'all');
+  selectedWarehouse='all';
+  onGlobalScopeChange();
+});
+$('warehouseSelect')?.addEventListener('change',e=>{
+  selectedWarehouse=String(e.target.value||'all');
+  onGlobalScopeChange();
+});
 $('supplierSearch').addEventListener('input',renderOverview);
 $('supplierSearchClear')?.addEventListener('click',()=>{$('supplierSearch').value='';renderOverview();$('supplierSearch').focus()});
 $('aiFab').onclick=openAi;$('aiClose').onclick=closeAi;$('aiSheet').addEventListener('click',e=>{if(e.target===$('aiSheet'))closeAi()});
