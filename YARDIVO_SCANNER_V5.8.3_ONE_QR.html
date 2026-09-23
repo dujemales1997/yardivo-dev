@@ -58,11 +58,21 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <body>
 <div class="wrap">
   <div class="brand">
-    <div><h1>YARDIVO · ONE QR</h1><small>MOBILE SCANNER · V5.8.3</small></div>
+    <div><h1>YARDIVO · ONE QR</h1><small>MOBILE SCANNER · V5.8.3 · QA HARDENED</small></div>
     <div id="netStatus" class="status"><span class="dot"></span><span>PRIPREMA</span></div>
   </div>
 
-  <section id="loginCard" class="card">
+  <section id="startupCard" class="card">
+    <div class="hero">
+      <strong>Provjera sesije</strong>
+      <span>YARDIVO provjerava prijavu i ovlasti…</span>
+    </div>
+    <div class="status" style="justify-content:center;margin:12px 0 4px">
+      <span class="dot"></span><span>UČITAVANJE</span>
+    </div>
+  </section>
+
+  <section id="loginCard" class="card hidden">
     <div class="hero">
       <strong>Prijava u scanner</strong>
       <span>Porta, Prijam ili Admin</span>
@@ -212,6 +222,7 @@ async function bootstrapSession(){
   }
 }
 function showScanner(){
+  $('startupCard').classList.add('hidden');
   $('loginCard').classList.add('hidden');
   $('scannerCard').classList.remove('hidden');
   $('who').textContent=scope?.username||'YARDIVO';
@@ -219,6 +230,7 @@ function showScanner(){
   $('adminModeWrap').classList.toggle('hidden',role()!=='admin');
 }
 function showLogin(){
+  $('startupCard').classList.add('hidden');
   $('scannerCard').classList.add('hidden');
   $('loginCard').classList.remove('hidden');
   $('resultCard').classList.add('hidden');
@@ -400,10 +412,18 @@ $('logoutBtn').onclick=async()=>{await stopCamera();await sb.auth.signOut();show
 window.addEventListener('online',()=>setNet(true,'ONLINE'));
 window.addEventListener('offline',()=>setNet(false,'OFFLINE'));
 
-bootstrapSession().catch(e=>{
-  showLogin();
-  msg($('loginMsg'),String(e?.message||e),'bad');
-});
+(async()=>{
+  try{
+    const ok=await bootstrapSession();
+    if(!ok){
+      showLogin();
+      setNet(navigator.onLine,'SPREMAN');
+    }
+  }catch(e){
+    showLogin();
+    msg($('loginMsg'),String(e?.message||e),'bad');
+  }
+})();
 })();
 </script>
 </body>
