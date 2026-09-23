@@ -60851,7 +60851,8 @@ function ensureAnchor(settings,masterPane){
     settings.prepend(a);
   }
   a.querySelector('[data-yv-master-jump-v11]')?.addEventListener('click',()=>{
-    masterPane.scrollIntoView({behavior:'smooth',block:'start'});
+    const target=document.getElementById('yardivoStableMasterEditorV583')||masterPane;
+    target.scrollIntoView({behavior:'smooth',block:'start'});
   },{once:true});
 }
 function restore(){
@@ -60891,12 +60892,11 @@ function restore(){
   masterPane.style.setProperty('display','block','important');
   adminPane.style.setProperty('display','block','important');
 
-  /* Re-render the authoritative Master editor. */
-  try{window.YardivoMasterFoundationV583?.render?.()}catch(_){}
-  try{window.YardivoStableMasterV583?.render?.()}catch(_){}
-
+  /* Keep ONLY the current canonical Master editor shown in the screenshot. */
   const foundation=document.getElementById('yardivoMasterFoundationV583');
-  if(foundation && foundation.parentElement!==masterPane)masterPane.appendChild(foundation);
+  if(foundation)foundation.remove();
+
+  try{window.YardivoStableMasterV583?.render?.()}catch(_){}
 
   const stable=document.getElementById('yardivoStableMasterEditorV583');
   if(stable && stable.parentElement!==masterPane)masterPane.appendChild(stable);
@@ -60921,7 +60921,56 @@ window.YardivoAdminMasterRestoreV11={restore};
 })();
 </script>
 
-<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260923-v5.8.3-admin-master-restore-v11';</script>
+
+<style id="yardivo-master-single-editor-v12">
+/* Admin Settings: only the canonical Master editor is allowed. */
+#settings #yardivoMasterFoundationV583{
+  display:none!important;
+}
+</style>
+
+
+<script id="yardivo-master-single-editor-v12-js">
+(function(){
+'use strict';
+if(window.__YARDIVO_MASTER_SINGLE_EDITOR_V12__)return;
+window.__YARDIVO_MASTER_SINGLE_EDITOR_V12__=true;
+
+function removeDuplicate(){
+  const old=document.getElementById('yardivoMasterFoundationV583');
+  if(old)old.remove();
+
+  const pane=document.getElementById('yardivoSettingsMasterPaneV583');
+  const keep=document.getElementById('yardivoStableMasterEditorV583');
+  if(pane&&keep&&keep.parentElement!==pane)pane.appendChild(keep);
+}
+
+let queued=false;
+function schedule(){
+  if(queued)return;
+  queued=true;
+  queueMicrotask(()=>{
+    queued=false;
+    removeDuplicate();
+  });
+}
+
+const mo=new MutationObserver(schedule);
+function boot(){
+  removeDuplicate();
+  if(document.body)mo.observe(document.body,{subtree:true,childList:true});
+}
+['yardivo:view-opened','yardivo:master-data-changed','yardivo:data-synced']
+  .forEach(ev=>window.addEventListener(ev,schedule));
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
+else boot();
+
+window.YardivoMasterSingleEditorV12={apply:removeDuplicate};
+})();
+</script>
+
+<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260923-v5.8.3-master-single-editor-v12';</script>
 
 </body>
 </html>
