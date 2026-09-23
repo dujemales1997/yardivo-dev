@@ -1,0 +1,36 @@
+name: Inspect gate approval popup
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-gate-popup-inspect.yml"
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect gate UI
+        shell: python
+        run: |
+          from pathlib import Path
+          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
+          needles=[
+            "gate_decide",
+            "list_gate",
+            "DOZVOLA ZA ULAZAK",
+            "ZAHTJEV ZA ULAZ",
+            "ULAZ ODOBREN",
+            "portir",
+            "GATE_ENTRY_REQUEST",
+            "manual_gate_enter",
+            "yardivo-self-gate",
+            "PARKING"
+          ]
+          for n in needles:
+              print("\n===== "+n+" =====")
+              start=0
+              for k in range(12):
+                  i=s.lower().find(n.lower(),start)
+                  if i<0: break
+                  print(f"--- {k+1} @ {i} ---")
+                  print(s[max(0,i-7000):min(len(s),i+16000)])
+                  start=i+len(n)
