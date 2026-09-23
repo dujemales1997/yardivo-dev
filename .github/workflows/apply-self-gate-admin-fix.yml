@@ -1,9 +1,9 @@
-name: Apply YARDIVO admin self gate QR fix
+name: Apply Self Gate Admin Fix
 on:
+  workflow_dispatch:
   push:
     paths:
-      - ".github/workflows/apply-self-gate-admin-fix.yml"
-  workflow_dispatch:
+      - ".github/scripts/fix_self_gate_admin.py"
 permissions:
   contents: write
 jobs:
@@ -14,209 +14,31 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-      - name: Patch Self Gate QR admin controls
-        shell: python
+      - name: Patch index
+        run: python .github/scripts/fix_self_gate_admin.py
+      - name: Validate
         run: |
+          python - <<'PY'
           from pathlib import Path
-          import re
-          p=Path("index.html")
-          s=p.read_text(encoding="utf-8")
-          if "yardivo-self-gate-admin-buttons-v2" in s:
-              print("already patched")
-              raise SystemExit(0)
-
-          anchor="function ensureWallAdmin(){"
-          if s.count(anchor)!=1:
-              raise SystemExit(f"ensureWallAdmin anchor count {s.count(anchor)}")
-
-          helpers=r'''function setWallButtons(exists,busy=false){
-  const create=document.getElementById('ysgWallCreate');
-  const open=document.getElementById('ysgWallOpen');
-  const copy=document.getElementById('ysgWallCopy');
-  const regen=document.getElementById('ysgWallRegenerate');
-  if(create)create.disabled=!!busy||!!exists;
-  if(open)open.disabled=!!busy||!exists;
-  if(copy)copy.disabled=!!busy||!exists;
-  if(regen)regen.disabled=!!busy||!exists;
-}
-async function copyTextSafe(text){
-  const value=String(text||'');
-  if(!value)return false;
-  if(navigator.clipboard&&window.isSecureContext&&document.hasFocus()){
-    try{await navigator.clipboard.writeText(value);return true}catch(_){}
-  }
-  let ta=null;
-  try{
-    ta=document.createElement('textarea');
-    ta.value=value;
-    ta.setAttribute('readonly','');
-    ta.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';
-    document.body.appendChild(ta);
-    ta.focus();ta.select();ta.setSelectionRange(0,value.length);
-    const ok=document.execCommand&&document.execCommand('copy');
-    return !!ok;
-  }catch(_){return false}
-  finally{try{ta?.remove()}catch(_){}}
-}
-function ensureWallQrModal(){
-  let m=document.getElementById('yardivoSelfGateWallQrModalV2');
-  if(m)return m;
-  m=document.createElement('div');
-  m.id='yardivoSelfGateWallQrModalV2';
-  m.style.cssText='position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;background:rgba(2,8,14,.82);padding:20px';
-  m.innerHTML=`<div style="width:min(560px,96vw);background:#0b2030;border:1px solid #31556a;border-radius:18px;padding:20px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.5)">
-    <div style="font-size:18px;font-weight:1000;margin-bottom:4px">YARDIVO SELF GATE QR</div>
-    <div id="ysgWallQrModalLocation" style="font-size:10px;color:#8aa8b8;margin-bottom:14px"></div>
-    <div id="ysgWallQrCanvas" style="display:inline-block;padding:14px;background:#fff;border-radius:14px;max-width:100%;overflow:auto"></div>
-    <div id="ysgWallQrModalUrl" style="margin-top:12px;font-size:9px;color:#88a8ba;word-break:break-all"></div>
-    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px">
-      <button type="button" class="secondary" data-wall-qr-copy>KOPIRAJ LINK</button>
-      <button type="button" class="secondary" data-wall-qr-open>OTVORI CHECK-IN</button>
-      <button type="button" class="primary" data-wall-qr-close>ZATVORI</button>
-    </div>
-  </div>`;
-  document.body.appendChild(m);
-  m.querySelector('[data-wall-qr-close]').onclick=()=>{m.style.display='none'};
-  m.onclick=e=>{if(e.target===m)m.style.display='none'};
-  return m;
-}
-async function showWallQr(publicUrl,locationName){
-  const m=ensureWallQrModal(),canvas=m.querySelector('#ysgWallQrCanvas');
-  if(!window.QRCode)throw new Error('QR biblioteka nije učitana. Osvježi stranicu i pokušaj ponovno.');
-  canvas.innerHTML='';
-  new QRCode(canvas,{text:publicUrl,width:360,height:360,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
-  m.querySelector('#ysgWallQrModalLocation').textContent=String(locationName||wallLocation()||'');
-  m.querySelector('#ysgWallQrModalUrl').textContent=publicUrl;
-  m.querySelector('[data-wall-qr-copy]').onclick=async()=>{
-    const ok=await copyTextSafe(publicUrl);
-    if(ok)window.showYmsToast?.('success','SELF GATE LINK KOPIRAN',String(locationName||wallLocation()||''));
-    else window.prompt('Kopiraj Self Gate link:',publicUrl);
-  };
-  m.querySelector('[data-wall-qr-open]').onclick=()=>window.open(publicUrl,'_blank','noopener');
-  m.style.display='flex';
-}
-'''
-          s=s.replace(anchor,helpers+anchor,1)
-
-          pattern=r"async function loadWallQrState\(\)\{.*?\n\}\nasync function createWallQr\(regenerate\)\{.*?\n\}\nasync function wallLink\(open\)\{.*?\n\}\n\n/\* PORTA - Self Check-In queue \*/"
-          replacement=r'''async function loadWallQrState(){
-  if(role()!=='admin')return;
-  const loc=wallLocation(),st=document.getElementById('ysgWallState');
-  if(!loc||!st)return;
-  setWallButtons(false,true);
-  st.textContent='PROVJERA QR-a...';st.style.color='#9bb7c7';st.style.borderColor='#334b59';st.style.background='transparent';
-  try{
-    const d=await api('wall_token_status',{location:loc});
-    const c=document.getElementById('ysgWallCreate');
-    const u=document.getElementById('ysgWallUrl');
-    if(!d.exists){
-      st.textContent='QR NE POSTOJI · '+String(d.locationName||loc);
-      st.style.color='#ff9ca4';
-      st.style.borderColor='#9e3942';
-      st.style.background='rgba(158,57,66,.10)';
-      if(c)c.textContent='IZRADI QR GATE ZA LOKACIJU';
-      if(u)u.textContent='';
-      setWallButtons(false,false);
-    }else if(d.enabled===false){
-      st.textContent='QR POSTOJI · SELF GATE ISKLJUČEN · '+String(d.locationName||loc);
-      st.style.color='#ff9ca4';
-      st.style.borderColor='#9e3942';
-      st.style.background='rgba(158,57,66,.10)';
-      if(c)c.textContent='QR VEĆ POSTOJI';
-      setWallButtons(true,false);
-    }else{
-      st.textContent='QR AKTIVAN · '+String(d.locationName||loc);
-      st.style.color='#63ef98';
-      st.style.borderColor='rgba(79,235,135,.35)';
-      st.style.background='rgba(43,139,86,.10)';
-      if(c)c.textContent='QR VEĆ POSTOJI';
-      setWallButtons(true,false);
-    }
-  }catch(e){
-    st.textContent='GREŠKA PROVJERE QR-a · '+String(e?.message||e);
-    st.style.color='#ff9ca4';st.style.borderColor='#9e3942';
-    setWallButtons(false,true);
-  }
-}
-async function createWallQr(regenerate){
-  const loc=wallLocation();if(!loc)return alert('Odaberi lokaciju.');
-  if(regenerate&&!confirm('Regenerirati Self Gate QR za ovu lokaciju?\n\nStari fizički QR odmah prestaje vrijediti.'))return;
-  const btn=document.getElementById(regenerate?'ysgWallRegenerate':'ysgWallCreate');
-  const oldText=btn?.textContent||'';
-  setWallButtons(!!regenerate,true);
-  if(btn)btn.textContent=regenerate?'REGENERIRAM…':'IZRAĐUJEM…';
-  try{
-    const d=await api(regenerate?'wall_token_regenerate':'wall_token_create',{location:loc,...(regenerate?{confirm:true}:{})});
-    const publicUrl=publicWallUrl(d.url);
-    const u=document.getElementById('ysgWallUrl');if(u)u.textContent=publicUrl;
-    await loadWallQrState();
-    window.showYmsToast?.('success',regenerate?'SELF GATE QR REGENERIRAN':'SELF GATE QR SPREMAN',String(d.locationName||loc));
-    await showWallQr(publicUrl,String(d.locationName||loc));
-  }catch(e){
-    alert('Self Gate QR nije izrađen:\n'+(e?.message||e));
-    await loadWallQrState();
-  }finally{
-    if(btn&&oldText&&!btn.disabled)btn.textContent=oldText;
-  }
-}
-async function wallLink(open){
-  const loc=wallLocation();if(!loc)return alert('Odaberi lokaciju.');
-  const btn=document.getElementById(open?'ysgWallOpen':'ysgWallCopy');
-  const oldText=btn?.textContent||'';
-  if(btn){btn.disabled=true;btn.textContent=open?'OTVARAM…':'KOPIRAM…'}
-  try{
-    const d=await api('wall_link',{location:loc});
-    const publicUrl=publicWallUrl(d.url);
-    const u=document.getElementById('ysgWallUrl');if(u)u.textContent=publicUrl;
-    if(open){
-      await showWallQr(publicUrl,String(d.locationName||loc));
-    }else{
-      const ok=await copyTextSafe(publicUrl);
-      if(ok)window.showYmsToast?.('success','SELF GATE LINK KOPIRAN',String(d.locationName||loc));
-      else window.prompt('Kopiraj Self Gate link:',publicUrl);
-    }
-  }catch(e){
-    if(String(e?.message||e).includes('WALL_TOKEN_NOT_FOUND'))alert('QR još nije izrađen za ovu lokaciju. Klikni "IZRADI QR GATE ZA LOKACIJU".');
-    else alert('Self Gate QR nije dostupan:\n'+(e?.message||e));
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent=oldText}
-  }
-}
-window.__YARDIVO_SELF_GATE_ADMIN_BUTTONS_V2__=true;
-
-/* PORTA - Self Check-In queue */'''
-          s,n=re.subn(pattern,replacement,s,count=1,flags=re.S)
-          if n!=1:
-              raise SystemExit(f"wall functions regex matches {n}")
-
-          s=s.replace('</body>','<script id="yardivo-self-gate-admin-buttons-v2">window.YARDIVO_DEV_BUILD="20260923-v5.8.3-self-gate-admin-buttons-v16";</script>\n</body>',1)
-          p.write_text(s,encoding="utf-8")
-          print("patched self gate admin controls")
-
-      - name: Validate JS and regression markers
-        shell: python
-        run: |
-          from pathlib import Path
-          import re,subprocess,tempfile,sys
+          import re, subprocess, tempfile, sys
           s=Path("index.html").read_text(encoding="utf-8")
-          req=["function copyTextSafe(text)","function ensureWallQrModal()","function showWallQr(publicUrl,locationName)","setWallButtons(true,false)","yardivo-self-gate-admin-buttons-v2","yardivo-self-gate","function normalizeDock(v)","warehouseBookingState"]
-          miss=[x for x in req if x not in s]
-          if miss: raise SystemExit("missing: "+", ".join(miss))
-          scripts=re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>",s,re.S|re.I)
+          required=["yardivo-self-gate-admin-buttons-v2","function copyTextSafe(text)","function ensureWallQrModal()","function showWallQr(publicUrl,locationName)","setWallButtons(true,false)","function normalizeDock(v)","warehouseBookingState"]
+          missing=[x for x in required if x not in s]
+          if missing: raise SystemExit("Missing: "+", ".join(missing))
+          scripts=re.findall(r"<script(?:\\s[^>]*)?>(.*?)</script>",s,re.S|re.I)
           checked=0
           for i,code in enumerate(scripts,1):
               if not code.strip(): continue
-              with tempfile.NamedTemporaryFile("w",suffix=".js",encoding="utf-8",delete=False) as f:
+              with tempfile.NamedTemporaryFile("w",suffix=".js",delete=False,encoding="utf-8") as f:
                   f.write(code); name=f.name
               r=subprocess.run(["node","--check",name],capture_output=True,text=True)
               checked+=1
               if r.returncode:
-                  print("script",i,"failed",r.stderr)
+                  print("FAILED SCRIPT",i,r.stderr)
                   sys.exit(1)
-          print("PASS inline JS",checked)
-
+          print("PASS",checked,"inline scripts")
+          PY
       - name: Commit
-        shell: bash
         run: |
           if git diff --quiet -- index.html; then exit 0; fi
           git config user.name "YARDIVO Automation"
