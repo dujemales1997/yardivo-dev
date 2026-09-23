@@ -1,0 +1,34 @@
+name: Inspect supplier announcement IDs
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-supplier-id-inspect.yml"
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect supplier IDs
+        shell: python
+        run: |
+          from pathlib import Path
+          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
+          needles=[
+            "Date.now()+Math.floor(Math.random()*1000)",
+            "client_id:String(row.id)",
+            "supplierPortalId",
+            "SUPDEL-",
+            "yspHistoryBody",
+            "pushSupplierRow(row)",
+            "POŠALJI NAJAVU",
+            "saveRows(rows)"
+          ]
+          for n in needles:
+              print("\n===== "+n+" =====")
+              start=0
+              for k in range(10):
+                  i=s.find(n,start)
+                  if i<0: break
+                  print(f"--- {k+1} @ {i} ---")
+                  print(s[max(0,i-6500):min(len(s),i+14000)])
+                  start=i+len(n)
