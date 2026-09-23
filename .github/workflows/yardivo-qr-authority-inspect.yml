@@ -1,0 +1,37 @@
+name: Inspect supplier QR authority
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-qr-authority-inspect.yml"
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect QR authority blocks
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
+          ids=[
+            "yardivo-v583-supplier-history-status-server-authority-20260923",
+            "yardivo-v583-gate-qr-v583",
+            "yardivo-v583-supplier-qr-history-live-20260923",
+            "yardivo-v583-supplier-no-flicker-final-20260923",
+            "yardivo-v583-announcement-number-display-20260923"
+          ]
+          for sid in ids:
+              m=re.search(r'<script\s+id="'+re.escape(sid)+r'"[^>]*>(.*?)</script>',s,re.S|re.I)
+              if m:
+                  print("\n===== "+sid+" =====\n")
+                  print(m.group(1)[:70000])
+          for n in ["data-yardivo-open-gate-qr","supplierButtons","qrMetaFromRow","parseReviewNote","PREUZMI QR","OTVORI QR"]:
+              print("\n===== TERM "+n+" =====")
+              start=0
+              for k in range(20):
+                  i=s.find(n,start)
+                  if i<0: break
+                  print(f"\n--- {k+1} @ {i} ---\n")
+                  print(s[max(0,i-5000):min(len(s),i+12000)])
+                  start=i+len(n)
