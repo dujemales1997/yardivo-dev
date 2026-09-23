@@ -1,0 +1,187 @@
+name: Apply YARDIVO v13 supplier booking fix
+
+on:
+  push:
+    paths:
+      - ".github/workflows/apply-yardivo-v13.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Patch index.html to v13
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p = Path("index.html")
+          s = p.read_text(encoding="utf-8")
+
+          if "supplier-bookable-warehouse-guard-v13" in s:
+              print("index.html already contains v13")
+              raise SystemExit(0)
+
+          old_populate = """function populateWarehouseSelect(){
+           const sel=$('sbnWarehouseSelect');if(!sel)return;
+           const rows=warehouses().filter(x=>x&&String(x.location_id||'')===String(loc));
+           sel.innerHTML='<option value="">Odaberi skladište...</option>';
+           rows.forEach(x=>sel.add(new Option(String(x.name||x.id),String(x.id))));
+           sel.disabled=!loc||!rows.length;
+           if(loc&&rows.length){sel.removeAttribute('disabled');sel.style.pointerEvents='auto';sel.style.opacity='1'}
+           try{sbnSelectSyncLastWh=String(sel.value||'')}catch(_){}
+          }"""
+
+          new_populate = """function warehouseBookingState(id){
+           const m=masterData(),all=Array.isArray(m.warehouses)?m.warehouses:[],mw=all.find(x=>x&&x.active!==false&&String(x.id)===String(id));
+           /* If local Master is not hydrated yet, do not false-block the user.
+              The availability Edge Function remains the final authority. */
+           if(!mw)return {known:false,bookable:true,reason:''};
+           const rf=String(mw.reception_from||'').slice(0,5),rt=String(mw.reception_to||'').slice(0,5);
+           const schedule=/^([01]\\d|2[0-3]):[0-5]\\d$/.test(rf)&&/^([01]\\d|2[0-3]):[0-5]\\d$/.test(rt)&&rt>rf;
+           const ramps=(Array.isArray(mw.ramp_settings)?mw.ramp_settings:[]).filter(r=>r&&r.active!==false&&Number(r.number)>0&&Number(r.pallets_per_hour)>0);
+           const bookable=schedule&&ramps.length>0;
+           return {known:true,bookable,reason:!schedule?'radno vrijeme nije definirano':(!ramps.length?'nema aktivnih konfiguriranih rampi':'')};
+          }
+          function ensureWarehouseScopeNote(){
+           const sel=$('sbnWarehouseSelect');if(!sel||$('sbnScopeWarehouseNote'))return;
+           const host=sel.closest('label')||sel.parentElement;if(!host)return;
+           const n=document.createElement('small');n.id='sbnScopeWarehouseNote';
+           n.style.cssText='display:block;margin-top:7px;color:#7890a4;font-size:9px;line-height:1.45';
+           n.textContent='Prikazuju se skladišta dodijeljena ovom Supplier accountu.';
+           host.appendChild(n);
+          }
+          function populateWarehouseSelect(){
+           ensureWarehouseScopeNote();
+           const sel=$('sbnWarehouseSelect');if(!sel)return;
+           const rows=warehouses().filter(x=>x&&String(x.location_id||'')===String(loc));
+           sel.innerHTML='<option value="">Odaberi skladište...</option>';
+           let usable=0;
+           rows.forEach(x=>{
+             const st=warehouseBookingState(x.id),label=String(x.name||x.id)+(st.known&&!st.bookable?' · NIJE KONFIGURIRANO':'');
+             const o=new Option(label,String(x.id));o.disabled=st.known&&!st.bookable;
+             if(!o.disabled)usable++;
+             sel.add(o);
+           });
+           sel.disabled=!loc||!rows.length||usable===0;
+           if(loc&&rows.length&&usable>0){sel.removeAttribute('disabled');sel.style.pointerEvents='auto';sel.style.opacity='1'}
+           try{sbnSelectSyncLastWh=String(sel.value||'')}catch(_){}
+           const note=$('sbnScopeWarehouseNote');
+           if(note){
+             const blocked=rows.filter(x=>{const st=warehouseBookingState(x.id);return st.known&&!st.bookable});
+             note.textContent=blocked.length
+               ? 'Skladišta označena “NIJE KONFIGURIRANO” nemaju radno vrijeme i/ili aktivne rampe u Master podacima te se ne mogu odabrati za najavu.'
+               : 'Prikazuju se skladišta dodijeljena ovom Supplier accountu.';
+           }
+          }"""
+
+          old_apply = """function applyWarehouseSelection(){
+           const sel=$('sbnWarehouseSelect');if(!sel)return;
+           const next=String(sel.value||'');
+           wh=next;resetChoice();
+           const ready=!!loc&&!!wh;
+           $('sbnQtyStep').hidden=!ready;
+           $('sbnMapStep').hidden=!ready;
+           $('sbnExtra').hidden=!ready;
+           if(ready){
+             status('SKLADIŠTE ODABRANO · UNESI PALETE I SKU');
+             empty('Dnevna mapa je spremna za izračun.','Unesi broj paleta i SKU, zatim će se prikazati slobodni zeleni termini.');
+             setTimeout(()=>{try{$('sbnQtyStep').scrollIntoView({behavior:'smooth',block:'center'});$('sbnPallets')?.focus()}catch(_){}},60);
+           }else{
+             status('ODABERI SKLADIŠTE');
+           }
+          }"""
+
+          new_apply = """function applyWarehouseSelection(){
+           const sel=$('sbnWarehouseSelect');if(!sel)return;
+           const next=String(sel.value||'');
+           const st=next?warehouseBookingState(next):{known:false,bookable:true,reason:''};
+           if(next&&st.known&&!st.bookable){
+             sel.value='';wh='';resetChoice();
+             $('sbnQtyStep').hidden=true;$('sbnMapStep').hidden=true;$('sbnExtra').hidden=true;
+             status('SKLADIŠTE NIJE KONFIGURIRANO');
+             empty('Najava za ovo skladište trenutno nije moguća.',st.reason+'. Admin treba dovršiti Master konfiguraciju skladišta.');
+             return;
+           }
+           wh=next;resetChoice();
+           const ready=!!loc&&!!wh;
+           $('sbnQtyStep').hidden=!ready;
+           $('sbnMapStep').hidden=!ready;
+           $('sbnExtra').hidden=!ready;
+           if(ready){
+             status('SKLADIŠTE ODABRANO · UNESI PALETE I SKU');
+             empty('Dnevna mapa je spremna za izračun.','Unesi broj paleta i SKU, zatim će se prikazati slobodni zeleni termini.');
+             setTimeout(()=>{try{$('sbnQtyStep').scrollIntoView({behavior:'smooth',block:'center'});$('sbnPallets')?.focus()}catch(_){}},60);
+           }else{
+             status('ODABERI SKLADIŠTE');
+           }
+          }"""
+
+          old_catch = """  }catch(e){empty('Mapa termina nije dostupna',String(e?.message||e));status('PROVJERI PODATKE')}"""
+          new_catch = """  }catch(e){
+           const msg=String(e?.message||e),code=String(e?.code||'');
+           if(code==='WAREHOUSE_RAMPS_INCOMPLETE'||/aktivnih rampi|konfiguriran.*ramp/i.test(msg)){
+             empty('Skladište nema konfigurirane aktivne rampe','Admin treba u Master podacima definirati aktivne rampe i kapacitet paleta/sat za odabrano skladište.');
+             status('SKLADIŠTE NIJE KONFIGURIRANO');
+           }else if(code==='WAREHOUSE_SCHEDULE_INCOMPLETE'||/vrijeme prijama/i.test(msg)){
+             empty('Radno vrijeme prijama nije definirano','Admin treba u Master podacima definirati vrijeme prijama za odabrano skladište.');
+             status('SKLADIŠTE NIJE KONFIGURIRANO');
+           }else{
+             empty('Mapa termina nije dostupna',msg);status('PROVJERI PODATKE');
+           }
+          }"""
+
+          for old, new, label in [
+              (old_populate, new_populate, "warehouse selector"),
+              (old_apply, new_apply, "warehouse selection"),
+              (old_catch, new_catch, "availability error"),
+          ]:
+              if old not in s:
+                  raise SystemExit(f"Required block not found: {label}")
+              s = s.replace(old, new, 1)
+
+          s = s.replace(
+              "window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-warehouse-selection-fixed-final';",
+              "window.YARDIVO_DEV_BUILD='20260923-v5.8.3-supplier-bookable-warehouse-guard-v13';",
+              1,
+          )
+          s = s.replace(
+              "window.YARDIVO_DEV_BUILD='20260923-v5.8.3-master-single-editor-v12';",
+              "window.YARDIVO_DEV_BUILD='20260923-v5.8.3-supplier-bookable-warehouse-guard-v13';",
+              1,
+          )
+
+          required = [
+              "supplier-bookable-warehouse-guard-v13",
+              "warehouseBookingState",
+              "NIJE KONFIGURIRANO",
+              "yardivo-supplier-availability",
+          ]
+          missing = [x for x in required if x not in s]
+          if missing:
+              raise SystemExit("Verification failed: " + ", ".join(missing))
+
+          p.write_text(s, encoding="utf-8")
+          print("Patched index.html to v13")
+
+      - name: Commit updated index
+        shell: bash
+        run: |
+          if git diff --quiet -- index.html; then
+            echo "No index.html changes needed."
+            exit 0
+          fi
+          git config user.name "YARDIVO Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html
+          git commit -m "Deploy YARDIVO v13 supplier booking fix"
+          git push origin HEAD:main
