@@ -12,16 +12,24 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          p=Path("index.html")
-          s=p.read_text(encoding="utf-8", errors="replace")
+          s=Path("index.html").read_text(encoding="utf-8", errors="replace")
           needles=[
-            "ODOBRI TERMIN","PREDLOŽI DRUGI TERMIN","ODBIJ",
-            "POŠALJI PRIJEDLOG DOBAVLJAČU","PRIHVATI ŽELJENI DATUM","ODBIJ ZAHTJEV",
-            "POŠALJI QR ZA DOCK","yardivo_master_data_registry_v583",
-            "yardivo-supplier-deliveries"
+            "function approveSupplierRequest",
+            "function openPlanner",
+            "function ensureModal",
+            "function rejectPlanner",
+            "data-v583-approve-request",
+            "data-v580-plan",
+            "data-v580-reject",
+            "inventoryButton",
+            "YardivoGateQrV583",
+            "function savePlanner",
+            "function sendPlanner",
+            "function acceptPlanner",
+            "ysrPlanner"
           ]
           for n in needles:
-              print("\n"+"="*30+" "+n+" "+"="*30)
+              print("\n"+"="*24+" "+n+" "+"="*24)
               start=0
               found=0
               while True:
@@ -29,7 +37,7 @@ jobs:
                   if i<0: break
                   found+=1
                   print(f"--- match {found} @ char {i} ---")
-                  print(s[max(0,i-6000):min(len(s),i+10000)])
+                  print(s[max(0,i-9000):min(len(s),i+18000)])
                   start=i+len(n)
-                  if found>=6: break
+                  if found>=8: break
               if not found: print("NO MATCH")
