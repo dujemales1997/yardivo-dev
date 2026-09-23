@@ -8,25 +8,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect exact scanner blocks
+      - name: Inspect scanner identifiers
         shell: python
         run: |
           from pathlib import Path
-          import re
           s=Path("index.html").read_text(encoding="utf-8",errors="replace")
-          pats=[
-            r"(?i).{0,120}(scan|scanner|gate|dock|rampa).{0,180}(camera|qr|token|check-in|checkin|validate|consume).{0,120}",
-            r"(?i).{0,140}(permission|dozvol|unauthor|forbidden|role).{0,180}(scan|scanner|gate|dock|rampa).{0,120}",
-            r"(?i).{0,100}(welcome|pozdrav|logout|signout).{0,180}(scan|scanner|gate|dock|rampa).{0,120}"
-          ]
-          hits=[]
-          for pat in pats:
-              for m in re.finditer(pat,s,re.S):
-                  a=max(0,m.start()-5000);b=min(len(s),m.end()+9000)
-                  chunk=s[a:b]
-                  if chunk not in hits:hits.append(chunk)
-                  if len(hits)>=18:break
-              if len(hits)>=18:break
-          for i,h in enumerate(hits,1):
-              print("\n===== HIT",i,"=====\n")
-              print(h)
+          needles=["scanGate","gateScanner","dockScanner","qrScanner","scannerMode","scanMode","scannerApp","scanResult","scanState","consume","validate","gateUrl","dockUrl","NEMA DOZVOLE","ODJAVA","logout","signOut","POZDRAV","DOBRODOŠ"]
+          for n in needles:
+              start=0
+              for k in range(8):
+                  i=s.lower().find(n.lower(),start)
+                  if i<0: break
+                  print(f"\n===== {n} #{k+1} @ {i} =====\n")
+                  print(s[max(0,i-4500):min(len(s),i+9000)])
+                  start=i+len(n)
