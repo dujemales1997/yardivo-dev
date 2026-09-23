@@ -1,0 +1,40 @@
+name: Inspect gate scanner auth and colors
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-scan-inspect.yml"
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect
+        shell: python
+        run: |
+          from pathlib import Path
+          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
+          needles=[
+            "GATE CHECK-IN",
+            "SCAN",
+            "qr scanner",
+            "yardivoQrMobileEnabled",
+            "NEMA DOZVOLE",
+            "logout",
+            "gate-pass",
+            "yardivo-gate-pass",
+            "gate scan",
+            "dock scan",
+            "scanner"
+          ]
+          for n in needles:
+              print("\n"+"="*24+" "+n+" "+"="*24)
+              start=0;found=0
+              while True:
+                  i=s.lower().find(n.lower(),start)
+                  if i<0: break
+                  found+=1
+                  print(f"--- match {found} @ {i} ---")
+                  print(s[max(0,i-7000):min(len(s),i+14000)])
+                  start=i+len(n)
+                  if found>=12: break
+              if not found: print("NO MATCH")
