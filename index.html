@@ -34640,8 +34640,9 @@ async function pushVehicle(row){
 async function pullSupplier(){
   if(!supplier())return;
   const rowsRaw=await call('list_mine');
-  const cleanEpoch=Date.parse(localStorage.getItem('yardivo_clean_epoch_v583')||'')||0;
-  const rows=(Array.isArray(rowsRaw)?rowsRaw:[]).filter(x=>!cleanEpoch||Date.parse(x?.created_at||x?.updated_at||0)>=cleanEpoch);
+  /* Supabase supplier_deliveries is authoritative for Supplier history.
+     A browser-local cleanup timestamp must never hide a valid server row. */
+  const rows=Array.isArray(rowsRaw)?rowsRaw:[];
   if(!Array.isArray(rows))return;
   try{
     const api=window.YardivoSupplierPortal;
@@ -34806,6 +34807,11 @@ async function syncNow(){
 window.YardivoSupplierLiveSync={call,pushSupplierRow,pushVehicle,pullSupplier,pullInternal,syncNow,busy:()=>__yardivoSupplierSyncBusy};
 
 window.addEventListener('yardivo:login',()=>setTimeout(syncNow,250));
+document.addEventListener('click',e=>{
+  if(!supplier())return;
+  const b=e.target.closest?.('#yardivoSupplierPortal [data-ysp-view="history"],#yardivoSupplierPortal [data-ysp-view="status"]');
+  if(b)setTimeout(()=>pullSupplier().catch(err=>console.error('Supplier history refresh',err)),30);
+},true);
 window.addEventListener('load',()=>setTimeout(syncNow,650));
 window.addEventListener('yardivo:server-change',()=>setTimeout(syncNow,80));
 window.addEventListener('yardivo:context-changed',()=>setTimeout(syncNow,60));
@@ -52941,7 +52947,7 @@ $('sbnRecommend').onclick=showRecommendation;$('sbnReset').onclick=resetAll;$('s
 $('sbnFullscreen').onclick=()=>{const m=$('sbnMapStep'),on=!m.classList.contains('fullscreen');m.classList.toggle('fullscreen',on);document.body.classList.toggle('sbn-fullscreen',on);$('sbnFullscreen').textContent=on?'× ZATVORI':'⛶ POVEĆAJ MAPU'};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('sbnMapStep')?.classList.contains('fullscreen')){$('sbnMapStep').classList.remove('fullscreen');document.body.classList.remove('sbn-fullscreen');$('sbnFullscreen').textContent='⛶ POVEĆAJ MAPU'}});
 setTimeout(init,350);
-window.YARDIVO_DEV_BUILD='20260923-v5.8.3-qa-smooth-theme-v15';
+window.YARDIVO_DEV_BUILD='20260923-v5.8.3-supplier-history-backend-v16';
 })();
 </script><style id="yardivo-v583-supplier-requests-final-style">
 #supplierRequests .ysr-flow-info{
@@ -61140,7 +61146,7 @@ window.YardivoMasterSingleEditorV12={apply:removeDuplicate};
 })();
 </script>
 
-<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260923-v5.8.3-qa-smooth-theme-v15';</script>
+<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260923-v5.8.3-supplier-history-backend-v16';</script>
 
 <style id="yardivo-v15-qa-smooth-theme">
 html.yardivo-theme-switching *,
@@ -61161,7 +61167,7 @@ html[data-yardivo-main-theme="light"] body :is(.topbar,.top-bar,.app-header,.hea
 }
 </style>
 <script id="yardivo-v15-qa-smooth-theme-marker">
-window.YARDIVO_DEV_BUILD='20260923-v5.8.3-qa-smooth-theme-v15';
+window.YARDIVO_DEV_BUILD='20260923-v5.8.3-supplier-history-backend-v16';
 </script>
 
 <script id="yardivo-self-gate-admin-buttons-v2">window.YARDIVO_DEV_BUILD="20260923-v5.8.3-self-gate-admin-buttons-v16";</script>
