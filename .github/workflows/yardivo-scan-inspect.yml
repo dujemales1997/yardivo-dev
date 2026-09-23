@@ -8,17 +8,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect gate-pass scanner blocks
+      - name: Inspect scanner scripts only
         shell: python
         run: |
           from pathlib import Path
+          import re
           s=Path("index.html").read_text(encoding="utf-8",errors="replace")
-          needles=["functions/v1/yardivo-gate-pass","yardivo-gate-pass","gate-pass","data-qr","html5-qrcode","BarcodeDetector","getUserMedia","SCAN ZA RAMPE","SCAN RAMPE","GATE CHECK-IN"]
-          for n in needles:
-              start=0
-              for k in range(10):
-                  i=s.lower().find(n.lower(),start)
-                  if i<0: break
-                  print(f"\n===== {n} #{k+1} @ {i} =====\n")
-                  print(s[max(0,i-7000):min(len(s),i+15000)])
-                  start=i+len(n)
+          for m in re.finditer(r'<script(?:\s+id="([^"]+)")?[^>]*>(.*?)</script>',s,re.S|re.I):
+              sid=m.group(1) or ''
+              body=m.group(2)
+              low=(sid+' '+body).lower()
+              if any(k in low for k in ['barcodedetector','html5-qrcode','getusermedia','scan qr','scanner','gate-pass']):
+                  print("\n===== SCRIPT",sid,"@ ",m.start(),"=====\n")
+                  print(body[:42000])
