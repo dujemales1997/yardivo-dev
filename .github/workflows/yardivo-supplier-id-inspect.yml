@@ -1,34 +1,119 @@
-name: Inspect supplier announcement IDs
+name: Apply NAJ announcement numbers
+permissions:
+  contents: write
 on:
   push:
     paths:
       - ".github/workflows/yardivo-supplier-id-inspect.yml"
 jobs:
-  inspect:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect supplier IDs
+      - name: Patch supplier announcement numbering
         shell: python
         run: |
           from pathlib import Path
-          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
-          needles=[
-            "Date.now()+Math.floor(Math.random()*1000)",
-            "client_id:String(row.id)",
-            "supplierPortalId",
-            "SUPDEL-",
-            "yspHistoryBody",
-            "pushSupplierRow(row)",
-            "POŠALJI NAJAVU",
-            "saveRows(rows)"
-          ]
-          for n in needles:
-              print("\n===== "+n+" =====")
-              start=0
-              for k in range(10):
-                  i=s.find(n,start)
-                  if i<0: break
-                  print(f"--- {k+1} @ {i} ---")
-                  print(s[max(0,i-6500):min(len(s),i+14000)])
-                  start=i+len(n)
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8")
+
+          # New Supplier announcements: NAJ + exactly 6 random digits.
+          old="""  const rows=loadRows(),now=new Date();
+            const id='SUP-'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+String(now.getTime()).slice(-6);
+            const row={"""
+          new="""  const rows=loadRows(),now=new Date();
+            const usedIds=new Set(rows.map(x=>String(x?.id||'').toUpperCase()));
+            let id='';
+            for(let attempt=0;attempt<30&&!id;attempt++){
+              let n=0;
+              try{const a=new Uint32Array(1);crypto.getRandomValues(a);n=100000+(a[0]%900000)}catch(_){n=100000+Math.floor(Math.random()*900000)}
+              const candidate='NAJ'+String(n).padStart(6,'0');
+              if(!usedIds.has(candidate))id=candidate;
+            }
+            if(!id)id='NAJ'+String((Date.now()%900000)+100000).slice(-6);
+            const row={"""
+          if old not in s:
+              raise SystemExit("Supplier submit ID anchor not found")
+          s=s.replace(old,new,1)
+
+          # Add stable display alias for legacy SUP-* client IDs without changing backend identity.
+          marker="yardivo-v583-announcement-number-display-20260923"
+          if marker not in s:
+              block=r'''
+          <script id="yardivo-v583-announcement-number-display-20260923">
+          (()=>{'use strict';
+          if(window.__YARDIVO_ANNOUNCEMENT_NUMBER_DISPLAY_20260923__)return;
+          window.__YARDIVO_ANNOUNCEMENT_NUMBER_DISPLAY_20260923__=true;
+          function hash6(v){
+            const s=String(v||'');let h=2166136261;
+            for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}
+            return String(100000+((h>>>0)%900000)).padStart(6,'0')
+          }
+          function displayId(v){
+            const s=String(v||'').trim();
+            if(/^NAJ\d{6}$/i.test(s))return s.toUpperCase();
+            if(/^SUP(?:-|$)/i.test(s))return 'NAJ'+hash6(s);
+            return s;
+          }
+          window.YardivoAnnouncementNumberV583={displayId};
+          })();
+          </script>
+          '''
+              idx=s.lower().rfind('</body>')
+              if idx<0: raise SystemExit("No body close")
+              s=s[:idx]+block+s[idx:]
+
+          # Server-authority Supplier History/Status uses display ID while retaining raw ID for QR/actions.
+          old="""              id:String(x.client_id||x.id||'—'),
+              serverId:String(x.id||''),"""
+          new="""              id:String(x.client_id||x.id||'—'),
+              displayId:window.YardivoAnnouncementNumberV583?.displayId?.(String(x.client_id||x.id||'—'))||String(x.client_id||x.id||'—'),
+              serverId:String(x.id||''),"""
+          if old not in s:
+              raise SystemExit("Server normalized ID anchor not found")
+          s=s.replace(old,new,1)
+
+          # Fingerprint includes display id too.
+          old="""[x.serverId,x.id,x.status,x.warehouse,x.date,x.time,x.dock,x.plate,x.trailer,x.driver,x.driverContact,x.pallets,x.sku,x.review,x.qrUrl,x.updatedAt]"""
+          new="""[x.serverId,x.id,x.displayId,x.status,x.warehouse,x.date,x.time,x.dock,x.plate,x.trailer,x.driver,x.driverContact,x.pallets,x.sku,x.review,x.qrUrl,x.updatedAt]"""
+          if old in s:s=s.replace(old,new,1)
+
+          # Replace only visible labels; data attributes keep raw ID.
+          s=s.replace("""'<td><span class="ysph-id">'+esc(x.id)+'</span><span class="ysph-sub">Ažurirano: '""",
+                      """'<td><span class="ysph-id">'+esc(x.displayId||x.id)+'</span><span class="ysph-sub">Ažurirano: '""",1)
+          s=s.replace("""'<div><div class="ysps-title"><strong>'+esc(x.id)+' · '+esc(x.order||'BEZ PO')+'</strong>""",
+                      """'<div><div class="ysps-title"><strong>'+esc(x.displayId||x.id)+' · '+esc(x.order||'BEZ PO')+'</strong>""",1)
+
+          # Legacy/local renderer visible ID labels: use display alias, but actions still use raw x.id.
+          s=s.replace("""<td><strong>${escapeHtml(x.id)}</strong></td>""",
+                      """<td><strong>${escapeHtml(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)}</strong></td>""",1)
+          s=s.replace("""<h3>${escapeHtml(x.id)} · ${escapeHtml(x.order||'—')}</h3>""",
+                      """<h3>${escapeHtml(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)} · ${escapeHtml(x.order||'—')}</h3>""",1)
+
+          p.write_text(s,encoding="utf-8")
+          Path(".github/workflows/yardivo-supplier-id-inspect.yml").unlink()
+
+      - name: Validate
+        shell: python
+        run: |
+          from pathlib import Path
+          import re,subprocess
+          s=Path("index.html").read_text(encoding="utf-8")
+          assert "candidate='NAJ'+String(n).padStart(6,'0')" in s
+          assert "yardivo-v583-announcement-number-display-20260923" in s
+          assert "displayId:window.YardivoAnnouncementNumberV583" in s
+          assert "const id='SUP-'+now.getFullYear()" not in s
+          for sid in ["yardivo-v583-announcement-number-display-20260923","yardivo-v583-supplier-history-status-server-authority-20260923"]:
+              m=re.search(r'<script id="'+re.escape(sid)+r'">(.*?)</script>',s,re.S)
+              assert m,sid
+              q="/tmp/"+sid+".js"
+              Path(q).write_text(m.group(1),encoding="utf-8")
+              subprocess.check_call(["node","--check",q])
+      - name: Commit
+        run: |
+          git config user.name "YARDIVO QA"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html .github/workflows/yardivo-supplier-id-inspect.yml
+          git diff --cached --check
+          git commit -m "Use NAJ six-digit announcement numbers"
+          git push origin HEAD:main
