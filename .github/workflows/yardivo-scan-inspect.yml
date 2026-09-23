@@ -8,17 +8,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect scanner identifiers
+      - name: Inspect gate-pass scanner blocks
         shell: python
         run: |
           from pathlib import Path
           s=Path("index.html").read_text(encoding="utf-8",errors="replace")
-          needles=["scanGate","gateScanner","dockScanner","qrScanner","scannerMode","scanMode","scannerApp","scanResult","scanState","consume","validate","gateUrl","dockUrl","NEMA DOZVOLE","ODJAVA","logout","signOut","POZDRAV","DOBRODOŠ"]
+          needles=["functions/v1/yardivo-gate-pass","yardivo-gate-pass","gate-pass","data-qr","html5-qrcode","BarcodeDetector","getUserMedia","SCAN ZA RAMPE","SCAN RAMPE","GATE CHECK-IN"]
           for n in needles:
               start=0
-              for k in range(8):
+              for k in range(10):
                   i=s.lower().find(n.lower(),start)
                   if i<0: break
                   print(f"\n===== {n} #{k+1} @ {i} =====\n")
-                  print(s[max(0,i-4500):min(len(s),i+9000)])
+                  print(s[max(0,i-7000):min(len(s),i+15000)])
                   start=i+len(n)
