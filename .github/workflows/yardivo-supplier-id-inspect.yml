@@ -14,10 +14,10 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
           p=Path("index.html")
           s=p.read_text(encoding="utf-8")
 
-          # New Supplier announcements: NAJ + exactly 6 random digits.
           old="""  const rows=loadRows(),now=new Date();
             const id='SUP-'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+String(now.getTime()).slice(-6);
             const row={"""
@@ -30,16 +30,13 @@ jobs:
               const candidate='NAJ'+String(n).padStart(6,'0');
               if(!usedIds.has(candidate))id=candidate;
             }
-            if(!id)id='NAJ'+String((Date.now()%900000)+100000).slice(-6);
+            if(!id)id='NAJ'+String(100000+(Date.now()%900000));
             const row={"""
           if old not in s:
               raise SystemExit("Supplier submit ID anchor not found")
           s=s.replace(old,new,1)
 
-          # Add stable display alias for legacy SUP-* client IDs without changing backend identity.
-          marker="yardivo-v583-announcement-number-display-20260923"
-          if marker not in s:
-              block=r'''
+          helper=r'''
           <script id="yardivo-v583-announcement-number-display-20260923">
           (()=>{'use strict';
           if(window.__YARDIVO_ANNOUNCEMENT_NUMBER_DISPLAY_20260923__)return;
@@ -59,32 +56,28 @@ jobs:
           })();
           </script>
           '''
-              idx=s.lower().rfind('</body>')
-              if idx<0: raise SystemExit("No body close")
-              s=s[:idx]+block+s[idx:]
+          if 'yardivo-v583-announcement-number-display-20260923' not in s:
+              # Insert before server authority so helper exists before first render.
+              anchor='<script id="yardivo-v583-supplier-history-status-server-authority-20260923">'
+              pos=s.find(anchor)
+              if pos<0:
+                  pos=s.lower().rfind('</body>')
+              s=s[:pos]+helper+s[pos:]
 
-          # Server-authority Supplier History/Status uses display ID while retaining raw ID for QR/actions.
-          old="""              id:String(x.client_id||x.id||'—'),
-              serverId:String(x.id||''),"""
-          new="""              id:String(x.client_id||x.id||'—'),
-              displayId:window.YardivoAnnouncementNumberV583?.displayId?.(String(x.client_id||x.id||'—'))||String(x.client_id||x.id||'—'),
-              serverId:String(x.id||''),"""
-          if old not in s:
-              raise SystemExit("Server normalized ID anchor not found")
-          s=s.replace(old,new,1)
+          # Server-authority visible labels only. Raw x.id remains in QR/action data attributes.
+          old1="""'<td><span class="ysph-id">'+esc(x.id)+'</span><span class="ysph-sub">Ažurirano: '"""
+          new1="""'<td><span class="ysph-id">'+esc(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+'</span><span class="ysph-sub">Ažurirano: '"""
+          if old1 not in s:
+              raise SystemExit("History visible ID anchor not found")
+          s=s.replace(old1,new1,1)
 
-          # Fingerprint includes display id too.
-          old="""[x.serverId,x.id,x.status,x.warehouse,x.date,x.time,x.dock,x.plate,x.trailer,x.driver,x.driverContact,x.pallets,x.sku,x.review,x.qrUrl,x.updatedAt]"""
-          new="""[x.serverId,x.id,x.displayId,x.status,x.warehouse,x.date,x.time,x.dock,x.plate,x.trailer,x.driver,x.driverContact,x.pallets,x.sku,x.review,x.qrUrl,x.updatedAt]"""
-          if old in s:s=s.replace(old,new,1)
+          old2="""'<div><div class="ysps-title"><strong>'+esc(x.id)+' · '+esc(x.order||'BEZ PO')+'</strong>"""
+          new2="""'<div><div class="ysps-title"><strong>'+esc(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+' · '+esc(x.order||'BEZ PO')+'</strong>"""
+          if old2 not in s:
+              raise SystemExit("Status visible ID anchor not found")
+          s=s.replace(old2,new2,1)
 
-          # Replace only visible labels; data attributes keep raw ID.
-          s=s.replace("""'<td><span class="ysph-id">'+esc(x.id)+'</span><span class="ysph-sub">Ažurirano: '""",
-                      """'<td><span class="ysph-id">'+esc(x.displayId||x.id)+'</span><span class="ysph-sub">Ažurirano: '""",1)
-          s=s.replace("""'<div><div class="ysps-title"><strong>'+esc(x.id)+' · '+esc(x.order||'BEZ PO')+'</strong>""",
-                      """'<div><div class="ysps-title"><strong>'+esc(x.displayId||x.id)+' · '+esc(x.order||'BEZ PO')+'</strong>""",1)
-
-          # Legacy/local renderer visible ID labels: use display alias, but actions still use raw x.id.
+          # Local legacy renderer fallback labels.
           s=s.replace("""<td><strong>${escapeHtml(x.id)}</strong></td>""",
                       """<td><strong>${escapeHtml(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)}</strong></td>""",1)
           s=s.replace("""<h3>${escapeHtml(x.id)} · ${escapeHtml(x.order||'—')}</h3>""",
@@ -101,8 +94,8 @@ jobs:
           s=Path("index.html").read_text(encoding="utf-8")
           assert "candidate='NAJ'+String(n).padStart(6,'0')" in s
           assert "yardivo-v583-announcement-number-display-20260923" in s
-          assert "displayId:window.YardivoAnnouncementNumberV583" in s
           assert "const id='SUP-'+now.getFullYear()" not in s
+          assert "displayId?.(x.id)" in s
           for sid in ["yardivo-v583-announcement-number-display-20260923","yardivo-v583-supplier-history-status-server-authority-20260923"]:
               m=re.search(r'<script id="'+re.escape(sid)+r'">(.*?)</script>',s,re.S)
               assert m,sid
