@@ -61354,6 +61354,7 @@ window.YARDIVO_DEV_BUILD='20260923-dev-v5.8.3-inventory-supplier-actions-fix';
 <script id="yardivo-v583-supplier-qr-history-live-20260923">
 (function(){
 'use strict';
+if(window.__YARDIVO_SUPPLIER_HISTORY_STATUS_SERVER_AUTH_20260923__)return;
 if(window.__YARDIVO_SUPPLIER_QR_HISTORY_LIVE_20260923__)return;
 window.__YARDIVO_SUPPLIER_QR_HISTORY_LIVE_20260923__=true;
 let busy=false,timer=0;
@@ -61614,7 +61615,22 @@ window.YARDIVO_DEV_BUILD='20260923-dev-v5.8.3-supplier-notif-delete';
 #yardivoSupplierPortal .ysph-status.bad{border-color:#9a3d48;background:#351218;color:#ffd0d4}
 #yardivoSupplierPortal .ysph-status.wait{border-color:#9b7627;background:#35290f;color:#ffe2a0}
 #yardivoSupplierPortal .ysph-vehicle{line-height:1.45}
-#yardivoSupplierPortal .ysph-qr{display:inline-flex;margin-top:6px;padding:6px 9px;border:1px solid #3187c9;border-radius:8px;background:#123754;color:#d8efff;font-size:9px;font-weight:950;cursor:pointer}
+#yardivoSupplierPortal .ysph-qr{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:7px 10px;border:1px solid #3187c9;border-radius:8px;background:#123754;color:#d8efff;font-size:9px;font-weight:950;cursor:pointer}
+#yardivoSupplierPortal .ysph-qr-ready{display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:4px 7px;border-radius:999px;background:#0d6d3a;color:#d8ffe7;font-size:8px;font-weight:950;box-shadow:0 0 12px rgba(45,198,105,.24)}
+#yardivoSupplierPortal .ysps-qr-live{display:grid;grid-template-columns:138px minmax(0,1fr);gap:12px;align-items:center;padding:12px;border:1px solid #2f7652;border-radius:12px;background:#0d2a1c}
+#yardivoSupplierPortal .ysps-qr-canvas{width:138px;height:138px;padding:7px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center}
+#yardivoSupplierPortal .ysps-qr-canvas canvas,#yardivoSupplierPortal .ysps-qr-canvas img{width:100%!important;height:100%!important;image-rendering:pixelated}
+#yardivoSupplierPortal .ysps-qr-copy strong{display:block;color:#c7f4d7;font-size:11px;margin-bottom:5px}.ysps-qr-copy p{margin:0 0 8px;color:#8cb8a0;font-size:9px;line-height:1.45}
+#yardivoSupplierPortal .ysps-qr-actions{display:flex;flex-wrap:wrap;gap:7px}.ysps-qr-actions button{min-height:36px}
+#yardivoSupplierQrCanonicalV583{position:fixed;inset:0;z-index:10000600;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(2,8,13,.92)}
+#yardivoSupplierQrCanonicalV583.open{display:flex}
+#yardivoSupplierQrCanonicalV583 .yvqc-card{width:min(560px,96vw);max-height:94vh;overflow:auto;padding:22px;border-radius:18px;background:#fff;color:#101820;text-align:center;box-shadow:0 30px 100px rgba(0,0,0,.72)}
+#yardivoSupplierQrCanonicalV583 .yvqc-card h2{margin:4px 0 4px;font-size:18px}.yvqc-sub{color:#667985;font-size:10px;margin-bottom:14px}
+#yardivoSupplierQrCanonicalV583 .yvqc-qr{width:260px;height:260px;max-width:74vw;max-height:74vw;margin:0 auto;padding:9px;background:#fff;display:flex;align-items:center;justify-content:center}
+#yardivoSupplierQrCanonicalV583 .yvqc-qr canvas,#yardivoSupplierQrCanonicalV583 .yvqc-qr img{width:100%!important;height:100%!important;image-rendering:pixelated}
+#yardivoSupplierQrCanonicalV583 .yvqc-meta{margin:12px 0 0;padding-top:10px;border-top:1px solid #e1e7eb;color:#40515c;font-size:10px;line-height:1.55}
+#yardivoSupplierQrCanonicalV583 .yvqc-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:15px}.yvqc-actions button{padding:10px 13px;border-radius:9px;border:1px solid #cbd6dd;background:#f5f8fa;color:#16252e;font-weight:900;cursor:pointer}.yvqc-actions .primary{background:#20c66b;border-color:#20c66b;color:#06130b}
+@media(max-width:700px){#yardivoSupplierPortal .ysps-qr-live{grid-template-columns:1fr}.ysps-qr-canvas{margin:0 auto}}
 #yardivoSupplierPortal .ysph-empty{padding:36px 16px;text-align:center;color:#7793a8;font-size:13px}
 #yardivoSupplierPortal .ysp-server-note{margin:0 0 12px;padding:10px 12px;border:1px solid #2c5f80;border-radius:10px;background:#0e2638;color:#b8d9ef;font-size:11px;font-weight:800}
 #yardivoSupplierPortal .ysps-card{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr);gap:16px;padding:18px;margin-bottom:12px;border:1px solid #2d526d;border-radius:15px;background:linear-gradient(180deg,#102a3d,#0a1c2a);color:#eef7fd}
@@ -61695,6 +61711,46 @@ function cleanReview(v){
 function qrMeta(x){
   try{return window.YardivoGateQrV583?.parseReviewNote?.(x.review_note||'')||null}catch(_){return null}
 }
+function rowByRawId(id){return rows.find(x=>String(x.id)===String(id)||String(x.serverId)===String(id))||null}
+function renderQrInto(el,url,size=300){
+  if(!el||!url)return;
+  el.innerHTML='';
+  if(!window.QRCode){el.textContent='QR modul nije učitan.';return}
+  new QRCode(el,{text:url,width:size,height:size,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M})
+}
+function ensureQrModal(){
+  let m=document.getElementById('yardivoSupplierQrCanonicalV583');if(m)return m;
+  m=document.createElement('div');m.id='yardivoSupplierQrCanonicalV583';
+  m.innerHTML='<div class="yvqc-card"><h2>YARDIVO QR · CHECK-IN</h2><div class="yvqc-sub">QR za vozača · Gate ulaz i potvrda na rampi</div><div class="yvqc-qr" id="yvqcQrCanvas"></div><div class="yvqc-meta" id="yvqcMeta"></div><div class="yvqc-actions"><button type="button" data-yvqc-close>ZATVORI</button><button type="button" class="primary" data-yvqc-pdf>PREUZMI QR · PDF</button></div></div>';
+  document.body.appendChild(m);
+  m.querySelector('[data-yvqc-close]').onclick=()=>m.classList.remove('open');
+  m.onclick=e=>{if(e.target===m)m.classList.remove('open')};
+  m.querySelector('[data-yvqc-pdf]').onclick=()=>{const id=m.dataset.rowId;downloadQrPdf(id)};
+  return m
+}
+function openQrCanonical(id){
+  const x=rowByRawId(id);if(!x?.qrUrl)return;
+  const m=ensureQrModal();m.dataset.rowId=String(x.id);
+  renderQrInto(document.getElementById('yvqcQrCanvas'),x.qrUrl,520);
+  document.getElementById('yvqcMeta').innerHTML='<strong>'+esc(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+'</strong><br>'+esc(x.date||'')+' · '+esc(x.time||'')+' · '+esc(whLabel(x.warehouse))+(x.dock?' · '+esc(/^R/i.test(x.dock)?x.dock:'R'+x.dock):'')+'<br>'+esc(x.order||'');
+  m.classList.add('open')
+}
+function downloadQrPdf(id){
+  const x=rowByRawId(id);if(!x?.qrUrl)return;
+  if(!window.jspdf?.jsPDF){window.open(x.qrUrl,'_blank','noopener');return}
+  try{
+    const holder=document.createElement('div');holder.style.cssText='position:fixed;left:-9999px;top:-9999px;width:700px;height:700px;background:#fff';document.body.appendChild(holder);
+    renderQrInto(holder,x.qrUrl,700);
+    const node=holder.querySelector('canvas,img');const data=node?.tagName==='CANVAS'?node.toDataURL('image/png'):node?.src||'';holder.remove();
+    const {jsPDF}=window.jspdf,pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    pdf.setTextColor(18,30,38);pdf.setFont('helvetica','bold');pdf.setFontSize(18);pdf.text('YARDIVO QR · CHECK-IN',105,24,{align:'center'});
+    pdf.setFont('helvetica','normal');pdf.setFontSize(10);pdf.text(String(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id),105,32,{align:'center'});
+    if(data)pdf.addImage(data,'PNG',50,42,110,110);
+    pdf.setFontSize(10);pdf.text((x.date||'')+' · '+(x.time||'')+' · '+whLabel(x.warehouse)+(x.dock?' · '+(/^R/i.test(x.dock)?x.dock:'R'+x.dock):''),105,163,{align:'center'});
+    pdf.text('PO: '+(x.order||'—'),105,170,{align:'center'});
+    pdf.save(String(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+'-QR.pdf')
+  }catch(e){console.error(e);window.open(x.qrUrl,'_blank','noopener')}
+}
 function normalized(x){
   const q=qrMeta(x);
   return {
@@ -61750,7 +61806,7 @@ function renderHistory(){
   const body=$('yspHistoryBody');if(!body)return;ensureHistoryNote();
   if(!rows.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema poslanih najava u YARDIVO bazi.</div></td></tr>';return}
   body.innerHTML=rows.map(x=>{
-    const qr=x.qrUrl?'<button type="button" class="ysph-qr" data-yardivo-open-gate-qr="'+esc(x.id)+'">OTVORI QR</button>':'';
+    const qr=x.qrUrl?'<span class="ysph-qr-ready">▣ QR STIGAO</span><br><button type="button" class="ysph-qr" data-yv-server-qr-open="'+esc(x.id)+'">OTVORI QR</button> <button type="button" class="ysph-qr" data-yv-server-qr-pdf="'+esc(x.id)+'">PREUZMI PDF</button>':'';
     return '<tr>'+
       '<td><span class="ysph-id">'+esc(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+'</span><span class="ysph-sub">Ažurirano: '+esc(x.updatedAt?new Date(x.updatedAt).toLocaleString('hr-HR'):'—')+'</span></td>'+
       '<td><b>'+esc(x.date||'—')+'</b><span class="ysph-sub">'+esc(x.time||'—')+'</span></td>'+
@@ -61772,7 +61828,7 @@ function renderStatus(){
   const labels=['NAJAVA','POTVRDA','DOLAZAK','RAMPA','ZAPRIMANJE','ZAVRŠENO'];
   host.innerHTML=active.map(x=>{
     const idx=progressIndex(x.status);
-    const qr=x.qrUrl?'<div class="ysps-qr"><strong>YARDIVO QR · CHECK-IN</strong><button type="button" class="btn-primary" data-yardivo-open-gate-qr="'+esc(x.id)+'">OTVORI QR</button></div>':'<div class="ysps-noqr">QR će se pojaviti ovdje kada ga YARDIVO izda za ovu najavu.</div>';
+    const qr=x.qrUrl?'<div class="ysps-qr-live"><div class="ysps-qr-canvas" data-yv-server-qr-canvas="'+esc(x.id)+'"></div><div class="ysps-qr-copy"><strong>▣ QR ZA VOZAČA JE SPREMAN</strong><p>Ovaj QR pošalji vozaču za Gate check-in i rampu.</p><div class="ysps-qr-actions"><button type="button" class="btn-primary" data-yv-server-qr-open="'+esc(x.id)+'">OTVORI QR</button><button type="button" class="btn-secondary" data-yv-server-qr-pdf="'+esc(x.id)+'">PREUZMI QR · PDF</button></div></div></div>':'<div class="ysps-noqr">QR još nije izdan od strane YARDIVO zaliha.</div>';
     return '<article class="ysps-card">'+
       '<div><div class="ysps-title"><strong>'+esc(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+' · '+esc(x.order||'BEZ PO')+'</strong><span class="ysph-status '+statusClass(x.status)+'">'+esc(statusLabel(x.status))+'</span></div>'+
       '<div class="ysps-grid">'+
@@ -61785,7 +61841,13 @@ function renderStatus(){
       '</div>'+(x.review?'<div class="ysps-review" style="margin-top:10px">YARDIVO: '+esc(x.review)+'</div>':'')+'</div>'+
       '<div class="ysps-side">'+qr+'<div class="ysps-timeline">'+labels.map((l,i)=>'<div class="ysps-step '+(i<=idx?'done':'')+'"><i></i>'+l+'</div>').join('')+'</div></div>'+
     '</article>'
-  }).join('')
+  }).join('');
+  requestAnimationFrame(()=>{
+    host.querySelectorAll('[data-yv-server-qr-canvas]').forEach(el=>{
+      const x=rowByRawId(el.dataset.yvServerQrCanvas);
+      if(x?.qrUrl)renderQrInto(el,x.qrUrl,260)
+    })
+  })
 }
 function renderKpis(){
   const set=(id,v)=>{const e=$(id);if(e)e.textContent=String(v)};
@@ -61813,6 +61875,10 @@ function schedule(){
   timer=setInterval(()=>{if(!document.hidden&&isSupplier()&&['history','status'].includes(currentView()))pull(false)},3000)
 }
 document.addEventListener('click',e=>{
+  const open=e.target.closest?.('[data-yv-server-qr-open]');
+  if(open){e.preventDefault();e.stopPropagation();openQrCanonical(open.dataset.yvServerQrOpen);return}
+  const pdf=e.target.closest?.('[data-yv-server-qr-pdf]');
+  if(pdf){e.preventDefault();e.stopPropagation();downloadQrPdf(pdf.dataset.yvServerQrPdf);return}
   const b=e.target.closest?.('#yardivoSupplierPortal [data-ysp-view]');
   if(b&&['history','status'].includes(String(b.dataset.yspView||'')))setTimeout(()=>pull(true),40)
 },true);
