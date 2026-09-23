@@ -79,8 +79,13 @@ window.addEventListener('yardivo:login',()=>{
    if(main!=='light'&&main!=='dark')main='dark';
    if(['graphite','blue','original'].indexOf(dark)<0)dark='original';
    document.documentElement.classList.add('yardivo-booting');
+   document.documentElement.classList.toggle('light-mode',main==='light');
+   document.documentElement.classList.toggle('dark-mode',main==='dark');
    document.documentElement.setAttribute('data-yardivo-main-theme',main);
+   document.documentElement.setAttribute('data-theme',main);
+   document.documentElement.setAttribute('data-yardivo-theme',main);
    document.documentElement.setAttribute('data-yardivo-dark-look',dark);
+   document.documentElement.style.colorScheme=main;
  }catch(e){
    document.documentElement.classList.add('yardivo-booting');
    document.documentElement.setAttribute('data-yardivo-main-theme','dark');
@@ -29840,34 +29845,12 @@ html[data-yardivo-main-theme="light"] body.light-mode :is(
 (function(){
 'use strict';
 function enforce(){
-  const html=document.documentElement,body=document.body;
-  const light=html.dataset.yardivoMainTheme==='light'||body.classList.contains('light-mode');
-  if(!light)return;
-  html.dataset.yardivoMainTheme='light';
-  body.classList.add('light-mode');
-
-  /* Remove old optional light palette class which painted sections green/dark. */
-  body.classList.remove('yardivo-light-green');
-
-  /* Explicitly clear legacy inline dark backgrounds on the large structural nodes
-     visible in Daily Map / capacity screens. */
-  document.querySelectorAll(
-    '.sidebar,.topbar,.top-bar,.app-header,.main,.main-content,.view.active,.panel,.panel-head,.panel-body,'+
-    '.daily-map-board,.daily-map-toolbar,.capacity-panel,.capacity-grid,.ramp-card,.dock-card,.data-wrap,.table-wrap'
-  ).forEach(el=>{
-    const bg=(el.style.background||el.style.backgroundColor||'').toLowerCase();
-    if(/#07131f|#0d1b29|#091827|#06121d|#050b11|rgb\(7,\s*19,\s*31\)|rgb\(13,\s*27,\s*41\)/.test(bg)){
-      el.style.setProperty('background','#fff','important');
-      el.style.setProperty('color','#102b3c','important');
-    }
-  });
+  const html=document.documentElement,body=document.body;if(!body)return;
+  const light=html.dataset.yardivoMainTheme==='light'||html.dataset.theme==='light';
+  body.classList.toggle('light-mode',light);
+  body.classList.toggle('dark-mode',!light);
+  if(light)body.classList.remove('yardivo-light-green');
 }
-window.addEventListener('load',()=>setTimeout(enforce,500),{once:true});
-window.addEventListener('yardivo:login',()=>setTimeout(enforce,100));
-window.addEventListener('yardivo:data-synced',enforce);
-document.addEventListener('click',e=>{
-  if(e.target.closest?.('#yardivoThemeSwitch,[data-view],[data-home-target]'))setTimeout(enforce,80);
-},true);
 window.YardivoAbsoluteWhite={apply:enforce};
 })();
 </script>
@@ -30164,9 +30147,11 @@ function apply(theme,save=true){
     }catch(_){}
   }
 
+  html.classList.add('yardivo-theme-switching');
   html.dataset.yardivoMainTheme=theme;
   html.dataset.theme=theme;
   html.dataset.yardivoTheme=theme;
+  html.style.colorScheme=theme;
   html.classList.toggle('light-mode',theme==='light');
   html.classList.toggle('dark-mode',theme==='dark');
   body.classList.toggle('light-mode',theme==='light');
@@ -30175,12 +30160,10 @@ function apply(theme,save=true){
 
   paintSwitch(theme);
 
-  /* Keep only dark appearance controller synchronized; it must never toggle main theme. */
+  /* Synchronize small controllers only; light paint is CSS-only. */
   try{window.YardivoSimpleTheme?.apply?.()}catch(_){}
   try{window.YardivoDarkPaletteIsolation?.apply?.()}catch(_){}
-  if(theme==='light'){
-    try{window.YardivoAbsoluteWhite?.apply?.()}catch(_){}
-  }
+  requestAnimationFrame(()=>requestAnimationFrame(()=>html.classList.remove('yardivo-theme-switching')));
 }
 function toggle(){
   if(locked)return;
@@ -52958,7 +52941,7 @@ $('sbnRecommend').onclick=showRecommendation;$('sbnReset').onclick=resetAll;$('s
 $('sbnFullscreen').onclick=()=>{const m=$('sbnMapStep'),on=!m.classList.contains('fullscreen');m.classList.toggle('fullscreen',on);document.body.classList.toggle('sbn-fullscreen',on);$('sbnFullscreen').textContent=on?'× ZATVORI':'⛶ POVEĆAJ MAPU'};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('sbnMapStep')?.classList.contains('fullscreen')){$('sbnMapStep').classList.remove('fullscreen');document.body.classList.remove('sbn-fullscreen');$('sbnFullscreen').textContent='⛶ POVEĆAJ MAPU'}});
 setTimeout(init,350);
-window.YARDIVO_DEV_BUILD='20260923-v5.8.3-notification-hygiene-v14';
+window.YARDIVO_DEV_BUILD='20260923-v5.8.3-qa-smooth-theme-v15';
 })();
 </script><style id="yardivo-v583-supplier-requests-final-style">
 #supplierRequests .ysr-flow-info{
@@ -54574,26 +54557,24 @@ function applyFont(p){
 }
 function applyTheme(theme){
   theme=theme==='light'?'light':'dark';
-  try{
-    localStorage.setItem(THEME_KEY,theme);
-    localStorage.setItem('yardivo_theme_v3',theme);
-    localStorage.setItem('yardivo_theme_v2',theme);
-    localStorage.setItem('yardivo_theme',theme);
-    localStorage.setItem('theme',theme);
-  }catch(_){}
-  const html=document.documentElement,body=document.body;
-  html.dataset.yardivoMainTheme=theme;
-  html.dataset.theme=theme;
-  html.dataset.yardivoTheme=theme;
-  html.classList.toggle('light-mode',theme==='light');
-  html.classList.toggle('dark-mode',theme==='dark');
-  body.classList.toggle('light-mode',theme==='light');
-  body.classList.toggle('dark-mode',theme==='dark');
-  body.classList.remove('yardivo-light-green');
-  try{window.YardivoSimpleTheme?.apply?.()}catch(_){}
-  try{window.YardivoDarkPaletteIsolation?.apply?.()}catch(_){}
-  if(theme==='light'){try{window.YardivoAbsoluteWhite?.apply?.()}catch(_){}}
-  applyPalette(paletteValue());
+  if(window.YardivoMainTheme?.apply){
+    window.YardivoMainTheme.apply(theme,true);
+  }else{
+    try{
+      localStorage.setItem(THEME_KEY,theme);
+      localStorage.setItem('yardivo_theme_v3',theme);
+      localStorage.setItem('yardivo_theme_v2',theme);
+      localStorage.setItem('yardivo_theme',theme);
+      localStorage.setItem('theme',theme);
+    }catch(_){}
+    const html=document.documentElement,body=document.body;
+    html.dataset.yardivoMainTheme=theme;html.dataset.theme=theme;html.dataset.yardivoTheme=theme;
+    html.style.colorScheme=theme;
+    html.classList.toggle('light-mode',theme==='light');html.classList.toggle('dark-mode',theme==='dark');
+    body.classList.toggle('light-mode',theme==='light');body.classList.toggle('dark-mode',theme==='dark');
+    body.classList.remove('yardivo-light-green');
+  }
+  if(theme==='dark')applyPalette(paletteValue());
   updateThemePaletteVisibility();
 }
 function statusText(type){
@@ -55963,6 +55944,7 @@ html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardiv
     const [r,g,b]=m.slice(1).map(Number);return b>=55 && b>r*1.18 && b>g*1.06;
   };
   const touched=new WeakMap();
+  const touchedEls=new Set();
   function paint(el){
     if(!isOn()||!el||el.nodeType!==1)return;
     if(el.matches?.('.success,.danger,.warning,.error,.destructive,[data-status="success"],[data-status="danger"],[data-status="warning"],.status-green,.status-red,.status-amber'))return;
@@ -55973,16 +55955,21 @@ html[data-yardivo-main-theme="dark"][data-yardivo-dark-palette]:not([data-yardiv
     if(blueish(cs.backgroundColor)) set('background-color',p.s1);
     if(blueish(cs.borderTopColor)||blueish(cs.borderRightColor)||blueish(cs.borderBottomColor)||blueish(cs.borderLeftColor)) set('border-color',p.line);
     if(blueish(cs.color) && !el.closest?.('.status,.badge,.pill,.legend')) set('color',p.muted);
-    if(changed)touched.set(el,rec);
+    if(changed){touched.set(el,rec);touchedEls.add(el)}
   }
   function restore(el){
     const rec=touched.get(el);if(!rec)return;
     for(const [prop,val] of Object.entries(rec)){if(val)el.style.setProperty(prop,val);else el.style.removeProperty(prop)}
-    touched.delete(el);
+    touched.delete(el);touchedEls.delete(el);
   }
   function sweep(){
-    const all=[document.body,...document.body.querySelectorAll('*')];
-    if(isOn()) all.forEach(paint); else all.forEach(restore);
+    if(!document.body)return;
+    if(isOn()){
+      paint(document.body);
+      document.body.querySelectorAll('*').forEach(paint);
+    }else{
+      Array.from(touchedEls).forEach(restore);
+    }
   }
   const obs=new MutationObserver(ms=>{if(!isOn())return;for(const m of ms)for(const n of m.addedNodes){if(n.nodeType===1){paint(n);n.querySelectorAll?.('*').forEach(paint)}}});
   function boot(){if(!document.body)return;obs.observe(document.body,{childList:true,subtree:true});sweep()}
@@ -59990,6 +59977,7 @@ window.__YARDIVO_THEME_FULL_AUTHORITY_V4__=true;
 
 const root=document.documentElement;
 const touched=new WeakMap();
+const touchedEls=new Set();
 
 function activePalette(){
   if(root.dataset.yardivoMainTheme!=='dark')return null;
@@ -60019,6 +60007,7 @@ function save(el,prop){
   let rec=touched.get(el);
   if(!rec){rec={};touched.set(el,rec)}
   if(!(prop in rec))rec[prop]=el.style.getPropertyValue(prop);
+  touchedEls.add(el);
   return rec;
 }
 function set(el,prop,val){
@@ -60055,11 +60044,12 @@ function paint(el){
   if(hasNavy(cs.color)&&!el.matches('a,.brand-slash'))set(el,'color',p.muted);
 }
 function restore(){
-  document.querySelectorAll('*').forEach(el=>{
-    const rec=touched.get(el);if(!rec)return;
-    Object.entries(rec).forEach(([prop,val])=>{if(val)el.style.setProperty(prop,val);else el.style.removeProperty(prop)});
+  for(const el of Array.from(touchedEls)){
+    const rec=touched.get(el);
+    if(rec)Object.entries(rec).forEach(([prop,val])=>{if(val)el.style.setProperty(prop,val);else el.style.removeProperty(prop)});
     touched.delete(el);
-  });
+    touchedEls.delete(el);
+  }
 }
 function apply(){
   const p=activePalette();
@@ -60326,107 +60316,13 @@ html[data-yardivo-main-theme="light"] body :is(
 'use strict';
 if(window.__YARDIVO_LIGHT_FULL_WHITE_V5__)return;
 window.__YARDIVO_LIGHT_FULL_WHITE_V5__=true;
-
-const root=document.documentElement;
-const changed=new WeakMap();
-
-function isLight(){
-  return root.dataset.yardivoMainTheme==='light' ||
-    root.dataset.theme==='light' ||
-    document.body?.classList.contains('light-mode');
-}
-function semantic(el){
-  return !!el.closest?.(
-    '.dmv-booked,.week-map-item,.appointment,.booking,.badge,.pill,.legend,.slotbar,'+
-    '.status-green,.status-red,.status-amber,[class*="status-" i],'+
-    '.success,.danger,.warning,.error,.destructive,.alert,.priority,'+
-    '[data-status="success"],[data-status="danger"],[data-status="warning"],[class*="yv-delay-level-"]'
-  );
-}
-function save(el,prop){
-  let r=changed.get(el);
-  if(!r){r={};changed.set(el,r)}
-  if(!(prop in r))r[prop]=el.style.getPropertyValue(prop);
-}
-function set(el,prop,val){
-  save(el,prop);
-  el.style.setProperty(prop,val,'important');
-}
-function darkish([r,g,b]){
-  return Math.max(r,g,b)<180 || (b>r+8 && b>g+5);
-}
-function rgbs(s){
-  return [...String(s||'').matchAll(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/gi)]
-    .map(m=>m.slice(1,4).map(Number));
-}
-function containsDark(s){return rgbs(s).some(darkish)}
-function shouldWhite(el){
-  if(semantic(el))return false;
-  if(el.matches?.('svg,svg *,canvas,img,video,iframe'))return false;
-  const cs=getComputedStyle(el);
-  const bg=cs.backgroundColor;
-  const bi=cs.backgroundImage;
-  return containsDark(bg) || (bi&&bi!=='none'&&containsDark(bi));
-}
-function paint(el){
-  if(!isLight()||!el||el.nodeType!==1||semantic(el))return;
-  const cs=getComputedStyle(el);
-
-  if(shouldWhite(el)){
-    set(el,'background-color','#ffffff');
-    if(cs.backgroundImage&&cs.backgroundImage!=='none')set(el,'background-image','none');
-  }
-  if(containsDark(cs.borderTopColor)||containsDark(cs.borderRightColor)||containsDark(cs.borderBottomColor)||containsDark(cs.borderLeftColor)){
-    set(el,'border-color','#d8e0e6');
-  }
-  const c=rgbs(cs.color)[0];
-  if(c && Math.min(...c)>185){
-    set(el,'color','#172833');
-    set(el,'-webkit-text-fill-color','#172833');
-  }
-}
-function restore(){
-  document.querySelectorAll('*').forEach(el=>{
-    const r=changed.get(el); if(!r)return;
-    for(const [p,v] of Object.entries(r)){ if(v)el.style.setProperty(p,v); else el.style.removeProperty(p); }
-    changed.delete(el);
-  });
-}
 function apply(){
-  if(!isLight()){restore();return}
-  if(!document.body)return;
-  document.body.style.setProperty('background','#ffffff','important');
-  document.body.style.setProperty('background-image','none','important');
-  document.body.querySelectorAll('*').forEach(paint);
+  const root=document.documentElement,body=document.body;if(!body)return;
+  const light=root.dataset.yardivoMainTheme==='light'||root.dataset.theme==='light';
+  body.classList.toggle('light-mode',light);
+  body.classList.toggle('dark-mode',!light);
+  if(light)body.classList.remove('yardivo-light-green');
 }
-let raf=0;
-function schedule(){
-  cancelAnimationFrame(raf);
-  raf=requestAnimationFrame(apply);
-}
-const obs=new MutationObserver(ms=>{
-  if(!isLight())return;
-  for(const m of ms){
-    for(const n of m.addedNodes){
-      if(n.nodeType===1){paint(n);n.querySelectorAll?.('*').forEach(paint)}
-    }
-  }
-});
-const rootObs=new MutationObserver(schedule);
-
-function boot(){
-  if(!document.body)return;
-  obs.observe(document.body,{subtree:true,childList:true});
-  rootObs.observe(root,{attributes:true,attributeFilter:['data-yardivo-main-theme','data-theme','data-yardivo-dark-palette']});
-  new MutationObserver(schedule).observe(document.body,{attributes:true,attributeFilter:['class']});
-  apply();
-}
-window.addEventListener('yardivo:view-opened',schedule);
-window.addEventListener('yardivo:data-synced',schedule);
-window.addEventListener('yardivo:master-data-changed',schedule);
-window.addEventListener('focus',schedule);
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-
 window.YardivoLightFullWhiteV5={apply};
 })();
 </script>
@@ -61120,7 +61016,29 @@ window.YardivoMasterSingleEditorV12={apply:removeDuplicate};
 })();
 </script>
 
-<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260923-v5.8.3-notification-hygiene-v14';</script>
+<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260923-v5.8.3-qa-smooth-theme-v15';</script>
+
+<style id="yardivo-v15-qa-smooth-theme">
+html.yardivo-theme-switching *,
+html.yardivo-theme-switching *::before,
+html.yardivo-theme-switching *::after{
+  transition:none!important;
+}
+html[data-yardivo-main-theme="light"] body{
+  color-scheme:light;
+}
+html[data-yardivo-main-theme="dark"] body{
+  color-scheme:dark;
+}
+/* Prevent expensive blur recomposition in light chrome; visual function is unchanged. */
+html[data-yardivo-main-theme="light"] body :is(.topbar,.top-bar,.app-header,.header-bar,.sidebar){
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+</style>
+<script id="yardivo-v15-qa-smooth-theme-marker">
+window.YARDIVO_DEV_BUILD='20260923-v5.8.3-qa-smooth-theme-v15';
+</script>
 
 </body>
 </html>
