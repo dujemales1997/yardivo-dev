@@ -34664,7 +34664,8 @@ async function pullSupplier(){
       });
     });
     localStorage.setItem(key,JSON.stringify([...map.values()]));
-    api?.render?.();
+    const activeSupplierView=document.querySelector('#yardivoSupplierPortal [data-ysp-view].active')?.dataset?.yspView||'';
+    if(!window.__YARDIVO_SUPPLIER_HISTORY_STATUS_SERVER_AUTH_20260923__||!['history','status'].includes(activeSupplierView))api?.render?.();
   }catch(e){console.error('Supplier pull',e)}
 }
 
@@ -61627,7 +61628,7 @@ window.YARDIVO_DEV_BUILD='20260923-dev-v5.8.3-supplier-notif-delete';
 #yardivoSupplierPortal .ysps-step.done i{background:#36b66d}
 #yardivoSupplierPortal .ysps-review{padding:10px;border:1px solid #8d6927;border-radius:9px;background:#31250d;color:#ffe0a0;font-size:10px;font-weight:850}
 #yardivoSupplierPortal[data-ysp-server-loading="1"] [data-ysp-section="history"] #yspHistoryBody,
-#yardivoSupplierPortal[data-ysp-server-loading="1"] [data-ysp-section="status"] #yspStatusList{opacity:.58}
+#yardivoSupplierPortal[data-ysp-server-loading="1"] [data-ysp-section="status"] #yspStatusList{opacity:1}
 #yardivoSupplierRightMapFullscreenV583,
 #yardivoSupplierRightDailyMapV583.ysr-floating,
 #yardivoSupplierPortal .supplier-side-popup,
@@ -61644,7 +61645,7 @@ window.YARDIVO_DEV_BUILD='20260923-dev-v5.8.3-supplier-notif-delete';
 if(window.__YARDIVO_SUPPLIER_HISTORY_STATUS_SERVER_AUTH_20260923__)return;
 window.__YARDIVO_SUPPLIER_HISTORY_STATUS_SERVER_AUTH_20260923__=true;
 const $=id=>document.getElementById(id);
-let rows=[],busy=false,lastPull=0,timer=0;
+let rows=[],busy=false,lastPull=0,timer=0,lastFingerprint='';
 const terminal=new Set(['completed','rejected','cancelled','canceled']);
 function portal(){return $('yardivoSupplierPortal')}
 function isSupplier(){try{return String((typeof currentSession!=='undefined'?currentSession:window.currentSession)?.role||'').toLowerCase()==='supplier'}catch(_){return false}}
@@ -61697,15 +61698,20 @@ function sortRows(a,b){
 async function pull(force=false){
   if(!isSupplier()||busy)return rows;
   if(!force&&Date.now()-lastPull<1800)return rows;
-  busy=true;portal()?.setAttribute('data-ysp-server-loading','1');
+  busy=true;
   try{
     const raw=await window.YardivoSupplierLiveSync?.call?.('list_mine');
-    if(Array.isArray(raw)){rows=raw.map(normalized).sort(sortRows);lastPull=Date.now();renderAll()}
+    if(Array.isArray(raw)){
+      const next=raw.map(normalized).sort(sortRows);
+      const fp=JSON.stringify(next.map(x=>[x.serverId,x.id,x.status,x.warehouse,x.date,x.time,x.dock,x.plate,x.trailer,x.driver,x.driverContact,x.pallets,x.sku,x.review,x.qrUrl,x.updatedAt]));
+      rows=next;lastPull=Date.now();
+      if(fp!==lastFingerprint){lastFingerprint=fp;renderAll()}
+    }
     return rows
   }catch(e){
     console.error('Supplier server history/status',e);
     return rows
-  }finally{busy=false;portal()?.removeAttribute('data-ysp-server-loading')}
+  }finally{busy=false}
 }
 function ensureHistoryNote(){
   const sec=portal()?.querySelector('[data-ysp-section="history"]');if(!sec)return;
@@ -61788,6 +61794,46 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&isSupplie
 window.addEventListener('load',()=>setTimeout(()=>{hideFloatingSupplierUi();pull(true);schedule()},700),{once:true});
 setTimeout(()=>{hideFloatingSupplierUi();pull(true);schedule()},250);
 window.YardivoSupplierHistoryStatusServerV583={pull,render:renderAll,rows:()=>rows.slice()};
+})();
+</script>
+
+<script id="yardivo-v583-supplier-no-flicker-final-20260923">
+(()=>{'use strict';
+if(window.__YARDIVO_SUPPLIER_NO_FLICKER_FINAL_20260923__)return;
+window.__YARDIVO_SUPPLIER_NO_FLICKER_FINAL_20260923__=true;
+let installed=false,nativeRender=null,lastView='';
+function supplier(){try{return String((typeof currentSession!=='undefined'?currentSession:window.currentSession)?.role||'').toLowerCase()==='supplier'}catch(_){return false}}
+function view(){return document.querySelector('#yardivoSupplierPortal [data-ysp-view].active')?.dataset?.yspView||''}
+function install(){
+  if(installed||!supplier()||!window.YardivoSupplierPortal?.render)return;
+  nativeRender=window.YardivoSupplierPortal.render.bind(window.YardivoSupplierPortal);
+  window.YardivoSupplierPortal.render=function(){
+    const v=view();
+    if(['history','status'].includes(v)&&window.YardivoSupplierHistoryStatusServerV583){
+      window.YardivoSupplierHistoryStatusServerV583.render();
+      return;
+    }
+    return nativeRender(...arguments);
+  };
+  installed=true;
+}
+function stabilize(){
+  if(!supplier())return;
+  const p=document.getElementById('yardivoSupplierPortal');if(!p)return;
+  p.style.setProperty('visibility','visible','important');
+  p.style.setProperty('opacity','1','important');
+  p.querySelectorAll('[data-ysp-section]').forEach(sec=>{
+    sec.style.setProperty('transition','none','important');
+    sec.style.setProperty('animation','none','important');
+  });
+  const v=view();
+  if(v!==lastView){lastView=v}
+}
+window.addEventListener('yardivo:login',()=>setTimeout(()=>{install();stabilize()},100));
+window.addEventListener('yardivo:data-synced',()=>setTimeout(stabilize,0));
+document.addEventListener('click',e=>{if(e.target.closest?.('#yardivoSupplierPortal [data-ysp-view]'))setTimeout(()=>{install();stabilize()},0)},true);
+setTimeout(()=>{install();stabilize()},300);
+window.YARDIVO_DEV_BUILD='20260923-dev-v5.8.3-supplier-no-flicker-final';
 })();
 </script>
 </body>
