@@ -1,39 +1,181 @@
-name: Inspect supplier notifications and delete action
+name: Apply supplier notification badges and delete action
+permissions:
+  contents: write
 on:
   push:
     paths:
       - ".github/workflows/yardivo-notif-delete-inspect.yml"
 jobs:
-  inspect:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect
+      - name: Patch
         shell: python
         run: |
           from pathlib import Path
-          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
-          needles=[
-            "yardivo_live_notifications_v1",
-            "YardivoNotifications",
-            "notification",
-            "bell",
-            "Najave dobavljača",
-            "NAJAVE DOBAVLJAČA",
-            "data-v583-approve-request",
-            "data-v580-reject",
-            "yardivoSupplierContextMenuV583",
-            "Supplier najava"
-          ]
-          for n in needles:
-              print("\n"+"="*24+" "+n+" "+"="*24)
-              start=0;found=0
-              while True:
-                  i=s.lower().find(n.lower(),start)
-                  if i<0: break
-                  found+=1
-                  print(f"--- match {found} @ {i} ---")
-                  print(s[max(0,i-7000):min(len(s),i+14000)])
-                  start=i+len(n)
-                  if found>=10: break
-              if not found: print("NO MATCH")
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8")
+
+          old="""  }
+  return h;
+}
+function openFor(x,clientX,clientY){"""
+          new="""  }
+  if(!['arrival','dock','receiving','completed'].includes(s)){
+    h+=actionButton('IZBRIŠI NAJAVU','danger',{'data-v583-delete-supplier-request':x.id},'🗑');
+  }
+  return h;
+}
+function openFor(x,clientX,clientY){"""
+          if old not in s:
+              raise SystemExit("Context menu items anchor not found")
+          s=s.replace(old,new,1)
+
+          marker='yardivo-v583-inventory-supplier-notif-delete-20260923'
+          if marker in s:
+              raise SystemExit("Patch already present")
+
+          patch=r'''
+          <style id="yardivo-v583-inventory-supplier-notif-delete-style-20260923">
+          .nav-btn[data-view="supplierRequests"] .nav-badge{min-width:18px;height:18px;align-items:center;justify-content:center;border-radius:999px;padding:0 5px;background:#e44b5f!important;color:#fff!important;font-size:8px;font-weight:950;box-shadow:0 0 0 2px rgba(228,75,95,.15)}
+          </style>
+          <script id="yardivo-v583-inventory-supplier-notif-delete-20260923">
+          (function(){
+          'use strict';
+          if(window.__YARDIVO_INVENTORY_SUPPLIER_NOTIF_DELETE_20260923__)return;
+          window.__YARDIVO_INVENTORY_SUPPLIER_NOTIF_DELETE_20260923__=true;
+          let busy=false,lastSig='';
+
+          function role(){
+            try{const s=window.currentSession||{};let r=String(s.app_role||s.role||'').toLowerCase().trim();if(r==='zalihe'||r==='upravljanje zalihama')r='inventory';return r}catch(_){return''}
+          }
+          function user(){
+            try{const s=window.currentSession||{};return String(s.username||s.user||role()||'anonymous')}catch(_){return'anonymous'}
+          }
+          function inventory(){return role()==='inventory'}
+          function notifId(id){return 'SUPREQ-'+String(id)}
+          function notifications(){
+            try{
+              const a=window.YardivoNotifications?.load?.();
+              if(Array.isArray(a))return a;
+              const b=JSON.parse(localStorage.getItem('yardivo_live_notifications_v1')||'[]');
+              return Array.isArray(b)?b:[];
+            }catch(_){return[]}
+          }
+          function isUnreadSupplier(n){
+            if(String(n?.event||'').toUpperCase()!=='SUPPLIER_REQUEST')return false;
+            const rb=n?.readBy&&typeof n.readBy==='object'?n.readBy:{};
+            return !rb[user()];
+          }
+          function syncSupplierBadge(){
+            if(!inventory())return;
+            const n=notifications().filter(isUnreadSupplier).length;
+            const b=document.getElementById('supplierRequestsBadge');
+            if(b){b.textContent=String(n);b.style.setProperty('display',n>0?'inline-flex':'none','important')}
+            try{window.YardivoNotifications?.render?.()}catch(_){}
+          }
+          function upsertLocalNotification(x){
+            if(!inventory()||!x||String(x.status||'').toLowerCase()!=='pending')return;
+            let list=notifications();
+            const id=notifId(x.id);
+            if(list.some(n=>String(n?.id)===id))return;
+            const now=String(x.created_at||new Date().toISOString());
+            list.push({
+              id,event:'SUPPLIER_REQUEST',type:'blue',
+              title:'NOVA NAJAVA DOBAVLJAČA',
+              body:String(x.supplier_name||x.supplier_username||'Dobavljač')+' · '+String(x.delivery_date||'')+' '+String(x.requested_time||'').slice(0,5),
+              at:now,createdAt:now,roles:['admin','manager','inventory'],
+              supplier:String(x.supplier_name||x.supplier_username||''),
+              supplierDeliveryId:String(x.id),announcementId:'SUPDEL-'+String(x.id),
+              warehouse:String(x.warehouse||''),location:String(x.location||''),readBy:{}
+            });
+            try{window.YardivoNotifications?.save?.(list)}catch(_){try{localStorage.setItem('yardivo_live_notifications_v1',JSON.stringify(list))}catch(__){}}
+            try{window.YardivoNotifications?.render?.()}catch(_){}
+          }
+          function removeLocalNotification(id){
+            const target=String(id);
+            const list=notifications().filter(n=>String(n?.id)!==notifId(target)&&String(n?.supplierDeliveryId||'')!==target);
+            try{window.YardivoNotifications?.save?.(list)}catch(_){try{localStorage.setItem('yardivo_live_notifications_v1',JSON.stringify(list))}catch(__){}}
+            syncSupplierBadge();
+          }
+          async function poll(){
+            if(!inventory()||busy||document.hidden||!window.YardivoSupplierLiveSync?.call)return;
+            busy=true;
+            try{
+              const rows=await window.YardivoSupplierLiveSync.call('list_internal');
+              if(!Array.isArray(rows))return;
+              rows.filter(x=>String(x.status||'').toLowerCase()==='pending').forEach(upsertLocalNotification);
+              const sig=rows.map(x=>String(x.id)+':'+String(x.status)).sort().join('|');
+              if(sig!==lastSig){
+                lastSig=sig;
+                try{await window.YardivoSupplierRequests?.load?.()}catch(_){}
+                try{window.dispatchEvent(new CustomEvent('yardivo:supplier-inbox-changed',{detail:{pending:rows.filter(x=>x.status==='pending').length}}))}catch(_){}
+              }
+              syncSupplierBadge();
+            }catch(_){}
+            finally{busy=false}
+          }
+          async function deleteRequest(id){
+            if(!inventory()&&role()!=='admin')return;
+            const x=window.YardivoSupplierContextActionsV583?.rowById?.(id)||null;
+            const label=x?(String(x.supplier_name||x.supplier_username||'Dobavljač')+' · '+String(x.delivery_date||'')):'ovu najavu';
+            if(!confirm('Trajno izbrisati '+label+'?'))return;
+            if(!confirm('Potvrdi brisanje Supplier najave. Ova radnja se ne može poništiti.'))return;
+            try{
+              await window.YardivoSupplierLiveSync.call('delete_internal',{id:String(id)});
+              removeLocalNotification(id);
+              try{await window.YardivoSupplierLiveSync.pullInternal?.()}catch(_){}
+              try{await window.YardivoSupplierRequests?.load?.()}catch(_){}
+              try{await window.YardivoSupplierPlannerV580?.refresh?.(true)}catch(_){}
+              try{window.YardivoSupplierContextActionsV583?.close?.()}catch(_){}
+              try{window.dispatchEvent(new CustomEvent('yardivo:supplier-request-updated',{detail:{id:String(id),deleted:true}}))}catch(_){}
+              try{if(typeof showYmsToast==='function')showYmsToast('success','NAJAVA IZBRISANA','Supplier najava je uklonjena.',3200)}catch(_){}
+              setTimeout(poll,80);
+            }catch(e){alert('Brisanje najave nije uspjelo:\n'+(e?.message||e))}
+          }
+
+          document.addEventListener('click',e=>{
+            const b=e.target.closest?.('[data-v583-delete-supplier-request]');
+            if(b){
+              e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+              void deleteRequest(b.dataset.v583DeleteSupplierRequest);
+              return;
+            }
+          },true);
+
+          window.addEventListener('yardivo:login',()=>setTimeout(poll,500));
+          window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>{syncSupplierBadge();poll()},120));
+          window.addEventListener('yardivo:supplier-request-updated',()=>setTimeout(poll,80));
+          window.addEventListener('focus',poll);
+          document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll()});
+          setInterval(poll,1500);
+          setInterval(syncSupplierBadge,700);
+          setTimeout(poll,900);
+          window.YARDIVO_DEV_BUILD='20260923-dev-v5.8.3-supplier-notif-delete';
+          })();
+          </script>
+          '''
+          if '</body>' not in s:
+              raise SystemExit("body close not found")
+          s=s.replace('</body>',patch+'\n</body>',1)
+          p.write_text(s,encoding='utf-8')
+
+          start=s.index('<script id="'+marker+'">')+len('<script id="'+marker+'">')
+          end=s.index('</script>',start)
+          Path('/tmp/notif_delete.js').write_text(s[start:end],encoding='utf-8')
+      - name: Validate
+        run: |
+          node --check /tmp/notif_delete.js
+          grep -q "IZBRIŠI NAJAVU" index.html
+          grep -q "NOVA NAJAVA DOBAVLJAČA" index.html
+          grep -q "yardivo-v583-inventory-supplier-notif-delete-20260923" index.html
+          git diff --check
+      - name: Commit
+        run: |
+          git config user.name "YARDIVO QA"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/yardivo-notif-delete-inspect.yml
+          git add index.html
+          git commit -m "Add supplier request badges and inventory delete action"
+          git push origin HEAD:main
