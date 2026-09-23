@@ -1,4 +1,4 @@
-name: Inspect scanner mobile UI
+name: Inspect scanner routing
 on:
   push:
     paths:
@@ -13,12 +13,12 @@ jobs:
         run: |
           from pathlib import Path
           s=Path("index.html").read_text(encoding="utf-8",errors="replace")
-          needles=["mobile_bootstrap","GATE_ROLE_REQUIRED","RECEPTION_ROLE_REQUIRED","QR_SCAN_DISABLED","warehouseName","nextAction","scan camera","scan-camera","mobile scanner","qrMobile"]
+          needles=["location.pathname","/q/","scan=gate","scan=dock","scanner=","mobileScan","mobile-scan","gateScanner","dockScanner","SCAN GATE","SCAN DOCK"]
           for n in needles:
               start=0
-              for k in range(12):
-                  i=s.find(n,start)
+              for k in range(20):
+                  i=s.lower().find(n.lower(),start)
                   if i<0: break
                   print(f"\n===== {n} #{k+1} @ {i} =====\n")
-                  print(s[max(0,i-9000):min(len(s),i+19000)])
+                  print(s[max(0,i-5000):min(len(s),i+11000)])
                   start=i+len(n)
