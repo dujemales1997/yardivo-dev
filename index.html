@@ -57464,29 +57464,67 @@ async function toggleRole(rr){
   if(role()!=='admin')return;
   const p=ensureAdmin(),loc=String(p.querySelector('#yqr6Location').value||''),wh=String(p.querySelector('#yqr6Warehouse').value||'');
   if(!wh)return alert('Odaberi skladište.');
-  const before=readCfg(),next=JSON.parse(JSON.stringify(before));
-  next.byWarehouse=next.byWarehouse||{};
-  const prev=next.byWarehouse[wh];
-  let node=(prev&&typeof prev==='object'&&!Array.isArray(prev))?{...prev}:{};
-  /* If migrating an old warehouse-wide value, preserve it for the other role. */
-  const oldBase=(typeof prev==='boolean')?prev:(node&&typeof node.enabled==='boolean'?node.enabled:before.enabled!==false);
-  if(typeof node.gate!=='boolean')node.gate=oldBase;
-  if(typeof node.reception!=='boolean')node.reception=oldBase;
-  node[rr]=!enabledFor(wh,rr);
-  node.location_id=loc;
-  node.updated_at=new Date().toISOString();
-  node.updated_by=String(window.currentSession?.username||window.currentSession?.user||'admin');
-  next.byWarehouse[wh]=node;
-  writeCfg(next);renderRoleStates();refreshAll();
+
+  const btn=p.querySelector(rr==='gate'?'#yqr6GateToggle':'#yqr6ReceptionToggle');
+  const oldText=btn?.textContent||'';
+  if(btn){btn.disabled=true;btn.textContent='SPREMAM…'}
+
+  const serverCfg=async()=>{
+    const t=await token();if(!t)throw new Error('ONLINE PRIJAVA NIJE AKTIVNA.');
+    const r=await fetch(SYNC,{
+      method:'POST',
+      headers:{apikey:PUB,Authorization:'Bearer '+t,'Content-Type':'application/json'},
+      body:JSON.stringify({action:'bootstrap',clientId:'yardivo-qr-role-verify-v587'})
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||d?.ok===false)throw new Error(d?.error||('HTTP '+r.status));
+    const row=(Array.isArray(d?.state)?d.state:[]).find(x=>String(x?.key||'')===KEY&&!x?.deleted);
+    const cfg=row?.value_json?JSON.parse(String(row.value_json)):{enabled:true,byWarehouse:{}};
+    return {...cfg,byWarehouse:(cfg?.byWarehouse&&typeof cfg.byWarehouse==='object')?cfg.byWarehouse:{}};
+  };
+  const valueFor=(cfg)=>{
+    const v=cfg?.byWarehouse?.[wh];
+    if(v&&typeof v==='object'&&typeof v[rr]==='boolean')return !!v[rr];
+    if(v&&typeof v==='object'&&v.roles&&typeof v.roles[rr]==='boolean')return !!v.roles[rr];
+    if(typeof v==='boolean')return v;
+    if(v&&typeof v==='object'&&typeof v.enabled==='boolean')return !!v.enabled;
+    return cfg?.enabled!==false;
+  };
+
+  let before=null;
   try{
+    before=await serverCfg();
+    writeCfg(before);
+    const next=JSON.parse(JSON.stringify(before));
+    next.byWarehouse=next.byWarehouse||{};
+    const prev=next.byWarehouse[wh];
+    let node=(prev&&typeof prev==='object'&&!Array.isArray(prev))?{...prev}:{};
+    const oldBase=(typeof prev==='boolean')?prev:(node&&typeof node.enabled==='boolean'?node.enabled:before.enabled!==false);
+    if(typeof node.gate!=='boolean')node.gate=oldBase;
+    if(typeof node.reception!=='boolean')node.reception=oldBase;
+
+    const wanted=!valueFor(before);
+    node[rr]=wanted;
+    node.location_id=loc;
+    node.updated_at=new Date().toISOString();
+    node.updated_by=String(window.currentSession?.username||window.currentSession?.user||'admin');
+    next.byWarehouse[wh]=node;
+
     await persist(next);
-    try{
-      const label=rr==='gate'?'PORTA':'PRIJAM',on=node[rr];
-      window.showYmsToast?.('success',`${label} QR ${on?'UKLJUČEN':'ISKLJUČEN'}`,`${whName(wh)} · ${locName(loc)}`);
-    }catch(_){}
+    const verified=await serverCfg();
+    if(valueFor(verified)!==wanted)throw new Error('SERVER NIJE POTVRDIO NOVU QR POSTAVKU.');
+
+    writeCfg(verified);
+    renderRoleStates();
+    refreshAll();
+    const label=rr==='gate'?'PORTA':'PRIJAM';
+    window.showYmsToast?.('success',`${label} QR ${wanted?'UKLJUČEN':'ISKLJUČEN'}`,`${whName(wh)} · ${locName(loc)} · SERVER POTVRĐEN`);
   }catch(e){
-    writeCfg(before);renderRoleStates();refreshAll();
-    alert('QR postavka nije spremljena na server: '+String(e?.message||e));
+    if(before)writeCfg(before);
+    renderRoleStates();refreshAll();
+    alert('QR postavka nije spremljena/potvrđena na serveru: '+String(e?.message||e));
+  }finally{
+    if(btn){btn.disabled=false;if(oldText)btn.textContent=oldText;renderRoleStates()}
   }
 }
 
@@ -61127,5 +61165,6 @@ window.YARDIVO_DEV_BUILD='20260923-v5.8.3-qa-smooth-theme-v15';
 </script>
 
 <script id="yardivo-self-gate-admin-buttons-v2">window.YARDIVO_DEV_BUILD="20260923-v5.8.3-self-gate-admin-buttons-v16";</script>
+<script id="yardivo-qr-role-server-confirm-v587">window.YARDIVO_QR_ROLE_SERVER_CONFIRM_V587=true;</script>
 </body>
 </html>
