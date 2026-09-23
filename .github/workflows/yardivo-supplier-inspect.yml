@@ -8,17 +8,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect supplier portal blocks
+      - name: Inspect supplier scripts
         shell: python
         run: |
           from pathlib import Path
+          import re
           s=Path("index.html").read_text(encoding="utf-8",errors="replace")
-          needles=["Povijest najava","POVIJEST NAJAVA","STANJE NAJAVE I ISPORUKE","SUPPLIER PORTAL","ONLINE BAZA","PONOVNO SPAJANJE","supplier history","supplierHistory","supplier portal"]
-          for n in needles:
-              start=0
-              for k in range(12):
-                  i=s.lower().find(n.lower(),start)
-                  if i<0: break
-                  print(f"\n===== {n} #{k+1} @ {i} =====\n")
-                  print(s[max(0,i-12000):min(len(s),i+26000)])
-                  start=i+len(n)
+          for m in re.finditer(r'<script(?:\s+id="([^"]+)")?[^>]*>(.*?)</script>',s,re.S|re.I):
+              sid=m.group(1) or ''
+              body=m.group(2)
+              low=(sid+' '+body).lower()
+              if 'supplier' in low and any(k in low for k in ['portal','history','delivery','notification','side','status']):
+                  print("\n===== SCRIPT",sid,"@ ",m.start(),"=====\n")
+                  print(body[:52000])
+          print("\n===== SUPPLIER STYLE BLOCKS =====\n")
+          for m in re.finditer(r'<style(?:\s+id="([^"]+)")?[^>]*>(.*?)</style>',s,re.S|re.I):
+              sid=m.group(1) or ''
+              body=m.group(2)
+              if 'supplier' in (sid+' '+body).lower():
+                  print("\n--- STYLE",sid,"@ ",m.start(),"---\n")
+                  print(body[:22000])
