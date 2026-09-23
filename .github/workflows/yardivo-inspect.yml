@@ -8,36 +8,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extract relevant snippets
+      - name: Inspect exact action menu
         shell: python
         run: |
           from pathlib import Path
           s=Path("index.html").read_text(encoding="utf-8", errors="replace")
-          needles=[
-            "function approveSupplierRequest",
-            "function openPlanner",
-            "function ensureModal",
-            "function rejectPlanner",
-            "data-v583-approve-request",
-            "data-v580-plan",
-            "data-v580-reject",
-            "inventoryButton",
-            "YardivoGateQrV583",
-            "function savePlanner",
-            "function sendPlanner",
-            "function acceptPlanner",
-            "ysrPlanner"
-          ]
+          needles=["PREDLOŽI DRUGI TERMIN","ODOBRI TERMIN","ysr-actions","data-a=\"revision\""]
           for n in needles:
-              print("\n"+"="*24+" "+n+" "+"="*24)
+              print("\n===== "+n+" =====")
               start=0
-              found=0
-              while True:
-                  i=s.lower().find(n.lower(), start)
+              for k in range(12):
+                  i=s.find(n,start)
                   if i<0: break
-                  found+=1
-                  print(f"--- match {found} @ char {i} ---")
-                  print(s[max(0,i-9000):min(len(s),i+18000)])
+                  print(f"--- {k+1} @ {i} ---")
+                  print(s[max(0,i-3500):min(len(s),i+6500)])
                   start=i+len(n)
-                  if found>=8: break
-              if not found: print("NO MATCH")
