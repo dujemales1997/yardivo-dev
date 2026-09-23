@@ -34202,7 +34202,7 @@ function renderHistory(){
   }
   body.innerHTML=rows.map(x=>`
     <tr>
-      <td><strong>${escapeHtml(x.id)}</strong></td>
+      <td><strong>${escapeHtml(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)}</strong></td>
       <td>${escapeHtml(x.date)} · ${escapeHtml(x.time)}</td>
       <td>${escapeHtml(whLabel(x.warehouse))}</td>
       <td>${escapeHtml(x.order||'—')}</td>
@@ -34229,7 +34229,7 @@ function renderStatus(){
     const idx=progressIndex(x);
     return `<div class="ysp-delivery-card">
       <div>
-        <h3>${escapeHtml(x.id)} · ${escapeHtml(x.order||'—')}</h3>
+        <h3>${escapeHtml(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)} · ${escapeHtml(x.order||'—')}</h3>
         <div class="ysp-delivery-meta">
           ${escapeHtml(x.date)} · ${escapeHtml(x.time)}<br>
           ${escapeHtml(whLabel(x.warehouse))} · ${escapeHtml(x.dock||t('dockUnknown'))}<br>
@@ -34417,7 +34417,15 @@ async function submit(){
   let attachment=null;
   try{attachment=await supplierAttachmentFromInput()}catch(e){alert(e?.message||e);return}
   const rows=loadRows(),now=new Date();
-  const id='SUP-'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+String(now.getTime()).slice(-6);
+  const usedIds=new Set(rows.map(x=>String(x?.id||'').toUpperCase()));
+  let id='';
+  for(let attempt=0;attempt<30&&!id;attempt++){
+    let n=0;
+    try{const a=new Uint32Array(1);crypto.getRandomValues(a);n=100000+(a[0]%900000)}catch(_){n=100000+Math.floor(Math.random()*900000)}
+    const candidate='NAJ'+String(n).padStart(6,'0');
+    if(!usedIds.has(candidate))id=candidate;
+  }
+  if(!id)id='NAJ'+String(100000+(Date.now()%900000));
   const row={
     id,warehouse,date,time,status:'pending',dock,order,pallets,skuCount,
     plate:document.getElementById('yspPlate')?.value.trim().toUpperCase()||'',
@@ -61640,6 +61648,25 @@ window.YARDIVO_DEV_BUILD='20260923-dev-v5.8.3-supplier-notif-delete';
   #yardivoSupplierPortal [data-ysp-section="history"] .ysp-table{min-width:1050px}
 }
 </style>
+
+<script id="yardivo-v583-announcement-number-display-20260923">
+(()=>{'use strict';
+if(window.__YARDIVO_ANNOUNCEMENT_NUMBER_DISPLAY_20260923__)return;
+window.__YARDIVO_ANNOUNCEMENT_NUMBER_DISPLAY_20260923__=true;
+function hash6(v){
+  const s=String(v||'');let h=2166136261;
+  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}
+  return String(100000+((h>>>0)%900000)).padStart(6,'0')
+}
+function displayId(v){
+  const s=String(v||'').trim();
+  if(/^NAJ\d{6}$/i.test(s))return s.toUpperCase();
+  if(/^SUP(?:-|$)/i.test(s))return 'NAJ'+hash6(s);
+  return s;
+}
+window.YardivoAnnouncementNumberV583={displayId};
+})();
+</script>
 <script id="yardivo-v583-supplier-history-status-server-authority-20260923">
 (()=>{'use strict';
 if(window.__YARDIVO_SUPPLIER_HISTORY_STATUS_SERVER_AUTH_20260923__)return;
@@ -61725,7 +61752,7 @@ function renderHistory(){
   body.innerHTML=rows.map(x=>{
     const qr=x.qrUrl?'<button type="button" class="ysph-qr" data-yardivo-open-gate-qr="'+esc(x.id)+'">OTVORI QR</button>':'';
     return '<tr>'+
-      '<td><span class="ysph-id">'+esc(x.id)+'</span><span class="ysph-sub">Ažurirano: '+esc(x.updatedAt?new Date(x.updatedAt).toLocaleString('hr-HR'):'—')+'</span></td>'+
+      '<td><span class="ysph-id">'+esc(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+'</span><span class="ysph-sub">Ažurirano: '+esc(x.updatedAt?new Date(x.updatedAt).toLocaleString('hr-HR'):'—')+'</span></td>'+
       '<td><b>'+esc(x.date||'—')+'</b><span class="ysph-sub">'+esc(x.time||'—')+'</span></td>'+
       '<td>'+esc(whLabel(x.warehouse))+'</td>'+
       '<td>'+esc(x.order||'—')+'</td>'+
@@ -61747,7 +61774,7 @@ function renderStatus(){
     const idx=progressIndex(x.status);
     const qr=x.qrUrl?'<div class="ysps-qr"><strong>YARDIVO QR · CHECK-IN</strong><button type="button" class="btn-primary" data-yardivo-open-gate-qr="'+esc(x.id)+'">OTVORI QR</button></div>':'<div class="ysps-noqr">QR će se pojaviti ovdje kada ga YARDIVO izda za ovu najavu.</div>';
     return '<article class="ysps-card">'+
-      '<div><div class="ysps-title"><strong>'+esc(x.id)+' · '+esc(x.order||'BEZ PO')+'</strong><span class="ysph-status '+statusClass(x.status)+'">'+esc(statusLabel(x.status))+'</span></div>'+
+      '<div><div class="ysps-title"><strong>'+esc(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+' · '+esc(x.order||'BEZ PO')+'</strong><span class="ysph-status '+statusClass(x.status)+'">'+esc(statusLabel(x.status))+'</span></div>'+
       '<div class="ysps-grid">'+
         '<div class="ysps-fact"><small>SKLADIŠTE</small><b>'+esc(whLabel(x.warehouse))+'</b></div>'+
         '<div class="ysps-fact"><small>DATUM / TERMIN</small><b>'+esc(x.date||'—')+' · '+esc(x.time||'—')+'</b></div>'+
