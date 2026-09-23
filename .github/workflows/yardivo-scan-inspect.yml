@@ -1,4 +1,4 @@
-name: Inspect gate scanner auth and colors
+name: Inspect exact QR scanner app
 on:
   push:
     paths:
@@ -8,33 +8,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect
+      - name: Inspect exact scanner blocks
         shell: python
         run: |
           from pathlib import Path
+          import re
           s=Path("index.html").read_text(encoding="utf-8",errors="replace")
-          needles=[
-            "GATE CHECK-IN",
-            "SCAN",
-            "qr scanner",
-            "yardivoQrMobileEnabled",
-            "NEMA DOZVOLE",
-            "logout",
-            "gate-pass",
-            "yardivo-gate-pass",
-            "gate scan",
-            "dock scan",
-            "scanner"
+          pats=[
+            r"(?i).{0,120}(scan|scanner|gate|dock|rampa).{0,180}(camera|qr|token|check-in|checkin|validate|consume).{0,120}",
+            r"(?i).{0,140}(permission|dozvol|unauthor|forbidden|role).{0,180}(scan|scanner|gate|dock|rampa).{0,120}",
+            r"(?i).{0,100}(welcome|pozdrav|logout|signout).{0,180}(scan|scanner|gate|dock|rampa).{0,120}"
           ]
-          for n in needles:
-              print("\n"+"="*24+" "+n+" "+"="*24)
-              start=0;found=0
-              while True:
-                  i=s.lower().find(n.lower(),start)
-                  if i<0: break
-                  found+=1
-                  print(f"--- match {found} @ {i} ---")
-                  print(s[max(0,i-7000):min(len(s),i+14000)])
-                  start=i+len(n)
-                  if found>=12: break
-              if not found: print("NO MATCH")
+          hits=[]
+          for pat in pats:
+              for m in re.finditer(pat,s,re.S):
+                  a=max(0,m.start()-5000);b=min(len(s),m.end()+9000)
+                  chunk=s[a:b]
+                  if chunk not in hits:hits.append(chunk)
+                  if len(hits)>=18:break
+              if len(hits)>=18:break
+          for i,h in enumerate(hits,1):
+              print("\n===== HIT",i,"=====\n")
+              print(h)
