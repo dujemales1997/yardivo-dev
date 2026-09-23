@@ -108,14 +108,10 @@ jobs:
               raise SystemExit("loadGate anchor missing")
           s=s.replace(fn_anchor,helper,1)
 
-          load_anchor="""const d=await api('list_gate'),rows=d.rows||[],host=p.querySelector('#ysgRows');
-            if(!rows.length){host.innerHTML='<div class="meta">Nema aktivnih uredno najavljenih Self Gate prijava. Za kamion bez najave klikni “+ NENAJAVLJENI DOLAZAK”.</div>';return}"""
-          load_new="""const d=await api('list_gate'),rows=d.rows||[],host=p.querySelector('#ysgRows');
-            if(!rows.length){host.innerHTML='<div class="meta">Nema aktivnih uredno najavljenih Self Gate prijava. Za kamion bez najave klikni “+ NENAJAVLJENI DOLAZAK”.</div>';return}
-            maybeShowGateDecisionPopup(rows);"""
+          load_anchor="const d=await api('list_gate'),rows=d.rows||[],host=p.querySelector('#ysgRows');"
           if load_anchor not in s:
               raise SystemExit("loadGate rows anchor missing")
-          s=s.replace(load_anchor,load_new,1)
+          s=s.replace(load_anchor,load_anchor+"\n    maybeShowGateDecisionPopup(rows);",1)
 
           # Make inline APPROVE respect the same missing-data rule before backend call.
           old="""async function decide(id,decision){
