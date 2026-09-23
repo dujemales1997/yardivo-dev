@@ -1,0 +1,25 @@
+name: Inspect factory reset UI
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-reset-inspect.yml"
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect reset UI
+        shell: python
+        run: |
+          from pathlib import Path
+          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
+          needles=["RESET YARDIVO","factory-reset","FACTORY RESET","factoryZero","resetYardivo","yardivo-factory-reset","POTPUNI MASTER"]
+          for n in needles:
+              print("\n===== "+n+" =====")
+              start=0
+              for k in range(12):
+                  i=s.lower().find(n.lower(),start)
+                  if i<0: break
+                  print(f"--- {k+1} @ {i} ---")
+                  print(s[max(0,i-8000):min(len(s),i+18000)])
+                  start=i+len(n)
