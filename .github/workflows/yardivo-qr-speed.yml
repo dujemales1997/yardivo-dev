@@ -1,0 +1,62 @@
+name: Speed up YARDIVO dock QR
+permissions:
+  contents: write
+on:
+  push:
+    paths:
+      - '.github/workflows/yardivo-qr-speed.yml'
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch QR prepare path
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8")
+          old=r"""  let ann=canonicalForSupplier(id);
+  if(!ann){try{await window.YardivoSupplierLiveSync?.pullInternal?.(true)}catch(_){}ann=canonicalForSupplier(id)}
+  if(!ann)return alert('Potvrđena najava još nije sinkronizirana u operativni YARDIVO. Osvježi podatke i pokušaj ponovno.');
+  const st=String(ann.status||'').toLowerCase();
+  if(!['najavljen','u dolasku','confirmed',''].includes(st))return alert('Vozilo je već u operativnom procesu. Novi Gate QR se više ne izdaje.');
+  const btn=document.querySelector(`[data-yardivo-send-gate-qr="${CSS.escape(String(id))}"]`);
+  if(btn){btn.disabled=true;btn.textContent='PRIPREMAM QR…'}
+  try{
+    try{if(typeof saveAnnouncements==='function')saveAnnouncements()}catch(_){}
+    try{await window.YardivoSupabase?.syncNow?.()}catch(_){}
+    const prepared=await edge('prepare',{announcementId:String(ann.id)});
+    showPreparedIssue(row,ann,prepared);
+"""
+          new=r"""  let ann=canonicalForSupplier(id);
+  if(!ann){
+    ann={id:'SUPDEL-'+String(id),supplierDeliveryId:String(id),supplier:row.supplier_name||row.supplier_username||'Dobavljač',warehouse:String(row.warehouse||''),date:String(row.delivery_date||''),time:String(row.requested_time||'').slice(0,5),dock:String(row.dock||'').replace(/^R/i,''),status:'Najavljen'};
+  }
+  const st=String(ann.status||'').toLowerCase();
+  if(!['najavljen','u dolasku','confirmed',''].includes(st))return alert('Vozilo je već u operativnom procesu. Novi Gate QR se više ne izdaje.');
+  const btn=document.querySelector(`[data-yardivo-send-gate-qr="${CSS.escape(String(id))}"]`);
+  if(btn){btn.disabled=true;btn.textContent='PRIPREMAM QR…'}
+  try{
+    const prepared=await edge('prepare',{announcementId:String(ann.id)});
+    showPreparedIssue(row,ann,prepared);
+"""
+          if old not in s:
+              raise SystemExit("Expected QR issue block not found")
+          s=s.replace(old,new,1)
+          s=s.replace("window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-notification-warehouse-scope-fix';",
+                      "window.YARDIVO_DEV_BUILD='20260923-dev-v5.8.3-fast-dock-qr';",1)
+          p.write_text(s,encoding="utf-8")
+      - name: Validate
+        run: |
+          grep -q "SUPDEL-'+String(id)" index.html
+          grep -q "20260923-dev-v5.8.3-fast-dock-qr" index.html
+          git diff --check
+      - name: Commit and cleanup
+        run: |
+          git config user.name "YARDIVO QA"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/yardivo-qr-speed.yml
+          git add index.html
+          git commit -m "Speed up dock QR preparation"
+          git push origin HEAD:main
