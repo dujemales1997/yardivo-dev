@@ -8,23 +8,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect supplier scripts
+      - name: Inspect target blocks
         shell: python
         run: |
           from pathlib import Path
           import re
           s=Path("index.html").read_text(encoding="utf-8",errors="replace")
-          for m in re.finditer(r'<script(?:\s+id="([^"]+)")?[^>]*>(.*?)</script>',s,re.S|re.I):
-              sid=m.group(1) or ''
-              body=m.group(2)
-              low=(sid+' '+body).lower()
-              if 'supplier' in low and any(k in low for k in ['portal','history','delivery','notification','side','status']):
-                  print("\n===== SCRIPT",sid,"@ ",m.start(),"=====\n")
-                  print(body[:52000])
-          print("\n===== SUPPLIER STYLE BLOCKS =====\n")
-          for m in re.finditer(r'<style(?:\s+id="([^"]+)")?[^>]*>(.*?)</style>',s,re.S|re.I):
-              sid=m.group(1) or ''
-              body=m.group(2)
-              if 'supplier' in (sid+' '+body).lower():
-                  print("\n--- STYLE",sid,"@ ",m.start(),"---\n")
-                  print(body[:22000])
+          ids=[
+            "yardivo-v583-supplier-portal-ux-authority",
+            "yardivo-v583-supplier-announcement-total-authority",
+            "yardivo-v583-supplier-single-authority-final",
+            "yardivo-v583-supplier-rebuilt-zero-authority",
+            "yardivo-v583-supplier-popup-xlsx-total-fix-authority",
+            "yardivo-v583-supplier-master-scope-account-xlsx-total",
+            "yardivo-v583-supplier-context-actions",
+            "yardivo-v560-supplier-live-sync",
+            "yardivo-v549-supplier-portal"
+          ]
+          for sid in ids:
+              m=re.search(r'<script\s+id="'+re.escape(sid)+r'"[^>]*>(.*?)</script>',s,re.S|re.I)
+              if m:
+                  print("\n===== "+sid+" =====\n")
+                  print(m.group(1))
+          for sid in ["yardivo-v583-supplier-portal-ux-authority","yardivo-v583-supplier-status-dark-contrast-final-v583"]:
+              m=re.search(r'<style\s+id="'+re.escape(sid)+r'"[^>]*>(.*?)</style>',s,re.S|re.I)
+              if m:
+                  print("\n===== STYLE "+sid+" =====\n")
+                  print(m.group(1))
+          for n in ["supplierSidebar","supplierDrawer","supplierPopup","supplierToast","onlineStatus","supabaseStatus","YardivoSupabase"]:
+              i=s.lower().find(n.lower())
+              if i>=0:
+                  print("\n===== TERM "+n+" @ "+str(i)+" =====\n")
+                  print(s[max(0,i-5000):min(len(s),i+14000)])
