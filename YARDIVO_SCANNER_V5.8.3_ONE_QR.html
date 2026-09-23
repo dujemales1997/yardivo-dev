@@ -37,6 +37,24 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .status.ok .dot{background:var(--green);box-shadow:0 0 14px rgba(74,163,255,.55)}
 .status.bad .dot{background:var(--red);box-shadow:0 0 14px rgba(255,107,116,.5)}
 .hidden{display:none!important}
+.auth{position:fixed;inset:0;z-index:100;background:radial-gradient(700px 380px at 50% 0,rgba(52,139,226,.22),transparent 70%),#07111b;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{width:min(430px,100%)}
+.login-brand{text-align:center;margin-bottom:22px}
+.login-logo{width:74px;height:74px;margin:0 auto 14px;border-radius:23px;display:grid;place-items:center;background:linear-gradient(145deg,#122b40,#0b1a28);border:1px solid #2f5f7d;box-shadow:0 18px 50px rgba(0,0,0,.35);font-size:28px;font-weight:1000;color:#68bdff}
+.login-brand h1{margin:0;font-size:25px;letter-spacing:-.02em}.login-brand p{margin:6px 0 0;color:#7895a7;font-size:11px}
+.login-panel{padding:17px;border-radius:20px;background:linear-gradient(180deg,#102235,#0b1825);border:1px solid #24465c;box-shadow:0 22px 60px rgba(0,0,0,.32)}
+.login-panel label{display:block;color:#839dac;font-size:9px;font-weight:1000;margin:10px 0 6px}
+.login-panel input{width:100%;padding:14px;border-radius:13px;border:1px solid #2a4c63;background:#081824;color:#fff;outline:none}
+.login-panel input:focus{border-color:#4aa7e7;box-shadow:0 0 0 3px rgba(74,167,231,.11)}
+.login-panel button{width:100%;margin-top:14px;border:0;border-radius:14px;padding:14px;background:linear-gradient(180deg,#62baff,#2c86d7);color:#04111a;font-weight:1000}
+.login-error{margin-top:10px;padding:11px;border:1px solid #8b3842;background:#2d1115;color:#ffbbc1;border-radius:12px;font-size:10px;font-weight:900;line-height:1.45}
+.welcome{position:fixed;inset:0;z-index:110;background:linear-gradient(180deg,#0b1d2d,#07111b);display:none;align-items:center;justify-content:center;padding:22px;text-align:center}
+.welcome.show{display:flex}.welcome-inner{width:min(420px,100%)}.welcome-logo{width:86px;height:86px;border-radius:28px;margin:0 auto 20px;display:grid;place-items:center;background:linear-gradient(145deg,#12324c,#0b1b2a);border:1px solid #3478a4;font-size:34px;font-weight:1000;color:#6bc0ff;box-shadow:0 20px 55px rgba(0,0,0,.35)}
+.welcome h2{margin:0;font-size:26px}.welcome p{margin:8px 0 0;color:#8ca6b7;font-size:12px}
+.welcome-progress{margin-top:24px;height:9px;border-radius:999px;background:#132b3a;overflow:hidden}.welcome-progress i{display:block;width:0;height:100%;background:linear-gradient(90deg,#45a6ff,#45e487);border-radius:999px;transition:width .18s ease}
+.welcome small{display:block;margin-top:9px;color:#6f899a;font-size:9px;font-weight:900;letter-spacing:.06em}
+.welcome-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:13px}.welcome-step{padding:7px 4px;border:1px solid #20394b;border-radius:9px;color:#617d8f;font-size:7px;font-weight:1000}.welcome-step.active{border-color:#3f92c8;color:#d9f1ff;background:#0d2637}.welcome-step.done{border-color:#327f60;color:#bdf2d3;background:#0c251c}
+.scanner-app{min-height:100%}
 #reader{width:100%;overflow:hidden;border-radius:16px;background:#000;min-height:280px}
 #reader video{object-fit:cover}
 .hero{text-align:center;padding:8px 0 2px}
@@ -56,35 +74,46 @@ button:disabled{opacity:.45;cursor:not-allowed}
 </style>
 </head>
 <body>
+<section id="auth" class="auth">
+  <div class="login-box">
+    <div class="login-brand">
+      <div class="login-logo">Y</div>
+      <h1>YARDIVO PRIJAM</h1>
+      <p id="loginContext">MOBILE QR SCANNER · PRIJAVA</p>
+    </div>
+    <div class="login-panel">
+      <label for="username">KORISNIČKO IME</label>
+      <input id="username" autocomplete="username" autocapitalize="none" spellcheck="false">
+      <label for="password">LOZINKA</label>
+      <input id="password" type="password" autocomplete="current-password">
+      <button id="loginBtn">PRIJAVI SE</button>
+      <div id="loginMsg" class="login-error hidden"></div>
+    </div>
+  </div>
+</section>
+
+<section id="welcome" class="welcome" aria-hidden="true">
+  <div class="welcome-inner">
+    <div class="welcome-logo">Y</div>
+    <h2 id="welcomeTitle">YARDIVO PRIJAM</h2>
+    <p id="welcomeSub">Provjeravam pristup scanneru…</p>
+    <div class="welcome-progress"><i id="welcomeFill"></i></div>
+    <small id="welcomePct">0%</small>
+    <div class="welcome-steps">
+      <div class="welcome-step" data-step="login">PRIJAVA</div>
+      <div class="welcome-step" data-step="scope">OVLASTI</div>
+      <div class="welcome-step" data-step="warehouse">SKLADIŠTE</div>
+      <div class="welcome-step" data-step="scanner">SCANNER</div>
+    </div>
+  </div>
+</section>
+
+<div id="scannerApp" class="scanner-app hidden">
 <div class="wrap">
   <div class="brand">
-    <div><h1>YARDIVO · ONE QR</h1><small>MOBILE SCANNER · V5.8.3 · QA HARDENED</small></div>
+    <div><h1>YARDIVO · ONE QR</h1><small>MOBILE SCANNER · V5.8.3 · LOGIN TRACKING V2</small></div>
     <div id="netStatus" class="status"><span class="dot"></span><span>PRIPREMA</span></div>
   </div>
-
-  <section id="startupCard" class="card">
-    <div class="hero">
-      <strong>Provjera sesije</strong>
-      <span>YARDIVO provjerava prijavu i ovlasti…</span>
-    </div>
-    <div class="status" style="justify-content:center;margin:12px 0 4px">
-      <span class="dot"></span><span>UČITAVANJE</span>
-    </div>
-  </section>
-
-  <section id="loginCard" class="card hidden">
-    <div class="hero">
-      <strong>Prijava u scanner</strong>
-      <span>Porta, Prijam ili Admin</span>
-    </div>
-    <label for="username">KORISNIČKO IME</label>
-    <input id="username" autocomplete="username" autocapitalize="none" spellcheck="false">
-    <label for="password">LOZINKA</label>
-    <input id="password" type="password" autocomplete="current-password">
-    <div style="height:12px"></div>
-    <button id="loginBtn" class="primary" style="width:100%">PRIJAVI SE</button>
-    <div id="loginMsg" class="msg bad hidden" style="margin-top:12px"></div>
-  </section>
 
   <section id="scannerCard" class="hidden">
     <div class="card">
@@ -144,6 +173,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
   <div class="footer">YARDIVO · Supabase protected scanner · ONE QR</div>
 </div>
+</div>
 
 <script>
 (()=>{'use strict';
@@ -156,6 +186,9 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
 
 const $=id=>document.getElementById(id);
 let scope=null,currentToken='',currentValidation=null,qr=null,running=false,lastDecoded='';
+const params=new URLSearchParams(location.search);
+const requestedRole=String(params.get('role')||'').toLowerCase();
+const requestedWarehouse=String(params.get('warehouse')||'').trim();
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
 function setNet(ok,text){
@@ -204,35 +237,55 @@ async function fetchScope(){
   if(!data?.ok)throw new Error(data?.error||'Scope nije dostupan.');
   return data.data||{};
 }
-async function bootstrapSession(){
-  const {data}=await sb.auth.getSession();
-  if(!data?.session)return false;
-  try{
-    scope=await fetchScope();
-    if(!['gate','reception','admin'].includes(role())){
-      await sb.auth.signOut();
-      throw new Error('Ovaj račun nema pravo koristiti mobilni scanner.');
-    }
-    showScanner();
-    setNet(true,'ONLINE');
-    return true;
-  }catch(e){
-    setNet(false,'GREŠKA');
-    throw e;
-  }
+function assertRequestedAccess(){
+  const r=role();
+  if(!['gate','reception','admin'].includes(r))throw new Error('Ovaj račun nema pravo koristiti mobilni scanner.');
+  if(requestedRole==='reception'&&!['reception','admin'].includes(r))throw new Error('Za PRIJAM scanner potreban je račun Prijam ili Admin.');
+  if(requestedRole==='gate'&&!['gate','admin'].includes(r))throw new Error('Za PORTA scanner potreban je račun Porta ili Admin.');
+}
+function setProgress(percent,step,text){
+  const fill=$('welcomeFill'),pct=$('welcomePct');
+  if(fill)fill.style.width=Math.max(0,Math.min(100,percent))+'%';
+  if(pct)pct.textContent=Math.max(0,Math.min(100,percent))+'%';
+  document.querySelectorAll('.welcome-step').forEach(el=>{
+    const order=['login','scope','warehouse','scanner'];
+    const here=order.indexOf(step),idx=order.indexOf(el.dataset.step);
+    el.classList.toggle('done',idx<here||percent===100);
+    el.classList.toggle('active',idx===here&&percent<100);
+  });
+  if(text&&$('welcomeSub'))$('welcomeSub').textContent=text;
+}
+async function welcomeThenOpen(){
+  $('auth').classList.add('hidden');
+  $('welcome').classList.add('show');
+  $('welcome').setAttribute('aria-hidden','false');
+  $('scannerApp').classList.add('hidden');
+  $('welcomeTitle').textContent='DOBRODOŠLI, '+String(scope?.username||prettyRole(role())).toUpperCase();
+  setProgress(25,'login','Prijava potvrđena.');
+  await new Promise(r=>setTimeout(r,180));
+  setProgress(50,'scope','Provjeravam ovlasti za '+(requestedRole==='reception'?'PRIJAM':requestedRole==='gate'?'PORTU':'SCANNER')+'…');
+  await new Promise(r=>setTimeout(r,180));
+  setProgress(75,'warehouse',requestedWarehouse?'Skladište '+requestedWarehouse+' · priprema scanner…':'Priprema scanner…');
+  await new Promise(r=>setTimeout(r,180));
+  setProgress(100,'scanner','Scanner je spreman.');
+  await new Promise(r=>setTimeout(r,220));
+  $('welcome').classList.remove('show');
+  $('welcome').setAttribute('aria-hidden','true');
+  $('scannerApp').classList.remove('hidden');
+  $('scannerCard').classList.remove('hidden');
+  setNet(true,'ONLINE');
 }
 function showScanner(){
-  $('startupCard').classList.add('hidden');
-  $('loginCard').classList.add('hidden');
   $('scannerCard').classList.remove('hidden');
   $('who').textContent=scope?.username||'YARDIVO';
   $('rolePill').textContent=prettyRole(role());
   $('adminModeWrap').classList.toggle('hidden',role()!=='admin');
 }
 function showLogin(){
-  $('startupCard').classList.add('hidden');
   $('scannerCard').classList.add('hidden');
-  $('loginCard').classList.remove('hidden');
+  $('scannerApp').classList.add('hidden');
+  $('welcome').classList.remove('show');
+  $('auth').classList.remove('hidden');
   $('resultCard').classList.add('hidden');
   scope=null;currentToken='';currentValidation=null;
 }
@@ -246,11 +299,8 @@ async function login(){
     const {data,error}=await sb.auth.signInWithPassword({email:`${username}@yardivo.local`,password});
     if(error||!data?.session)throw error||new Error('Prijava nije uspjela.');
     scope=await fetchScope();
-    if(!['gate','reception','admin'].includes(role())){
-      await sb.auth.signOut();
-      throw new Error('Ovaj račun nije Porta, Prijam ni Admin.');
-    }
-    showScanner();setNet(true,'ONLINE');
+    try{assertRequestedAccess()}catch(accessErr){await sb.auth.signOut();throw accessErr}
+    await welcomeThenOpen();
     msg($('scanMsg'),'Prijava uspješna. Uključi kameru i skeniraj QR.','ok');
   }catch(e){
     msg($('loginMsg'),String(e?.message||e),'bad');setNet(false,'OFFLINE');
@@ -407,23 +457,22 @@ $('confirmBtn').onclick=confirmScan;
 $('rejectBtn').onclick=()=>finishReception('rejected');
 $('cancelBtn').onclick=()=>{$('resultCard').classList.add('hidden');currentToken='';currentValidation=null;startCamera()};
 $('adminMode').onchange=()=>{if(currentValidation)renderValidation(currentValidation)};
-$('logoutBtn').onclick=async()=>{await stopCamera();await sb.auth.signOut();showLogin();setNet(false,'ODJAVLJEN')};
+$('logoutBtn').onclick=async()=>{await stopCamera();await sb.auth.signOut();showLogin();$('username').value='';$('password').value='';setNet(false,'ODJAVLJEN')};
 
 window.addEventListener('online',()=>setNet(true,'ONLINE'));
 window.addEventListener('offline',()=>setNet(false,'OFFLINE'));
 
-(async()=>{
-  try{
-    const ok=await bootstrapSession();
-    if(!ok){
-      showLogin();
-      setNet(navigator.onLine,'SPREMAN');
-    }
-  }catch(e){
-    showLogin();
-    msg($('loginMsg'),String(e?.message||e),'bad');
-  }
-})();
+/* Scanner Mobile always starts on explicit login, same principle as Manager Mobile.
+   Existing browser/Supabase session is never used to silently reveal the scanner UI. */
+scope=null;
+$('auth').classList.remove('hidden');
+$('welcome').classList.remove('show');
+$('scannerApp').classList.add('hidden');
+$('scannerCard').classList.add('hidden');
+$('username').value='';
+$('password').value='';
+$('loginContext').textContent=(requestedRole==='reception'?'PRIJAM':requestedRole==='gate'?'PORTA':'MOBILE QR SCANNER')+(requestedWarehouse?' · '+requestedWarehouse:'')+' · PRIJAVA';
+setNet(navigator.onLine,'SPREMAN');
 })();
 </script>
 </body>
