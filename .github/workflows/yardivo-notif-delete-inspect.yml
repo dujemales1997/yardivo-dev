@@ -17,17 +17,6 @@ jobs:
           p=Path("index.html")
           s=p.read_text(encoding="utf-8")
 
-          ctx_start=s.index('<script id="yardivo-v583-supplier-context-actions">')
-          ctx_end=s.index('</script>',ctx_start)
-          ctx=s[ctx_start:ctx_end]
-          anchor="  return h;\n}"
-          pos=ctx.find(anchor,ctx.find('function itemsFor(x)'))
-          if pos<0:
-              raise SystemExit("Context menu items anchor not found")
-          insert="  if(!['arrival','dock','receiving','completed'].includes(s)){\n    h+=actionButton('IZBRIŠI NAJAVU','danger',{'data-v583-delete-supplier-request':x.id},'🗑');\n  }\n"
-          ctx=ctx[:pos]+insert+ctx[pos:]
-          s=s[:ctx_start]+ctx+s[ctx_end:]
-
           marker='yardivo-v583-inventory-supplier-notif-delete-20260923'
           if marker in s:
               raise SystemExit("Patch already present")
@@ -130,6 +119,25 @@ jobs:
               setTimeout(poll,80);
             }catch(e){alert('Brisanje najave nije uspjelo:\n'+(e?.message||e))}
           }
+
+          document.addEventListener('contextmenu',e=>{
+            const tr=e.target.closest?.('#supplierRequests #ysrBody tr[data-ysr-detail]');
+            if(!tr||(!inventory()&&role()!=='admin'))return;
+            const id=String(tr.dataset.ysrDetail||'');
+            setTimeout(()=>{
+              const menu=document.getElementById('yardivoSupplierContextMenuV583');
+              const x=window.YardivoSupplierContextActionsV583?.rowById?.(id)||null;
+              const st=String(x?.status||'').toLowerCase();
+              if(!menu?.classList.contains('open')||!x||['arrival','dock','receiving','completed'].includes(st))return;
+              if(menu.querySelector('[data-v583-delete-supplier-request]'))return;
+              const b=document.createElement('button');
+              b.type='button';b.className='danger';b.dataset.v583DeleteSupplierRequest=id;
+              b.innerHTML='<span>🗑</span><span>IZBRIŠI NAJAVU</span>';
+              menu.appendChild(b);
+              const r=menu.getBoundingClientRect();
+              if(r.bottom>window.innerHeight-10)menu.style.top=Math.max(10,window.innerHeight-r.height-10)+'px';
+            },0);
+          },true);
 
           document.addEventListener('click',e=>{
             const b=e.target.closest?.('[data-v583-delete-supplier-request]');
