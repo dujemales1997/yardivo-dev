@@ -1,0 +1,35 @@
+name: YARDIVO inspect supplier actions
+on:
+  push:
+    paths:
+      - '.github/workflows/yardivo-inspect.yml'
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract relevant snippets
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8", errors="replace")
+          needles=[
+            "ODOBRI TERMIN","PREDLOŽI DRUGI TERMIN","ODBIJ",
+            "POŠALJI PRIJEDLOG DOBAVLJAČU","PRIHVATI ŽELJENI DATUM","ODBIJ ZAHTJEV",
+            "POŠALJI QR ZA DOCK","yardivo_master_data_registry_v583",
+            "yardivo-supplier-deliveries"
+          ]
+          for n in needles:
+              print("\n"+"="*30+" "+n+" "+"="*30)
+              start=0
+              found=0
+              while True:
+                  i=s.lower().find(n.lower(), start)
+                  if i<0: break
+                  found+=1
+                  print(f"--- match {found} @ char {i} ---")
+                  print(s[max(0,i-6000):min(len(s),i+10000)])
+                  start=i+len(n)
+                  if found>=6: break
+              if not found: print("NO MATCH")
