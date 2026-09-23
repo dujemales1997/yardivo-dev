@@ -1,4 +1,4 @@
-name: Inspect exact QR scanner app
+name: Inspect scanner mobile UI
 on:
   push:
     paths:
@@ -8,16 +8,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect scanner scripts only
+      - name: Inspect
         shell: python
         run: |
           from pathlib import Path
-          import re
           s=Path("index.html").read_text(encoding="utf-8",errors="replace")
-          for m in re.finditer(r'<script(?:\s+id="([^"]+)")?[^>]*>(.*?)</script>',s,re.S|re.I):
-              sid=m.group(1) or ''
-              body=m.group(2)
-              low=(sid+' '+body).lower()
-              if any(k in low for k in ['barcodedetector','html5-qrcode','getusermedia','scan qr','scanner','gate-pass']):
-                  print("\n===== SCRIPT",sid,"@ ",m.start(),"=====\n")
-                  print(body[:42000])
+          needles=["mobile_bootstrap","GATE_ROLE_REQUIRED","RECEPTION_ROLE_REQUIRED","QR_SCAN_DISABLED","warehouseName","nextAction","scan camera","scan-camera","mobile scanner","qrMobile"]
+          for n in needles:
+              start=0
+              for k in range(12):
+                  i=s.find(n,start)
+                  if i<0: break
+                  print(f"\n===== {n} #{k+1} @ {i} =====\n")
+                  print(s[max(0,i-9000):min(len(s),i+19000)])
+                  start=i+len(n)
