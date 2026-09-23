@@ -1,0 +1,40 @@
+name: Inspect supplier QR history
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-supplier-qr-inspect.yml"
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect
+        shell: python
+        run: |
+          from pathlib import Path
+          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
+          needles=[
+            "Povijest najava",
+            "supplierButtons(x)",
+            "pushSupplierQrNotification",
+            "data-yardivo-open-gate-qr",
+            "yardivo-supplier-qr-actions",
+            "function renderHistory",
+            "history",
+            "yspHistory",
+            "supplier history",
+            "yardivo:supplier-qr-ready"
+          ]
+          for n in needles:
+              print("\n"+"="*24+" "+n+" "+"="*24)
+              start=0
+              found=0
+              while True:
+                  i=s.lower().find(n.lower(),start)
+                  if i<0: break
+                  found+=1
+                  print(f"--- match {found} @ {i} ---")
+                  print(s[max(0,i-8000):min(len(s),i+16000)])
+                  start=i+len(n)
+                  if found>=10: break
+              if not found: print("NO MATCH")
