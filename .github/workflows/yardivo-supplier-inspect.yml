@@ -1,0 +1,24 @@
+name: Inspect supplier portal
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-supplier-inspect.yml"
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect supplier portal blocks
+        shell: python
+        run: |
+          from pathlib import Path
+          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
+          needles=["Povijest najava","POVIJEST NAJAVA","STANJE NAJAVE I ISPORUKE","SUPPLIER PORTAL","ONLINE BAZA","PONOVNO SPAJANJE","supplier history","supplierHistory","supplier portal"]
+          for n in needles:
+              start=0
+              for k in range(12):
+                  i=s.lower().find(n.lower(),start)
+                  if i<0: break
+                  print(f"\n===== {n} #{k+1} @ {i} =====\n")
+                  print(s[max(0,i-12000):min(len(s),i+26000)])
+                  start=i+len(n)
