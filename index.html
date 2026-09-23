@@ -45314,7 +45314,7 @@ function render(){
  host.innerHTML=`
   <div class="ymf-hero">
    <div><h2>MASTER PODACI · TEMELJ YARDIVO LOGIKE</h2>
-    <p>Ovdje gradiš stvarnu strukturu sustava: lokacije → skladišta → rampe → kapaciteti → radna vremena → Detention SLA. Administracija korisnika ostaje odvojena.</p></div>
+    <p>Ovdje gradiš stvarnu strukturu sustava: lokacije → skladišta → rampe → kapaciteti → radna vremena. Administracija korisnika ostaje odvojena.</p></div>
    <span class="ymf-status ${cleanupActive?'cleaning':''}">${cleanupActive?'ČIŠĆENJE STARIH PODATAKA…':'MASTER DATA AKTIVAN'}</span>
   </div>
   <div class="ymf-grid">
@@ -60746,7 +60746,182 @@ window.YardivoDelayLabelSyncV10={sync};
 })();
 </script>
 
-<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260922-v5.8.3-final-qa-1-5-v10';</script>
+
+<style id="yardivo-admin-master-restore-v11">
+/* Admin Master Data must always be visible at the top of Settings. */
+#settings #yardivoSettingsMasterPaneV583{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  position:relative!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+  margin:0 0 18px!important;
+}
+#settings #yardivoMasterFoundationV583{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  position:relative!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+#settings #yardivoMasterFoundationV583 .ymf-grid,
+#settings #yardivoMasterFoundationV583 .ymf-card,
+#settings #yardivoMasterFoundationV583 .ymf-wh,
+#settings #yardivoMasterFoundationV583 .ymf-sector{
+  display:grid;
+}
+#settings #yardivoMasterFoundationV583 .ymf-card.full{grid-column:1/-1}
+#settings #yardivoMasterFoundationV583 .ymf-sector{display:block}
+#settings #yardivoSettingsAdminPaneV583{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+#yardivoMasterAdminSettingsV583{
+  display:none!important;
+}
+#yardivoAdminMasterQuickAnchorV11{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 14px;
+  margin:0 0 12px;
+  border:1px solid #2b4d65;
+  border-radius:10px;
+  background:#081823;
+}
+#yardivoAdminMasterQuickAnchorV11 strong{
+  display:block;
+  font-size:12px;
+  letter-spacing:.4px;
+}
+#yardivoAdminMasterQuickAnchorV11 small{
+  display:block;
+  margin-top:3px;
+  font-size:9px;
+  color:#8fa7b8;
+}
+#yardivoAdminMasterQuickAnchorV11 button{
+  flex:0 0 auto;
+}
+html[data-yardivo-main-theme="light"] #yardivoAdminMasterQuickAnchorV11,
+body.light-mode #yardivoAdminMasterQuickAnchorV11{
+  background:#fff!important;
+  border-color:#d8e0e6!important;
+  color:#172833!important;
+}
+</style>
+
+
+<script id="yardivo-admin-master-restore-v11-js">
+(function(){
+'use strict';
+if(window.__YARDIVO_ADMIN_MASTER_RESTORE_V11__)return;
+window.__YARDIVO_ADMIN_MASTER_RESTORE_V11__=true;
+
+function role(){
+  let r='';
+  try{r=String(currentSession?.role||currentSession?.app_role||'').trim().toLowerCase()}catch(_){}
+  if(r==='voditelj'||r==='management')r='manager';
+  return r;
+}
+function settingsVisible(){
+  const s=document.getElementById('settings');
+  if(!s)return false;
+  return s.classList.contains('active') || s.style.display==='block' || document.body?.dataset?.managerView==='settings';
+}
+function ensureAnchor(settings,masterPane){
+  let a=document.getElementById('yardivoAdminMasterQuickAnchorV11');
+  if(!a){
+    a=document.createElement('div');
+    a.id='yardivoAdminMasterQuickAnchorV11';
+    a.innerHTML=`<div><strong>MASTER PODACI · LOKACIJE / SKLADIŠTA / RAMPE</strong>
+      <small>Ovdje uređuješ stvarne lokacije, skladišta, broj rampi, kapacitete i radna vremena.</small></div>
+      <button type="button" class="primary" data-yv-master-jump-v11>OTVORI MASTER PODATKE</button>`;
+  }
+  const title=settings.querySelector('.section-title');
+  if(title){
+    if(a.previousElementSibling!==title)title.insertAdjacentElement('afterend',a);
+  }else if(settings.firstChild!==a){
+    settings.prepend(a);
+  }
+  a.querySelector('[data-yv-master-jump-v11]')?.addEventListener('click',()=>{
+    masterPane.scrollIntoView({behavior:'smooth',block:'start'});
+  },{once:true});
+}
+function restore(){
+  if(role()!=='admin')return;
+  const settings=document.getElementById('settings');
+  if(!settings)return;
+
+  /* Recreate the canonical settings shell if an older cleanup removed it. */
+  try{window.YardivoMasterAdminSettingsV583?.ensureShell?.()}catch(_){}
+
+  let masterPane=document.getElementById('yardivoSettingsMasterPaneV583');
+  let adminPane=document.getElementById('yardivoSettingsAdminPaneV583');
+
+  if(!masterPane){
+    masterPane=document.createElement('div');
+    masterPane.id='yardivoSettingsMasterPaneV583';
+    const title=settings.querySelector('.section-title');
+    if(title)title.insertAdjacentElement('afterend',masterPane);
+    else settings.prepend(masterPane);
+  }
+  if(!adminPane){
+    adminPane=document.createElement('div');
+    adminPane.id='yardivoSettingsAdminPaneV583';
+    masterPane.insertAdjacentElement('afterend',adminPane);
+  }
+
+  /* Master Data is always first in Admin Settings. */
+  const title=settings.querySelector('.section-title');
+  if(title && masterPane.previousElementSibling!==title){
+    title.insertAdjacentElement('afterend',masterPane);
+  }else if(!title && settings.firstElementChild!==masterPane){
+    settings.prepend(masterPane);
+  }
+
+  masterPane.classList.add('active');
+  adminPane.classList.add('active');
+  masterPane.style.setProperty('display','block','important');
+  adminPane.style.setProperty('display','block','important');
+
+  /* Re-render the authoritative Master editor. */
+  try{window.YardivoMasterFoundationV583?.render?.()}catch(_){}
+  try{window.YardivoStableMasterV583?.render?.()}catch(_){}
+
+  const foundation=document.getElementById('yardivoMasterFoundationV583');
+  if(foundation && foundation.parentElement!==masterPane)masterPane.appendChild(foundation);
+
+  const stable=document.getElementById('yardivoStableMasterEditorV583');
+  if(stable && stable.parentElement!==masterPane)masterPane.appendChild(stable);
+
+  ensureAnchor(settings,masterPane);
+}
+function schedule(){
+  setTimeout(restore,0);
+  setTimeout(restore,80);
+  setTimeout(restore,250);
+}
+document.addEventListener('click',e=>{
+  if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"],#navSettings'))schedule();
+},true);
+['yardivo:login','yardivo:data-synced','yardivo:master-data-changed','yardivo:view-opened']
+  .forEach(ev=>window.addEventListener(ev,()=>{if(settingsVisible()||ev!=='yardivo:view-opened')schedule()}));
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
+window.addEventListener('load',schedule,{once:true});
+
+window.YardivoAdminMasterRestoreV11={restore};
+})();
+</script>
+
+<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260923-v5.8.3-admin-master-restore-v11';</script>
 
 </body>
 </html>
