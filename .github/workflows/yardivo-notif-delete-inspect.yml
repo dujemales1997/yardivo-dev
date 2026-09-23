@@ -17,17 +17,8 @@ jobs:
           p=Path("index.html")
           s=p.read_text(encoding="utf-8")
 
-          old="""  }
-  return h;
-}
-function openFor(x,clientX,clientY){"""
-          new="""  }
-  if(!['arrival','dock','receiving','completed'].includes(s)){
-    h+=actionButton('IZBRIŠI NAJAVU','danger',{'data-v583-delete-supplier-request':x.id},'🗑');
-  }
-  return h;
-}
-function openFor(x,clientX,clientY){"""
+          old="  }\\n  return h;\\n}\\nfunction openFor(x,clientX,clientY){"
+          new="  }\\n  if(!['arrival','dock','receiving','completed'].includes(s)){\\n    h+=actionButton('IZBRIŠI NAJAVU','danger',{'data-v583-delete-supplier-request':x.id},'🗑');\\n  }\\n  return h;\\n}\\nfunction openFor(x,clientX,clientY){"
           if old not in s:
               raise SystemExit("Context menu items anchor not found")
           s=s.replace(old,new,1)
