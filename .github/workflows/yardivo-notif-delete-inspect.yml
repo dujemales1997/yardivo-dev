@@ -17,11 +17,16 @@ jobs:
           p=Path("index.html")
           s=p.read_text(encoding="utf-8")
 
-          old="  }\\n  return h;\\n}\\nfunction openFor(x,clientX,clientY){"
-          new="  }\\n  if(!['arrival','dock','receiving','completed'].includes(s)){\\n    h+=actionButton('IZBRIŠI NAJAVU','danger',{'data-v583-delete-supplier-request':x.id},'🗑');\\n  }\\n  return h;\\n}\\nfunction openFor(x,clientX,clientY){"
-          if old not in s:
+          ctx_start=s.index('<script id="yardivo-v583-supplier-context-actions">')
+          ctx_end=s.index('</script>',ctx_start)
+          ctx=s[ctx_start:ctx_end]
+          anchor="  return h;\n}"
+          pos=ctx.find(anchor,ctx.find('function itemsFor(x)'))
+          if pos<0:
               raise SystemExit("Context menu items anchor not found")
-          s=s.replace(old,new,1)
+          insert="  if(!['arrival','dock','receiving','completed'].includes(s)){\n    h+=actionButton('IZBRIŠI NAJAVU','danger',{'data-v583-delete-supplier-request':x.id},'🗑');\n  }\n"
+          ctx=ctx[:pos]+insert+ctx[pos:]
+          s=s[:ctx_start]+ctx+s[ctx_end:]
 
           marker='yardivo-v583-inventory-supplier-notif-delete-20260923'
           if marker in s:
