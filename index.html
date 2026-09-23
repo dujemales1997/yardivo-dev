@@ -9169,7 +9169,7 @@ var currentSession=null;
 </section>
 </div>
 <div class="after14-alert-panel dash-hidden-alert" id="after14NoShowPanel">
-<div class="after14-alert-head"><strong>⚠ NIJE DOŠAO NAKON 14:00</strong><span id="after14NoShowCount"></span></div>
+<div class="after14-alert-head"><strong>⚠ AUTOMATSKI NO-SHOW</strong><span id="after14NoShowCount"></span></div>
 <div class="after14-alert-list" id="after14NoShowList"></div>
 </div>
 </section>
@@ -9394,7 +9394,7 @@ AUTOMATSKA PREPORUKA</small>
 <div><h2>RASPORED NAJAVA</h2><small id="annScheduleLabel">Odaberi datum i skladište</small><div class="ann-help" style="margin-top:5px">Desni klik na najavu za dodatne opcije, uključujući tablice i vozača.</div></div>
 </div>
 <div class="yardivo-status-legend" id="annStatusLegend">
-<span><i style="background:#0e5fa8"></i>U dolasku</span><span><i style="background:#70560e"></i>Kasni</span><span><i style="background:#a94f0d"></i>U dvorištu</span><span><i style="background:#8b6d0a"></i>Na rampi</span><span><i style="background:#126b34"></i>Zaprimljeno</span><span><i style="background:#642a30"></i>Nije došao</span><span><i style="background:#d7192d"></i>Odbijeno</span><span><i style="background:#6340a8"></i>Promijenjena</span>
+<span><i style="background:#0e5fa8"></i>U dolasku</span><span><i style="background:#f2ae38"></i>Kasni</span><span><i style="background:#a94f0d"></i>U dvorištu</span><span><i style="background:#8b6d0a"></i>Na rampi</span><span><i style="background:#126b34"></i>Zaprimljeno</span><span><i style="background:#c61d2b"></i>NO-SHOW</span><span><i style="background:#64151d"></i>Odbijeno</span><span><i style="background:#6340a8"></i>Promijenjena</span>
 </div>
 <div class="schedule-board" id="announcementSchedule"></div>
 </section>
@@ -9607,7 +9607,7 @@ AUTOMATSKA PREPORUKA</small>
 <div>
 <h2 id="weeklyMapHeading">TJEDAN</h2>
 <small id="weeklyMapSubtitle"></small><div class="yardivo-status-legend" id="weeklyStatusLegend">
-<span><i style="background:#0e5fa8"></i>U dolasku</span><span><i style="background:#70560e"></i>Kasni</span><span><i style="background:#a94f0d"></i>U dvorištu</span><span><i style="background:#8b6d0a"></i>Na rampi</span><span><i style="background:#126b34"></i>Zaprimljeno</span><span><i style="background:#642a30"></i>Nije došao</span><span><i style="background:#d7192d"></i>Odbijeno</span><span><i style="background:#6340a8"></i>Promijenjena</span>
+<span><i style="background:#0e5fa8"></i>U dolasku</span><span><i style="background:#f2ae38"></i>Kasni</span><span><i style="background:#a94f0d"></i>U dvorištu</span><span><i style="background:#8b6d0a"></i>Na rampi</span><span><i style="background:#126b34"></i>Zaprimljeno</span><span><i style="background:#c61d2b"></i>NO-SHOW</span><span><i style="background:#64151d"></i>Odbijeno</span><span><i style="background:#6340a8"></i>Promijenjena</span>
 </div>
 </div>
 </div>
@@ -10019,7 +10019,7 @@ AUTOMATSKA PREPORUKA</small>
 <section class="view" id="operations">
 <div class="section-title"><div><h1>NOTIFIKACIJE</h1><p>Operativne notifikacije, statusi kamiona i odstupanja za današnji rad.</p></div></div>
 <section class="panel">
-<div class="panel-head"><div><h2>NIJE DOŠAO NAKON 14:00</h2><small>Najavljeni dobavljači koji danas nisu evidentirani kao stigli.</small></div></div>
+<div class="panel-head"><div><h2>AUTOMATSKI NO-SHOW</h2><small>Najavljeni dobavljači koji nisu stigli do vremena postavljenog u Admin · Postavke kašnjenja.</small></div></div>
 <div class="panel-body"><div id="after14OperationsList"></div></div>
 </section>
 <div class="ops-kpis">
@@ -10882,6 +10882,13 @@ document.getElementById('globalWarehouse')?.addEventListener('change',e=>setGlob
 let incidents=JSON.parse(safeStorage.getItem('yardivo_yms_incidents_v1')||'[]');
 const saveIncidents=()=>safeStorage.setItem('yardivo_yms_incidents_v1',JSON.stringify(incidents));
 let TOLERANCE_MIN=15;
+function yardivoDelayGraceMinutes(){
+  try{
+    const v=Number(window.YardivoDelayRulesV1?.get?.().graceMinutes);
+    if(Number.isFinite(v)&&v>=0)return v;
+  }catch(_){}
+  return Number.isFinite(Number(TOLERANCE_MIN))?Number(TOLERANCE_MIN):15;
+}
 
 function plannedDateTime(a){return new Date(`${a.date}T${a.time}:00`)}
 function actualDateTime(a){return a.actualDate&&a.actualTime?new Date(`${a.actualDate}T${a.actualTime}:00`):null}
@@ -11232,7 +11239,7 @@ function renderDailyMap(){
   // Vertical layout is intentionally not transformed by old horizontal zoom.
 }
 document.getElementById('dailyMapBoard')?.addEventListener('click',e=>{
-  const block=e.target.closest('.booked[data-announcement-id]');
+  const block=e.target.closest('.dmv-booked[data-announcement-id],.booked[data-announcement-id]');
   if(!block)return;
   const id=Number(block.dataset.announcementId);
   const a=announcements.find(x=>x.id===id);
@@ -11593,7 +11600,7 @@ function supplierReliability(name){
   const all=announcements.filter(a=>a.supplier===name);
   const arrived=all.filter(a=>a.actualDate&&a.actualTime);
   const noShows=all.filter(a=>typeof isNoShow==='function'&&isNoShow(a)).length;
-  const late=arrived.filter(a=>delayMinutes(a)>15).length;
+  const late=arrived.filter(a=>delayMinutes(a)>yardivoDelayGraceMinutes()).length;
   const advanceChanges=all.reduce((s,a)=>s+(a.changeHistory||[]).filter(c=>!c.countsAsLate).length,0);
   const negativeChanges=all.reduce((s,a)=>s+(a.changeHistory||[]).filter(c=>c.countsAsLate).length,0);
   const inc=incidents.filter(i=>i.supplier===name);
@@ -13126,7 +13133,7 @@ function renderAfter14NoShowAlerts(){
           <span>R${a.dock||'—'}</span>
           <span class="no-show-after14-badge">NIJE DOŠAO · KASNI ${exactDelayTextFromPlan(a)}</span>
         </div>`).join('')}</div>`
-      : '<div class="overview-empty">Nema današnjih NO-SHOW upozorenja nakon 14:00.</div>';
+      : `<div class="overview-empty">Nema današnjih NO-SHOW upozorenja nakon ${String(window.YardivoDelayRulesV1?.get?.().noShowAt||'14:00')}.</div>`;
   }
 
   const badge=document.getElementById('opsAlertBadge');
@@ -13157,10 +13164,14 @@ function yardivoMapDelayVisualClass(a){
   if(!(mins>0))return '';
   let r={graceMinutes:15,orangeFrom:30,redFrom:60,criticalFrom:90};
   try{r={...r,...(window.YardivoDelayRulesV1?.get?.()||{})}}catch(_){}
-  if(mins<Number(r.graceMinutes||15))return '';
-  if(mins<Number(r.orangeFrom||30))return 'yv-delay-level-1';
-  if(mins<Number(r.redFrom||60))return 'yv-delay-level-2';
-  if(mins<Number(r.criticalFrom||90))return 'yv-delay-level-3';
+  const grace=Number.isFinite(Number(r.graceMinutes))?Number(r.graceMinutes):15;
+  const orange=Number.isFinite(Number(r.orangeFrom))?Number(r.orangeFrom):30;
+  const red=Number.isFinite(Number(r.redFrom))?Number(r.redFrom):60;
+  const critical=Number.isFinite(Number(r.criticalFrom))?Number(r.criticalFrom):90;
+  if(mins<grace)return '';
+  if(mins<orange)return 'yv-delay-level-1';
+  if(mins<red)return 'yv-delay-level-2';
+  if(mins<critical)return 'yv-delay-level-3';
   return 'yv-delay-level-4';
 }
 function yardivoUnifiedStatusClass(a){
@@ -13179,12 +13190,12 @@ function yardivoUnifiedStatusClass(a){
 function yardivoStatusLegendHtml(){
   return `<div class="yardivo-status-legend">
     <span><i style="background:#0e5fa8"></i>U dolasku</span>
-    <span><i style="background:#70560e"></i>Kasni</span>
+    <span><i style="background:#f2ae38"></i>Kasni</span>
     <span><i style="background:#a94f0d"></i>U dvorištu</span>
     <span><i style="background:#8b6d0a"></i>Na rampi</span>
     <span><i style="background:#126b34"></i>Zaprimljeno</span>
-    <span><i style="background:#642a30"></i>Nije došao</span>
-    <span><i style="background:#d7192d"></i>Odbijeno</span>
+    <span><i style="background:#c61d2b"></i>NO-SHOW</span>
+    <span><i style="background:#64151d"></i>Odbijeno</span>
     <span><i style="background:#6340a8"></i>Promijenjena</span>
   </div>`;
 }
@@ -13577,7 +13588,7 @@ window.deleteIncident=id=>{incidents=incidents.filter(x=>x.id!==id);saveIncident
 
 function renderDailyReport(){
   const host=document.getElementById('dailyReport');if(!host)return;const date=document.getElementById('reportDate')?.value||ymsToday();
-  const a=announcements.filter(x=>x.date===date),arr=a.filter(x=>x.actualDate),late=arr.filter(x=>delayMinutes(x)>15),inc=incidents.filter(x=>x.date===date);
+  const a=announcements.filter(x=>x.date===date),arr=a.filter(x=>x.actualDate),late=arr.filter(x=>delayMinutes(x)>yardivoDelayGraceMinutes()),inc=incidents.filter(x=>x.date===date);
   const unloads=a.filter(x=>x.unloadStartDate&&x.unloadEndDate).map(x=>ymsMinutes(ymsDT(x.unloadStartDate,x.unloadStartTime),ymsDT(x.unloadEndDate,x.unloadEndTime))).filter(x=>x>0&&x<300);
   const booked=a.reduce((s,x)=>s+Number(x.duration||0),0),util=Math.round(booked/(6*7*60)*100);
   host.innerHTML=`<div class="report-grid"><div class="report-stat"><small>PLANIRANO</small><strong>${a.length}</strong></div><div class="report-stat"><small>STIGLO</small><strong>${arr.length}</strong></div><div class="report-stat"><small>KAŠNJENJA</small><strong>${late.length}</strong></div><div class="report-stat"><small>NA VRIJEME</small><strong>${arr.length?Math.round((arr.length-late.length)/arr.length*100):0}%</strong></div><div class="report-stat"><small>PROSJ. KAŠNJENJE</small><strong>${late.length?formatDelay(Math.round(late.reduce((s,x)=>s+delayMinutes(x),0)/late.length)):'0 min'}</strong></div><div class="report-stat"><small>PROSJ. ISTOVAR</small><strong>${unloads.length?Math.round(unloads.reduce((x,y)=>x+y,0)/unloads.length):0} min</strong></div><div class="report-stat"><small>ISKORIŠTENOST RAMPI</small><strong>${util}%</strong></div><div class="report-stat"><small>INCIDENTI</small><strong>${inc.length}</strong></div></div><div class="smart-note">Ukupno planirano paleta: <strong>${a.reduce((s,x)=>s+Number(x.pallets||0),0)}</strong> · Ukupno SKU: <strong>${a.reduce((s,x)=>s+Number(x.sku||0),0)}</strong>.</div>`;
@@ -13868,9 +13879,10 @@ let rampBlocks=JSON.parse(safeStorage.getItem('studenac_ramp_blocks')||'[]');
 function saveRampBlocks(){safeStorage.setItem('studenac_ramp_blocks',JSON.stringify(rampBlocks))}
 function whAnnouncements(){return announcements.filter(whMatch)}
 function isNoShow(a){
-  if(actualDateTime(a))return !!a.noShow;
-  const plan=new Date(`${a.date}T${a.time}:00`);
-  return !!a.noShow || (new Date()-plan>2*60*60*1000 && !['Zaprimljeno','Završeno','Izašao'].includes(a.status));
+  /* Global Admin rule owns automatic NO-SHOW timing.
+     This helper only respects an explicit/manual NO-SHOW marker/status. */
+  const s=String(a?.status||'').toLocaleUpperCase('hr-HR');
+  return !!a?.noShow || /NO.?SHOW|NIJE DOŠAO|NIJE DOSAO/.test(s);
 }
 function isRampBlocked(warehouse,date,dock,start,duration){
  return rampBlocks.some(b=>b.warehouse===warehouse&&b.date===date&&Number(b.dock)===Number(dock)&&overlaps(start,duration,toMin(b.from),toMin(b.to)-toMin(b.from)));
@@ -16351,7 +16363,7 @@ window.YardivoCleanCore={load,save,role,applyHome,driverOpen,driverSave,gateFind
    const late=arrivals.filter(a=>{
      if(!a.time||!a.actualTime)return false;
      const tm=v=>{const [h,m]=String(v).split(':').map(Number);return h*60+m};
-     return tm(a.actualTime)-tm(a.time)>15;
+     return tm(a.actualTime)-tm(a.time)>yardivoDelayGraceMinutes();
    }).length;
    const noShow=all.filter(a=>['NO-SHOW','Nije došao','No-show'].includes(a.status)).length;
    const pallets=all.reduce((s,a)=>s+Number(a.pallets||0),0);
@@ -17973,6 +17985,8 @@ function ensureSettings(){
     now owns only the global delay/no-show rules. */
  const old=document.getElementById('detentionSettings');
  if(old)old.remove();
+ const old2=document.getElementById('yardivoMasterDwellV583');
+ if(old2)old2.remove();
 }
 
 function decorateSupplierProfile(){
@@ -18282,7 +18296,7 @@ function supplierStat(name, allA, allI){
   /* Future appointments are visible in history but never penalize reliability. */
   const evaluated=data.filter(due);
   const arrived=evaluated.filter(actual);
-  const late=arrived.filter(a=>(delay(a)||0)>15);
+  const late=arrived.filter(a=>(delay(a)||0)>yardivoDelayGraceMinutes());
   const on=Math.max(0,arrived.length-late.length);
   const lateVals=late.map(delay).filter(v=>v!=null&&Number.isFinite(v));
   const avgLate=lateVals.length?Math.round(lateVals.reduce((x,y)=>x+y,0)/lateVals.length):0;
@@ -18359,7 +18373,7 @@ function render(){
   const scopedI=selected?allI.filter(i=>i.supplier===selected):allI;
 
   const arrived=scopedA.filter(actual);
-  const late=arrived.filter(a=>(delay(a)||0)>15);
+  const late=arrived.filter(a=>(delay(a)||0)>yardivoDelayGraceMinutes());
   const on=arrived.length-late.length;
   const lateVals=late.map(delay).filter(v=>v!=null);
   const avgLate=lateVals.length?Math.round(lateVals.reduce((x,y)=>x+y,0)/lateVals.length):0;
@@ -18919,10 +18933,10 @@ function payload(view){
  const iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,A=anns().filter(a=>a.date===iso),I=incs().filter(i=>i.date===iso);
  const arrived=A.filter(a=>a.actualDate||a.actualTime||a.yardArrivalAt||a.dockArrivalAt||a.receivedAt||a.rejectedAt);
  const received=A.filter(a=>a.receivedAt||/zaprim|zavr|received/i.test(String(a.status||''))),rejected=A.filter(a=>a.rejectedAt||/odbij|reject/i.test(String(a.status||'')));
- const pending=A.filter(a=>!received.includes(a)&&!rejected.includes(a)),late=arrived.filter(a=>{try{return Number(delayMinutes(a)||0)>15}catch(_){return false}}),onTime=Math.max(0,arrived.length-late.length);
- const noShow=A.filter(a=>!arrived.includes(a)&&String(a.time||'')<'14:00'),pallets=A.reduce((n,a)=>n+Number(a.pallets||0),0),sku=A.reduce((n,a)=>n+Number(a.sku||0),0);
+ const pending=A.filter(a=>!received.includes(a)&&!rejected.includes(a)),late=arrived.filter(a=>{try{return Number(delayMinutes(a)||0)>yardivoDelayGraceMinutes()}catch(_){return false}}),onTime=Math.max(0,arrived.length-late.length);
+ const noShow=A.filter(a=>{try{return ['NIJE DOŠAO','NO-SHOW'].includes(operationalPlanStatus(a))}catch(_){return false}}),pallets=A.reduce((n,a)=>n+Number(a.pallets||0),0),sku=A.reduce((n,a)=>n+Number(a.sku||0),0);
  const avgLate=late.length?Math.round(late.reduce((n,a)=>{try{return n+Number(delayMinutes(a)||0)}catch(_){return n}},0)/late.length):0;
- const summary={name:'Dnevni izvještaj',headers:['POKAZATELJ','REZULTAT'],rows:[['Planirano danas',A.length],['Stiglo',arrived.length],['Zaprimljeno',received.length],['Odbijeno',rejected.length],['Još čeka / nije završeno',pending.length],['Na vrijeme',onTime],['Točnost dolazaka',arrived.length?Math.round(onTime/arrived.length*100)+'%':'0%'],['Kašnjenja > 15 min',late.length],['No-show do 14:00',noShow.length],['Prosječno kašnjenje',avgLate+' min'],['Palete',pallets],['SKU',sku],['Dobavljači',new Set(A.map(a=>a.supplier).filter(Boolean)).size],['Incidenti',I.length]],meta:[['YARDIVO','DNEVNO STANJE PRIJAMA'],['Datum',iso],['Lokacija',locName()],['Generirano',new Date().toLocaleString('hr-HR')]]};
+ const summary={name:'Dnevni izvještaj',headers:['POKAZATELJ','REZULTAT'],rows:[['Planirano danas',A.length],['Stiglo',arrived.length],['Zaprimljeno',received.length],['Odbijeno',rejected.length],['Još čeka / nije završeno',pending.length],['Na vrijeme',onTime],['Točnost dolazaka',arrived.length?Math.round(onTime/arrived.length*100)+'%':'0%'],[`Kašnjenja > ${Number(window.YardivoDelayRulesV1?.get?.().graceMinutes??TOLERANCE_MIN)} min`,late.length],[`No-show nakon ${String(window.YardivoDelayRulesV1?.get?.().noShowAt||'14:00')}`,noShow.length],['Prosječno kašnjenje',avgLate+' min'],['Palete',pallets],['SKU',sku],['Dobavljači',new Set(A.map(a=>a.supplier).filter(Boolean)).size],['Incidenti',I.length]],meta:[['YARDIVO','DNEVNO STANJE PRIJAMA'],['Datum',iso],['Lokacija',locName()],['Generirano',new Date().toLocaleString('hr-HR')]]};
  const detail=annSheet('Detalj prijama',A,[['YARDIVO','Dnevni detalj prijama'],['Datum',iso],['Lokacija',locName()]]);
  const incidentToday={...incidentSheet(),name:'Incidenti danas',rows:I.map(i=>[safe(i.id),safe(i.date),safe(i.supplier),safe(i.type||i.reason),safe(i.severity),Number(i.pallets||0),Number(i.sku||0),safe(i.announcementId),safe(i.note||i.description),safe(i.createdBy),fmt(i.createdAt)])};
  return {fileName:`YARDIVO_Dnevno_stanje_prijama_${iso}.xlsx`,sheets:[summary,detail,incidentToday],dashboardReport:true};
@@ -38245,11 +38259,7 @@ function save(c){
  try{window.YardivoSmartReplanning?.applyState?.()}catch(_){}
  render()
 }
-function inject(){const v=document.getElementById('settings');if(!v||document.getElementById('yardivoSmartEngineSettingsV583'))return;const host=v.querySelector('.settings-grid,.settings-content,.master-settings-body')||v;const p=document.createElement('section');p.id='yardivoSmartEngineSettingsV583';p.innerHTML=`<div class="yse-head"><div><h3>YARDIVO SMART · PLANERSKI MOTOR</h3><p>Parametri za procjenu trajanja istovara i automatsko traženje najboljeg slobodnog gap-a. Kad je Smart OFF, motor ne radi automatske promjene i ne šalje Smart notifikacije.</p></div><div class="yse-power-wrap"><span class="yse-status" id="yseStatus">SMART OFF</span><button type="button" class="yv-unified-switch" id="ysePower">OFF</button></div></div><div class="yse-grid"><div class="yse-field"><label>BRZINA ISKRCAJA · PALETA / SAT</label><input id="yseRate" type="number" min="1" max="200" step="1"><small>Početna vrijednost 33 pal/h. Iz nje YARDIVO računa potrebno trajanje termina kad nema pouzdanije povijesti.</small></div><div class="yse-field"><label>PRAG KAŠNJENJA · MIN</label><input id="yseLate" type="number" min="5" max="180" step="5"><small>Nakon ovog kašnjenja Smart traži sigurniji termin/rampu.</small></div><div class="yse-field"><label>HORIZONT PRETRAGE · MIN</label><input id="yseHorizon" type="number" min="30" max="1440" step="15"><small>Koliko unaprijed motor analizira najave i konflikte.</small></div><div class="yse-field"><label>MAX POMAK TERMINA · MIN</label><input id="yseShift" type="number" min="15" max="1440" step="15"><small>Najveći dopušteni pomak istog dana prije nego kandidat izgubi prioritet.</small></div><div class="yse-field"><label>TEŽINA GAP-A</label><input id="yseGap" type="number" min="0" max="5" step="0.05"><small>Veća vrijednost jače preferira kompaktne praznine između postojećih termina.</small></div><div class="yse-field"><label>INTERVAL PROVJERE · SEK</label><input id="yseScan" type="number" min="10" max="300" step="5"><small>Koliko često Smart motor provjerava promjene dok je uključen.</small></div></div><div class="yse-actions"><button type="button" class="yse-save" id="yseSave">SPREMI PARAMETRE</button><span class="yse-note" id="yseNote">—</span></div>`;host.appendChild(p);p.querySelector('#yseSave').addEventListener('click',()=>{const c=cfg();c.palletsPerHour=Math.max(1,Number(p.querySelector('#yseRate').value||33));c.lateThreshold=Math.max(5,Number(p.querySelector('#yseLate').value||20));c.horizonMinutes=Math.max(30,Number(p.querySelector('#yseHorizon').value||240));c.maxShiftMinutes=Math.max(15,Number(p.querySelector('#yseShift').value||240));c.gapWeight=Math.max(0,Number(p.querySelector('#yseGap').value||1.15));c.scanSeconds=Math.max(10,Number(p.querySelector('#yseScan').value||30));save(c);p.querySelector('#yseNote').textContent='Spremljeno · '+new Date().toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'})});
-p.querySelector('#ysePower')?.addEventListener('click',async()=>{const b=p.querySelector('#ysePower');if(b)b.disabled=true;try{await togglePower()}finally{if(b)b.disabled=false}});
-render()}
-function render(){const p=document.getElementById('yardivoSmartEngineSettingsV583');if(!p)return;if(document.activeElement?.closest?.('#yardivoSmartEngineSettingsV583 input'))return;const c=cfg(),ms=masterSmart(),on=!!ms.enabled&&ms.mode!=='PAUSED';p.querySelector('#yseRate').value=c.palletsPerHour;p.querySelector('#yseLate').value=c.lateThreshold;p.querySelector('#yseHorizon').value=c.horizonMinutes;p.querySelector('#yseShift').value=c.maxShiftMinutes;p.querySelector('#yseGap').value=c.gapWeight;p.querySelector('#yseScan').value=c.scanSeconds;const st=p.querySelector('#yseStatus'),b=p.querySelector('#ysePower');if(st){st.textContent=on?'SMART ON':'SMART OFF';st.classList.toggle('off',!on)}if(b){b.textContent=on?'ON':'OFF';b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on))}document.body.classList.toggle('yardivo-smart-off',!on)}
-window.addEventListener('load',()=>setTimeout(()=>{inject();render()},900));document.addEventListener('click',e=>{if(e.target.closest?.('[data-view="settings"]'))setTimeout(()=>{inject();render()},80)},true);window.YardivoSmartEngineSettingsV583={get:cfg,save,render,toggle:togglePower};
+function inject(){const p=document.getElementById('yardivoSmartEngineSettingsV583');if(p)p.remove();}
 })();
 </script>
 <style id="yardivo-v583-original-login-blue-authority">
@@ -52047,15 +52057,7 @@ function ensureHeaderLoc(){const tb=document.querySelector('.topbar .warehouse-t
 function fill(sel,rows,placeholder,value){if(!sel)return;const sig=JSON.stringify(rows.map(x=>[x.id,x.name]));if(sel.dataset.yvFinalSig!==sig){sel.innerHTML='<option value="">'+esc(placeholder)+'</option>'+rows.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');sel.dataset.yvFinalSig=sig}sel.value=rows.some(x=>String(x.id)===String(value))?String(value):''}
 function sync(){const d=read(),L=locs(d);let l=chosenLoc();if(!L.some(x=>String(x.id)===l))l='';const hs=$('homeLocationSelect'),gl=ensureHeaderLoc();fill(hs,L,'Odaberi lokaciju...',l);fill(gl,L,'Odaberi lokaciju...',l);[hs,gl].forEach(x=>{if(x)x.disabled=!L.length});const W=whs(d,l);let w=chosenWh();if(!W.some(x=>String(x.id)===w))w='';const gw=$('globalWarehouse');if(gw){fill(gw,W,l?'Odaberi skladište...':'Prvo odaberi lokaciju',w);gw.disabled=!l||!W.length}const name=L.find(x=>String(x.id)===l)?.name||'';const st=$('homeLocationStatus');if(st){st.textContent=l?'Odabrano: '+name:'Lokacija nije odabrana';st.classList.toggle('ready',!!l)}const ttl=$('homeSelectedLocation');if(ttl){ttl.textContent=l?name.toUpperCase():'ODABERI LOKACIJU';ttl.classList.toggle('selected',!!l)}document.querySelectorAll('#homeMenuGrid .home-menu-card').forEach(c=>c.classList.toggle('locked',!l))}
 async function saveMaster(d){d.__masterUpdatedAtV583=new Date().toISOString();localStorage.setItem(MASTER,JSON.stringify(d));if(window.YardivoMasterDataV583?.save)await Promise.resolve(window.YardivoMasterDataV583.save(d));else if(typeof window.putCloudState==='function')await Promise.resolve(window.putCloudState(MASTER,JSON.stringify(d)));window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:{reason:'dwell.update'}}))}
-function renderDwell(){const pane=$('yardivoSettingsMasterPaneV583');if(!pane||!admin())return;let box=$('yardivoMasterDwellV583');if(!box){box=document.createElement('section');box.id='yardivoMasterDwellV583';pane.appendChild(box)}const d=read(),rows=d.warehouses.filter(w=>w&&w.active!==false);box.innerHTML='<div class="yv-dwell-head"><h3>DWELL / DETENTION</h3><p>Pragovi čekanja i vremena na rampi su dio MASTER PODATAKA i spremaju se po skladištu.</p></div><div class="yv-dwell-grid">'+(rows.length?rows.map(w=>'<div class="yv-dwell-card" data-dwell-wh="'+esc(w.id)+'"><h4>'+esc(w.name)+'</h4><div class="yv-dwell-fields"><label>Čekanje / Dwell (min)<input type="number" min="0" step="1" data-dwell-wait value="'+esc(w.detention_wait_min??'')+'"></label><label>Na rampi / Detention (min)<input type="number" min="0" step="1" data-dwell-dock value="'+esc(w.detention_dock_min??'')+'"></label><button class="yv-dwell-save" type="button" data-dwell-save="'+esc(w.id)+'">SPREMI</button></div></div>').join(''):'<div class="yv-dwell-card">Prvo dodaj skladište u Master podatke.</div>')+'</div>'}
-function showMasterInline(){if(!admin())return;document.body.classList.add('yv-final-admin-v583');const settings=$('settings'),host=$('yardivoUnifiedSettingsV583')||settings?.querySelector('.settings-grid');const pane=$('yardivoSettingsMasterPaneV583');if(!host||!pane)return;if(pane.parentElement!==host)host.prepend(pane);pane.hidden=false;pane.classList.add('active');pane.style.setProperty('display','block','important');['yardivoStableMasterEditorV583','yardivoMasterSuppliersV583','yardivoResponsiblePeopleV583'].forEach(id=>{const x=$(id);if(x&&x.parentElement!==pane)pane.appendChild(x);if(x){x.hidden=false;x.style.setProperty('display',id==='yardivoStableMasterEditorV583'?'grid':'block','important')}});renderDwell();try{window.YardivoStableMasterV583?.render?.(true)}catch(_){} }
-function applyLocation(v,source){const d=read();v=String(v||'');if(v&&!locs(d).some(x=>String(x.id)===v))v='';saveLoc(v);saveWh('');const hs=$('homeLocationSelect'),gl=ensureHeaderLoc();if(hs)hs.value=v;if(gl)gl.value=v;sync();window.dispatchEvent(new CustomEvent('yardivo:context-changed',{detail:{source,location:v,warehouse:''}}))}
-document.addEventListener('change',e=>{const id=e.target?.id;if(id==='homeLocationSelect'){applyLocation(e.target.value,'home-final');return}if(id==='globalLocationV583'){applyLocation(e.target.value,'header-final');return}if(id==='globalWarehouse'){const d=read(),l=chosenLoc(),v=String(e.target.value||'');saveWh(whs(d,l).some(x=>String(x.id)===v)?v:'');sync();window.dispatchEvent(new CustomEvent('yardivo:context-changed',{detail:{source:'warehouse-final',location:l,warehouse:chosenWh()}}))}},true);
-document.addEventListener('click',async e=>{const b=e.target?.closest?.('[data-dwell-save]');if(b){e.preventDefault();const d=read(),w=d.warehouses.find(x=>String(x.id)===String(b.dataset.dwellSave));const card=b.closest('[data-dwell-wh]');if(!w||!card)return;const wait=card.querySelector('[data-dwell-wait]')?.value,dock=card.querySelector('[data-dwell-dock]')?.value;w.detention_wait_min=wait===''?null:Math.max(0,Number(wait));w.detention_dock_min=dock===''?null:Math.max(0,Number(dock));try{await saveMaster(d);b.textContent='SPREMLJENO';setTimeout(()=>b.textContent='SPREMI',900)}catch(err){console.error(err);alert('Dwell/Detention nije spremljen.')}return}if(e.target?.closest?.('[data-home-target="settings"],[data-view="settings"],#navSettings,#yardivoOpenMasterV583'))setTimeout(showMasterInline,30)},true);
-['yardivo:login','yardivo:data-synced','yardivo:master-data-ready','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{sync();showMasterInline()},60)));
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{sync();showMasterInline()},900),{once:true});else setTimeout(()=>{sync();showMasterInline()},120);
-window.addEventListener('load',()=>setTimeout(()=>{sync();showMasterInline()},400),{once:true});
-window.YardivoFinalHomeHeaderMasterV583={sync,showMasterInline,renderDwell};window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-home-header-master-dwell-fixed-final';
+function renderDwell(){const x=document.getElementById('yardivoMasterDwellV583');if(x)x.remove();}
 })();
 </script>
 <style id="yardivo-v583-master-people-users-ui-final-style">
@@ -52237,7 +52239,6 @@ function moveSmartIntoMaster(){
  const pane=masterPane(), smart=$('yardivoSmartEngineSettingsV583');if(!pane||!smart)return;
  if(smart.parentElement!==pane)pane.appendChild(smart);
  smart.hidden=false;smart.style.setProperty('display','block','important');
- if(!smart.querySelector('.yse-master-note'))smart.insertAdjacentHTML('beforeend','<div class="yse-master-note"><strong>SMART WORKFLOW / POVIJEST PROMJENA</strong><br>Kad je YARDIVO SMART uključen, korisnicima s operativnim pravom pojavljuje se modul <b>YARDIVO automatske preporuke</b> u lijevom izborniku. Tamo se prati razlog odluke, stari → novi termin/rampa, vrijeme odluke i approval status svake Smart promjene.</div>');
  const simple=$('yardivoSmartToggleCardExactV583');if(simple)simple.style.setProperty('display','none','important');
 }
 function smartOn(){const m=readMaster(), c=cfg(), s={...c,...(m.smart||{})};return s.enabled===true&&String(s.mode||'').toUpperCase()!=='PAUSED'}
@@ -58997,8 +58998,8 @@ function rowFor(s,d,anns,incs){
  const sa=anns.filter(a=>announcementMatchesSupplier(a,keys)&&announcementInAccountScope(a,d));
  const si=incs.filter(i=>incidentMatchesSupplier(i,keys)&&incidentInAccountScope(i,d));
  const arrived=sa.filter(hasArrived);
- const late=arrived.filter(a=>delayMin(a)>15);
- const ontime=arrived.filter(a=>delayMin(a)<=15);
+ const late=arrived.filter(a=>delayMin(a)>yardivoDelayGraceMinutes());
+ const ontime=arrived.filter(a=>delayMin(a)<=yardivoDelayGraceMinutes());
  const lateAvg=late.length?Math.round(late.reduce((n,a)=>n+Math.max(0,delayMin(a)),0)/late.length):0;
  const noShows=sa.filter(noShow).length;
  const rejects=sa.filter(rejected).length;
@@ -59259,8 +59260,8 @@ function waitMin(a){return minutes(arrivalDT(a),dockDT(a))}
 function unloadMin(a){return minutes(dockDT(a),completeDT(a))}
 function turnaroundMin(a){return minutes(arrivalDT(a),completeDT(a))}
 function delayMin(a){const p=plannedDT(a),x=arrivalDT(a);if(!p||!x)return null;return Math.round((+x-+p)/60000)}
-function knownOnTime(a){const d=delayMin(a);return d===null?null:d<=15}
-function statusKind(a){const s=aStatus(a).toLowerCase();if(/zaprim|zavr|completed|received/.test(s))return'received';if(/odbij|reject/.test(s))return'rejected';if(/no.?show|nije do/.test(s))return'noshow';if(/ramp/.test(s))return'dock';if(/dvori|parking/.test(s))return'yard';return'planned'}
+function knownOnTime(a){const d=delayMin(a);return d===null?null:d<=yardivoDelayGraceMinutes()}
+function statusKind(a){let raw=aStatus(a);try{if(typeof operationalPlanStatus==='function')raw=operationalPlanStatus(a)||raw}catch(_){}const s=String(raw).toLowerCase();if(/zaprim|zavr|completed|received/.test(s))return'received';if(/odbij|reject/.test(s))return'rejected';if(/no.?show|nije do/.test(s))return'noshow';if(/ramp/.test(s))return'dock';if(/dvori|parking/.test(s))return'yard';return'planned'}
 function ymd(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function dayStart(d){const x=new Date(d);x.setHours(0,0,0,0);return x}
 function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
@@ -60439,9 +60440,14 @@ function apply(x){
  x=sanitize(x);localStorage.setItem(KEY,JSON.stringify(x));
  try{TOLERANCE_MIN=x.graceMinutes}catch(_){}
  try{LATE_GRACE_MINUTES=x.graceMinutes}catch(_){}
+ /* ONE GLOBAL RULESET: never keyed by warehouse/location. */
+ window.YARDIVO_GLOBAL_DELAY_RULES={...x};
+ try{window.dispatchEvent(new CustomEvent('yardivo:delay-rules-changed',{detail:{...x,scope:'ALL_WAREHOUSES'}}))}catch(_){}
  try{window.renderDailyMap?.()}catch(_){}
  try{window.renderWeeklyMap?.()}catch(_){}
  try{window.renderOverview?.()}catch(_){}
+ try{window.renderDashboard?.()}catch(_){}
+ try{window.renderControlTower?.()}catch(_){}
  try{window.YardivoAnalyticsV1?.render?.()}catch(_){}
  try{window.YardivoControlTower?.render?.()}catch(_){}
  render();
@@ -60484,7 +60490,7 @@ function ensure(){
  let p=document.getElementById('yardivoDelaySettingsV1');
  if(!p){
    p=document.createElement('section');p.id='yardivoDelaySettingsV1';p.className='panel';p.dataset.yardivoSettings='admin';
-   p.innerHTML=`<div class="panel-head"><div><h2>POSTAVKE KAŠNJENJA</h2><small>Jedina Admin postavka za kašnjenje, boje Dnevne/Tjedne mape i automatski NO-SHOW</small></div></div>
+   p.innerHTML=`<div class="panel-head"><div><h2>POSTAVKE KAŠNJENJA</h2><small>GLOBALNO PRAVILO · vrijedi za SVA skladišta u YARDIVO · Dnevna/Tjedna mapa, Analytics, Overview i NO-SHOW</small></div></div>
    <div class="yds-body">
     <div class="yds-grid">
      <div class="yds-field"><label>KAŠNJENJE POČINJE NAKON · MIN</label><input id="ydsGrace" type="number" min="0" step="1"><small>Do ovog praga najava ostaje normalno plava.</small></div>
@@ -60493,7 +60499,7 @@ function ensure(){
      <div class="yds-field"><label>KRITIČNO CRVENO OD · MIN</label><input id="ydsCritical" type="number" min="3" step="1"><small>Najjača razina upozorenja prije NO-SHOW statusa.</small></div>
      <div class="yds-field"><label>AUTOMATSKI NO-SHOW POSLIJE</label><input id="ydsNoShow" type="time"><small>Za današnju najavu koja do tog vremena nije fizički stigla.</small></div>
     </div>
-    <div class="yds-preview">
+    <div style="margin-top:10px;padding:9px 10px;border:1px solid #2b4d65;border-radius:8px;font-size:9px;font-weight:900">PRIMJENA: <strong>SVA SKLADIŠTA / SVE LOKACIJE</strong> · pravilo nije vezano uz pojedino skladište.</div><div class="yds-preview">
       <span class="yds-chip blue">U DOLASKU</span>
       <span class="yds-chip yellow">POČETNO KAŠNJENJE</span>
       <span class="yds-chip orange">NARANČASTO</span>
@@ -60554,7 +60560,193 @@ window.YardivoDelayRulesV1={get,apply,bootstrap,persist,noShowAt:()=>get().noSho
 })();
 </script>
 
-<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260921-v5.8.3-admin-delay-settings-v7';</script>
+
+<style id="yardivo-admin-cleanup-v8">
+/* Requested removals only. */
+#detentionSettings,
+#yardivoMasterDwellV583,
+#yardivoSmartEngineSettingsV583,
+.yse-master-note,
+#yardivoQrWarehouseSettings,
+#yardivoQrWarehouseSettingsV584,
+#yvQrWarehouseSettings,
+#yvQrWarehouseSettingsV584,
+[data-yardivo-qr-warehouse-settings],
+[data-yv-qr-warehouse-settings],
+[data-dwell-wh],
+[data-dwell-save],
+[data-dwell-wait],
+[data-dwell-dock]{
+  display:none!important;
+}
+</style>
+
+
+<script id="yardivo-admin-cleanup-v8-js">
+(function(){
+'use strict';
+if(window.__YARDIVO_ADMIN_CLEANUP_V8__)return;
+window.__YARDIVO_ADMIN_CLEANUP_V8__=true;
+
+const exactIds=[
+ 'detentionSettings',
+ 'yardivoMasterDwellV583',
+ 'yardivoSmartEngineSettingsV583',
+ 'yardivoQrWarehouseSettings',
+ 'yardivoQrWarehouseSettingsV584',
+ 'yvQrWarehouseSettings',
+ 'yvQrWarehouseSettingsV584'
+];
+
+function txt(el){return String(el?.textContent||'').replace(/\s+/g,' ').trim().toUpperCase()}
+
+function removeRequested(root=document){
+  for(const id of exactIds){const e=document.getElementById(id);if(e)e.remove()}
+
+  document.querySelectorAll('.yse-master-note,[data-dwell-wh],[data-dwell-save],[data-dwell-wait],[data-dwell-dock]').forEach(e=>{
+    const sec=e.closest('section,.panel,.settings-card,.card')||e;
+    if(sec)sec.remove();
+  });
+
+  /* Text fallback for legacy-generated cards whose IDs changed between builds.
+     Only exact requested modules are removed. */
+  document.querySelectorAll('#settings section,#settings .panel,#settings .settings-card,#settings .card').forEach(el=>{
+    const t=txt(el);
+    if(
+      t.startsWith('DWELL / DETENTION') ||
+      t.includes('YARDIVO SMART · PLANERSKI MOTOR') ||
+      t.startsWith('QR SCANNER · PO SKLADIŠTU') ||
+      t.startsWith('QR SCANNER PO SKLADIŠTU')
+    ){
+      el.remove();
+    }
+  });
+
+  /* Remove YARDIVO Smart automatic-recommendation navigation/module if present.
+     This is limited to the Smart module, not other AI/help features. */
+  document.querySelectorAll('[data-view],[data-home-target],.nav-btn,.home-menu-card,.home-card').forEach(el=>{
+    const t=txt(el);
+    const v=String(el.getAttribute?.('data-view')||el.getAttribute?.('data-home-target')||'').toLowerCase();
+    if(
+      v.includes('smartrecommend') ||
+      v.includes('smart-recommend') ||
+      t==='YARDIVO AUTOMATSKE PREPORUKE' ||
+      t.startsWith('YARDIVO AUTOMATSKE PREPORUKE ')
+    ){
+      el.remove();
+    }
+  });
+  document.querySelectorAll('[id*="smartRecommend" i],[id*="smart-recommend" i]').forEach(el=>el.remove());
+}
+
+let queued=false;
+function schedule(){
+ if(queued)return;queued=true;
+ queueMicrotask(()=>{queued=false;removeRequested(document)});
+}
+const mo=new MutationObserver(schedule);
+function boot(){
+ removeRequested(document);
+ if(document.body)mo.observe(document.body,{subtree:true,childList:true});
+}
+['yardivo:view-opened','yardivo:data-synced','yardivo:master-data-changed','yardivo:login'].forEach(ev=>window.addEventListener(ev,schedule));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+
+window.YardivoAdminCleanupV8={apply:removeRequested};
+})();
+</script>
+
+
+<script id="yardivo-global-delay-rules-v9">
+(function(){
+'use strict';
+if(window.__YARDIVO_GLOBAL_DELAY_RULES_V9__)return;
+window.__YARDIVO_GLOBAL_DELAY_RULES_V9__=true;
+
+function applyGlobal(){
+  try{
+    const api=window.YardivoDelayRulesV1;
+    if(!api?.get||!api?.apply)return;
+    const rules=api.get();
+    window.YARDIVO_GLOBAL_DELAY_RULES={...rules};
+    /* Reapply unchanged rules after warehouse/location changes so no view can
+       fall back to an old hard-coded or warehouse-specific threshold. */
+    try{TOLERANCE_MIN=Number(rules.graceMinutes)}catch(_){}
+    try{LATE_GRACE_MINUTES=Number(rules.graceMinutes)}catch(_){}
+  }catch(_){}
+}
+[
+ 'yardivo:context-changed',
+ 'yardivo:warehouse-changed',
+ 'yardivo:location-changed',
+ 'yardivo:view-opened',
+ 'yardivo:data-synced'
+].forEach(ev=>window.addEventListener(ev,applyGlobal));
+
+document.addEventListener('change',e=>{
+  const id=String(e.target?.id||'');
+  if(['globalWarehouse','yscWarehouseSelect','globalLocationV583','homeLocationSelect','yscLocationSelect'].includes(id)){
+    setTimeout(applyGlobal,0);
+  }
+},true);
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyGlobal,{once:true});else applyGlobal();
+window.YardivoGlobalDelayRulesV9={apply:applyGlobal};
+})();
+</script>
+
+
+<script id="yardivo-final-qa-1-5-v10">
+(function(){
+'use strict';
+if(window.__YARDIVO_FINAL_QA_1_5_V10__)return;
+window.__YARDIVO_FINAL_QA_1_5_V10__=true;
+
+function syncWarehouse(){
+  const sel=document.getElementById('globalWarehouse');
+  if(!sel)return;
+  const wid=String(sel.value||'').trim();
+  if(!wid||wid==='ALL')return;
+  try{
+    if(String(window.YardivoAppStateV583?.warehouse?.()||'')!==wid){
+      window.YardivoAppStateV583?.setWarehouse?.(wid);
+    }
+  }catch(_){}
+  try{window.activeWarehouse=wid;if(typeof activeWarehouse!=='undefined')activeWarehouse=wid}catch(_){}
+  try{localStorage.setItem('studenac_active_warehouse',wid)}catch(_){}
+  setTimeout(()=>{
+    try{if(document.getElementById('analytics')?.classList.contains('active')||document.body?.dataset?.managerView==='analytics')window.renderYardivoAnalytics?.()}catch(_){}
+    try{if(document.getElementById('dailyMap')?.classList.contains('active')||document.body?.dataset?.managerView==='dailyMap')window.renderDailyMap?.()}catch(_){}
+    try{if(document.getElementById('weeklyMap')?.classList.contains('active')||document.body?.dataset?.managerView==='weeklyMap')window.renderWeeklyMap?.()}catch(_){}
+  },0);
+}
+document.addEventListener('change',e=>{
+  if(e.target?.id==='globalWarehouse')syncWarehouse();
+},true);
+window.YardivoFinalQaV10={syncWarehouse};
+})();
+</script>
+
+
+<script id="yardivo-delay-label-sync-v10">
+(function(){
+'use strict';
+function sync(){
+  let t='14:00';
+  try{t=String(window.YardivoDelayRulesV1?.get?.().noShowAt||'14:00')}catch(_){}
+  const head=document.querySelector('#after14NoShowPanel .after14-alert-head strong');
+  if(head)head.textContent=`⚠ AUTOMATSKI NO-SHOW · ${t}`;
+  const ops=document.querySelector('#operationsPro .panel-head h2, #after14OperationsList')?.closest?.('.panel')?.querySelector?.('.panel-head h2');
+  if(ops&&/NO-SHOW/i.test(ops.textContent||''))ops.textContent=`AUTOMATSKI NO-SHOW · ${t}`;
+}
+window.addEventListener('yardivo:delay-rules-changed',sync);
+window.addEventListener('yardivo:view-opened',sync);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});else sync();
+window.YardivoDelayLabelSyncV10={sync};
+})();
+</script>
+
+<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260922-v5.8.3-final-qa-1-5-v10';</script>
 
 </body>
 </html>
