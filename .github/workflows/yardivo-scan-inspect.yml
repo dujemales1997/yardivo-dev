@@ -1,24 +1,39 @@
-name: Inspect scanner routing
+name: Validate scanner state fix
+permissions:
+  contents: write
 on:
   push:
     paths:
       - ".github/workflows/yardivo-scan-inspect.yml"
 jobs:
-  inspect:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect
+      - name: Validate scanner files
         shell: python
         run: |
           from pathlib import Path
-          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
-          needles=["location.pathname","/q/","scan=gate","scan=dock","scanner=","mobileScan","mobile-scan","gateScanner","dockScanner","SCAN GATE","SCAN DOCK"]
-          for n in needles:
-              start=0
-              for k in range(20):
-                  i=s.lower().find(n.lower(),start)
-                  if i<0: break
-                  print(f"\n===== {n} #{k+1} @ {i} =====\n")
-                  print(s[max(0,i-5000):min(len(s),i+11000)])
-                  start=i+len(n)
+          for name in ["scanner/index.html","YARDIVO_SCANNER_V5.8.3_ONE_QR.html"]:
+              s=Path(name).read_text(encoding="utf-8")
+              assert "NEMA DOZVOLE" in s
+              assert "scan-state-blue" in s
+              assert "scan-state-green" in s
+              assert "scan-state-red" in s
+              assert "await sb.auth.signOut().catch" not in s
+              start=s.rfind("<script>")
+              end=s.find("</script>",start)
+              Path("/tmp/"+name.replace("/","_")+".js").write_text(s[start+8:end],encoding="utf-8")
+          assert Path("scanner/index.html").read_bytes()==Path("YARDIVO_SCANNER_V5.8.3_ONE_QR.html").read_bytes()
+      - name: JavaScript syntax
+        run: |
+          node --check /tmp/scanner_index.html.js
+          node --check /tmp/YARDIVO_SCANNER_V5.8.3_ONE_QR.html.js
+          git diff --check
+      - name: Remove temporary inspection workflow
+        run: |
+          git config user.name "YARDIVO QA"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/yardivo-scan-inspect.yml
+          git commit -m "Remove scanner inspection workflow"
+          git push origin HEAD:main
