@@ -52642,14 +52642,47 @@ function populateLocationSelect(){
  sel.disabled=!rows.length;
  if(rows.length){sel.removeAttribute('disabled');sel.style.pointerEvents='auto';sel.style.opacity='1'}
 }
+function warehouseBookingState(id){
+ const m=masterData(),all=Array.isArray(m.warehouses)?m.warehouses:[],mw=all.find(x=>x&&x.active!==false&&String(x.id)===String(id));
+ /* If local Master is not hydrated yet, do not false-block the user.
+    The availability Edge Function remains the final authority. */
+ if(!mw)return {known:false,bookable:true,reason:''};
+ const rf=String(mw.reception_from||'').slice(0,5),rt=String(mw.reception_to||'').slice(0,5);
+ const schedule=/^([01]\d|2[0-3]):[0-5]\d$/.test(rf)&&/^([01]\d|2[0-3]):[0-5]\d$/.test(rt)&&rt>rf;
+ const ramps=(Array.isArray(mw.ramp_settings)?mw.ramp_settings:[]).filter(r=>r&&r.active!==false&&Number(r.number)>0&&Number(r.pallets_per_hour)>0);
+ const bookable=schedule&&ramps.length>0;
+ return {known:true,bookable,reason:!schedule?'radno vrijeme nije definirano':(!ramps.length?'nema aktivnih konfiguriranih rampi':'')};
+}
+function ensureWarehouseScopeNote(){
+ const sel=$('sbnWarehouseSelect');if(!sel||$('sbnScopeWarehouseNote'))return;
+ const host=sel.closest('label')||sel.parentElement;if(!host)return;
+ const n=document.createElement('small');n.id='sbnScopeWarehouseNote';
+ n.style.cssText='display:block;margin-top:7px;color:#7890a4;font-size:9px;line-height:1.45';
+ n.textContent='Prikazuju se skladišta dodijeljena ovom Supplier accountu.';
+ host.appendChild(n);
+}
 function populateWarehouseSelect(){
+ ensureWarehouseScopeNote();
  const sel=$('sbnWarehouseSelect');if(!sel)return;
  const rows=warehouses().filter(x=>x&&String(x.location_id||'')===String(loc));
  sel.innerHTML='<option value="">Odaberi skladište...</option>';
- rows.forEach(x=>sel.add(new Option(String(x.name||x.id),String(x.id))));
- sel.disabled=!loc||!rows.length;
- if(loc&&rows.length){sel.removeAttribute('disabled');sel.style.pointerEvents='auto';sel.style.opacity='1'}
+ let usable=0;
+ rows.forEach(x=>{
+   const st=warehouseBookingState(x.id),label=String(x.name||x.id)+(st.known&&!st.bookable?' · NIJE KONFIGURIRANO':'');
+   const o=new Option(label,String(x.id));o.disabled=st.known&&!st.bookable;
+   if(!o.disabled)usable++;
+   sel.add(o);
+ });
+ sel.disabled=!loc||!rows.length||usable===0;
+ if(loc&&rows.length&&usable>0){sel.removeAttribute('disabled');sel.style.pointerEvents='auto';sel.style.opacity='1'}
  try{sbnSelectSyncLastWh=String(sel.value||'')}catch(_){}
+ const note=$('sbnScopeWarehouseNote');
+ if(note){
+   const blocked=rows.filter(x=>{const st=warehouseBookingState(x.id);return st.known&&!st.bookable});
+   note.textContent=blocked.length
+     ? 'Skladišta označena “NIJE KONFIGURIRANO” nemaju radno vrijeme i/ili aktivne rampe u Master podacima te se ne mogu odabrati za najavu.'
+     : 'Prikazuju se skladišta dodijeljena ovom Supplier accountu.';
+ }
 }
 function contextReady(){return !!date&&!!loc&&!!wh}
 function qtyReady(){return Number($('sbnPallets')?.value)>0&&Number($('sbnSku')?.value)>0}
@@ -52699,7 +52732,18 @@ async function loadAvailability(){
    availability=await edge(AVAIL,{location_id:loc,warehouse_id:wh,delivery_date:date,pallets:Number($('sbnPallets').value),sku_count:Number($('sbnSku').value)});
    renderMap();status(availability?.closed_day?'NERADNI DAN':'ODABERI TERMIN');
    setTimeout(()=>$('sbnMapStep').scrollIntoView({behavior:'smooth',block:'center'}),70);
-  }catch(e){empty('Mapa termina nije dostupna',String(e?.message||e));status('PROVJERI PODATKE')}
+  }catch(e){
+ const msg=String(e?.message||e),code=String(e?.code||'');
+ if(code==='WAREHOUSE_RAMPS_INCOMPLETE'||/aktivnih rampi|konfiguriran.*ramp/i.test(msg)){
+   empty('Skladište nema konfigurirane aktivne rampe','Admin treba u Master podacima definirati aktivne rampe i kapacitet paleta/sat za odabrano skladište.');
+   status('SKLADIŠTE NIJE KONFIGURIRANO');
+ }else if(code==='WAREHOUSE_SCHEDULE_INCOMPLETE'||/vrijeme prijama/i.test(msg)){
+   empty('Radno vrijeme prijama nije definirano','Admin treba u Master podacima definirati vrijeme prijama za odabrano skladište.');
+   status('SKLADIŠTE NIJE KONFIGURIRANO');
+ }else{
+   empty('Mapa termina nije dostupna',msg);status('PROVJERI PODATKE');
+ }
+}
  },250);
 }
 function renderMap(){
@@ -52768,6 +52812,14 @@ function applyLocationSelection(){
 function applyWarehouseSelection(){
  const sel=$('sbnWarehouseSelect');if(!sel)return;
  const next=String(sel.value||'');
+ const st=next?warehouseBookingState(next):{known:false,bookable:true,reason:''};
+ if(next&&st.known&&!st.bookable){
+   sel.value='';wh='';resetChoice();
+   $('sbnQtyStep').hidden=true;$('sbnMapStep').hidden=true;$('sbnExtra').hidden=true;
+   status('SKLADIŠTE NIJE KONFIGURIRANO');
+   empty('Najava za ovo skladište trenutno nije moguća.',st.reason+'. Admin treba dovršiti Master konfiguraciju skladišta.');
+   return;
+ }
  wh=next;resetChoice();
  const ready=!!loc&&!!wh;
  $('sbnQtyStep').hidden=!ready;
@@ -52808,7 +52860,7 @@ $('sbnRecommend').onclick=showRecommendation;$('sbnReset').onclick=resetAll;$('s
 $('sbnFullscreen').onclick=()=>{const m=$('sbnMapStep'),on=!m.classList.contains('fullscreen');m.classList.toggle('fullscreen',on);document.body.classList.toggle('sbn-fullscreen',on);$('sbnFullscreen').textContent=on?'× ZATVORI':'⛶ POVEĆAJ MAPU'};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('sbnMapStep')?.classList.contains('fullscreen')){$('sbnMapStep').classList.remove('fullscreen');document.body.classList.remove('sbn-fullscreen');$('sbnFullscreen').textContent='⛶ POVEĆAJ MAPU'}});
 setTimeout(init,350);
-window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-warehouse-selection-fixed-final';
+window.YARDIVO_DEV_BUILD='20260923-v5.8.3-supplier-bookable-warehouse-guard-v13';
 })();
 </script><style id="yardivo-v583-supplier-requests-final-style">
 #supplierRequests .ysr-flow-info{
@@ -60970,7 +61022,7 @@ window.YardivoMasterSingleEditorV12={apply:removeDuplicate};
 })();
 </script>
 
-<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260923-v5.8.3-master-single-editor-v12';</script>
+<script id="yardivo-analytics-build-marker">window.YARDIVO_DEV_BUILD='20260923-v5.8.3-supplier-bookable-warehouse-guard-v13';</script>
 
 </body>
 </html>
