@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06111f">
+<title>YARDIVO · ONE QR Scanner</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#06111f;--panel:#0b1728;--panel2:#0f1f34;--line:#25466f;
+  --text:#eef6ff;--muted:#90a9c6;--green:#4aa3ff;--green2:#2f86e6;
+  --red:#ff6673;--yellow:#ffd56a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{padding:env(safe-area-inset-top) 14px calc(16px + env(safe-area-inset-bottom))}
+.wrap{max-width:720px;margin:0 auto}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 4px}
+.brand h1{font-size:18px;margin:0;letter-spacing:.04em}
+.brand small{color:var(--green);font-weight:900}
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:16px;margin:10px 0;box-shadow:0 14px 40px rgba(0,0,0,.26)}
+label{display:block;font-size:11px;color:var(--muted);font-weight:800;margin:10px 0 6px}
+input,select,button{font:inherit}
+input,select{width:100%;padding:13px 12px;border-radius:12px;border:1px solid #2b4f7d;background:#081729;color:var(--text);outline:none}
+input:focus,select:focus{border-color:var(--green2);box-shadow:0 0 0 3px rgba(74,163,255,.12)}
+button{border:0;border-radius:12px;padding:13px 16px;font-weight:950;cursor:pointer}
+button.primary{background:linear-gradient(180deg,#57adff,#2f86e6);color:#04111f}
+button.secondary{background:#132019;color:var(--text);border:1px solid #2b4f7d}
+button.danger{background:#31171a;color:#ffc5c8;border:1px solid #6b2d33}
+button:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1 1 180px}
+.status{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:900}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--yellow);box-shadow:0 0 14px rgba(255,213,106,.5)}
+.status.ok .dot{background:var(--green);box-shadow:0 0 14px rgba(74,163,255,.55)}
+.status.bad .dot{background:var(--red);box-shadow:0 0 14px rgba(255,107,116,.5)}
+.hidden{display:none!important}
+.auth{position:fixed;inset:0;z-index:100;background:radial-gradient(700px 380px at 50% 0,rgba(52,139,226,.22),transparent 70%),#07111b;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{width:min(430px,100%)}
+.login-brand{text-align:center;margin-bottom:22px}
+.login-logo{width:74px;height:74px;margin:0 auto 14px;border-radius:23px;display:grid;place-items:center;background:linear-gradient(145deg,#122b40,#0b1a28);border:1px solid #2f5f7d;box-shadow:0 18px 50px rgba(0,0,0,.35);font-size:28px;font-weight:1000;color:#68bdff}
+.login-brand h1{margin:0;font-size:25px;letter-spacing:-.02em}.login-brand p{margin:6px 0 0;color:#7895a7;font-size:11px}
+.login-panel{padding:17px;border-radius:20px;background:linear-gradient(180deg,#102235,#0b1825);border:1px solid #24465c;box-shadow:0 22px 60px rgba(0,0,0,.32)}
+.login-panel label{display:block;color:#839dac;font-size:9px;font-weight:1000;margin:10px 0 6px}
+.login-panel input{width:100%;padding:14px;border-radius:13px;border:1px solid #2a4c63;background:#081824;color:#fff;outline:none}
+.login-panel input:focus{border-color:#4aa7e7;box-shadow:0 0 0 3px rgba(74,167,231,.11)}
+.login-panel button{width:100%;margin-top:14px;border:0;border-radius:14px;padding:14px;background:linear-gradient(180deg,#62baff,#2c86d7);color:#04111a;font-weight:1000}
+.login-error{margin-top:10px;padding:11px;border:1px solid #8b3842;background:#2d1115;color:#ffbbc1;border-radius:12px;font-size:10px;font-weight:900;line-height:1.45}
+.welcome{position:fixed;inset:0;z-index:110;background:linear-gradient(180deg,#0b1d2d,#07111b);display:none;align-items:center;justify-content:center;padding:22px;text-align:center}
+.welcome.show{display:flex}.welcome-inner{width:min(420px,100%)}.welcome-logo{width:86px;height:86px;border-radius:28px;margin:0 auto 20px;display:grid;place-items:center;background:linear-gradient(145deg,#12324c,#0b1b2a);border:1px solid #3478a4;font-size:34px;font-weight:1000;color:#6bc0ff;box-shadow:0 20px 55px rgba(0,0,0,.35)}
+.welcome h2{margin:0;font-size:26px}.welcome p{margin:8px 0 0;color:#8ca6b7;font-size:12px}
+.welcome-progress{margin-top:24px;height:9px;border-radius:999px;background:#132b3a;overflow:hidden}.welcome-progress i{display:block;width:0;height:100%;background:linear-gradient(90deg,#45a6ff,#45e487);border-radius:999px;transition:width .18s ease}
+.welcome small{display:block;margin-top:9px;color:#6f899a;font-size:9px;font-weight:900;letter-spacing:.06em}
+.welcome-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:13px}.welcome-step{padding:7px 4px;border:1px solid #20394b;border-radius:9px;color:#617d8f;font-size:7px;font-weight:1000}.welcome-step.active{border-color:#3f92c8;color:#d9f1ff;background:#0d2637}.welcome-step.done{border-color:#327f60;color:#bdf2d3;background:#0c251c}
+.scanner-app{min-height:100%}
+#reader{width:100%;overflow:hidden;border-radius:16px;background:#000;min-height:280px}
+#reader video{object-fit:cover}
+.hero{text-align:center;padding:8px 0 2px}
+.hero strong{display:block;font-size:20px}
+.hero span{color:var(--muted);font-size:12px}
+.result{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.fact{border:1px solid #25466f;border-radius:12px;padding:10px;background:#09182a}
+.fact small{display:block;color:var(--muted);font-size:9px;font-weight:800;margin-bottom:3px}
+.fact strong{font-size:13px;word-break:break-word}
+.msg{padding:11px 12px;border-radius:12px;border:1px solid #5a4720;background:#251e0b;color:#ffe8a4;font-size:12px;font-weight:800;line-height:1.45}
+.msg.ok{border-color:#2f78bb;background:#0b223d;color:#b9dcff}
+.msg.bad{border-color:#b73543;background:#3a1017;color:#ffd3d7;font-size:13px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rolepill{font-size:10px;font-weight:950;color:#c6e4ff;background:#0c2541;border:1px solid #2f6fa8;padding:7px 9px;border-radius:999px}
+.footer{color:#5f7568;text-align:center;font-size:10px;padding:18px 6px}
+@media(max-width:520px){.result{grid-template-columns:1fr}.brand h1{font-size:16px}}
+</style>
+</head>
+<body>
+<section id="auth" class="auth">
+  <div class="login-box">
+    <div class="login-brand">
+      <div class="login-logo">Y</div>
+      <h1>YARDIVO PRIJAM</h1>
+      <p id="loginContext">MOBILE QR SCANNER · PRIJAVA</p>
+    </div>
+    <div class="login-panel">
+      <label for="username">KORISNIČKO IME</label>
+      <input id="username" autocomplete="username" autocapitalize="none" spellcheck="false">
+      <label for="password">LOZINKA</label>
+      <input id="password" type="password" autocomplete="current-password">
+      <button id="loginBtn">PRIJAVI SE</button>
+      <div id="loginMsg" class="login-error hidden"></div>
+    </div>
+  </div>
+</section>
+
+<section id="welcome" class="welcome" aria-hidden="true">
+  <div class="welcome-inner">
+    <div class="welcome-logo">Y</div>
+    <h2 id="welcomeTitle">YARDIVO PRIJAM</h2>
+    <p id="welcomeSub">Provjeravam pristup scanneru…</p>
+    <div class="welcome-progress"><i id="welcomeFill"></i></div>
+    <small id="welcomePct">0%</small>
+    <div class="welcome-steps">
+      <div class="welcome-step" data-step="login">PRIJAVA</div>
+      <div class="welcome-step" data-step="scope">OVLASTI</div>
+      <div class="welcome-step" data-step="warehouse">SKLADIŠTE</div>
+      <div class="welcome-step" data-step="scanner">SCANNER</div>
+    </div>
+  </div>
+</section>
+
+<div id="scannerApp" class="scanner-app hidden">
+<div class="wrap">
+  <div class="brand">
+    <div><h1>YARDIVO · ONE QR</h1><small>MOBILE SCANNER · V5.8.3 · LOGIN TRACKING V2</small></div>
+    <div id="netStatus" class="status"><span class="dot"></span><span>PRIPREMA</span></div>
+  </div>
+
+  <section id="scannerCard" class="hidden">
+    <div class="card">
+      <div class="toolbar">
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:800">PRIJAVLJEN</div>
+          <strong id="who">—</strong>
+        </div>
+        <div class="row" style="flex:0 1 auto">
+          <span id="rolePill" class="rolepill">—</span>
+          <button id="logoutBtn" class="secondary">ODJAVA</button>
+        </div>
+      </div>
+
+      <div id="adminModeWrap" class="hidden" style="margin-top:14px">
+        <label for="adminMode">ADMIN SCAN NAČIN</label>
+        <select id="adminMode">
+          <option value="gate">PORTA · ULAZ</option>
+          <option value="dock">PRIJAM · NA RAMPI</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hero">
+        <strong>Skeniraj YARDIVO QR</strong>
+        <span>Kamera radi samo nakon tvoje dozvole</span>
+      </div>
+      <div id="reader"></div>
+      <div class="row" style="margin-top:12px">
+        <button id="startBtn" class="primary">UKLJUČI KAMERU</button>
+        <button id="stopBtn" class="secondary" disabled>ZAUSTAVI</button>
+      </div>
+      <div id="scanMsg" class="msg hidden" style="margin-top:12px"></div>
+
+      <details style="margin-top:12px">
+        <summary style="cursor:pointer;color:var(--muted);font-size:11px;font-weight:900">RUČNI TEST TOKENA</summary>
+        <label for="manualToken">QR URL ILI TOKEN</label>
+        <input id="manualToken" placeholder="Zalijepi QR URL ili token">
+        <button id="manualBtn" class="secondary" style="width:100%;margin-top:8px">PROVJERI</button>
+      </details>
+    </div>
+
+    <div id="resultCard" class="card hidden">
+      <div class="hero">
+        <strong id="resultTitle">QR VALJAN</strong>
+        <span id="resultSub">Provjeri podatke prije potvrde</span>
+      </div>
+      <div id="facts" class="result"></div>
+      <div class="row" style="margin-top:14px">
+        <button id="confirmBtn" class="primary">POTVRDI</button>
+        <button id="rejectBtn" class="danger hidden">ODBIJEN</button>
+        <button id="cancelBtn" class="secondary">ODUSTANI</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">YARDIVO · Supabase protected scanner · ONE QR</div>
+</div>
+</div>
+
+<script>
+(()=>{'use strict';
+
+const SUPABASE_URL='https://rskticdbiovvgyocpzoc.supabase.co';
+const SUPABASE_KEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
+  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}
+});
+
+const $=id=>document.getElementById(id);
+let scope=null,currentToken='',currentValidation=null,qr=null,running=false,lastDecoded='';
+const params=new URLSearchParams(location.search);
+const requestedRole=String(params.get('role')||'').toLowerCase();
+const requestedWarehouse=String(params.get('warehouse')||'').trim();
+
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function setNet(ok,text){
+  const el=$('netStatus');el.className='status '+(ok?'ok':'bad');
+  el.querySelector('span:last-child').textContent=text;
+}
+function msg(el,text,type=''){
+  el.textContent=text;el.className='msg '+(type||'');el.classList.toggle('hidden',!text);
+}
+function role(){return String(scope?.app_role||'').toLowerCase()}
+function mode(){
+  if(role()==='gate')return'gate';
+  if(role()==='reception')return'dock';
+  return $('adminMode').value||'gate';
+}
+function prettyRole(r){return ({gate:'PORTA',reception:'PRIJAM',admin:'ADMIN'})[r]||String(r||'').toUpperCase()}
+function tokenFromRaw(raw){
+  raw=String(raw||'').trim();
+  if(!raw)return'';
+  try{
+    const u=new URL(raw);
+    const parts=u.pathname.split('/').filter(Boolean);
+    const i=parts.findIndex(x=>x==='pass');
+    if(i>=0&&parts[i+1])return decodeURIComponent(parts[i+1]);
+  }catch(_){}
+  const m=raw.match(/\/q\/pass\/([^?#\s]+)/i);
+  if(m)return decodeURIComponent(m[1]);
+  return raw;
+}
+async function invokeGate(action,payload={}){
+  const {data,error}=await sb.functions.invoke('yardivo-gate-pass',{body:{action,...payload}});
+  if(error){
+    let text=error.message||String(error);
+    try{
+      const body=await error.context?.json?.();
+      if(body?.error)text=body.error;
+    }catch(_){}
+    throw new Error(text);
+  }
+  if(data?.ok===false)throw new Error(data.error||'SCAN_ERROR');
+  return data;
+}
+async function fetchScope(){
+  const {data,error}=await sb.functions.invoke('yardivo-user-scope',{body:{fresh:true}});
+  if(error)throw error;
+  if(!data?.ok)throw new Error(data?.error||'Scope nije dostupan.');
+  return data.data||{};
+}
+function assertRequestedAccess(){
+  const r=role();
+  if(!['gate','reception','admin'].includes(r))throw new Error('Ovaj račun nema pravo koristiti mobilni scanner.');
+  if(requestedRole==='reception'&&!['reception','admin'].includes(r))throw new Error('Za PRIJAM scanner potreban je račun Prijam ili Admin.');
+  if(requestedRole==='gate'&&!['gate','admin'].includes(r))throw new Error('Za PORTA scanner potreban je račun Porta ili Admin.');
+}
+function setProgress(percent,step,text){
+  const fill=$('welcomeFill'),pct=$('welcomePct');
+  if(fill)fill.style.width=Math.max(0,Math.min(100,percent))+'%';
+  if(pct)pct.textContent=Math.max(0,Math.min(100,percent))+'%';
+  document.querySelectorAll('.welcome-step').forEach(el=>{
+    const order=['login','scope','warehouse','scanner'];
+    const here=order.indexOf(step),idx=order.indexOf(el.dataset.step);
+    el.classList.toggle('done',idx<here||percent===100);
+    el.classList.toggle('active',idx===here&&percent<100);
+  });
+  if(text&&$('welcomeSub'))$('welcomeSub').textContent=text;
+}
+async function welcomeThenOpen(){
+  $('auth').classList.add('hidden');
+  $('welcome').classList.add('show');
+  $('welcome').setAttribute('aria-hidden','false');
+  $('scannerApp').classList.add('hidden');
+  $('welcomeTitle').textContent='DOBRODOŠLI, '+String(scope?.username||prettyRole(role())).toUpperCase();
+  setProgress(25,'login','Prijava potvrđena.');
+  await new Promise(r=>setTimeout(r,180));
+  setProgress(50,'scope','Provjeravam ovlasti za '+(requestedRole==='reception'?'PRIJAM':requestedRole==='gate'?'PORTU':'SCANNER')+'…');
+  await new Promise(r=>setTimeout(r,180));
+  setProgress(75,'warehouse',requestedWarehouse?'Skladište '+requestedWarehouse+' · priprema scanner…':'Priprema scanner…');
+  await new Promise(r=>setTimeout(r,180));
+  setProgress(100,'scanner','Scanner je spreman.');
+  await new Promise(r=>setTimeout(r,220));
+  $('welcome').classList.remove('show');
+  $('welcome').setAttribute('aria-hidden','true');
+  $('scannerApp').classList.remove('hidden');
+  $('scannerCard').classList.remove('hidden');
+  setNet(true,'ONLINE');
+}
+function showScanner(){
+  $('scannerCard').classList.remove('hidden');
+  $('who').textContent=scope?.username||'YARDIVO';
+  $('rolePill').textContent=prettyRole(role());
+  $('adminModeWrap').classList.toggle('hidden',role()!=='admin');
+}
+function showLogin(){
+  $('scannerCard').classList.add('hidden');
+  $('scannerApp').classList.add('hidden');
+  $('welcome').classList.remove('show');
+  $('auth').classList.remove('hidden');
+  $('resultCard').classList.add('hidden');
+  scope=null;currentToken='';currentValidation=null;
+}
+async function login(){
+  const username=$('username').value.trim().toLowerCase();
+  const password=$('password').value;
+  msg($('loginMsg'),'');
+  if(!username||!password){msg($('loginMsg'),'Upiši korisničko ime i lozinku.','bad');return}
+  const btn=$('loginBtn');btn.disabled=true;btn.textContent='PRIJAVA…';
+  try{
+    const {data,error}=await sb.auth.signInWithPassword({email:`${username}@yardivo.local`,password});
+    if(error||!data?.session)throw error||new Error('Prijava nije uspjela.');
+    scope=await fetchScope();
+    try{assertRequestedAccess()}catch(accessErr){await sb.auth.signOut();throw accessErr}
+    await welcomeThenOpen();
+    msg($('scanMsg'),'Prijava uspješna. Uključi kameru i skeniraj QR.','ok');
+  }catch(e){
+    msg($('loginMsg'),String(e?.message||e),'bad');setNet(false,'OFFLINE');
+  }finally{btn.disabled=false;btn.textContent='PRIJAVI SE'}
+}
+async function startCamera(){
+  msg($('scanMsg'),'');
+  if(running)return;
+  if(!window.Html5Qrcode){msg($('scanMsg'),'QR kamera biblioteka nije učitana. Provjeri internet vezu.','bad');return}
+  try{
+    qr=new Html5Qrcode('reader');
+    const cams=await Html5Qrcode.getCameras();
+    if(!cams?.length)throw new Error('Kamera nije pronađena ili nije dopuštena.');
+    const back=cams.find(c=>/back|rear|environment/i.test(c.label))||cams[cams.length-1];
+    await qr.start(
+      {deviceId:{exact:back.id}},
+      {fps:12,qrbox:{width:240,height:240},aspectRatio:1},
+      async decoded=>{
+        if(decoded===lastDecoded)return;
+        lastDecoded=decoded;setTimeout(()=>{lastDecoded=''},1800);
+        await processRaw(decoded);
+      },
+      ()=>{}
+    );
+    running=true;$('startBtn').disabled=true;$('stopBtn').disabled=false;
+    msg($('scanMsg'),'Kamera je uključena. Usmjeri je prema YARDIVO QR kodu.','ok');
+  }catch(e){
+    msg($('scanMsg'),String(e?.message||e),'bad');
+    try{await qr?.clear?.()}catch(_){}
+    qr=null;running=false;
+  }
+}
+async function stopCamera(){
+  if(!qr)return;
+  try{await qr.stop()}catch(_){}
+  try{await qr.clear()}catch(_){}
+  qr=null;running=false;$('startBtn').disabled=false;$('stopBtn').disabled=true;
+}
+async function processRaw(raw){
+  const token=tokenFromRaw(raw);
+  if(!token){msg($('scanMsg'),'QR token nije prepoznat.','bad');return}
+  currentToken=token;currentValidation=null;
+  msg($('scanMsg'),'Provjeravam QR u YARDIVO bazi…');
+  try{
+    const data=await invokeGate('validate',{token,type:mode()});
+    currentValidation=data;
+    renderValidation(data);
+    msg($('scanMsg'),'QR je valjan. Provjeri podatke i potvrdi.','ok');
+    if(running)await stopCamera();
+  }catch(e){
+    const er=String(e?.message||e);
+    if(/QR_SCAN_DISABLED/i.test(er)){
+      msg($('scanMsg'),'ERROR · Mobilno QR skeniranje je isključeno u YARDIVO Postavkama. Admin mora uključiti QR Scan switch za test.','bad');
+    }else{
+      msg($('scanMsg'),'⛔ NEVAŽEĆI QR · '+er,'bad');
+    }
+    $('resultCard').classList.add('hidden');
+  }
+}
+function fmtDateTime(v){
+  if(!v)return'—';
+  try{return new Intl.DateTimeFormat('hr-HR',{dateStyle:'short',timeStyle:'medium'}).format(new Date(v))}catch(_){return String(v)}
+}
+function renderValidation(d){
+  const isGate=mode()==='gate';
+  const completing=!isGate && d.nextAction==='complete';
+  $('resultTitle').textContent='QR VALJAN';
+  $('resultSub').textContent=isGate
+    ?'Porta · provjeri podatke i potvrdi ulaz'
+    :(completing?'Prijam · završi prijam':'Prijam · spoji vozilo na rampu');
+
+  const facts=[
+    ['DOBAVLJAČ',d.supplier||'—'],
+    ['REGISTRACIJA',d.plate||'—'],
+    ['VOZAČ',d.driver||'—'],
+    ['KONTAKT VOZAČA',d.driverContact||'—'],
+    ['PRIKOLICA',d.trailerPlate||'—'],
+    ['LOKACIJA',d.locationName||'—'],
+    ['SKLADIŠTE',d.warehouseName||'—'],
+    ['DATUM NAJAVE',d.date||'—'],
+    ['VRIJEME NAJAVE',d.time||'—'],
+    ['RAMPA',d.dock||'—'],
+    ['PALETE',Number.isFinite(Number(d.pallets))?d.pallets:'—'],
+    ['SKU',Number.isFinite(Number(d.sku))?d.sku:'—'],
+    ['BROJ NARUDŽBE',d.orderNumber||'—'],
+    ['STATUS',String(d.status||'—').toUpperCase()==='RAMPA'?'NA RAMPI':(d.status||'—')],
+    ['ULAZ EVIDENTIRAN',fmtDateTime(d.gateUsedAt)],
+    ['SPOJEN NA RAMPU',fmtDateTime(d.dockUsedAt||d.dockArrivalAt)]
+  ];
+  $('facts').innerHTML=facts.map(([k,v])=>`<div class="fact"><small>${esc(k)}</small><strong>${esc(v)}</strong></div>`).join('');
+
+  $('rejectBtn').classList.toggle('hidden',!completing);
+  $('confirmBtn').classList.remove('hidden');
+  if(isGate)$('confirmBtn').textContent='POTVRDI ULAZ';
+  else if(completing)$('confirmBtn').textContent='ZAPRIMLJEN';
+  else $('confirmBtn').textContent='NA RAMPI';
+
+  $('resultCard').classList.remove('hidden');
+}
+async function finishReception(outcome){
+  if(!currentToken||!currentValidation)return;
+  const ok=outcome==='received';
+  const btn=ok?$('confirmBtn'):$('rejectBtn');
+  const other=ok?$('rejectBtn'):$('confirmBtn');
+  btn.disabled=true;other.disabled=true;
+  const previous=btn.textContent;btn.textContent='SPREMAM…';
+  try{
+    const data=await invokeGate('complete',{token:currentToken,type:'dock',outcome});
+    msg($('scanMsg'),ok
+      ?'USPJEH · Prijam je završen: ZAPRIMLJEN.'
+      :'USPJEH · Prijam je završen: ODBIJEN.','ok');
+    $('resultCard').classList.add('hidden');
+    currentToken='';currentValidation=null;
+    setTimeout(()=>startCamera(),900);
+  }catch(e){
+    const er=String(e?.message||e);
+    if(/QR_SCAN_DISABLED/i.test(er))msg($('scanMsg'),'ERROR · QR Scan switch je isključen u YARDIVO Postavkama.','bad');
+    else msg($('scanMsg'),'ERROR · '+er,'bad');
+  }finally{
+    btn.disabled=false;other.disabled=false;btn.textContent=previous;
+  }
+}
+async function confirmScan(){
+  if(!currentToken||!currentValidation)return;
+  if(mode()==='dock'&&currentValidation.nextAction==='complete'){
+    return finishReception('received');
+  }
+  const action=mode()==='gate'?'arrival':'dock';
+  const btn=$('confirmBtn');btn.disabled=true;btn.textContent='SPREMAM…';
+  try{
+    const data=await invokeGate(action,{token:currentToken,type:mode()});
+    msg($('scanMsg'),action==='arrival'
+      ?'USPJEH · Vozilo je evidentirano kao U DVORIŠTU.'
+      :'USPJEH · Vozilo je NA RAMPI i vrijeme spajanja je zabilježeno.','ok');
+    $('resultCard').classList.add('hidden');
+    currentToken='';currentValidation=null;
+    setTimeout(()=>startCamera(),900);
+  }catch(e){
+    const er=String(e?.message||e);
+    if(/QR_SCAN_DISABLED/i.test(er))msg($('scanMsg'),'ERROR · QR Scan switch je isključen u YARDIVO Postavkama.','bad');
+    else msg($('scanMsg'),'ERROR · '+er,'bad');
+  }finally{
+    btn.disabled=false;
+    btn.textContent=mode()==='gate'?'POTVRDI ULAZ':'NA RAMPI';
+  }
+}
+
+$('loginBtn').onclick=login;
+$('password').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+$('startBtn').onclick=startCamera;
+$('stopBtn').onclick=stopCamera;
+$('manualBtn').onclick=()=>processRaw($('manualToken').value);
+$('confirmBtn').onclick=confirmScan;
+$('rejectBtn').onclick=()=>finishReception('rejected');
+$('cancelBtn').onclick=()=>{$('resultCard').classList.add('hidden');currentToken='';currentValidation=null;startCamera()};
+$('adminMode').onchange=()=>{if(currentValidation)renderValidation(currentValidation)};
+$('logoutBtn').onclick=async()=>{await stopCamera();await sb.auth.signOut();showLogin();$('username').value='';$('password').value='';setNet(false,'ODJAVLJEN')};
+
+window.addEventListener('online',()=>setNet(true,'ONLINE'));
+window.addEventListener('offline',()=>setNet(false,'OFFLINE'));
+
+/* Scanner Mobile always starts on explicit login, same principle as Manager Mobile.
+   Existing browser/Supabase session is never used to silently reveal the scanner UI. */
+scope=null;
+$('auth').classList.remove('hidden');
+$('welcome').classList.remove('show');
+$('scannerApp').classList.add('hidden');
+$('scannerCard').classList.add('hidden');
+$('username').value='';
+$('password').value='';
+$('loginContext').textContent=(requestedRole==='reception'?'PRIJAM':requestedRole==='gate'?'PORTA':'MOBILE QR SCANNER')+(requestedWarehouse?' · '+requestedWarehouse:'')+' · PRIJAVA';
+setNet(navigator.onLine,'SPREMAN');
+})();
+</script>
+</body>
+</html>
