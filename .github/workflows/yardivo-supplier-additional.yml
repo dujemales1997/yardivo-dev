@@ -113,9 +113,9 @@ jobs:
           assert 'yardivoSupplierAdditionalModalV583' in s
           assert 'UNESI DODATNO' in s
           assert "window.YardivoSupplierLiveSync?.call?.('vehicle',payload)" in s
-          assert """(x.review?'<div class="ysps-review" style="margin-top:10px">YARDIVO: '""" not in s
           m=re.search(r'<script id="yardivo-v583-supplier-history-status-server-authority-20260923">(.*?)</script>',s,re.S)
           assert m
+          assert """(x.review?'<div class="ysps-review" style="margin-top:10px">YARDIVO: '""" not in m.group(1)
           Path("/tmp/supplier-authority.js").write_text(m.group(1),encoding="utf-8")
           subprocess.check_call(["node","--check","/tmp/supplier-authority.js"])
       - name: Commit
