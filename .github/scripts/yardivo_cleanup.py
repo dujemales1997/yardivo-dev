@@ -6,14 +6,32 @@ s = p.read_text(encoding="utf-8")
 before = len(s)
 changes = []
 
+def script_bounds(script_id):
+    marker = f'id="{script_id}"'
+    pos = s.find(marker)
+    if pos < 0:
+        marker = f"id='{script_id}'"
+        pos = s.find(marker)
+    if pos < 0:
+        return None
+    a = s.rfind("<script", 0, pos)
+    z = s.find("</script>", pos)
+    if a < 0 or z < 0:
+        return None
+    z += len("</script>")
+    while z < len(s) and s[z] in "\r\n":
+        z += 1
+    return a, z
+
 def remove_script(script_id):
     global s
-    pat = re.compile(r'<script\\b[^>]*\\bid=["\']' + re.escape(script_id) + r'["\'][^>]*>[\\s\\S]*?</script>\\s*', re.I)
-    s2, n = pat.subn('', s, count=1)
-    if n:
-        s = s2
-        changes.append("remove:" + script_id)
-    return n
+    bounds = script_bounds(script_id)
+    if not bounds:
+        return 0
+    a, z = bounds
+    s = s[:a] + s[z:]
+    changes.append("remove:" + script_id)
+    return 1
 
 def replace_once(old, new, label, required=False):
     global s
@@ -30,17 +48,17 @@ def replace_once(old, new, label, required=False):
 
 def replace_in_script(script_id, old, new, label, required=False):
     global s
-    pat = re.compile(r'<script\\b[^>]*\\bid=["\']' + re.escape(script_id) + r'["\'][^>]*>[\\s\\S]*?</script>', re.I)
-    m = pat.search(s)
-    if not m:
+    bounds = script_bounds(script_id)
+    if not bounds:
         if required:
             raise SystemExit(f"{label}: script not found: {script_id}")
         return False
-    block = m.group(0)
+    a, z = bounds
+    block = s[a:z]
     n = block.count(old)
     if n == 1:
-        block2 = block.replace(old, new, 1)
-        s = s[:m.start()] + block2 + s[m.end():]
+        block = block.replace(old, new, 1)
+        s = s[:a] + block + s[z:]
         changes.append(label)
         return True
     if required and n == 0:
