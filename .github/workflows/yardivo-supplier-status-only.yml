@@ -110,7 +110,7 @@ jobs:
           s=s.replace("function renderAll(){if(!isSupplier())return;renderHistory();renderStatus();renderKpis();hideFloatingSupplierUi()}",
                       "function renderAll(){if(!isSupplier())return;renderStatus();renderKpis();hideFloatingSupplierUi()}",1)
           s=s.replace("['history','status'].includes(currentView())","currentView()==='status'",1)
-          s=s.replace("if(b&&['history','status'].includes(String(b.dataset.yspView||'')))","if(b&&String(b.dataset.yspView||'')==='status'",1)
+          s=s.replace("if(b&&['history','status'].includes(String(b.dataset.yspView||'')))","if(b&&String(b.dataset.yspView||'')==='status')",1)
           s=s.replace("!['history','status'].includes(activeSupplierView)","activeSupplierView!=='status'",1)
           s=s.replace('#yardivoSupplierPortal [data-ysp-view="history"],#yardivoSupplierPortal [data-ysp-view="status"]','#yardivoSupplierPortal [data-ysp-view="status"]',1)
           
