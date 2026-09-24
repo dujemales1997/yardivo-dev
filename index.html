@@ -61804,7 +61804,7 @@ function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function statusKey(v){return String(v||'pending').trim().toLowerCase()}
 function statusLabel(v){
   const s=statusKey(v);
-  return {pending:'ČEKA POTVRDU',confirmed:'POTVRĐENO',revision_requested:'VRAĆENO NA DORADU',rejected:'ODBIJENO',arrival:'U DVORIŠTU',dock:'NA RAMPI',receiving:'ZAPRIMANJE',completed:'ZAPRIMLJENO',cancelled:'OTKAZANO',canceled:'OTKAZANO'}[s]||String(v||'ČEKA POTVRDU').toUpperCase()
+  return {pending:'ČEKA POTVRDU',confirmed:'POTVRĐENO',revision_requested:'VRAĆENO NA DORADU',rejected:'ODBIJENO',arrival:'U DVORIŠTU',dock:'NA RAMPI',receiving:'ZAPRIMANJE',completed:'ZAPRIMLJENO',cancelled:'IZBRISANA NAJAVA',canceled:'IZBRISANA NAJAVA'}[s]||String(v||'ČEKA POTVRDU').toUpperCase()
 }
 function statusClass(v){const s=statusKey(v);return ['completed','confirmed','arrival','dock','receiving'].includes(s)?'ok':['rejected','cancelled','canceled'].includes(s)?'bad':'wait'}
 function whLabel(code){
@@ -61921,7 +61921,7 @@ function renderHistory(){
   const history=rows.filter(x=>['completed','rejected'].includes(statusKey(x.status)));
   if(!history.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema zaprimljenih ili odbijenih najava.</div></td></tr>';return}
   body.innerHTML=history.map(x=>{
-    const qr=x.qrUrl?'<span class="ysph-qr-ready">▣ QR STIGAO</span><br><button type="button" class="ysph-qr" data-yv-server-qr-open="'+esc(x.id)+'">OTVORI QR</button> <button type="button" class="ysph-qr" data-yv-server-qr-pdf="'+esc(x.id)+'">PREUZMI PDF</button>':'';
+    const qr=!['cancelled','canceled'].includes(statusKey(x.status))&&x.qrUrl?'<span class="ysph-qr-ready">▣ QR STIGAO</span><br><button type="button" class="ysph-qr" data-yv-server-qr-open="'+esc(x.id)+'">OTVORI QR</button> <button type="button" class="ysph-qr" data-yv-server-qr-pdf="'+esc(x.id)+'">PREUZMI PDF</button>':'';
     return '<tr>'+
       '<td><span class="ysph-id">'+esc(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+'</span><span class="ysph-sub">Ažurirano: '+esc(x.updatedAt?new Date(x.updatedAt).toLocaleString('hr-HR'):'—')+'</span></td>'+
       '<td><b>'+esc(x.date||'—')+'</b><span class="ysph-sub">'+esc(x.time||'—')+'</span></td>'+
@@ -62134,5 +62134,48 @@ setTimeout(()=>{ensure();refreshThreads();setInterval(()=>{if(!document.hidden&&
 window.YardivoOperationalChatV583={open:openPanel,close:closePanel,refresh:refreshThreads};})();
 </script>
 
+
+<style id="yardivo-v583-supplier-history-tombstone-voice-style">
+#yardivoSupplierPortal [data-ysp-view="history"]{display:block!important}
+#yardivoSupplierPortal .ysph-status.bad{font-weight:950}
+</style>
+<script id="yardivo-v583-supplier-history-tombstone-voice-20260924">
+(function(){
+'use strict';
+if(window.__YARDIVO_SUPPLIER_HISTORY_TOMBSTONE_VOICE_20260924__)return;
+window.__YARDIVO_SUPPLIER_HISTORY_TOMBSTONE_VOICE_20260924__=true;
+function role(){try{return String((window.currentSession||{}).role||'').toLowerCase()}catch(_){return''}}
+function purgeGhostSupplier(){
+ try{for(const st of [localStorage,sessionStorage]){const remove=[];for(let i=0;i<st.length;i++){const k=st.key(i);if(k&&String(k).toLowerCase().includes('dobavljac69'))remove.push(k)}remove.forEach(k=>st.removeItem(k))}}catch(_){}
+ try{document.querySelectorAll('option,tr,li,[data-username],[data-user]').forEach(el=>{const txt=String(el.textContent||'').trim().toLowerCase(),du=String(el.getAttribute?.('data-username')||el.getAttribute?.('data-user')||'').toLowerCase();if(txt==='dobavljac69'||du==='dobavljac69'||txt.includes('dobavljac69'))el.remove()})}catch(_){}
+}
+function relevant(n){
+ if(!n||typeof n!=='object')return false;
+ const r=role();if(!r)return false;
+ const roles=Array.isArray(n.roles)?n.roles.map(x=>String(x).toLowerCase()):[];
+ if(roles.length&&!roles.includes(r)&&!roles.includes('all'))return false;
+ if(r==='supplier'){const me=String(window.currentSession?.username||window.currentSession?.user||'').toLowerCase(),target=String(n.supplier_username||n.supplierUsername||n.username||'').toLowerCase();if(target&&me&&target!==me)return false}
+ return true;
+}
+const KEY='yardivo_voice_notif_seen_v583';let initialized=false;
+function loadSeen(){try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return new Set(Array.isArray(a)?a.map(String):[])}catch(_){return new Set()}}
+function saveSeen(set){try{localStorage.setItem(KEY,JSON.stringify([...set].slice(-300)))}catch(_){}}
+function speak(text){try{if(!('speechSynthesis' in window)||!window.SpeechSynthesisUtterance)return;const u=new SpeechSynthesisUtterance(String(text||'').slice(0,500));u.lang='hr-HR';u.rate=1;u.pitch=1;window.speechSynthesis.speak(u)}catch(_){}}
+function currentNotifications(){try{const a=JSON.parse(localStorage.getItem('yardivo_live_notifications_v1')||'[]');return Array.isArray(a)?a:[]}catch(_){return[]}}
+function pollVoice(){
+ const list=currentNotifications().filter(relevant),seen=loadSeen();
+ if(!initialized){list.forEach(n=>seen.add(String(n.id||n.event||n.createdAt||n.at||'')));saveSeen(seen);initialized=true;return}
+ const fresh=list.filter(n=>{const id=String(n.id||n.event||n.createdAt||n.at||'');return id&&!seen.has(id)}).sort((a,b)=>String(a.createdAt||a.at||'').localeCompare(String(b.createdAt||b.at||'')));
+ for(const n of fresh){const id=String(n.id||n.event||n.createdAt||n.at||'');seen.add(id);const title=String(n.title||'Nova YARDIVO obavijest'),body=String(n.body||'');speak(title+(body?'. '+body:''))}
+ if(fresh.length)saveSeen(seen);
+}
+function boot(){purgeGhostSupplier();pollVoice()}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,100));
+window.addEventListener('load',()=>setTimeout(boot,250),{once:true});
+['yardivo:login','yardivo:data-synced','yardivo:notification','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{purgeGhostSupplier();pollVoice()},40)));
+setInterval(()=>{purgeGhostSupplier();pollVoice()},1000);
+try{new MutationObserver(()=>purgeGhostSupplier()).observe(document.documentElement,{childList:true,subtree:true})}catch(_){}
+})();
+</script>
 </body>
 </html>
