@@ -61991,7 +61991,7 @@ function ensureHistoryNote(){
 }
 function renderHistory(){
   const body=$('yspHistoryBody');if(!body)return;ensureHistoryNote();
-  const history=rows.filter(x=>!['pending','revision_requested','proposal_sent'].includes(statusKey(x.status)));
+  const history=rows.filter(x=>['confirmed','arrival','dock','receiving','completed','rejected'].includes(statusKey(x.status)));
   if(!history.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema potvrđenih ili odbijenih najava.</div></td></tr>';return}
   body.innerHTML=history.map(x=>{
     const qr=!['cancelled','canceled'].includes(statusKey(x.status))&&x.qrUrl?'<span class="ysph-qr-ready">▣ QR STIGAO</span><br><button type="button" class="ysph-qr" data-yv-server-qr-open="'+esc(x.id)+'">OTVORI QR</button> <button type="button" class="ysph-qr" data-yv-server-qr-pdf="'+esc(x.id)+'">PREUZMI PDF</button>':'';
@@ -62045,7 +62045,7 @@ function renderKpis(){
   set('yspKpiPending',rows.filter(x=>['pending','revision_requested'].includes(statusKey(x.status))).length);
   set('yspKpiDone',rows.filter(x=>statusKey(x.status)==='completed').length)
 }
-function renderAll(){if(!isSupplier())return;renderStatus();renderKpis();hideFloatingSupplierUi()}
+function renderAll(){if(!isSupplier())return;renderStatus();renderHistory();renderKpis();hideFloatingSupplierUi()}
 function hideFloatingSupplierUi(){
   if(!isSupplier())return;
   document.querySelectorAll('body > div,body > section').forEach(el=>{
@@ -62060,7 +62060,7 @@ function hideFloatingSupplierUi(){
 function currentView(){return portal()?.querySelector('[data-ysp-view].active')?.dataset.yspView||''}
 function schedule(){
   clearInterval(timer);
-  timer=setInterval(()=>{if(!document.hidden&&isSupplier()&&currentView()==='status')pull(false)},3000)
+  timer=setInterval(()=>{const v=currentView();if(!document.hidden&&isSupplier()&&(v==='status'||v==='history'))pull(false)},3000)
 }
 function ensureSupplierAdditionalModal(){
   let m=document.getElementById('yardivoSupplierAdditionalModalV583');if(m)return m;
