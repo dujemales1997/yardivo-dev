@@ -14,7 +14,7 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          import re, subprocess
+          import re
           p=Path("index.html")
           s=p.read_text(encoding="utf-8")
           
@@ -72,26 +72,49 @@ jobs:
               raise SystemExit("notification lifecycle anchor missing")
           s=s.replace(old,new,1)
           
-          start=s.find('<script id="yardivo-v583-supplier-history-tombstone-voice-20260924">')
-          if start<0:
-              raise SystemExit("tombstone voice script missing")
-          end=s.find('</script>',start)
-          block=s[start:end]
-          block2=re.sub(r"const KEY='yardivo_voice_notif_seen_v583';.*?function boot\\(\\)\\{purgeGhostSupplier\\(\\);pollVoice\\(\\)\\}",
-                        "function boot(){purgeGhostSupplier()}",
-                        block,flags=re.S)
-          block2=block2.replace("['yardivo:login','yardivo:data-synced','yardivo:notification','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{purgeGhostSupplier();pollVoice()},40)));",
-                                "['yardivo:login','yardivo:data-synced','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(purgeGhostSupplier,40)));")
-          block2=block2.replace("setInterval(()=>{purgeGhostSupplier();pollVoice()},1000);","setInterval(purgeGhostSupplier,1000);")
-          if "speechSynthesis" in block2 or "pollVoice" in block2 or "yardivo_voice_notif_seen_v583" in block2:
-              raise SystemExit("legacy voice loop was not fully retired")
-          s=s[:start]+block2+s[end:]
+          replacement="""<script id="yardivo-v583-supplier-history-tombstone-voice-20260924">
+          (function(){
+          'use strict';
+          if(window.__YARDIVO_SUPPLIER_HISTORY_TOMBSTONE_VOICE_20260924__)return;
+          window.__YARDIVO_SUPPLIER_HISTORY_TOMBSTONE_VOICE_20260924__=true;
+          function purgeGhostSupplier(){
+           try{
+             for(const st of [localStorage,sessionStorage]){
+               const remove=[];
+               for(let i=0;i<st.length;i++){
+                 const k=st.key(i);
+                 if(k&&String(k).toLowerCase().includes('dobavljac69'))remove.push(k)
+               }
+               remove.forEach(k=>st.removeItem(k))
+             }
+           }catch(_){}
+           try{
+             document.querySelectorAll('option,tr,li,[data-username],[data-user]').forEach(el=>{
+               const txt=String(el.textContent||'').trim().toLowerCase();
+               const du=String(el.getAttribute?.('data-username')||el.getAttribute?.('data-user')||'').toLowerCase();
+               if(txt==='dobavljac69'||du==='dobavljac69'||txt.includes('dobavljac69'))el.remove()
+             })
+           }catch(_){}
+          }
+          document.addEventListener('DOMContentLoaded',()=>setTimeout(purgeGhostSupplier,100));
+          window.addEventListener('load',()=>setTimeout(purgeGhostSupplier,250),{once:true});
+          ['yardivo:login','yardivo:data-synced','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(purgeGhostSupplier,40)));
+          setInterval(purgeGhostSupplier,1000);
+          try{new MutationObserver(()=>purgeGhostSupplier()).observe(document.documentElement,{childList:true,subtree:true})}catch(_){}
+          })();
+          </script>"""
+          pat=r'<script id="yardivo-v583-supplier-history-tombstone-voice-20260924">.*?</script>'
+          s2,n=re.subn(pat,replacement,s,count=1,flags=re.S)
+          if n!=1:
+              raise SystemExit("tombstone script replace failed")
+          s=s2
           
           final_guard="""<script id="yardivo-v583-notification-login-ai-voice-guard-20260924">
           (()=>{'use strict';
           if(window.__YARDIVO_NOTIFICATION_LOGIN_AI_VOICE_GUARD_20260924__)return;
           window.__YARDIVO_NOTIFICATION_LOGIN_AI_VOICE_GUARD_20260924__=true;
-          function stopVoice(){try{window.speechSynthesis?.cancel?.()}catch(_){}
+          function stopVoice(){
+           try{window.speechSynthesis?.cancel?.()}catch(_){}
            try{window.YardivoAIVoiceNotifications?.setMode?.('off')}catch(_){}
           }
           window.addEventListener('yardivo:logout',()=>{
@@ -101,13 +124,16 @@ jobs:
           window.addEventListener('yardivo:login',()=>{
            try{
              const resume=sessionStorage.getItem('yardivo_ai_voice_resume_after_login');
-             if(resume==='1'){sessionStorage.removeItem('yardivo_ai_voice_resume_after_login');window.YardivoAIVoiceNotifications?.setMode?.('ai')}
+             if(resume==='1'){
+               sessionStorage.removeItem('yardivo_ai_voice_resume_after_login');
+               window.YardivoAIVoiceNotifications?.setMode?.('ai')
+             }
            }catch(_){}
           });
           })();
           </script>"""
           if 'yardivo-v583-notification-login-ai-voice-guard-20260924' not in s:
-              s=s.replace('</body>',final_guard+'\\n</body>',1)
+              s=s.replace('</body>',final_guard+'\n</body>',1)
           
           p.write_text(s,encoding="utf-8")
           Path(".github/workflows/yardivo-notif-login-voice.yml").unlink()
@@ -127,7 +153,7 @@ jobs:
           Path("/tmp/notif.js").write_text(m.group(1),encoding="utf-8")
           subprocess.check_call(["node","--check","/tmp/notif.js"])
           m=re.search(r'<script id="yardivo-v583-supplier-history-tombstone-voice-20260924">(.*?)</script>',s,re.S)
-          assert m and "speechSynthesis" not in m.group(1) and "pollVoice" not in m.group(1)
+          assert m and "speechSynthesis" not in m.group(1) and "pollVoice" not in m.group(1) and "yardivo_voice_notif_seen_v583" not in m.group(1)
           Path("/tmp/tomb.js").write_text(m.group(1),encoding="utf-8")
           subprocess.check_call(["node","--check","/tmp/tomb.js"])
           m=re.search(r'<script id="yardivo-v583-notification-login-ai-voice-guard-20260924">(.*?)</script>',s,re.S)
