@@ -26577,6 +26577,12 @@ const EDGE=BASE+'/functions/v1/yardivo-sync';
 const ANN_KEYS=new Set(['yardivo_yms_announcements_v1']);
 const INC_KEYS=new Set(['yardivo_yms_incidents_v1']);
 const STATE_EXACT=new Set(['yardivo_live_notifications_v1','yardivo_master_notifications_v1']);
+const OBSOLETE_STATE_KEYS=new Set([
+  'studenac_announcements','yardivo_announcements','yms_announcements','yardivo_incidents',
+  'yardivo_supplier_deliveries_v1','yardivo_supplier_requests_v1',
+  'yardivo_supabase_offline_queue_v1','yardivo_supabase_offline_queue_v2',
+  'yardivo_supabase_sync_meta_v1','yardivo_supabase_sync_meta_v2'
+]);
 const CLIENT_KEY='yardivo_client_id_v1';
 
 let accessToken='',refreshToken='',tokenExp=0,ready=false,applying=false,client=null;
@@ -26649,6 +26655,7 @@ async function edge(action,payload={}){
 }
 function stateKey(k){
   k=String(k||'');
+  if(OBSOLETE_STATE_KEYS.has(k))return false;
   try{
     if(window.YardivoBrowserlessStorageV583?.isServerKey?.(k))return true;
   }catch(_){}
@@ -27107,9 +27114,12 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 window.__yardivoFastSafetySyncTimer&&clearInterval(window.__yardivoFastSafetySyncTimer);
 window.__yardivoFastSafetySyncTimer=setInterval(()=>{
   if(!ready||document.hidden||navigator.onLine===false)return;
-  if(pending())flush();
-  else pull();
-},2200);
+  if(pending()){flush();return}
+  /* Realtime is authoritative while connected. Do not download a full bootstrap
+     every few seconds when no server-side change happened. */
+  if(realtimeStatus==='SUBSCRIBED')return;
+  pull();
+},60000);
 
 window.YardivoRealtimeLatencyV583={
   targetMs:3000,
@@ -27122,7 +27132,7 @@ window.YardivoRealtimeLatencyV583={
     realtime:realtimeStatus,
     pending:pending(),
     targetMs:3000,
-    safetyPulseMs:2200,
+    safetyPulseMs:60000,
     lastPullAt:lastRealtimePullAt||0
   })
 };
@@ -34886,8 +34896,9 @@ window.addEventListener('yardivo:context-changed',()=>setTimeout(syncNow,60));
    refresh while the tab is visible. Planner editing remains protected. */
 window.__yardivoSupplierLiveSyncTimer&&clearInterval(window.__yardivoSupplierLiveSyncTimer);
 window.__yardivoSupplierLiveSyncTimer=setInterval(()=>{
+  if(document.hidden)return;
   if(!document.getElementById('ysrPlannerOverlay')?.classList.contains('open'))syncNow();
-},2300);
+},30000);
 })();
 </script>
 <style id="yardivo-v561-supplier-pro-style">
@@ -53370,7 +53381,8 @@ window.addEventListener('focus',()=>setTimeout(()=>refresh(false),120));
 window.addEventListener('yardivo:supplier-request-updated',()=>setTimeout(()=>refresh(true),100));
 window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>refresh(false),180));
 window.addEventListener('load',()=>setTimeout(()=>refresh(true),1200));
-setInterval(()=>refresh(false),10000);
+/* EGRESS CLEANUP: duplicate 10s list_internal polling retired.
+   yardivo-v560-supplier-live-sync owns the 30s safety refresh; events/focus refresh immediately. */
 setTimeout(()=>refresh(true),650);
 
 window.YardivoSupplierInboxNotificationFinalV583={refresh,ensureNav,ensureView};
@@ -53524,7 +53536,7 @@ window.addEventListener('focus',()=>setTimeout(()=>{refresh(false);healOnline()}
 window.addEventListener('load',()=>setTimeout(()=>{bind();refresh(true);healOnline()},900));
 setTimeout(()=>{bind();refresh(true);healOnline()},450);
 /* Stable polling only updates data; it never toggles the section/view. */
-setInterval(()=>{if(!document.hidden){refresh(false);healOnline()}},12000);
+setInterval(()=>{if(!document.hidden)healOnline()},60000);
 
 window.YardivoSupplierInboxStableFinalV583={refresh,healOnline};
 window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-inbox-stable-supabase-health-fixed-final';
@@ -53782,7 +53794,7 @@ async function ensureOnline(force=false){
   });
 });
 window.addEventListener('load',()=>setTimeout(()=>ensureOnline(true),700));
-setInterval(()=>{if(!document.hidden)ensureOnline(false)},5000);
+setInterval(()=>{if(!document.hidden)ensureOnline(false)},60000);
 setTimeout(()=>ensureOnline(true),250);
 
 window.YardivoSupabaseConnectionWatchdogV583={ensureOnline};
@@ -61749,7 +61761,7 @@ window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>{syncSupplierBa
 window.addEventListener('yardivo:supplier-request-updated',()=>setTimeout(poll,80));
 window.addEventListener('focus',poll);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll()});
-setInterval(poll,1500);
+setInterval(()=>{if(!document.hidden)poll()},60000);
 setInterval(syncSupplierBadge,700);
 setTimeout(poll,900);
 window.YARDIVO_DEV_BUILD='20260923-dev-v5.8.3-supplier-notif-delete';
@@ -62060,7 +62072,7 @@ function hideFloatingSupplierUi(){
 function currentView(){return portal()?.querySelector('[data-ysp-view].active')?.dataset.yspView||''}
 function schedule(){
   clearInterval(timer);
-  timer=setInterval(()=>{const v=currentView();if(!document.hidden&&isSupplier()&&(v==='status'||v==='history'))pull(false)},3000)
+  timer=setInterval(()=>{const v=currentView();if(!document.hidden&&isSupplier()&&(v==='status'||v==='history'))pull(false)},30000)
 }
 function ensureSupplierAdditionalModal(){
   let m=document.getElementById('yardivoSupplierAdditionalModalV583');if(m)return m;
