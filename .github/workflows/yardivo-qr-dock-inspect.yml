@@ -1,25 +1,68 @@
-name: Inspect QR Dock labels
+name: Apply QR Dock terminology
+permissions:
+  contents: write
 on:
   push:
     paths:
       - ".github/workflows/yardivo-qr-dock-inspect.yml"
 jobs:
-  inspect:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect QR labels
+      - name: Rename supplier/inventory QR to QR Dock
         shell: python
         run: |
           from pathlib import Path
-          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
-          needles=["YARDIVO QR · CHECK-IN","QR ZA VOZAČA","QR ZA RAMPU","OTVORI QR","IZDAJ QR","POŠALJI QR","gateUrl","dockUrl","oneQr"]
-          for n in needles:
-              print("\n===== "+n+" =====")
-              start=0
-              for k in range(25):
-                  i=s.find(n,start)
-                  if i<0: break
-                  print(f"--- {k+1} @ {i} ---")
-                  print(s[max(0,i-3500):min(len(s),i+8000)])
-                  start=i+len(n)
+          import re, subprocess
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8")
+
+          reps={
+            "YARDIVO QR · CHECK-IN":"YARDIVO QR DOCK",
+            "QR za vozača · Gate ulaz i potvrda na rampi":"QR za konkretnu isporuku · koristi se na Docku / Prijamu",
+            "QR ZA VOZAČA JE SPREMAN":"QR DOCK JE SPREMAN",
+            "Ovaj QR pošalji vozaču za Gate check-in i rampu.":"Ovaj QR Dock pošalji vozaču za potvrdu na Docku / Prijamu. Gate Check-In se radi posebnim QR-om na ulazu.",
+            "QR još nije izdan od strane YARDIVO zaliha.":"QR Dock još nije izdan od strane YARDIVO zaliha.",
+            "QR · CHECK-IN":"QR DOCK",
+            "STIGAO JE QR · CHECK-IN":"STIGAO JE QR DOCK",
+            "Novi Gate QR se više ne izdaje.":"Novi QR Dock se više ne izdaje.",
+            "QR · CHECK-IN može poslati Upravljanje zalihama ili Admin.":"QR Dock može poslati Upravljanje zalihama ili Admin.",
+            "QR još NIJE poslan dobavljaču. Klikom na POTVRDI aktivira se Gate Pass i QR se odmah objavljuje u Supplier Povijesti najava.":"QR Dock još NIJE poslan dobavljaču. Klikom na POTVRDI QR Dock se odmah objavljuje u Stanje najave / Isporuke.",
+            "Gate Pass":"Dock Pass"
+          }
+          for a,b in reps.items():
+              s=s.replace(a,b)
+
+          s=s.replace("pdf.save(String(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+'-QR.pdf')",
+                      "pdf.save(String(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+'-QR-DOCK.pdf')")
+
+          # Keep internal data attributes/API names unchanged for compatibility.
+          p.write_text(s,encoding="utf-8")
+          Path(".github/workflows/yardivo-qr-dock-inspect.yml").unlink()
+
+      - name: Validate
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, subprocess
+          s=Path("index.html").read_text(encoding="utf-8")
+          assert "YARDIVO QR DOCK" in s
+          assert "QR DOCK JE SPREMAN" in s
+          assert "Gate Check-In se radi posebnim QR-om na ulazu." in s
+          assert "STIGAO JE QR DOCK" in s
+          assert "QR Dock može poslati Upravljanje zalihama ili Admin." in s
+          for sid in ["yardivo-v583-supplier-history-status-server-authority-20260923","yardivo-gate-qr-v583-final"]:
+              m=re.search(r'<script[^>]+id="'+re.escape(sid)+r'"[^>]*>(.*?)</script>',s,re.S)
+              if m:
+                  q="/tmp/"+sid+".js"
+                  Path(q).write_text(m.group(1),encoding="utf-8")
+                  subprocess.check_call(["node","--check",q])
+      - name: Commit
+        run: |
+          git config user.name "YARDIVO QA"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html .github/workflows/yardivo-qr-dock-inspect.yml
+          git diff --cached --check
+          git commit -m "Rename supplier QR flow to QR Dock"
+          git push origin HEAD:main
