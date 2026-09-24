@@ -1,0 +1,87 @@
+name: Remove supplier history view
+permissions:
+  contents: write
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-supplier-history-remove.yml"
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch supplier portal
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8")
+
+          # Hide/remove Supplier History navigation and section while preserving Status/Deliveries.
+          s=re.sub(r'(<[^>]+data-ysp-view=["\']history["\'][^>]*>.*?</[^>]+>)','',s,count=1,flags=re.S)
+          # Hide any remaining history view/section structurally without deleting server data.
+          style='''\n<style id="yardivo-v583-supplier-status-only-20260924-style">
+          #yardivoSupplierPortal [data-ysp-view="history"],
+          #yardivoSupplierPortal [data-ysp-section="history"],
+          #yardivoSupplierPortal #yspHistory,
+          #yardivoSupplierPortal #yspHistoryBody{display:none!important}
+          </style>\n'''
+          if 'yardivo-v583-supplier-status-only-20260924-style' not in s:
+              idx=s.lower().rfind('</body>')
+              s=s[:idx]+style+s[idx:]
+
+          # Authority should only auto-own status now, not history.
+          s=s.replace("['history','status'].includes(activeSupplierView)","['status'].includes(activeSupplierView)")
+          s=s.replace("['history','status'].includes(String(b.dataset.yspView||''))","['status'].includes(String(b.dataset.yspView||''))")
+
+          # Force supplier portal to status view if old state points to history.
+          block=r'''
+          <script id="yardivo-v583-supplier-status-only-20260924">
+          (()=>{'use strict';
+          if(window.__YARDIVO_SUPPLIER_STATUS_ONLY_20260924__)return;
+          window.__YARDIVO_SUPPLIER_STATUS_ONLY_20260924__=true;
+          function activate(){
+            const root=document.getElementById('yardivoSupplierPortal');if(!root)return;
+            root.querySelectorAll('[data-ysp-view]').forEach(b=>b.classList.toggle('active',String(b.dataset.yspView)==='status'));
+            root.querySelectorAll('[data-ysp-section]').forEach(x=>x.classList.toggle('active',String(x.dataset.yspSection)==='status'));
+            const hist=root.querySelector('[data-ysp-section="history"]');if(hist)hist.style.display='none';
+            try{window.YardivoSupplierHistoryStatusServerV583?.render?.()}catch(_){}
+          }
+          ['yardivo:login','yardivo:data-synced'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(activate,40)));
+          document.addEventListener('click',e=>{
+            if(e.target.closest?.('#yardivoSupplierPortal'))setTimeout(()=>{
+              const h=document.querySelector('#yardivoSupplierPortal [data-ysp-view="history"]');if(h)h.remove()
+            },0)
+          },true);
+          if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(activate,120),{once:true});else setTimeout(activate,120);
+          })();
+          </script>
+          '''
+          if 'yardivo-v583-supplier-status-only-20260924' not in s:
+              idx=s.lower().rfind('</body>')
+              s=s[:idx]+block+s[idx:]
+
+          p.write_text(s,encoding="utf-8")
+      - name: Validate
+        shell: python
+        run: |
+          from pathlib import Path
+          import re,subprocess
+          s=Path("index.html").read_text(encoding="utf-8")
+          assert 'yardivo-v583-supplier-status-only-20260924' in s
+          assert "['status'].includes(activeSupplierView)" in s
+          m=re.search(r'<script id="yardivo-v583-supplier-status-only-20260924">(.*?)</script>',s,re.S)
+          assert m
+          Path("/tmp/supplier-status-only.js").write_text(m.group(1),encoding="utf-8")
+          subprocess.check_call(["node","--check","/tmp/supplier-status-only.js"])
+          subprocess.check_call(["git","diff","--check"])
+      - name: Commit
+        run: |
+          git config user.name "YARDIVO QA"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html .github/workflows/yardivo-supplier-history-remove.yml
+          git commit -m "Simplify supplier portal to status and deliveries"
+          git rm .github/workflows/yardivo-supplier-history-remove.yml
+          git commit --amend --no-edit
+          git push origin HEAD:main
