@@ -19671,12 +19671,34 @@ window.addEventListener('load',()=>{
   setTimeout(()=>{
     setPhaseClasses();
     render();
-    const s=seen();
-    if(!prelogin()){all().forEach(n=>s.add(String(n.id)));saveSeen(s)}
+    if(!prelogin())checkNew();
   },700);
+});
+window.addEventListener('yardivo:login',()=>{
+  try{sessionStorage.removeItem(SEEN)}catch(_){}
+  setTimeout(()=>{
+    setPhaseClasses();
+    render();
+    checkNew();
+  },220);
+});
+['yardivo:data-synced','yardivo:online-ready'].forEach(ev=>window.addEventListener(ev,()=>{
+  setTimeout(()=>{
+    if(prelogin())return;
+    render();
+    checkNew();
+  },120);
+}));
+window.addEventListener('yardivo:logout',()=>{
+  try{sessionStorage.removeItem(SEEN)}catch(_){}
+  try{document.getElementById('yardivoToastStack')?.replaceChildren()}catch(_){}
+  try{panel?.classList.remove('open')}catch(_){}
+  setPhaseClasses();
+  syncBadges();
 });
 setInterval(()=>{
   setPhaseClasses();
+  if(prelogin()){syncBadges();return}
   const now=fingerprint();
   if(now!==fp){render();checkNew()}else syncBadges();
 },1200);
@@ -62144,37 +62166,53 @@ window.YardivoOperationalChatV583={open:openPanel,close:closePanel,refresh:refre
 'use strict';
 if(window.__YARDIVO_SUPPLIER_HISTORY_TOMBSTONE_VOICE_20260924__)return;
 window.__YARDIVO_SUPPLIER_HISTORY_TOMBSTONE_VOICE_20260924__=true;
-function role(){try{return String((window.currentSession||{}).role||'').toLowerCase()}catch(_){return''}}
 function purgeGhostSupplier(){
- try{for(const st of [localStorage,sessionStorage]){const remove=[];for(let i=0;i<st.length;i++){const k=st.key(i);if(k&&String(k).toLowerCase().includes('dobavljac69'))remove.push(k)}remove.forEach(k=>st.removeItem(k))}}catch(_){}
- try{document.querySelectorAll('option,tr,li,[data-username],[data-user]').forEach(el=>{const txt=String(el.textContent||'').trim().toLowerCase(),du=String(el.getAttribute?.('data-username')||el.getAttribute?.('data-user')||'').toLowerCase();if(txt==='dobavljac69'||du==='dobavljac69'||txt.includes('dobavljac69'))el.remove()})}catch(_){}
+ try{
+   for(const st of [localStorage,sessionStorage]){
+     const remove=[];
+     for(let i=0;i<st.length;i++){
+       const k=st.key(i);
+       if(k&&String(k).toLowerCase().includes('dobavljac69'))remove.push(k)
+     }
+     remove.forEach(k=>st.removeItem(k))
+   }
+ }catch(_){}
+ try{
+   document.querySelectorAll('option,tr,li,[data-username],[data-user]').forEach(el=>{
+     const txt=String(el.textContent||'').trim().toLowerCase();
+     const du=String(el.getAttribute?.('data-username')||el.getAttribute?.('data-user')||'').toLowerCase();
+     if(txt==='dobavljac69'||du==='dobavljac69'||txt.includes('dobavljac69'))el.remove()
+   })
+ }catch(_){}
 }
-function relevant(n){
- if(!n||typeof n!=='object')return false;
- const r=role();if(!r)return false;
- const roles=Array.isArray(n.roles)?n.roles.map(x=>String(x).toLowerCase()):[];
- if(roles.length&&!roles.includes(r)&&!roles.includes('all'))return false;
- if(r==='supplier'){const me=String(window.currentSession?.username||window.currentSession?.user||'').toLowerCase(),target=String(n.supplier_username||n.supplierUsername||n.username||'').toLowerCase();if(target&&me&&target!==me)return false}
- return true;
-}
-const KEY='yardivo_voice_notif_seen_v583';let initialized=false;
-function loadSeen(){try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return new Set(Array.isArray(a)?a.map(String):[])}catch(_){return new Set()}}
-function saveSeen(set){try{localStorage.setItem(KEY,JSON.stringify([...set].slice(-300)))}catch(_){}}
-function speak(text){try{if(!('speechSynthesis' in window)||!window.SpeechSynthesisUtterance)return;const u=new SpeechSynthesisUtterance(String(text||'').slice(0,500));u.lang='hr-HR';u.rate=1;u.pitch=1;window.speechSynthesis.speak(u)}catch(_){}}
-function currentNotifications(){try{const a=JSON.parse(localStorage.getItem('yardivo_live_notifications_v1')||'[]');return Array.isArray(a)?a:[]}catch(_){return[]}}
-function pollVoice(){
- const list=currentNotifications().filter(relevant),seen=loadSeen();
- if(!initialized){list.forEach(n=>seen.add(String(n.id||n.event||n.createdAt||n.at||'')));saveSeen(seen);initialized=true;return}
- const fresh=list.filter(n=>{const id=String(n.id||n.event||n.createdAt||n.at||'');return id&&!seen.has(id)}).sort((a,b)=>String(a.createdAt||a.at||'').localeCompare(String(b.createdAt||b.at||'')));
- for(const n of fresh){const id=String(n.id||n.event||n.createdAt||n.at||'');seen.add(id);const title=String(n.title||'Nova YARDIVO obavijest'),body=String(n.body||'');speak(title+(body?'. '+body:''))}
- if(fresh.length)saveSeen(seen);
-}
-function boot(){purgeGhostSupplier();pollVoice()}
-document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,100));
-window.addEventListener('load',()=>setTimeout(boot,250),{once:true});
-['yardivo:login','yardivo:data-synced','yardivo:notification','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{purgeGhostSupplier();pollVoice()},40)));
-setInterval(()=>{purgeGhostSupplier();pollVoice()},1000);
+document.addEventListener('DOMContentLoaded',()=>setTimeout(purgeGhostSupplier,100));
+window.addEventListener('load',()=>setTimeout(purgeGhostSupplier,250),{once:true});
+['yardivo:login','yardivo:data-synced','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(purgeGhostSupplier,40)));
+setInterval(purgeGhostSupplier,1000);
 try{new MutationObserver(()=>purgeGhostSupplier()).observe(document.documentElement,{childList:true,subtree:true})}catch(_){}
+})();
+</script>
+<script id="yardivo-v583-notification-login-ai-voice-guard-20260924">
+(()=>{'use strict';
+if(window.__YARDIVO_NOTIFICATION_LOGIN_AI_VOICE_GUARD_20260924__)return;
+window.__YARDIVO_NOTIFICATION_LOGIN_AI_VOICE_GUARD_20260924__=true;
+function stopVoice(){
+ try{window.speechSynthesis?.cancel?.()}catch(_){}
+ try{window.YardivoAIVoiceNotifications?.setMode?.('off')}catch(_){}
+}
+window.addEventListener('yardivo:logout',()=>{
+ try{sessionStorage.setItem('yardivo_ai_voice_resume_after_login',localStorage.getItem('yardivo_notification_sound_mode_v2')==='off'?'0':'1')}catch(_){}
+ stopVoice();
+});
+window.addEventListener('yardivo:login',()=>{
+ try{
+   const resume=sessionStorage.getItem('yardivo_ai_voice_resume_after_login');
+   if(resume==='1'){
+     sessionStorage.removeItem('yardivo_ai_voice_resume_after_login');
+     window.YardivoAIVoiceNotifications?.setMode?.('ai')
+   }
+ }catch(_){}
+});
 })();
 </script>
 </body>
