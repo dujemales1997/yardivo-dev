@@ -1,0 +1,160 @@
+name: Simplify supplier status deliveries
+permissions:
+  contents: write
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-supplier-status-only.yml"
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch supplier portal
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8")
+
+          # Remove Supplier History navigation item.
+          s2,n=re.subn(r'\s*<button[^>]*data-ysp-view="history"[^>]*>.*?</button>','',s,count=1,flags=re.S|re.I)
+          if n!=1: raise SystemExit("history nav not found")
+          s=s2
+
+          # Remove Supplier History section itself.
+          pat=r'\s*<section class="ysp-view" data-ysp-section="history">.*?</section>\s*(?=<section class="ysp-view" data-ysp-section="status">)'
+          s2,n=re.subn(pat,'\n',s,count=1,flags=re.S|re.I)
+          if n!=1: raise SystemExit("history section not found")
+          s=s2
+
+          # Add status-only/vehicle edit styles.
+          anchor='#yardivoSupplierPortal .ysps-review{padding:10px;border:1px solid #8d6927;border-radius:9px;background:#31250d;color:#ffe0a0;font-size:10px;font-weight:850}'
+          extra=anchor+"""
+          #yardivoSupplierPortal .ysps-edit{margin-top:10px;padding:11px;border:1px solid #2a5570;border-radius:10px;background:#081923}
+          #yardivoSupplierPortal .ysps-edit summary{cursor:pointer;font-size:9px;font-weight:950;color:#9ed4f4;letter-spacing:.04em}
+          #yardivoSupplierPortal .ysps-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+          #yardivoSupplierPortal .ysps-edit-grid label{display:grid;gap:4px;color:#7793a7;font-size:8px;font-weight:900}
+          #yardivoSupplierPortal .ysps-edit-grid input{width:100%;box-sizing:border-box;background:#06131d;color:#eef8fd;border:1px solid #294a60;border-radius:7px;padding:9px 10px;font-size:10px}
+          #yardivoSupplierPortal .ysps-edit-actions{display:flex;justify-content:flex-end;margin-top:9px}
+          #yardivoSupplierPortal .ysps-edit-actions button{min-height:36px;padding:8px 12px}
+          #yardivoSupplierPortal .ysps-terminal-note{margin-top:10px;padding:9px 10px;border:1px solid #334b5b;border-radius:8px;background:#0a1720;color:#748b9b;font-size:9px}
+          @media(max-width:700px){#yardivoSupplierPortal .ysps-edit-grid{grid-template-columns:1fr}}"""
+          if anchor not in s: raise SystemExit("style anchor missing")
+          s=s.replace(anchor,extra,1)
+
+          # Status section help text: all deliveries, not active only.
+          s=s.replace('Pratite potvrdu termina i operativni status svake aktivne isporuke.',
+                      'Sve vaše najave i isporuke na jednom mjestu: status, termin, QR, rampa i podaci vozila.',1)
+
+          # normalized() includes no change needed; fingerprint already tracks vehicle data.
+
+          # Replace renderStatus active-filter block with all server rows.
+          old="""function renderStatus(){
+            const host=$('yspStatusList');if(!host)return;
+            const active=rows.filter(x=>!terminal.has(statusKey(x.status)));
+            if(!active.length){host.innerHTML='<div class="ysph-empty">Nema aktivnih najava. Završene i prethodne najave nalaze se u Povijesti najava.</div>';return}
+            const labels=['NAJAVA','POTVRDA','DOLAZAK','RAMPA','ZAPRIMANJE','ZAVRŠENO'];
+            host.innerHTML=active.map(x=>{"""
+          new="""function renderStatus(){
+            const host=$('yspStatusList');if(!host)return;
+            const deliveries=rows.slice();
+            if(!deliveries.length){host.innerHTML='<div class="ysph-empty">Još nema najava ni isporuka u YARDIVO bazi.</div>';return}
+            const labels=['NAJAVA','POTVRDA','DOLAZAK','RAMPA','ZAPRIMANJE','ZAVRŠENO'];
+            host.innerHTML=deliveries.map(x=>{"""
+          if old not in s: raise SystemExit("renderStatus head missing")
+          s=s.replace(old,new,1)
+
+          # Add inline vehicle editor to each delivery card.
+          old="""      '</div>'+(x.review?'<div class="ysps-review" style="margin-top:10px">YARDIVO: '+esc(x.review)+'</div>':'')+'</div>'+
+              '<div class="ysps-side">'+qr+'<div class="ysps-timeline">'+labels.map((l,i)=>'<div class="ysps-step '+(i<=idx?'done':'')+'"><i></i>'+l+'</div>').join('')+'</div></div>'+"""
+          new="""      '</div>'+(x.review?'<div class="ysps-review" style="margin-top:10px">YARDIVO: '+esc(x.review)+'</div>':'')+
+              (!terminal.has(statusKey(x.status))?'<details class="ysps-edit"><summary>UREDI VOZILO / VOZAČA</summary><div class="ysps-edit-grid">'+
+                '<label>REGISTRACIJA VOZILA<input data-yv-supplier-plate="'+esc(x.id)+'" value="'+esc(x.plate)+'" placeholder="npr. ZG1234AB"></label>'+
+                '<label>REGISTRACIJA PRIKOLICE<input data-yv-supplier-trailer="'+esc(x.id)+'" value="'+esc(x.trailer)+'"></label>'+
+                '<label>IME I PREZIME VOZAČA<input data-yv-supplier-driver="'+esc(x.id)+'" value="'+esc(x.driver)+'"></label>'+
+                '<label>KONTAKT VOZAČA<input data-yv-supplier-contact="'+esc(x.id)+'" value="'+esc(x.driverContact)+'"></label>'+
+              '</div><div class="ysps-edit-actions"><button type="button" class="btn-primary" data-yv-supplier-save-vehicle="'+esc(x.id)+'">SPREMI PODATKE</button></div></details>':
+              '<div class="ysps-terminal-note">Isporuka je zaključena. Podaci vozila više se ne mijenjaju kroz Supplier portal.</div>')+
+              '</div>'+
+              '<div class="ysps-side">'+qr+'<div class="ysps-timeline">'+labels.map((l,i)=>'<div class="ysps-step '+(i<=idx?'done':'')+'"><i></i>'+l+'</div>').join('')+'</div></div>'+"""
+          if old not in s: raise SystemExit("status card body anchor missing")
+          s=s.replace(old,new,1)
+
+          # Add canonical vehicle save through existing Supplier edge action.
+          click_anchor="""document.addEventListener('click',e=>{
+            const open=e.target.closest?.('[data-yv-server-qr-open]');"""
+          click_new="""async function saveVehicleFromCard(id,btn){
+            const x=rowByRawId(id);if(!x)return;
+            const root=btn?.closest?.('.ysps-edit')||portal();
+            const value=sel=>String(root?.querySelector?.(sel)?.value||'').trim();
+            const payload={
+              client_id:String(x.id),
+              vehicle_plate:value('[data-yv-supplier-plate="'+CSS.escape(String(x.id))+'"]').toUpperCase(),
+              trailer_plate:value('[data-yv-supplier-trailer="'+CSS.escape(String(x.id))+'"]').toUpperCase(),
+              driver_name:value('[data-yv-supplier-driver="'+CSS.escape(String(x.id))+'"]'),
+              driver_contact:value('[data-yv-supplier-contact="'+CSS.escape(String(x.id))+'"]')
+            };
+            const before=btn?.textContent||'SPREMI PODATKE';if(btn){btn.disabled=true;btn.textContent='SPREMAM…'}
+            try{
+              await window.YardivoSupplierLiveSync?.call?.('vehicle',payload);
+              if(btn)btn.textContent='SPREMLJENO ✓';
+              await pull(true);
+              try{window.showYmsToast?.('success','PODACI SPREMLJENI','Vozilo i vozač su ažurirani u YARDIVO sustavu.')}catch(_){}
+            }catch(err){
+              if(btn){btn.disabled=false;btn.textContent=before}
+              alert('Spremanje podataka nije uspjelo:\n'+String(err?.message||err))
+            }
+          }
+          document.addEventListener('click',e=>{
+            const save=e.target.closest?.('[data-yv-supplier-save-vehicle]');
+            if(save){e.preventDefault();e.stopPropagation();void saveVehicleFromCard(save.dataset.yvSupplierSaveVehicle,save);return}
+            const open=e.target.closest?.('[data-yv-server-qr-open]');"""
+          if click_anchor not in s: raise SystemExit("click anchor missing")
+          s=s.replace(click_anchor,click_new,1)
+
+          # Poll/render status only; history no longer exists.
+          s=s.replace("['history','status'].includes(currentView())","currentView()==='status'",1)
+          s=s.replace("if(b&&['history','status'].includes(String(b.dataset.yspView||'')))","if(b&&String(b.dataset.yspView||'')==='status')",1)
+
+          # Authority renderer no longer renders removed history.
+          s=s.replace("function renderAll(){if(!isSupplier())return;renderHistory();renderStatus();renderKpis();hideFloatingSupplierUi()}",
+                      "function renderAll(){if(!isSupplier())return;renderStatus();renderKpis();hideFloatingSupplierUi()}",1)
+
+          # Legacy live sync must not invoke the old renderer while status is active.
+          s=s.replace("!['history','status'].includes(activeSupplierView)","activeSupplierView!=='status'",1)
+          s=s.replace('#yardivoSupplierPortal [data-ysp-view="history"],#yardivoSupplierPortal [data-ysp-view="status"]',
+                      '#yardivoSupplierPortal [data-ysp-view="status"]',1)
+
+          p.write_text(s,encoding="utf-8")
+          Path(".github/workflows/yardivo-supplier-status-only.yml").unlink()
+
+      - name: Validate
+        shell: python
+        run: |
+          from pathlib import Path
+          import re,subprocess
+          s=Path("index.html").read_text(encoding="utf-8")
+          assert 'data-ysp-view="history"' not in s
+          assert 'data-ysp-section="history"' not in s
+          assert 'data-yv-supplier-save-vehicle' in s
+          assert "const deliveries=rows.slice();" in s
+          assert "renderStatus();renderKpis()" in s
+          assert "renderHistory();renderStatus()" not in s
+          m=re.search(r'<script id="yardivo-v583-supplier-history-status-server-authority-20260923">(.*?)</script>',s,re.S)
+          assert m
+          Path("/tmp/supplier-status.js").write_text(m.group(1),encoding="utf-8")
+          subprocess.check_call(["node","--check","/tmp/supplier-status.js"])
+          m2=re.search(r'<script id="yardivo-v560-supplier-live-sync">(.*?)</script>',s,re.S)
+          assert m2
+          Path("/tmp/supplier-live.js").write_text(m2.group(1),encoding="utf-8")
+          subprocess.check_call(["node","--check","/tmp/supplier-live.js"])
+      - name: Commit
+        run: |
+          git config user.name "YARDIVO QA"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html .github/workflows/yardivo-supplier-status-only.yml
+          git diff --cached --check
+          git commit -m "Simplify supplier portal to status and deliveries"
+          git push origin HEAD:main
