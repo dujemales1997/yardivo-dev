@@ -28,6 +28,27 @@ def replace_once(old, new, label, required=False):
         raise SystemExit(f"{label}: ambiguous ({n} matches)")
     return False
 
+def replace_in_script(script_id, old, new, label, required=False):
+    global s
+    pat = re.compile(r'<script\\b[^>]*\\bid=["\']' + re.escape(script_id) + r'["\'][^>]*>[\\s\\S]*?</script>', re.I)
+    m = pat.search(s)
+    if not m:
+        if required:
+            raise SystemExit(f"{label}: script not found: {script_id}")
+        return False
+    block = m.group(0)
+    n = block.count(old)
+    if n == 1:
+        block2 = block.replace(old, new, 1)
+        s = s[:m.start()] + block2 + s[m.end():]
+        changes.append(label)
+        return True
+    if required and n == 0:
+        raise SystemExit(f"{label}: missing expected text in {script_id}")
+    if n > 1:
+        raise SystemExit(f"{label}: ambiguous inside {script_id} ({n} matches)")
+    return False
+
 dead_ids = [
     "yardivo-live-yard-digital-twin-v1","yardivo-live-yard-tv-v5","yardivo-live-yard-v5-4-dock-clean",
     "yardivo-real-webgl-yard-v1","yardivo-native-yard-v3",
@@ -167,7 +188,8 @@ window.addEventListener('yardivo:gate-qr-issued',()=>setTimeout(()=>{bind();wind
 )
 
 # Inventory notification/delete helper reads cache and no longer owns a second API polling loop.
-replace_once(
+replace_in_script(
+    "yardivo-v583-inventory-supplier-notif-delete-20260923",
 """    const rows=await window.YardivoSupplierLiveSync.call('list_internal');
     if(!Array.isArray(rows))return;""",
 """    const rows=window.YardivoSupplierLiveSync.internalRows?.();
