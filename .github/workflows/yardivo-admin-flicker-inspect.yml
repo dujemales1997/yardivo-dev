@@ -1,0 +1,28 @@
+name: Inspect admin settings flicker
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-admin-flicker-inspect.yml"
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect admin settings renderers
+        shell: python
+        run: |
+          from pathlib import Path
+          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
+          needles=[
+            "KORISNIČKI RAČUNI","Korisnički računi","user accounts","yardivoAdminUsers",
+            "AdminUsers","renderUsers","loadUsers","settings","yardivo:login","yardivo:data-synced"
+          ]
+          for n in needles:
+              print("\n===== "+n+" =====")
+              start=0
+              for k in range(30):
+                  i=s.lower().find(n.lower(),start)
+                  if i<0: break
+                  print(f"--- {k+1} @ {i} ---")
+                  print(s[max(0,i-5000):min(len(s),i+12000)])
+                  start=i+len(n)
