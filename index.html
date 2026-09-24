@@ -44143,7 +44143,7 @@ async function confirmPreparedIssue(){
     try{Promise.resolve(window.YardivoSupplierPlannerV580?.refresh?.(true)).catch(()=>{})}catch(_){}
     try{window.dispatchEvent(new CustomEvent('yardivo:gate-qr-issued',{detail:{id:String(row.id),announcementId:String(ann.id),supplier:String(row.supplier_username||'')}}))}catch(_){}
     try{
-      if(typeof showYmsToast==='function')showYmsToast('success','QR POSLAN DOBAVLJAČU','QR · CHECK-IN je objavljen u Supplier Povijesti najava.',4200);
+      if(typeof showYmsToast==='function')showYmsToast('success','QR POSLAN DOBAVLJAČU','QR · CHECK-IN je objavljen u Stanje najave / Isporuke.',4200);
       else alert('QR · CHECK-IN je potvrđen i poslan dobavljaču.');
     }catch(_){}
   }catch(e){
@@ -44207,7 +44207,7 @@ function pushSupplierQrNotification(row,meta){
     event:'SUPPLIER_QR_READY',
     type:'success',
     title:'STIGAO JE QR · CHECK-IN',
-    body:`${warehouseBusinessName(row.warehouse)} · ${row.date||''} ${row.time||''} · QR je spreman za preuzimanje u Povijesti najava.`,
+    body:`${warehouseBusinessName(row.warehouse)} · ${row.date||''} ${row.time||''} · QR je spreman u Stanje najave / Isporuke.`,
     at:new Date().toISOString(),createdAt:new Date().toISOString(),
     roles:['supplier'],supplierDeliveryId:String(row.id),readBy:{}
   };
@@ -61849,7 +61849,12 @@ function downloadQrPdf(id){
   }catch(e){console.error(e);window.open(x.qrUrl,'_blank','noopener')}
 }
 function normalized(x){
-  const q=qrMeta(x);
+  const parsed=qrMeta(x);
+  const q={
+    qrUrl:String(x.gate_qr_url||parsed?.qrUrl||''),
+    token:String(x.gate_qr_token||parsed?.token||''),
+    issuedAt:String(x.gate_qr_issued_at||parsed?.issuedAt||'')
+  };
   return {
     id:String(x.client_id||x.id||'—'),
     serverId:String(x.id||''),
@@ -61867,8 +61872,9 @@ function normalized(x){
     sku:Number(x.sku_count||0),
     review:cleanReview(x.review_note),
     updatedAt:String(x.announcement_updated_at||x.updated_at||x.created_at||''),
-    qrUrl:String(q?.qrUrl||''),
-    qrToken:String(q?.token||'')
+    qrUrl:String(q.qrUrl||''),
+    qrToken:String(q.token||''),
+    qrIssuedAt:String(q.issuedAt||'')
   }
 }
 function sortRows(a,b){
@@ -61883,7 +61889,7 @@ async function pull(force=false){
     const raw=await window.YardivoSupplierLiveSync?.call?.('list_mine');
     if(Array.isArray(raw)){
       const next=raw.map(normalized).sort(sortRows);
-      const fp=JSON.stringify(next.map(x=>[x.serverId,x.id,x.status,x.warehouse,x.date,x.time,x.dock,x.plate,x.trailer,x.driver,x.driverContact,x.pallets,x.sku,x.review,x.qrUrl,x.updatedAt]));
+      const fp=JSON.stringify(next.map(x=>[x.serverId,x.id,x.status,x.warehouse,x.date,x.time,x.dock,x.plate,x.trailer,x.driver,x.driverContact,x.pallets,x.sku,x.review,x.qrUrl,x.qrIssuedAt,x.updatedAt]));
       rows=next;lastPull=Date.now();
       if(fp!==lastFingerprint){lastFingerprint=fp;renderAll()}
     }
