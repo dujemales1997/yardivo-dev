@@ -1,0 +1,25 @@
+name: Inspect QR Dock labels
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-qr-dock-inspect.yml"
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect QR labels
+        shell: python
+        run: |
+          from pathlib import Path
+          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
+          needles=["YARDIVO QR · CHECK-IN","QR ZA VOZAČA","QR ZA RAMPU","OTVORI QR","IZDAJ QR","POŠALJI QR","gateUrl","dockUrl","oneQr"]
+          for n in needles:
+              print("\n===== "+n+" =====")
+              start=0
+              for k in range(25):
+                  i=s.find(n,start)
+                  if i<0: break
+                  print(f"--- {k+1} @ {i} ---")
+                  print(s[max(0,i-3500):min(len(s),i+8000)])
+                  start=i+len(n)
