@@ -1,0 +1,79 @@
+name: Fix intermittent login timeout
+permissions:
+  contents: write
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-login-timeout-fix.yml"
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch canonical login retry
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, subprocess
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8")
+          old="""async function fetchJSON(url,options={},timeoutMs=6500){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  try{
+    const res=await fetch(url,{...options,signal:controller.signal});
+    const data=await res.json().catch(()=>({}));
+    return {res,data};
+  }finally{
+    clearTimeout(timer);
+  }
+}"""
+          new="""async function fetchJSON(url,options={},timeoutMs=10000){
+  let lastError=null;
+  for(let attempt=0;attempt<2;attempt++){
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),timeoutMs);
+    try{
+      const res=await fetch(url,{...options,signal:controller.signal});
+      const data=await res.json().catch(()=>({}));
+      return {res,data};
+    }catch(e){
+      lastError=e;
+      const transient=e?.name==='AbortError'||/Failed to fetch|NetworkError|Load failed/i.test(String(e?.message||e));
+      if(!transient||attempt>=1)throw e;
+      await new Promise(r=>setTimeout(r,300));
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+  throw lastError||new Error('NETWORK_REQUEST_FAILED');
+}"""
+          if old not in s:
+              raise SystemExit("fetchJSON anchor missing")
+          s=s.replace(old,new,1)
+          s=s.replace("    6500\n  );","    10000\n  );",2)
+          p.write_text(s,encoding="utf-8")
+
+      - name: Validate canonical login
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, subprocess
+          s=Path("index.html").read_text(encoding="utf-8")
+          assert "for(let attempt=0;attempt<2;attempt++)" in s
+          assert "await new Promise(r=>setTimeout(r,300))" in s
+          assert s.count("    10000\n  );") >= 2
+          m=re.search(r'<script id="yardivo-canonical-login-router-v2-20260901">(.*?)</script>',s,re.S)
+          assert m, "canonical login script missing"
+          Path("/tmp/login.js").write_text(m.group(1),encoding="utf-8")
+          subprocess.check_call(["node","--check","/tmp/login.js"])
+
+      - name: Commit
+        run: |
+          rm .github/workflows/yardivo-login-timeout-fix.yml
+          git config user.name "YARDIVO QA"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html .github/workflows/yardivo-login-timeout-fix.yml
+          git diff --cached --check
+          git commit -m "Harden canonical login against transient timeouts"
+          git push origin HEAD:main
