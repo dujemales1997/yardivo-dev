@@ -1,25 +1,111 @@
-name: Inspect login multiwindow
+name: Fix multiwindow login
+permissions:
+  contents: write
 on:
   push:
     paths:
       - ".github/workflows/yardivo-login-multiwindow-inspect.yml"
 jobs:
-  inspect:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect login
+      - name: Patch login isolation and supplier history
         shell: python
         run: |
           from pathlib import Path
-          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
-          needles=["SERVER NIJE ODGOVORIO","PROVJERA","signInWithPassword","createClient(","persistSession","navigator.locks","yardivo:login","auth.getSession","auth.signOut"]
-          for n in needles:
-              print("\n===== "+n+" =====")
-              start=0
-              for k in range(30):
-                  i=s.find(n,start)
-                  if i<0: break
-                  print(f"--- {k+1} @ {i} ---")
-                  print(s[max(0,i-6500):min(len(s),i+15000)])
-                  start=i+len(n)
+          import re
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8")
+
+          old="""{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage,storageKey:(window.YardivoTabAuthV583?.storageKey||('yardivo-auth-'+Math.random().toString(36).slice(2)))}}"""
+          new="""{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage,storageKey:(window.YardivoTabAuthV583?.storageKey||('yardivo-auth-'+Math.random().toString(36).slice(2))),lock:async(_name,_timeout,fn)=>await fn()}}"""
+          cnt=s.count(old)
+          if cnt < 2:
+              raise SystemExit(f"Expected at least 2 auth client configs, found {cnt}")
+          s=s.replace(old,new)
+
+          # Canonical router: never allow auth bind / online bootstrap to leave the button spinning forever.
+          anchor="""async function authenticate(){
+  const username="""
+          if anchor not in s:
+              raise SystemExit("canonical authenticate anchor missing")
+          helper="""function withLoginTimeout(promise,ms,label){
+  let timer;
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(label||'SERVER NIJE ODGOVORIO — pokušaj ponovno.')),ms)})
+  ]).finally(()=>clearTimeout(timer))
+}
+
+async function authenticate(){
+  const username="""
+          s=s.replace(anchor,helper,1)
+
+          oldset="""      const {error:setSessionError}=await authClient.auth.setSession({
+        access_token:auth.access_token,
+        refresh_token:auth.refresh_token
+      });"""
+          newset="""      const {error:setSessionError}=await withLoginTimeout(authClient.auth.setSession({
+        access_token:auth.access_token,
+        refresh_token:auth.refresh_token
+      }),7000,'AUTH SESSION NIJE ODGOVORIO — pokušaj ponovno.');"""
+          if oldset not in s:
+              raise SystemExit("canonical setSession anchor missing")
+          s=s.replace(oldset,newset,1)
+
+          oldonline="""    const connected=await window.YardivoSupabase.authenticate(auth.access_token,auth.refresh_token);"""
+          newonline="""    const connected=await withLoginTimeout(window.YardivoSupabase.authenticate(auth.access_token,auth.refresh_token),10000,'ONLINE BAZA NIJE ODGOVORILA — pokušaj ponovno.');"""
+          if oldonline not in s:
+              raise SystemExit("online authenticate anchor missing")
+          s=s.replace(oldonline,newonline,1)
+
+          # Supplier history: only confirmed/rejected or later operational/terminal states.
+          oldhist="""  if(!rows.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema poslanih najava u YARDIVO bazi.</div></td></tr>';return}
+  body.innerHTML=rows.map(x=>{"""
+          newhist="""  const history=rows.filter(x=>!['pending','revision_requested','proposal_sent'].includes(statusKey(x.status)));
+  if(!history.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema potvrđenih ili odbijenih najava.</div></td></tr>';return}
+  body.innerHTML=history.map(x=>{"""
+          if oldhist not in s:
+              raise SystemExit("supplier history anchor missing")
+          s=s.replace(oldhist,newhist,1)
+
+          # Active Status must still show pending/revision/proposal rows, so no change there.
+          p.write_text(s,encoding="utf-8")
+
+          for q in [
+            Path(".github/workflows/yardivo-login-multiwindow-inspect.yml"),
+            Path(".github/workflows/yardivo-supplier-settings-clean.yml")
+          ]:
+              if q.exists(): q.unlink()
+
+      - name: Validate
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, subprocess
+          s=Path("index.html").read_text(encoding="utf-8")
+          assert s.count("lock:async(_name,_timeout,fn)=>await fn()") >= 2
+          assert "withLoginTimeout(authClient.auth.setSession" in s
+          assert "withLoginTimeout(window.YardivoSupabase.authenticate" in s
+          assert "const history=rows.filter(x=>!['pending','revision_requested','proposal_sent'].includes(statusKey(x.status)))" in s
+          assert not Path(".github/workflows/yardivo-login-multiwindow-inspect.yml").exists()
+          assert not Path(".github/workflows/yardivo-supplier-settings-clean.yml").exists()
+
+          ids=["yardivo-auth-driver-role-final-fix","yardivo-canonical-login-router-v2-20260901","yardivo-v583-supplier-history-status-server-authority-20260923"]
+          for sid in ids:
+              m=re.search(r'<script[^>]+id="'+re.escape(sid)+r'"[^>]*>(.*?)</script>',s,re.S)
+              if not m:
+                  raise SystemExit("missing script "+sid)
+              f=Path("/tmp")/(sid+".js")
+              f.write_text(m.group(1),encoding="utf-8")
+              subprocess.check_call(["node","--check",str(f)])
+
+      - name: Commit
+        run: |
+          git config user.name "YARDIVO QA"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "Fix multiwindow login and supplier history"
+          git push origin HEAD:main
