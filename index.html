@@ -15832,7 +15832,7 @@ async function authClient(){
     window.__yardivoAuthClient=window.supabase.createClient(
       'https://rskticdbiovvgyocpzoc.supabase.co',
       'sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy',
-      {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}
+      {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage}}
     );
   }
   return window.__yardivoAuthClient;
@@ -26911,7 +26911,7 @@ Storage.prototype.removeItem=function(k){
 async function getClient(){
   if(!window.supabase?.createClient)return null;
   if(!client){
-    client=window.__yardivoAuthClient||window.supabase.createClient(BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+    client=window.__yardivoAuthClient||window.supabase.createClient(BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage}});
     window.__yardivoAuthClient=client;
   }
   if(accessToken&&refreshToken){
