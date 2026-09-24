@@ -1,0 +1,25 @@
+name: Inspect egress hotspots
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-egress-inspect.yml"
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect
+        shell: python
+        run: |
+          from pathlib import Path
+          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
+          needles=["attachmentDataUrl","yardivo-sync","bootstrap","list_mine","list_internal","setInterval(","3000","1500"]
+          for n in needles:
+              print("\n===== "+n+" =====")
+              start=0
+              for k in range(20):
+                  i=s.find(n,start)
+                  if i<0: break
+                  print(f"--- {k+1} @ {i} ---")
+                  print(s[max(0,i-2500):min(len(s),i+6000)])
+                  start=i+len(n)
