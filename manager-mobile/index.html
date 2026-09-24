@@ -470,7 +470,7 @@ async function token(){
   if(!s?.access_token)s=(await sb.auth.getSession()).data.session;
   if(!s?.access_token)s=(await sb.auth.refreshSession()).data.session;
   if(!s?.access_token)throw new Error('Prijava je istekla.');
-  session=s;
+  session=s;window.__YARDIVO_MANAGER_MOBILE_TOKEN=s.access_token;
   return s.access_token;
 }
 async function getScope(){
@@ -493,7 +493,7 @@ async function login(){
     const u=$('username').value.trim().toLowerCase(),p=$('password').value;if(!u||!p)throw new Error('Upiši korisničko ime i lozinku.');
     const {data,error}=await sb.auth.signInWithPassword({email:u+'@yardivo.local',password:p});
     if(error||!data?.session)throw error||new Error('Prijava nije uspjela.');
-    session=data.session;scope=await getScope();
+    session=data.session;window.__YARDIVO_MANAGER_MOBILE_TOKEN=session.access_token;scope=await getScope();
     if(normRole(scope?.app_role||scope?.role)!=='manager'){await sb.auth.signOut();throw new Error('Ovaj Mobile UI je dostupan samo Voditeljima.');}
     await bootstrap();await welcomeThenOpen();
   }catch(e){err.textContent=String(e?.message||e);err.classList.remove('hidden')}
@@ -904,6 +904,35 @@ $('aiFab').classList.add('hidden');
 $('username').value='';
 $('password').value='';
 
+})();
+</script>
+
+<style id="yardivo-manager-mobile-operational-chat-v1">
+#mmOpChatFab{position:fixed;right:max(76px,calc((100vw - 760px)/2 + 76px));bottom:calc(var(--navh) + env(safe-area-inset-bottom) + 13px);z-index:56;width:54px;height:54px;border-radius:18px;border:1px solid #3c8fb9;background:#0d3044;color:#e8f8ff;box-shadow:0 15px 36px rgba(0,0,0,.35);font-size:21px;font-weight:1000}
+#mmOpChatFab .b{position:absolute;right:-4px;top:-4px;display:none;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#ef4a56;color:#fff;font-size:9px;line-height:20px}
+#mmOpChatSheet{position:fixed;inset:0;z-index:90;display:none;align-items:flex-end;background:rgba(2,8,13,.62);backdrop-filter:blur(5px)}#mmOpChatSheet.open{display:flex}
+.mmoc-panel{width:min(760px,100%);margin:0 auto;height:min(78dvh,680px);border-radius:23px 23px 0 0;background:#0a1d29;border:1px solid #2d5269;border-bottom:0;display:grid;grid-template-rows:auto auto 1fr auto;overflow:hidden}
+.mmoc-head{display:flex;align-items:center;padding:13px 14px;border-bottom:1px solid #27485c}.mmoc-head strong{font-size:13px}.mmoc-head small{display:block;color:#7899aa;font-size:7px;margin-top:3px}.mmoc-close{margin-left:auto;width:36px;height:36px;border-radius:11px;border:1px solid #31566b;background:#102b3a;color:#fff;font-size:18px}
+.mmoc-tabs{display:flex;gap:7px;padding:9px;overflow:auto;border-bottom:1px solid #234355}.mmoc-tabs button{border:1px solid #294d62;border-radius:10px;background:#0d2634;color:#9db8c7;padding:9px 12px;font-size:8px;font-weight:1000;white-space:nowrap}.mmoc-tabs button.active{background:#174c6a;color:#fff;border-color:#3d92c0}.mmoc-tabs em{font-style:normal;background:#ef4a56;color:#fff;border-radius:8px;padding:1px 5px;margin-left:4px}
+.mmoc-msgs{overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px}.mmoc-msg{max-width:88%;padding:9px 10px;border:1px solid #2a4c5f;border-radius:13px;background:#102938;font-size:10px;line-height:1.45}.mmoc-msg.mine{align-self:flex-end;background:#174968;border-color:#327da8}.mmoc-msg small{display:block;color:#7195a7;font-size:7px;margin-bottom:4px}.mmoc-empty{margin:auto;color:#718d9d;font-size:10px}
+.mmoc-compose{display:grid;grid-template-columns:1fr auto;gap:8px;padding:10px 11px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #27485c;background:#0d2432}.mmoc-compose textarea{min-height:44px;max-height:90px;resize:none;border:1px solid #31566c;border-radius:11px;background:#071822;color:#fff;padding:10px;font-size:10px}.mmoc-compose button{border:0;border-radius:11px;background:#2385bf;color:#fff;font-weight:1000;padding:0 14px}
+#mmOpChatPop{position:fixed;right:10px;top:68px;z-index:89;width:min(330px,calc(100vw - 20px));display:grid;gap:7px}.mmoc-pop{border:1px solid #39728f;border-radius:12px;background:#0c2433;color:#fff;padding:11px;box-shadow:0 14px 34px rgba(0,0,0,.4);text-align:left}.mmoc-pop strong{display:block;font-size:10px}.mmoc-pop p{margin:5px 0 0;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+<script id="yardivo-manager-mobile-operational-chat-v1">
+(()=>{'use strict';
+const BASE='https://rskticdbiovvgyocpzoc.supabase.co',KEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy',URL=BASE+'/functions/v1/yardivo-operational-chat';
+let threads=[],selected='',msgs=[],opened=false,lastSig='',timer=null;
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(action,payload={}){const t=String(window.__YARDIVO_MANAGER_MOBILE_TOKEN||'');if(!t)throw new Error('Prijava nije spremna');const r=await fetch(URL,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({action,...payload})});const d=await r.json().catch(()=>({}));if(!r.ok||d?.ok===false)throw new Error(d?.error||('HTTP '+r.status));return d?.data??d}
+function ensure(){if(document.getElementById('mmOpChatFab'))return;const f=document.createElement('button');f.id='mmOpChatFab';f.type='button';f.innerHTML='💬<span class="b">0</span>';f.onclick=()=>openPanel();document.body.appendChild(f);const p=document.createElement('div');p.id='mmOpChatSheet';p.innerHTML='<div class="mmoc-panel"><div class="mmoc-head"><div><strong>OPERATIVNI CHAT</strong><small>VODITELJ · PRIJAM · ZALIHE</small></div><button class="mmoc-close" type="button">×</button></div><div class="mmoc-tabs" id="mmocTabs"></div><div class="mmoc-msgs" id="mmocMsgs"><div class="mmoc-empty">Učitavam…</div></div><div class="mmoc-compose"><textarea id="mmocInput" placeholder="Napiši poruku…"></textarea><button id="mmocSend" type="button">➤</button></div></div>';document.body.appendChild(p);p.querySelector('.mmoc-close').onclick=closePanel;p.onclick=e=>{if(e.target===p)closePanel()};p.querySelector('#mmocSend').onclick=send;p.querySelector('#mmocInput').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}};p.querySelector('#mmocTabs').onclick=e=>{const b=e.target.closest('[data-mmoc]');if(b){selected=b.dataset.mmoc;renderTabs();loadMessages()}};const pop=document.createElement('div');pop.id='mmOpChatPop';document.body.appendChild(pop);pop.onclick=e=>{const b=e.target.closest('[data-mmoc-pop]');if(b)openPanel(b.dataset.mmocPop)}}
+function renderTabs(){const h=document.getElementById('mmocTabs');if(h)h.innerHTML=threads.map(t=>'<button class="'+(t.thread_key===selected?'active':'')+'" data-mmoc="'+esc(t.thread_key)+'">'+esc(t.label)+(t.unread?'<em>'+t.unread+'</em>':'')+'</button>').join('')}
+function render(){const h=document.getElementById('mmocMsgs');if(!h)return;if(!msgs.length){h.innerHTML='<div class="mmoc-empty">Još nema poruka.</div>';return}const me='voditelj';h.innerHTML=msgs.map(m=>'<div class="mmoc-msg '+(String(m.sender_username||'').toLowerCase()===me?'mine':'')+'"><small>'+esc(m.sender_username||'')+'</small>'+esc(m.body||'')+'</div>').join('');h.scrollTop=h.scrollHeight}
+async function refresh(show=true){ensure();try{threads=await api('list_threads')||[];if(!selected&&threads[0])selected=threads[0].thread_key;renderTabs();const total=threads.reduce((a,x)=>a+Number(x.unread||0),0),b=document.querySelector('#mmOpChatFab .b');b.textContent=String(total);b.style.display=total?'block':'none';if(show&&!opened){const u=threads.filter(x=>x.unread),sig=u.map(x=>x.thread_key+':'+x.last_at).join('|');if(sig&&sig!==lastSig){lastSig=sig;document.getElementById('mmOpChatPop').innerHTML=u.slice(0,2).map(x=>'<button class="mmoc-pop" data-mmoc-pop="'+esc(x.thread_key)+'"><strong>'+esc(x.label)+' · NOVA PORUKA</strong><p>'+esc(x.last_message||'')+'</p></button>').join('')}}}catch(_){}}
+async function loadMessages(){if(!selected)return;try{msgs=await api('list_messages',{thread_key:selected})||[];render();await refresh(false)}catch(e){document.getElementById('mmocMsgs').innerHTML='<div class="mmoc-empty">'+esc(e.message||e)+'</div>'}}
+async function send(){const i=document.getElementById('mmocInput'),body=String(i.value||'').trim();if(!body||!selected)return;try{await api('send',{thread_key:selected,body,warehouse:document.getElementById('warehouseSelect')?.value||''});i.value='';await loadMessages()}catch(e){alert(e.message||e)}}
+async function openPanel(key){ensure();opened=true;document.getElementById('mmOpChatSheet').classList.add('open');document.getElementById('mmOpChatPop').innerHTML='';await refresh(false);if(key)selected=key;renderTabs();await loadMessages();clearInterval(timer);timer=setInterval(()=>{if(opened)loadMessages()},3000)}
+function closePanel(){opened=false;document.getElementById('mmOpChatSheet')?.classList.remove('open');clearInterval(timer);timer=null}
+setInterval(()=>{if(window.__YARDIVO_MANAGER_MOBILE_TOKEN&&!opened)refresh(true)},4000);setTimeout(()=>refresh(true),2500);
 })();
 </script>
 </body>
