@@ -15853,7 +15853,7 @@ async function authClient(){
     window.__yardivoAuthClient=window.supabase.createClient(
       'https://rskticdbiovvgyocpzoc.supabase.co',
       'sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy',
-      {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage,storageKey:(window.YardivoTabAuthV583?.storageKey||('yardivo-auth-'+Math.random().toString(36).slice(2)))}}
+      {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage,storageKey:(window.YardivoTabAuthV583?.storageKey||('yardivo-auth-'+Math.random().toString(36).slice(2))),lock:async(_name,_timeout,fn)=>await fn()}}
     );
   }
   return window.__yardivoAuthClient;
@@ -26932,7 +26932,7 @@ Storage.prototype.removeItem=function(k){
 async function getClient(){
   if(!window.supabase?.createClient)return null;
   if(!client){
-    client=window.__yardivoAuthClient||window.supabase.createClient(BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage,storageKey:(window.YardivoTabAuthV583?.storageKey||('yardivo-auth-'+Math.random().toString(36).slice(2)))}});
+    client=window.__yardivoAuthClient||window.supabase.createClient(BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage,storageKey:(window.YardivoTabAuthV583?.storageKey||('yardivo-auth-'+Math.random().toString(36).slice(2))),lock:async(_name,_timeout,fn)=>await fn()}});
     window.__yardivoAuthClient=client;
   }
   if(accessToken&&refreshToken){
@@ -27220,6 +27220,14 @@ function persistSession(session){
   }catch(_){window.currentSession=session}
 }
 
+function withLoginTimeout(promise,ms,label){
+  let timer;
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(label||'SERVER NIJE ODGOVORIO — pokušaj ponovno.')),ms)})
+  ]).finally(()=>clearTimeout(timer))
+}
+
 async function authenticate(){
   const username=(document.getElementById('loginUser')?.value||'').trim().toLowerCase();
   const password=document.getElementById('loginPass')?.value||'';
@@ -27286,10 +27294,10 @@ async function authenticate(){
   try{
     const authClient=await window.YardivoAuth?.client?.();
     if(authClient?.auth?.setSession){
-      const {error:setSessionError}=await authClient.auth.setSession({
+      const {error:setSessionError}=await withLoginTimeout(authClient.auth.setSession({
         access_token:auth.access_token,
         refresh_token:auth.refresh_token
-      });
+      }),7000,'AUTH SESSION NIJE ODGOVORIO — pokušaj ponovno.');
       if(setSessionError)throw setSessionError;
     }
     window.__yardivoSupplierAccessToken=auth.access_token;
@@ -27303,7 +27311,7 @@ async function authenticate(){
   if(assignedRole!=='supplier'){
     if(!window.YardivoSupabase?.authenticate)throw new Error('ONLINE BAZA NIJE SPREMNA.');
     /* Canonical DB connection is part of login. Do not open the app in a half-connected state. */
-    const connected=await window.YardivoSupabase.authenticate(auth.access_token,auth.refresh_token);
+    const connected=await withLoginTimeout(window.YardivoSupabase.authenticate(auth.access_token,auth.refresh_token),10000,'ONLINE BAZA NIJE ODGOVORILA — pokušaj ponovno.');
     if(!connected||!window.YardivoSupabase?.online?.())throw new Error('ONLINE BAZA NIJE SPOJENA.');
   }
 
