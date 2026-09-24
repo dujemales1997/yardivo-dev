@@ -1,0 +1,30 @@
+name: Audit request hotspots
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-request-hotspot-audit.yml"
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit request hotspots
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s=Path("index.html").read_text(encoding="utf-8",errors="replace")
+          needles=["auth.getUser(","getUser()","yardivo_user_access","setInterval(","setTimeout(","list_mine","yardivo_app_state","yardivo_announcements","yardivo_supplier_deliveries"]
+          for n in needles:
+              print("\n===== "+n+" =====")
+              start=0
+              for k in range(80):
+                  i=s.find(n,start)
+                  if i<0: break
+                  pre=s[max(0,i-1000):i]
+                  sid=""
+                  ms=list(re.finditer(r'<script[^>]+id=["\']([^"\']+)["\'][^>]*>',pre,re.I))
+                  if ms:sid=ms[-1].group(1)
+                  print(f"{i} SCRIPT={sid}")
+                  print(s[max(0,i-700):min(len(s),i+1400)].replace("\n"," ")[:2400])
+                  start=i+len(n)
