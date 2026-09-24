@@ -1,0 +1,87 @@
+name: Remove supplier settings side popup
+permissions:
+  contents: write
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-supplier-settings-clean.yml"
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch supplier settings
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, subprocess
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8")
+          marker='yardivo-v583-supplier-hide-settings-20260924'
+          if marker in s:
+              raise SystemExit("already patched")
+          block=r'''
+<style id="yardivo-v583-supplier-hide-settings-20260924">
+#yardivoSupplierPortal [data-ysp-view="settings"],
+#yardivoSupplierPortal [data-ysp-section="settings"]{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+</style>
+<script id="yardivo-v583-supplier-hide-settings-20260924-js">
+(()=>{'use strict';
+if(window.__YARDIVO_SUPPLIER_HIDE_SETTINGS_20260924__)return;
+window.__YARDIVO_SUPPLIER_HIDE_SETTINGS_20260924__=true;
+function supplierRole(){
+  try{return String((typeof currentSession!=='undefined'?currentSession:window.currentSession)?.role||'').toLowerCase()==='supplier'}catch(_){return false}
+}
+function clean(){
+  if(!supplierRole())return;
+  const p=document.getElementById('yardivoSupplierPortal');if(!p)return;
+  p.querySelectorAll('[data-ysp-view="settings"],[data-ysp-section="settings"]').forEach(el=>{
+    el.style.setProperty('display','none','important');
+    el.setAttribute('aria-hidden','true');
+  });
+  const active=p.querySelector('[data-ysp-section="settings"].active,[data-ysp-section="settings"][style*="display"]');
+  if(active){
+    const btn=p.querySelector('[data-ysp-view="status"]');
+    if(btn)btn.click();
+  }
+}
+['yardivo:login','yardivo:data-synced'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(clean,0)));
+document.addEventListener('click',e=>{
+  if(e.target.closest?.('[data-ysp-view="settings"]')&&supplierRole()){
+    e.preventDefault();e.stopImmediatePropagation();
+    document.querySelector('#yardivoSupplierPortal [data-ysp-view="status"]')?.click();
+  }
+},true);
+document.addEventListener('DOMContentLoaded',()=>setTimeout(clean,0));
+window.addEventListener('load',()=>setTimeout(clean,0),{once:true});
+window.YardivoSupplierSettingsHiddenV583={apply:clean};
+})();
+</script>
+'''
+          s=s.replace('</body>',block+'\n</body>',1)
+          p.write_text(s,encoding="utf-8")
+          Path(".github/workflows/yardivo-supplier-settings-clean.yml").unlink()
+      - name: Validate
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, subprocess
+          s=Path("index.html").read_text(encoding="utf-8")
+          assert 'yardivo-v583-supplier-hide-settings-20260924' in s
+          assert '[data-ysp-view="settings"]' in s
+          m=re.search(r'<script id="yardivo-v583-supplier-hide-settings-20260924-js">(.*?)</script>',s,re.S)
+          assert m
+          Path('/tmp/check.js').write_text(m.group(1),encoding='utf-8')
+          subprocess.check_call(['node','--check','/tmp/check.js'])
+      - name: Commit
+        run: |
+          git config user.name "YARDIVO QA"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html .github/workflows/yardivo-supplier-settings-clean.yml
+          git diff --cached --check
+          git commit -m "Hide supplier settings side panel"
+          git push origin HEAD:main
