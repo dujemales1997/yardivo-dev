@@ -27166,16 +27166,25 @@ function setBusy(on){
   }
 }
 
-async function fetchJSON(url,options={},timeoutMs=6500){
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),timeoutMs);
-  try{
-    const res=await fetch(url,{...options,signal:controller.signal});
-    const data=await res.json().catch(()=>({}));
-    return {res,data};
-  }finally{
-    clearTimeout(timer);
+async function fetchJSON(url,options={},timeoutMs=10000){
+  let lastError=null;
+  for(let attempt=0;attempt<2;attempt++){
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),timeoutMs);
+    try{
+      const res=await fetch(url,{...options,signal:controller.signal});
+      const data=await res.json().catch(()=>({}));
+      return {res,data};
+    }catch(e){
+      lastError=e;
+      const transient=e?.name==='AbortError'||/Failed to fetch|NetworkError|Load failed/i.test(String(e?.message||e));
+      if(!transient||attempt>=1)throw e;
+      await new Promise(r=>setTimeout(r,300));
+    }finally{
+      clearTimeout(timer);
+    }
   }
+  throw lastError||new Error('NETWORK_REQUEST_FAILED');
 }
 
 function persistSession(session){
@@ -27205,7 +27214,7 @@ async function authenticate(){
   const {res:authRes,data:auth}=await fetchJSON(
     BASE+'/auth/v1/token?grant_type=password',
     {method:'POST',headers,body:JSON.stringify({email:username+'@yardivo.local',password})},
-    6500
+    10000
   );
 
   if(!authRes.ok||!auth?.access_token){
@@ -27220,7 +27229,7 @@ async function authenticate(){
   const {res:profileRes,data:pdata}=await fetchJSON(
     BASE+'/rest/v1/rpc/yardivo_my_profile',
     {method:'POST',headers:profileHeaders,body:'{}'},
-    6500
+    10000
   );
   if(!profileRes.ok){
     throw new Error(String(pdata?.message||'NE MOGU UČITATI KORISNIČKI PROFIL.'));
