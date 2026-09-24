@@ -16,7 +16,6 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re, subprocess
-
           p=Path('index.html')
           s=p.read_text(encoding='utf-8',errors='replace')
           sid='yardivo-v583-supplier-history-status-server-authority-20260923'
@@ -24,39 +23,25 @@ jobs:
           if not m:
               raise SystemExit('supplier authority script missing')
           js=m.group(2)
-
-          old="""function renderHistory(){
-  const body=$('yspHistoryBody');if(!body)return;ensureHistoryNote();
-  if(!rows.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema poslanih najava u YARDIVO bazi.</div></td></tr>';return}
-  body.innerHTML=rows.map(x=>{"""
-          new="""function renderHistory(){
-  const body=$('yspHistoryBody');if(!body)return;ensureHistoryNote();
-  const historyRows=rows.filter(x=>['confirmed','arrival','dock','receiving','completed','rejected'].includes(statusKey(x.status)));
-  if(!historyRows.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema potvrđenih ili odbijenih najava.</div></td></tr>';return}
-  body.innerHTML=historyRows.map(x=>{"""
-
-          if old not in js:
-              if 'const historyRows=rows.filter' not in js:
-                  raise SystemExit('renderHistory anchor missing')
-          else:
+          old="function renderHistory(){\n  const body=$('yspHistoryBody');if(!body)return;ensureHistoryNote();\n  if(!rows.length){body.innerHTML='<tr><td colspan=\"7\"><div class=\"ysph-empty\">Još nema poslanih najava u YARDIVO bazi.</div></td></tr>';return}\n  body.innerHTML=rows.map(x=>{"
+          new="function renderHistory(){\n  const body=$('yspHistoryBody');if(!body)return;ensureHistoryNote();\n  const historyRows=rows.filter(x=>['confirmed','arrival','dock','receiving','completed','rejected'].includes(statusKey(x.status)));\n  if(!historyRows.length){body.innerHTML='<tr><td colspan=\"7\"><div class=\"ysph-empty\">Još nema potvrđenih ili odbijenih najava.</div></td></tr>';return}\n  body.innerHTML=historyRows.map(x=>{"
+          if old in js:
               js=js.replace(old,new,1)
-
+          elif 'const historyRows=rows.filter' not in js:
+              raise SystemExit('renderHistory anchor missing')
           oldnote="n.textContent='Povijest se učitava izravno iz YARDIVO baze. Ovdje su sve najave i narudžbe ovog Supplier računa, uključujući završene, s njihovim zadnjim statusom.';"
           newnote="n.textContent='Povijest se učitava izravno iz YARDIVO baze. Prikazuju se potvrđene najave i njihov daljnji tijek te odbijene najave. Najave koje čekaju potvrdu ostaju u Stanje najave / Isporuke.';"
           if oldnote in js:
               js=js.replace(oldnote,newnote,1)
-
           out=s[:m.start(2)]+js+s[m.end(2):]
           p.write_text(out,encoding='utf-8')
           Path('/tmp/supplier-authority.js').write_text(js,encoding='utf-8')
           subprocess.check_call(['node','--check','/tmp/supplier-authority.js'])
-
           chk=p.read_text(encoding='utf-8')
           assert "const historyRows=rows.filter" in chk
           assert "'confirmed','arrival','dock','receiving','completed','rejected'" in chk
           assert 'Još nema potvrđenih ili odbijenih najava.' in chk
           PY
-
           git config user.name "YARDIVO QA"
           git config user.email "actions@users.noreply.github.com"
           git rm .github/workflows/yardivo-supplier-history-filter.yml
