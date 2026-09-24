@@ -55428,7 +55428,8 @@ document.addEventListener('click',e=>{
   if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(ensureWallAdmin,40);
   if(e.target.closest?.('[data-view="checkin"],[data-home-target="checkin"]'))setTimeout(()=>{ensureGatePanel();loadGate()},40);
 },true);
-setInterval(()=>{if(!document.hidden&&['admin','gate'].includes(role()))loadGate()},7000);
+/* Event listeners are primary; 30 s is only a visible-tab safety fallback. */
+setInterval(()=>{if(!document.hidden&&['admin','gate'].includes(role()))loadGate()},30000);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,500),{once:true});else setTimeout(boot,300);
 
 window.YardivoDeliveryPassV1={dpMeta,cleanDp,loadGate,wallLink};
