@@ -61846,7 +61846,7 @@ function normalized(x){
     date:String(x.delivery_date||'').slice(0,10),
     time:String(x.requested_time||'').slice(0,5),
     order:String(x.order_number||''),
-    status:statusKey(x.status),
+    status:statusKey(x.effective_status||x.status),
     dock:String(x.dock||x.dock_number||''),
     plate:String(x.vehicle_plate||''),
     trailer:String(x.trailer_plate||''),
@@ -61855,7 +61855,7 @@ function normalized(x){
     pallets:Number(x.pallets||0),
     sku:Number(x.sku_count||0),
     review:cleanReview(x.review_note),
-    updatedAt:String(x.updated_at||x.created_at||''),
+    updatedAt:String(x.announcement_updated_at||x.updated_at||x.created_at||''),
     qrUrl:String(q?.qrUrl||''),
     qrToken:String(q?.token||'')
   }
@@ -61886,7 +61886,7 @@ function ensureHistoryNote(){
   const sec=portal()?.querySelector('[data-ysp-section="history"]');if(!sec)return;
   if(sec.querySelector('.ysp-server-note'))return;
   const card=sec.querySelector('.ysp-card');if(!card)return;
-  const n=document.createElement('div');n.className='ysp-server-note';n.textContent='Povijest se učitava izravno iz YARDIVO baze. Prikazane su sve najave poslane s ovog Supplier računa.';card.insertBefore(n,card.querySelector('.data-wrap')||card.firstChild)
+  const n=document.createElement('div');n.className='ysp-server-note';n.textContent='Povijest se učitava izravno iz YARDIVO baze. Ovdje su sve najave i narudžbe ovog Supplier računa, uključujući završene, s njihovim zadnjim statusom.';card.insertBefore(n,card.querySelector('.data-wrap')||card.firstChild)
 }
 function renderHistory(){
   const body=$('yspHistoryBody');if(!body)return;ensureHistoryNote();
