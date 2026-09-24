@@ -1,120 +1,87 @@
-name: Restore supplier terminal history
-permissions:
-  contents: write
+name: Restore Supplier History
 on:
   push:
     paths:
-      - ".github/workflows/yardivo-restore-supplier-history.yml"
+      - '.github/workflows/yardivo-restore-supplier-history.yml'
+permissions:
+  contents: write
 jobs:
-  patch:
+  restore:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect and patch supplier history
-        shell: python
+      - name: Patch index
         run: |
+          python <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+
+          nav_old='''<button class="active" data-i18n="navNew" data-ysp-view="new" type="button">NAJAVA</button>
+          <button data-i18n="navStatus" data-ysp-view="status" type="button">STANJE NAJAVE I ISPORUKE</button>
+          <button data-i18n="navSettings" data-ysp-view="settings" type="button">POSTAVKE</button>'''
+          nav_new='''<button class="active" data-i18n="navNew" data-ysp-view="new" type="button">NAJAVA</button>
+          <button data-i18n="navStatus" data-ysp-view="status" type="button">STANJE NAJAVE I ISPORUKE</button>
+          <button data-i18n="navHistory" data-ysp-view="history" type="button">POVIJEST NAJAVA</button>
+          <button data-i18n="navSettings" data-ysp-view="settings" type="button">POSTAVKE</button>'''
+          if nav_old not in s: raise SystemExit('nav anchor missing')
+          s=s.replace(nav_old,nav_new,1)
+
+          status='''<section class="ysp-view" data-ysp-section="status">
+          <div class="ysp-card">
+          <h2 data-i18n="statusTitle">Stanje najave i isporuke</h2>'''
+          hist='''<section class="ysp-view" data-ysp-section="history">
+          <div class="ysp-card">
+          <h2 data-i18n="historyTitle">Povijest najava</h2>
+          <p class="muted">Zaprimljene i odbijene narudžbe ovog Supplier računa.</p>
+          <div class="data-wrap"><table class="ysp-table">
+          <thead><tr><th>NAJAVA</th><th>DATUM / TERMIN</th><th>SKLADIŠTE</th><th>NARUDŽBA / PO</th><th>STATUS</th><th>RAMPA</th><th>VOZILO / QR DOCK</th></tr></thead>
+          <tbody id="yspHistoryBody"><tr><td colspan="7"><div class="ysph-empty">Učitavanje povijesti...</div></td></tr></tbody>
+          </table></div>
+          </div>
+          </section>
+          '''+status
+          if status not in s: raise SystemExit('status anchor missing')
+          s=s.replace(status,hist,1)
+
+          old='''function renderHistory(){
+            const body=$('yspHistoryBody');if(!body)return;ensureHistoryNote();
+            if(!rows.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema poslanih najava u YARDIVO bazi.</div></td></tr>';return}
+            body.innerHTML=rows.map(x=>{'''
+          new='''function renderHistory(){
+            const body=$('yspHistoryBody');if(!body)return;ensureHistoryNote();
+            const history=rows.filter(x=>['completed','rejected'].includes(statusKey(x.status)));
+            if(!history.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema zaprimljenih ili odbijenih najava.</div></td></tr>';return}
+            body.innerHTML=history.map(x=>{'''
+          if old not in s: raise SystemExit('canonical history anchor missing')
+          s=s.replace(old,new,1)
+
+          s=s.replace('Povijest se učitava izravno iz YARDIVO baze. Ovdje su sve najave i narudžbe ovog Supplier računa, uključujući završene, s njihovim zadnjim statusom.','Povijest se učitava izravno iz YARDIVO baze. Ovdje su završene narudžbe: zaprimljene i odbijene, s njihovim zadnjim statusom.')
+          s=s.replace('Nema aktivnih najava. Završene i prethodne najave nalaze se u Povijesti najava.','Nema aktivnih najava. Zaprimljene i odbijene narudžbe nalaze se u Povijesti najava.')
+
+          assert 'const history=rows.filter' in s
+          assert 'data-ysp-view="history"' in s
+          assert 'id="yspHistoryBody"' in s
+          p.write_text(s,encoding='utf-8')
+          Path('.github/workflows/yardivo-restore-supplier-history.yml').unlink()
+          PY
+      - name: Validate scripts
+        run: |
+          python <<'PY'
           from pathlib import Path
           import re, subprocess
-          p=Path("index.html")
-          s=p.read_text(encoding="utf-8",errors="replace")
-
-          # Locate the canonical supplier authority block.
-          m=re.search(r'(<script[^>]+id="yardivo-v583-supplier-history-status-server-authority-20260923"[^>]*>)(.*?)(</script>)',s,re.S)
-          if not m:
-              raise SystemExit("supplier authority block missing")
-          js=m.group(2)
-
-          # Terminal history: completed/rejected only. Keep active cards in Status.
-          old="""function renderHistory(){
-  const body=$('yspHistoryBody');if(!body)return;ensureHistoryNote();
-  if(!rows.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema poslanih najava u YARDIVO bazi.</div></td></tr>';return}
-  body.innerHTML=rows.map(x=>{"""
-          new="""function renderHistory(){
-  const body=$('yspHistoryBody');if(!body)return;ensureHistoryNote();
-  const history=rows.filter(x=>['completed','rejected'].includes(statusKey(x.status)));
-  if(!history.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema zaprimljenih ili odbijenih najava.</div></td></tr>';return}
-  body.innerHTML=history.map(x=>{"""
-          if old in js:
-              js=js.replace(old,new)
-          elif "function renderHistory()" not in js:
-              raise SystemExit("renderHistory missing")
-
-          # Update history note if present.
-          js=js.replace(
-            "Povijest se učitava izravno iz YARDIVO baze. Ovdje su sve najave i narudžbe ovog Supplier računa, uključujući završene, s njihovim zadnjim statusom.",
-            "Povijest se učitava izravno iz YARDIVO baze. Ovdje su završene narudžbe: zaprimljene i odbijene, s njihovim zadnjim statusom."
-          )
-
-          # Status empty message should point to history.
-          js=js.replace(
-            "Nema aktivnih najava. Završene i prethodne najave nalaze se u Povijesti najava.",
-            "Nema aktivnih najava. Zaprimljene i odbijene narudžbe nalaze se u Povijesti najava."
-          )
-
-          # Ensure history section/tab is visible if an earlier cleanup hid it.
-          addon=r'''
-<style id="yardivo-v583-supplier-terminal-history-restore-20260924">
-#yardivoSupplierPortal [data-ysp-section="history"]{display:none}
-#yardivoSupplierPortal [data-ysp-section="history"].active{display:block!important}
-#yardivoSupplierPortal [data-ysp-nav="history"],
-#yardivoSupplierPortal [data-ysp-target="history"]{display:flex!important}
-</style>
-<script id="yardivo-v583-supplier-terminal-history-restore-20260924">
-(function(){'use strict';
-if(window.__YARDIVO_SUPPLIER_TERMINAL_HISTORY_RESTORE_20260924__)return;
-window.__YARDIVO_SUPPLIER_TERMINAL_HISTORY_RESTORE_20260924__=true;
-function restore(){
- const p=document.getElementById('yardivoSupplierPortal');if(!p)return;
- const sec=p.querySelector('[data-ysp-section="history"]');
- if(sec)sec.removeAttribute('hidden');
- const navs=[...p.querySelectorAll('[data-ysp-nav="history"],[data-ysp-target="history"]')];
- navs.forEach(x=>{x.hidden=false;x.style.removeProperty('display');});
-}
-document.addEventListener('DOMContentLoaded',()=>setTimeout(restore,60));
-window.addEventListener('yardivo:login',()=>setTimeout(restore,80));
-window.addEventListener('yardivo:data-synced',()=>setTimeout(restore,80));
-document.addEventListener('click',e=>{
- const b=e.target.closest?.('[data-ysp-nav="history"],[data-ysp-target="history"]');if(!b)return;
- setTimeout(()=>{try{window.YardivoSupplierHistoryStatusServerV583?.render?.()}catch(_){}},0);
-},true);
-restore();
-})();
-</script>
-'''
-          if 'yardivo-v583-supplier-terminal-history-restore-20260924' not in s:
-              insert_at=m.end()
-              s=s[:insert_at]+addon+s[insert_at:]
-
-          # Put patched JS back after optional insertion based on original match positions.
-          # Re-find after insertion to avoid offset issues.
-          m2=re.search(r'(<script[^>]+id="yardivo-v583-supplier-history-status-server-authority-20260923"[^>]*>)(.*?)(</script>)',s,re.S)
-          s=s[:m2.start(2)]+js+s[m2.end(2):]
-
-          p.write_text(s,encoding="utf-8")
-          Path(".github/workflows/yardivo-restore-supplier-history.yml").unlink()
-
-      - name: Validate
-        shell: python
-        run: |
-          from pathlib import Path
-          import re, subprocess
-          s=Path("index.html").read_text(encoding="utf-8")
-          assert "const history=rows.filter(x=>['completed','rejected'].includes(statusKey(x.status)))" in s
-          assert "Još nema zaprimljenih ili odbijenih najava." in s
-          assert "yardivo-v583-supplier-terminal-history-restore-20260924" in s
+          s=Path('index.html').read_text(encoding='utf-8')
           m=re.search(r'<script[^>]+id="yardivo-v583-supplier-history-status-server-authority-20260923"[^>]*>(.*?)</script>',s,re.S)
           assert m
-          Path("/tmp/supplier-authority.js").write_text(m.group(1),encoding="utf-8")
-          subprocess.check_call(["node","--check","/tmp/supplier-authority.js"])
-          m2=re.search(r'<script[^>]+id="yardivo-v583-supplier-terminal-history-restore-20260924"[^>]*>(.*?)</script>',s,re.S)
-          assert m2
-          Path("/tmp/history-restore.js").write_text(m2.group(1),encoding="utf-8")
-          subprocess.check_call(["node","--check","/tmp/history-restore.js"])
+          Path('/tmp/supplier.js').write_text(m.group(1),encoding='utf-8')
+          subprocess.check_call(['node','--check','/tmp/supplier.js'])
+          assert "['completed','rejected']" in m.group(1)
+          PY
+          git diff --check
       - name: Commit
         run: |
           git config user.name "YARDIVO QA"
           git config user.email "actions@users.noreply.github.com"
           git add index.html .github/workflows/yardivo-restore-supplier-history.yml
-          git diff --cached --check
           git commit -m "Restore supplier completed and rejected history"
           git push origin HEAD:main
