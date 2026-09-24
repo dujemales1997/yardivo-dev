@@ -17,69 +17,67 @@ jobs:
           import re, subprocess
           p=Path("index.html")
           s=p.read_text(encoding="utf-8")
-
+          
           old="""window.addEventListener('load',()=>{
-  setPhaseClasses();
-  setTimeout(()=>{
-    setPhaseClasses();
-    render();
-    const s=seen();
-    if(!prelogin()){all().forEach(n=>s.add(String(n.id)));saveSeen(s)}
-  },700);
-});
-setInterval(()=>{
-  setPhaseClasses();
-  const now=fingerprint();
-  if(now!==fp){render();checkNew()}else syncBadges();
-},1200);"""
+            setPhaseClasses();
+            setTimeout(()=>{
+              setPhaseClasses();
+              render();
+              const s=seen();
+              if(!prelogin()){all().forEach(n=>s.add(String(n.id)));saveSeen(s)}
+            },700);
+          });
+          setInterval(()=>{
+            setPhaseClasses();
+            const now=fingerprint();
+            if(now!==fp){render();checkNew()}else syncBadges();
+          },1200);"""
           new="""window.addEventListener('load',()=>{
-  setPhaseClasses();
-  setTimeout(()=>{
-    setPhaseClasses();
-    render();
-    if(!prelogin())checkNew();
-  },700);
-});
-window.addEventListener('yardivo:login',()=>{
-  try{sessionStorage.removeItem(SEEN)}catch(_){}
-  setTimeout(()=>{
-    setPhaseClasses();
-    render();
-    checkNew();
-  },220);
-});
-['yardivo:data-synced','yardivo:online-ready'].forEach(ev=>window.addEventListener(ev,()=>{
-  setTimeout(()=>{
-    if(prelogin())return;
-    render();
-    checkNew();
-  },120);
-}));
-window.addEventListener('yardivo:logout',()=>{
-  try{sessionStorage.removeItem(SEEN)}catch(_){}
-  try{document.getElementById('yardivoToastStack')?.replaceChildren()}catch(_){}
-  try{panel?.classList.remove('open')}catch(_){}
-  setPhaseClasses();
-  syncBadges();
-});
-setInterval(()=>{
-  setPhaseClasses();
-  if(prelogin()){syncBadges();return}
-  const now=fingerprint();
-  if(now!==fp){render();checkNew()}else syncBadges();
-},1200);"""
+            setPhaseClasses();
+            setTimeout(()=>{
+              setPhaseClasses();
+              render();
+              if(!prelogin())checkNew();
+            },700);
+          });
+          window.addEventListener('yardivo:login',()=>{
+            try{sessionStorage.removeItem(SEEN)}catch(_){}
+            setTimeout(()=>{
+              setPhaseClasses();
+              render();
+              checkNew();
+            },220);
+          });
+          ['yardivo:data-synced','yardivo:online-ready'].forEach(ev=>window.addEventListener(ev,()=>{
+            setTimeout(()=>{
+              if(prelogin())return;
+              render();
+              checkNew();
+            },120);
+          }));
+          window.addEventListener('yardivo:logout',()=>{
+            try{sessionStorage.removeItem(SEEN)}catch(_){}
+            try{document.getElementById('yardivoToastStack')?.replaceChildren()}catch(_){}
+            try{panel?.classList.remove('open')}catch(_){}
+            setPhaseClasses();
+            syncBadges();
+          });
+          setInterval(()=>{
+            setPhaseClasses();
+            if(prelogin()){syncBadges();return}
+            const now=fingerprint();
+            if(now!==fp){render();checkNew()}else syncBadges();
+          },1200);"""
           if old not in s:
               raise SystemExit("notification lifecycle anchor missing")
           s=s.replace(old,new,1)
-
-          # Retire the extra browser speech loop. AI voice is already bound to yardivo:visible-toast,
-          # which is emitted exactly when a notification bubble is rendered.
+          
           start=s.find('<script id="yardivo-v583-supplier-history-tombstone-voice-20260924">')
           if start<0:
               raise SystemExit("tombstone voice script missing")
           end=s.find('</script>',start)
           block=s[start:end]
-          block2=re.sub(r"const KEY='yardivo_voice_notif_seen_v583';.*?function boot\(\)\{purgeGhostSupplier\(\);pollVoice\(\)\}",
+          block2=re.sub(r"const KEY='yardivo_voice_notif_seen_v583';.*?function boot\\(\\)\\{purgeGhostSupplier\\(\\);pollVoice\\(\\)\\}",
                         "function boot(){purgeGhostSupplier()}",
                         block,flags=re.S)
           block2=block2.replace("['yardivo:login','yardivo:data-synced','yardivo:notification','yardivo:master-data-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{purgeGhostSupplier();pollVoice()},40)));",
@@ -88,68 +86,32 @@ setInterval(()=>{
           if "speechSynthesis" in block2 or "pollVoice" in block2 or "yardivo_voice_notif_seen_v583" in block2:
               raise SystemExit("legacy voice loop was not fully retired")
           s=s[:start]+block2+s[end:]
-
-          # Hard logout guard for the Gemini/AI voice queue.
-          marker="window.YardivoAIVoiceNotifications={"
-          ai=s.find(marker)
-          if ai<0:
-              raise SystemExit("AI voice API marker missing")
-          guard="""window.addEventListener('yardivo:logout',()=>{
-  try{window.YardivoAIVoiceNotifications?.setMode?.('off')}catch(_){}
-  try{sessionStorage.setItem('yardivo_ai_voice_resume_after_login','1')}catch(_){}
-});
-window.addEventListener('yardivo:login',()=>{
-  try{
-    if(sessionStorage.getItem('yardivo_ai_voice_resume_after_login')==='1'){
-      sessionStorage.removeItem('yardivo_ai_voice_resume_after_login');
-      window.YardivoAIVoiceNotifications?.setMode?.('ai');
-    }
-  }catch(_){}
-});
-"""
-          # Insert after AI API object block's script if not already there via final guard script.
-          final_guard="""
-<script id="yardivo-v583-notification-login-ai-voice-guard-20260924">
-(()=>{'use strict';
-if(window.__YARDIVO_NOTIFICATION_LOGIN_AI_VOICE_GUARD_20260924__)return;
-window.__YARDIVO_NOTIFICATION_LOGIN_AI_VOICE_GUARD_20260924__=true;
-function loggedIn(){try{return !!(window.currentSession&&window.currentSession.role)}catch(_){return false}}
-function stopVoice(){try{window.speechSynthesis?.cancel?.()}catch(_){}
- try{window.YardivoAIVoiceNotifications?.setMode?.('off')}catch(_){}
-}
-window.addEventListener('yardivo:logout',()=>{
- try{sessionStorage.setItem('yardivo_ai_voice_resume_after_login',localStorage.getItem('yardivo_notification_sound_mode_v2')==='off'?'0':'1')}catch(_){}
- stopVoice();
-});
-window.addEventListener('yardivo:login',()=>{
- try{
-   const resume=sessionStorage.getItem('yardivo_ai_voice_resume_after_login');
-   if(resume==='1'){sessionStorage.removeItem('yardivo_ai_voice_resume_after_login');window.YardivoAIVoiceNotifications?.setMode?.('ai')}
- }catch(_){}
-});
-window.addEventListener('yardivo:visible-toast',e=>{
- if(!loggedIn())return;
- const n=e?.detail?.notification;
- if(!n)return;
- try{window.YardivoAIVoiceNotifications?.speak?.(n)}catch(_){}
-});
-})();
-</script>
-"""
-          # Existing AI voice already listens to visible-toast, so don't duplicate speaking.
-          final_guard=final_guard.replace("""window.addEventListener('yardivo:visible-toast',e=>{
- if(!loggedIn())return;
- const n=e?.detail?.notification;
- if(!n)return;
- try{window.YardivoAIVoiceNotifications?.speak?.(n)}catch(_){}
-});
-""","")
+          
+          final_guard="""<script id="yardivo-v583-notification-login-ai-voice-guard-20260924">
+          (()=>{'use strict';
+          if(window.__YARDIVO_NOTIFICATION_LOGIN_AI_VOICE_GUARD_20260924__)return;
+          window.__YARDIVO_NOTIFICATION_LOGIN_AI_VOICE_GUARD_20260924__=true;
+          function stopVoice(){try{window.speechSynthesis?.cancel?.()}catch(_){}
+           try{window.YardivoAIVoiceNotifications?.setMode?.('off')}catch(_){}
+          }
+          window.addEventListener('yardivo:logout',()=>{
+           try{sessionStorage.setItem('yardivo_ai_voice_resume_after_login',localStorage.getItem('yardivo_notification_sound_mode_v2')==='off'?'0':'1')}catch(_){}
+           stopVoice();
+          });
+          window.addEventListener('yardivo:login',()=>{
+           try{
+             const resume=sessionStorage.getItem('yardivo_ai_voice_resume_after_login');
+             if(resume==='1'){sessionStorage.removeItem('yardivo_ai_voice_resume_after_login');window.YardivoAIVoiceNotifications?.setMode?.('ai')}
+           }catch(_){}
+          });
+          })();
+          </script>"""
           if 'yardivo-v583-notification-login-ai-voice-guard-20260924' not in s:
-              s=s.replace('</body>',final_guard+'\n</body>',1)
-
+              s=s.replace('</body>',final_guard+'\\n</body>',1)
+          
           p.write_text(s,encoding="utf-8")
           Path(".github/workflows/yardivo-notif-login-voice.yml").unlink()
-
+          
       - name: Validate JS and semantics
         shell: python
         run: |
@@ -172,6 +134,7 @@ window.addEventListener('yardivo:visible-toast',e=>{
           assert m
           Path("/tmp/guard.js").write_text(m.group(1),encoding="utf-8")
           subprocess.check_call(["node","--check","/tmp/guard.js"])
+          
       - name: Commit
         run: |
           git config user.name "YARDIVO QA"
