@@ -15789,6 +15789,22 @@ window.YardivoLocationLock={
   setTimeout(clean,800);
 })();
 </script>
+<script id="yardivo-tab-auth-isolation-v583">
+(function(){
+'use strict';
+if(window.YardivoTabAuthV583)return;
+let id='';
+try{
+  id=String(window.name||'').match(/^yardivo-auth-tab-(.+)$/)?.[1]||'';
+  if(!id){
+    id=(crypto?.randomUUID?.()||('t'+Date.now().toString(36)+Math.random().toString(36).slice(2)));
+    window.name='yardivo-auth-tab-'+id;
+  }
+}catch(_){id='t'+Date.now().toString(36)+Math.random().toString(36).slice(2)}
+const safe=id.replace(/[^a-zA-Z0-9_-]/g,'').slice(0,80)||('t'+Date.now());
+window.YardivoTabAuthV583={id:safe,storageKey:'yardivo-auth-'+safe};
+})();
+</script>
 <script id="yardivo-auth-driver-role-final-fix">
 (function(){
 'use strict';
@@ -15837,7 +15853,7 @@ async function authClient(){
     window.__yardivoAuthClient=window.supabase.createClient(
       'https://rskticdbiovvgyocpzoc.supabase.co',
       'sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy',
-      {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage}}
+      {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage,storageKey:(window.YardivoTabAuthV583?.storageKey||('yardivo-auth-'+Math.random().toString(36).slice(2)))}}
     );
   }
   return window.__yardivoAuthClient;
@@ -15860,7 +15876,7 @@ async function authoritativeLogin(){
   const btn=document.getElementById('loginSubmitBtn');if(btn)btn.disabled=true;
   try{
     const c=await authClient();
-    await c.auth.signOut({scope:'local'}).catch(()=>{});
+    try{await Promise.race([c.auth.signOut({scope:'local'}),new Promise(r=>setTimeout(r,1200))])}catch(_){}
     const {data,error}=await c.auth.signInWithPassword({email:`${username}@yardivo.local`,password});
     if(error||!data?.session)throw error||new Error('Prijava nije uspjela.');
     /* password change is user-initiated only */
@@ -26916,7 +26932,7 @@ Storage.prototype.removeItem=function(k){
 async function getClient(){
   if(!window.supabase?.createClient)return null;
   if(!client){
-    client=window.__yardivoAuthClient||window.supabase.createClient(BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage}});
+    client=window.__yardivoAuthClient||window.supabase.createClient(BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage,storageKey:(window.YardivoTabAuthV583?.storageKey||('yardivo-auth-'+Math.random().toString(36).slice(2)))}});
     window.__yardivoAuthClient=client;
   }
   if(accessToken&&refreshToken){
@@ -27172,20 +27188,20 @@ function setBusy(on){
   }
 }
 
-async function fetchJSON(url,options={},timeoutMs=10000){
+async function fetchJSON(url,options={},timeoutMs=12000){
   let lastError=null;
-  for(let attempt=0;attempt<2;attempt++){
+  for(let attempt=0;attempt<3;attempt++){
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),timeoutMs);
     try{
-      const res=await fetch(url,{...options,signal:controller.signal});
+      const res=await fetch(url,{...options,cache:'no-store',signal:controller.signal});
       const data=await res.json().catch(()=>({}));
       return {res,data};
     }catch(e){
       lastError=e;
-      const transient=e?.name==='AbortError'||/Failed to fetch|NetworkError|Load failed/i.test(String(e?.message||e));
-      if(!transient||attempt>=1)throw e;
-      await new Promise(r=>setTimeout(r,300));
+      const transient=e?.name==='AbortError'||/Failed to fetch|NetworkError|Load failed|network request failed/i.test(String(e?.message||e));
+      if(!transient||attempt>=2)throw e;
+      await new Promise(r=>setTimeout(r,350*(attempt+1)));
     }finally{
       clearTimeout(timer);
     }
