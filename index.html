@@ -8540,6 +8540,11 @@ body:has(#settings.view) #settings #qrMobileSettingsPanel{
   display:none!important;
 }
 </style>
+<style id="yardivo-v583-login-spinner-20260924">
+#loginSubmitBtn.yv-login-busy{display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important}
+#loginSubmitBtn .yv-login-spinner{width:18px!important;height:18px!important;border:3px solid rgba(255,255,255,.35)!important;border-top-color:#fff!important;border-radius:50%!important;flex:0 0 18px!important;animation:yardivoLoginSpin .75s linear infinite!important}
+@keyframes yardivoLoginSpin{to{transform:rotate(360deg)}}
+</style>
 </head>
 <body>
 <button aria-label="Uključi full screen" id="yardivoFullscreenBtn" title="Full screen" type="button"><span class="fs-icon">⛶</span><span class="fs-label">FULL SCREEN</span></button>
@@ -27155,7 +27160,8 @@ function setBusy(on){
   const b=document.getElementById('loginSubmitBtn');
   if(!b)return;
   if(!b.dataset.normalText)b.dataset.normalText=b.textContent||'PRIJAVA';
-  b.textContent=on?'PROVJERA…':b.dataset.normalText;
+  b.innerHTML=on?'<span class=\"yv-login-spinner\" aria-hidden=\"true\"></span><span>PROVJERA…</span>':b.dataset.normalText;
+  b.classList.toggle('yv-login-busy',!!on);
   b.disabled=!!on;
   if(on)b.setAttribute('aria-busy','true');
   else{
