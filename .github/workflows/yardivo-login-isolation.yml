@@ -1,114 +1,23 @@
 name: Fix multi-window login isolation
-permissions:
-  contents: write
 on:
   push:
     paths:
       - ".github/workflows/yardivo-login-isolation.yml"
+      - ".github/scripts/patch_login_isolation.py"
+permissions:
+  contents: write
 jobs:
   patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch login auth isolation
-        shell: python
-        run: |
-          from pathlib import Path
-          import re, subprocess
-          p=Path("index.html")
-          s=p.read_text(encoding="utf-8")
-
-          helper='''<script id="yardivo-tab-auth-isolation-v583">
-(function(){
-'use strict';
-if(window.YardivoTabAuthV583)return;
-let id='';
-try{
-  id=String(window.name||'').match(/^yardivo-auth-tab-(.+)$/)?.[1]||'';
-  if(!id){
-    id=(crypto?.randomUUID?.()||('t'+Date.now().toString(36)+Math.random().toString(36).slice(2)));
-    window.name='yardivo-auth-tab-'+id;
-  }
-}catch(_){id='t'+Date.now().toString(36)+Math.random().toString(36).slice(2)}
-const safe=id.replace(/[^a-zA-Z0-9_-]/g,'').slice(0,80)||('t'+Date.now());
-const storageKey='yardivo-auth-'+safe;
-window.YardivoTabAuthV583={id:safe,storageKey};
-})();
-</script>'''
-          anchor='<script id="yardivo-auth-driver-role-final-fix">'
-          if 'id="yardivo-tab-auth-isolation-v583"' not in s:
-              if anchor not in s: raise SystemExit("auth anchor missing")
-              s=s.replace(anchor,helper+'\n'+anchor,1)
-
-          old="""{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage}}"""
-          new="""{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage,storageKey:(window.YardivoTabAuthV583?.storageKey||('yardivo-auth-'+Math.random().toString(36).slice(2)))}}"""
-          if old not in s: raise SystemExit("auth client option anchor missing")
-          s=s.replace(old,new)
-
-          # Patch every online-sync fallback client too.
-          s=s.replace(
-            "window.supabase.createClient(BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage}})",
-            "window.supabase.createClient(BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage,storageKey:(window.YardivoTabAuthV583?.storageKey||('yardivo-auth-'+Math.random().toString(36).slice(2)))}})"
-          )
-
-          # Canonical login network helper: 3 attempts, slightly longer timeout, bounded overall.
-          pat=re.compile(r"""async function fetchJSON\(url,options=\{\},timeoutMs=10000\)\{\n  let lastError=null;\n  for\(let attempt=0;attempt<2;attempt\+\+\)\{\n    const controller=new AbortController\(\);\n    const timer=setTimeout\(\(\)=>controller\.abort\(\),timeoutMs\);\n    try\{\n      const res=await fetch\(url,\{\.\.\.options,signal:controller\.signal\}\);\n      const data=await res\.json\(\)\.catch\(\(\)=>\(\{\}\)\);\n      return \{res,data\};\n    \}catch\(e\)\{\n      lastError=e;\n      const transient=e\?\.name==='AbortError'\|\|/Failed to fetch\|NetworkError\|Load failed/i\.test\(String\(e\?\.message\|\|e\)\);\n      if\(!transient\|\|attempt>=1\)throw e;\n      await new Promise\(r=>setTimeout\(r,300\)\);\n    \}finally\{\n      clearTimeout\(timer\);\n    \}\n  \}\n  throw lastError\|\|new Error\('NETWORK_REQUEST_FAILED'\);\n\}""")
-          repl="""async function fetchJSON(url,options={},timeoutMs=12000){
-  let lastError=null;
-  for(let attempt=0;attempt<3;attempt++){
-    const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),timeoutMs);
-    try{
-      const res=await fetch(url,{...options,cache:'no-store',signal:controller.signal});
-      const data=await res.json().catch(()=>({}));
-      return {res,data};
-    }catch(e){
-      lastError=e;
-      const transient=e?.name==='AbortError'||/Failed to fetch|NetworkError|Load failed|network request failed/i.test(String(e?.message||e));
-      if(!transient||attempt>=2)throw e;
-      await new Promise(r=>setTimeout(r,350*(attempt+1)));
-    }finally{
-      clearTimeout(timer);
-    }
-  }
-  throw lastError||new Error('NETWORK_REQUEST_FAILED');
-}"""
-          s,n=pat.subn(repl,s,count=1)
-          if n!=1: raise SystemExit(f"canonical fetchJSON patch count={n}")
-
-          # Avoid a stale cloned session blocking a fresh login: clear only THIS tab's client.
-          s=s.replace(
-            "const c=await authClient();\n    await c.auth.signOut({scope:'local'}).catch(()=>{});\n    const {data,error}=await c.auth.signInWithPassword",
-            "const c=await authClient();\n    try{await Promise.race([c.auth.signOut({scope:'local'}),new Promise(r=>setTimeout(r,1200))])}catch(_){}\n    const {data,error}=await c.auth.signInWithPassword"
-          )
-
-          p.write_text(s,encoding="utf-8")
-
-      - name: Validate auth scripts
-        shell: python
-        run: |
-          from pathlib import Path
-          import re, subprocess
-          s=Path("index.html").read_text(encoding="utf-8")
-          assert 'yardivo-tab-auth-isolation-v583' in s
-          assert 'storageKey:(window.YardivoTabAuthV583?.storageKey' in s
-          assert 'for(let attempt=0;attempt<3;attempt++)' in s
-          assert "cache:'no-store'" in s
-          assert "Promise.race([c.auth.signOut({scope:'local'})" in s
-          for sid in ["yardivo-tab-auth-isolation-v583","yardivo-auth-driver-role-final-fix","yardivo-canonical-login-router-v2-20260901"]:
-              m=re.search(r'<script[^>]+id="'+re.escape(sid)+r'"[^>]*>(.*?)</script>',s,re.S)
-              if not m: raise SystemExit("missing "+sid)
-              q="/tmp/"+sid+".js"
-              Path(q).write_text(m.group(1),encoding="utf-8")
-              subprocess.check_call(["node","--check",q])
-          subprocess.check_call(["git","diff","--check"])
-
-      - name: Remove workflow and commit
-        run: |
+      - run: python .github/scripts/patch_login_isolation.py
+      - run: |
           rm .github/workflows/yardivo-login-isolation.yml
+          rm .github/scripts/patch_login_isolation.py
           git config user.name "YARDIVO QA"
           git config user.email "actions@users.noreply.github.com"
-          git add index.html .github/workflows/yardivo-login-isolation.yml
+          git add index.html .github/workflows/yardivo-login-isolation.yml .github/scripts/patch_login_isolation.py
           git diff --cached --check
           git commit -m "Fix multi-window login isolation"
           git push origin HEAD:main
