@@ -32,14 +32,11 @@ jobs:
               raise SystemExit("normalized QR anchor missing")
           s=s.replace(old,new,1)
 
-          old2="""    qrUrl:String(q?.qrUrl||''),
-            qrToken:String(q?.token||'')"""
-          new2="""    qrUrl:String(q.qrUrl||''),
-            qrToken:String(q.token||''),
-            qrIssuedAt:String(q.issuedAt||'')"""
-          if old2 not in s:
+          import re
+          s,n=re.subn(r"qrUrl:String\(q\?\.qrUrl\|\|''\),\s*qrToken:String\(q\?\.token\|\|''\)",
+                      "qrUrl:String(q.qrUrl||''),\n    qrToken:String(q.token||''),\n    qrIssuedAt:String(q.issuedAt||'')",s,count=1)
+          if n!=1:
               raise SystemExit("normalized QR fields anchor missing")
-          s=s.replace(old2,new2,1)
 
           old3="""const fp=JSON.stringify(next.map(x=>[x.serverId,x.id,x.status,x.warehouse,x.date,x.time,x.dock,x.plate,x.trailer,x.driver,x.driverContact,x.pallets,x.sku,x.review,x.qrUrl,x.updatedAt]));"""
           new3="""const fp=JSON.stringify(next.map(x=>[x.serverId,x.id,x.status,x.warehouse,x.date,x.time,x.dock,x.plate,x.trailer,x.driver,x.driverContact,x.pallets,x.sku,x.review,x.qrUrl,x.qrIssuedAt,x.updatedAt]));"""
