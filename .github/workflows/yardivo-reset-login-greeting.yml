@@ -30,7 +30,7 @@ jobs:
           s=s.replace('OSTAJE SAMO: <strong id="yardivoResetKeeperLabel">TRENUTNI ADMIN</strong> + aktivna autentikacijska sesija.','ZAŠTIĆENI ACCOUNT: <strong id="yardivoResetKeeperLabel">TRENUTNI ADMIN</strong> + aktivna autentikacijska sesija.',1)
           
           vstart=s.index("async function verifyEmpty(keep){")
-          vend=s.index("\\nasync function resetYardivo(){",vstart)
+          vend=s.index(chr(10)+"async function resetYardivo(){",vstart)
           assert vstart>=0 and vend>vstart
           verify="""async function verifyEmpty(keep,deleteAccounts){
            const checks={localAnnouncements:-1,localIncidents:-1,locations:-1,warehouses:-1,suppliers:-1,responsiblePeople:-1,qrEnabled:null,users:null};
@@ -50,12 +50,12 @@ jobs:
           s=s[:vstart]+verify+s[vend:]
           
           start=s.index("async function resetYardivo(){")
-          end=s.index("\\nfunction ensureBottom()",start)
+          end=s.index(chr(10)+"function ensureBottom()",start)
           assert start>=0 and end>start
           replacement="""async function resetYardivo(){
            if(busy)return;let keep;
            try{keep=keeper()}catch(e){alert(e.message);return}
-           if(!confirm(\`RESET YARDIVO — POTPUNI FACTORY ZERO\\n\\nBrišu se poslovni podaci: lokacije, skladišta, rampe, dobavljači, odgovorne osobe, najave, Supplier najave, incidenti, QR/Gate povijest, notifikacije, audit i app state.\\n\\nU sljedećem koraku biraš želiš li obrisati i korisničke accounte.\\n\\nAdmin / Yard Manager dujemales se NE BRIŠE.\\n\\nNastaviti?\`))return;
+           if(!confirm(`RESET YARDIVO — POTPUNI FACTORY ZERO\\n\\nBrišu se poslovni podaci: lokacije, skladišta, rampe, dobavljači, odgovorne osobe, najave, Supplier najave, incidenti, QR/Gate povijest, notifikacije, audit i app state.\\n\\nU sljedećem koraku biraš želiš li obrisati i korisničke accounte.\\n\\nAdmin / Yard Manager dujemales se NE BRIŠE.\\n\\nNastaviti?`))return;
            const deleteAccounts=confirm('ŽELIŠ LI OBRISATI SVE KORISNIČKE ACCOUNTE?\\n\\nDA = brišu se svi Auth/User accounti osim Admin / Yard Manager dujemales.\\n\\nNE = accounti ostaju, a poslovni sustav se svejedno vraća na 0.');
            const typed=prompt('Za konačnu potvrdu upiši točno:\\nRESET YARDIVO');
            if(String(typed||'').trim().toUpperCase()!=='RESET YARDIVO')return;
@@ -75,9 +75,9 @@ jobs:
             rerenderEmpty();
             status('5/5 · Verificiram 0 poslovnih podataka'+(deleteAccounts?' i samo dujemales account…':'…'));
             const v=await verifyEmpty(keep,deleteAccounts);if(!v.ok)throw new Error('Factory Zero je pokrenut, ali završna verifikacija nije potpuno čista.');
-            status(\`✓ FACTORY ZERO · 0 POSLOVNIH PODATAKA · \${deleteAccounts?'SAMO DUJEMALES ACCOUNT':'ACCOUNTI SAČUVANI'}\`,'ok');
+            status(`✓ FACTORY ZERO · 0 POSLOVNIH PODATAKA · ${deleteAccounts?'SAMO DUJEMALES ACCOUNT':'ACCOUNTI SAČUVANI'}`,'ok');
             try{showYmsToast?.('success','YARDIVO FACTORY ZERO',deleteAccounts?'Sve je na 0. Ostao je samo Admin / Yard Manager dujemales.':'Sve je na 0. Korisnički accounti su sačuvani.')}catch(_){}
-            alert(\`YARDIVO je resetiran.\\n\\n0 lokacija\\n0 skladišta\\n0 dobavljača\\n0 odgovornih osoba\\n0 najava / incidenata / QR povijesti\\nSMART OFF\\nQR SCAN OFF\\n\\n\${deleteAccounts?'Korisnici: obrisani svi osim Admin / Yard Manager dujemales.':'Korisnici: SAČUVANI.'}\`);
+            alert(`YARDIVO je resetiran.\\n\\n0 lokacija\\n0 skladišta\\n0 dobavljača\\n0 odgovornih osoba\\n0 najava / incidenata / QR povijesti\\nSMART OFF\\nQR SCAN OFF\\n\\n${deleteAccounts?'Korisnici: obrisani svi osim Admin / Yard Manager dujemales.':'Korisnici: SAČUVANI.'}`);
            }catch(e){
             console.error('[RESET YARDIVO]',e);status('RESET NIJE ZAVRŠIO 100%: '+String(e?.message||e),'error');alert('RESET YARDIVO nije završio 100%:\\n\\n'+String(e?.message||e))
            }finally{busy=false;if(btn){btn.disabled=false;btn.textContent='RESET YARDIVO — VRATI SVE NA 0'}}
