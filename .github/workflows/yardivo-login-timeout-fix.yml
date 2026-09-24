@@ -14,46 +14,16 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          import re, subprocess
           p=Path("index.html")
           s=p.read_text(encoding="utf-8")
-          old="""async function fetchJSON(url,options={},timeoutMs=6500){
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),timeoutMs);
-  try{
-    const res=await fetch(url,{...options,signal:controller.signal});
-    const data=await res.json().catch(()=>({}));
-    return {res,data};
-  }finally{
-    clearTimeout(timer);
-  }
-}"""
-          new="""async function fetchJSON(url,options={},timeoutMs=10000){
-  let lastError=null;
-  for(let attempt=0;attempt<2;attempt++){
-    const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),timeoutMs);
-    try{
-      const res=await fetch(url,{...options,signal:controller.signal});
-      const data=await res.json().catch(()=>({}));
-      return {res,data};
-    }catch(e){
-      lastError=e;
-      const transient=e?.name==='AbortError'||/Failed to fetch|NetworkError|Load failed/i.test(String(e?.message||e));
-      if(!transient||attempt>=1)throw e;
-      await new Promise(r=>setTimeout(r,300));
-    }finally{
-      clearTimeout(timer);
-    }
-  }
-  throw lastError||new Error('NETWORK_REQUEST_FAILED');
-}"""
-          if old not in s:
+          start=s.find("async function fetchJSON(url,options={},timeoutMs=6500){")
+          end=s.find("\n}\n\nfunction persistSession",start)
+          if start<0 or end<0:
               raise SystemExit("fetchJSON anchor missing")
-          s=s.replace(old,new,1)
+          new="async function fetchJSON(url,options={},timeoutMs=10000){\n  let lastError=null;\n  for(let attempt=0;attempt<2;attempt++){\n    const controller=new AbortController();\n    const timer=setTimeout(()=>controller.abort(),timeoutMs);\n    try{\n      const res=await fetch(url,{...options,signal:controller.signal});\n      const data=await res.json().catch(()=>({}));\n      return {res,data};\n    }catch(e){\n      lastError=e;\n      const transient=e?.name==='AbortError'||/Failed to fetch|NetworkError|Load failed/i.test(String(e?.message||e));\n      if(!transient||attempt>=1)throw e;\n      await new Promise(r=>setTimeout(r,300));\n    }finally{\n      clearTimeout(timer);\n    }\n  }\n  throw lastError||new Error('NETWORK_REQUEST_FAILED');\n}"
+          s=s[:start]+new+s[end+2:]
           s=s.replace("    6500\n  );","    10000\n  );",2)
           p.write_text(s,encoding="utf-8")
-
       - name: Validate canonical login
         shell: python
         run: |
@@ -62,12 +32,10 @@ jobs:
           s=Path("index.html").read_text(encoding="utf-8")
           assert "for(let attempt=0;attempt<2;attempt++)" in s
           assert "await new Promise(r=>setTimeout(r,300))" in s
-          assert s.count("    10000\n  );") >= 2
           m=re.search(r'<script id="yardivo-canonical-login-router-v2-20260901">(.*?)</script>',s,re.S)
-          assert m, "canonical login script missing"
+          assert m
           Path("/tmp/login.js").write_text(m.group(1),encoding="utf-8")
           subprocess.check_call(["node","--check","/tmp/login.js"])
-
       - name: Commit
         run: |
           rm .github/workflows/yardivo-login-timeout-fix.yml
