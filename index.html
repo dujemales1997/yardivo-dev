@@ -33729,6 +33729,7 @@ window.YardivoFullOperationalNotificationsV548={
 <nav class="ysp-nav">
 <button class="active" data-i18n="navNew" data-ysp-view="new" type="button">NAJAVA</button>
 <button data-i18n="navStatus" data-ysp-view="status" type="button">STANJE NAJAVE I ISPORUKE</button>
+<button data-i18n="navHistory" data-ysp-view="history" type="button">POVIJEST NAJAVA</button>
 <button data-i18n="navSettings" data-ysp-view="settings" type="button">POSTAVKE</button>
 </nav>
 <div class="ysp-side-bottom">
@@ -33817,6 +33818,16 @@ window.YardivoFullOperationalNotificationsV548={
 <button class="sbn-muted" id="sbnReset" type="button">OČISTI</button>
 <button class="sbn-send" disabled="" id="sbnSend" type="button">POŠALJI NAJAVU U ZALIHE</button>
 </div>
+</div>
+</section>
+<section class="ysp-view" data-ysp-section="history">
+<div class="ysp-card">
+<h2 data-i18n="historyTitle">Povijest najava</h2>
+<p class="muted">Zaprimljene i odbijene narudžbe ovog Supplier računa.</p>
+<div class="data-wrap"><table class="ysp-table">
+<thead><tr><th>NAJAVA</th><th>DATUM / TERMIN</th><th>SKLADIŠTE</th><th>NARUDŽBA / PO</th><th>STATUS</th><th>RAMPA</th><th>VOZILO / QR DOCK</th></tr></thead>
+<tbody id="yspHistoryBody"><tr><td colspan="7"><div class="ysph-empty">Učitavanje povijesti...</div></td></tr></tbody>
+</table></div>
 </div>
 </section>
 <section class="ysp-view" data-ysp-section="status">
@@ -61903,12 +61914,13 @@ function ensureHistoryNote(){
   const sec=portal()?.querySelector('[data-ysp-section="history"]');if(!sec)return;
   if(sec.querySelector('.ysp-server-note'))return;
   const card=sec.querySelector('.ysp-card');if(!card)return;
-  const n=document.createElement('div');n.className='ysp-server-note';n.textContent='Povijest se učitava izravno iz YARDIVO baze. Ovdje su sve najave i narudžbe ovog Supplier računa, uključujući završene, s njihovim zadnjim statusom.';card.insertBefore(n,card.querySelector('.data-wrap')||card.firstChild)
+  const n=document.createElement('div');n.className='ysp-server-note';n.textContent='Povijest se učitava izravno iz YARDIVO baze. Ovdje su završene narudžbe: zaprimljene i odbijene, s njihovim zadnjim statusom.';card.insertBefore(n,card.querySelector('.data-wrap')||card.firstChild)
 }
 function renderHistory(){
   const body=$('yspHistoryBody');if(!body)return;ensureHistoryNote();
-  if(!rows.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema poslanih najava u YARDIVO bazi.</div></td></tr>';return}
-  body.innerHTML=rows.map(x=>{
+  const history=rows.filter(x=>['completed','rejected'].includes(statusKey(x.status)));
+  if(!history.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema zaprimljenih ili odbijenih najava.</div></td></tr>';return}
+  body.innerHTML=history.map(x=>{
     const qr=x.qrUrl?'<span class="ysph-qr-ready">▣ QR STIGAO</span><br><button type="button" class="ysph-qr" data-yv-server-qr-open="'+esc(x.id)+'">OTVORI QR</button> <button type="button" class="ysph-qr" data-yv-server-qr-pdf="'+esc(x.id)+'">PREUZMI PDF</button>':'';
     return '<tr>'+
       '<td><span class="ysph-id">'+esc(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+'</span><span class="ysph-sub">Ažurirano: '+esc(x.updatedAt?new Date(x.updatedAt).toLocaleString('hr-HR'):'—')+'</span></td>'+
@@ -61927,7 +61939,7 @@ function progressIndex(s){
 function renderStatus(){
   const host=$('yspStatusList');if(!host)return;
   const active=rows.filter(x=>!terminal.has(statusKey(x.status)));
-  if(!active.length){host.innerHTML='<div class="ysph-empty">Nema aktivnih najava. Završene i prethodne najave nalaze se u Povijesti najava.</div>';return}
+  if(!active.length){host.innerHTML='<div class="ysph-empty">Nema aktivnih najava. Zaprimljene i odbijene narudžbe nalaze se u Povijesti najava.</div>';return}
   const labels=['NAJAVA','POTVRDA','DOLAZAK','RAMPA','ZAPRIMANJE','ZAVRŠENO'];
   host.innerHTML=active.map(x=>{
     const idx=progressIndex(x.status);
