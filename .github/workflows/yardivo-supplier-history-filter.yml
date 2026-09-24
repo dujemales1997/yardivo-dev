@@ -17,24 +17,15 @@ jobs:
           import re, subprocess
           p=Path("index.html")
           s=p.read_text(encoding="utf-8")
-
-          old="""  const history=rows.filter(x=>['completed','rejected'].includes(statusKey(x.status)));
-  if(!history.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema zaprimljenih ili odbijenih najava.</div></td></tr>';return}"""
-          new="""  const history=rows.filter(x=>!['pending','revision_requested','proposal_sent'].includes(statusKey(x.status)));
-  if(!history.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema potvrđenih ili odbijenih najava.</div></td></tr>';return}"""
+          old="const history=rows.filter(x=>['completed','rejected'].includes(statusKey(x.status)));"
+          new="const history=rows.filter(x=>!['pending','revision_requested','proposal_sent'].includes(statusKey(x.status)));"
           if old not in s:
               raise SystemExit("supplier history filter anchor missing")
           s=s.replace(old,new,1)
-
-          s=s.replace(
-            "Povijest se učitava izravno iz YARDIVO baze. Ovdje su završene narudžbe: zaprimljene i odbijene, s njihovim zadnjim statusom.",
-            "Povijest se učitava izravno iz YARDIVO baze. Ovdje su potvrđene, operativne, završene i odbijene najave. Najave koje čekaju potvrdu ostaju samo u Stanje najave / Isporuke.",
-            1
-          )
-
+          s=s.replace("Još nema zaprimljenih ili odbijenih najava.","Još nema potvrđenih ili odbijenih najava.",1)
+          s=s.replace("Povijest se učitava izravno iz YARDIVO baze. Ovdje su završene narudžbe: zaprimljene i odbijene, s njihovim zadnjim statusom.","Povijest se učitava izravno iz YARDIVO baze. Ovdje su potvrđene, operativne, završene i odbijene najave. Najave koje čekaju potvrdu ostaju samo u Stanje najave / Isporuke.",1)
           p.write_text(s,encoding="utf-8")
           Path(".github/workflows/yardivo-supplier-history-filter.yml").unlink()
-
       - name: Validate Supplier authority
         shell: python
         run: |
