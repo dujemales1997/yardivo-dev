@@ -1,0 +1,66 @@
+name: Fix supplier history status filter
+permissions:
+  contents: write
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-supplier-history-filter.yml"
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch supplier history filter
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, subprocess
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8",errors="replace")
+
+          sid="yardivo-v583-supplier-history-status-server-authority-20260923"
+          m=re.search(r'(<script[^>]+id="'+re.escape(sid)+r'"[^>]*>)(.*?)(</script>)',s,re.S)
+          if not m:
+              raise SystemExit("supplier authority script missing")
+          js=m.group(2)
+
+          old="""function renderHistory(){
+  const body=$('yspHistoryBody');if(!body)return;ensureHistoryNote();
+  if(!rows.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema poslanih najava u YARDIVO bazi.</div></td></tr>';return}
+  body.innerHTML=rows.map(x=>{"""
+          new="""function renderHistory(){
+  const body=$('yspHistoryBody');if(!body)return;ensureHistoryNote();
+  const historyRows=rows.filter(x=>['confirmed','arrival','dock','receiving','completed','rejected'].includes(statusKey(x.status)));
+  if(!historyRows.length){body.innerHTML='<tr><td colspan="7"><div class="ysph-empty">Još nema potvrđenih ili odbijenih najava.</div></td></tr>';return}
+  body.innerHTML=historyRows.map(x=>{"""
+          if old not in js:
+              raise SystemExit("renderHistory anchor missing")
+          js=js.replace(old,new,1)
+
+          js=js.replace(
+            "n.textContent='Povijest se učitava izravno iz YARDIVO baze. Ovdje su sve najave i narudžbe ovog Supplier računa, uključujući završene, s njihovim zadnjim statusom.';",
+            "n.textContent='Povijest se učitava izravno iz YARDIVO baze. Ovdje se prikazuju samo potvrđene najave i njihov daljnji tijek te odbijene najave. Najave koje čekaju potvrdu ostaju u Stanje najave / Isporuke.';"
+          )
+
+          out=s[:m.start(2)]+js+s[m.end(2):]
+          p.write_text(out,encoding="utf-8")
+
+          Path("/tmp/supplier-authority.js").write_text(js,encoding="utf-8")
+          subprocess.check_call(["node","--check","/tmp/supplier-authority.js"])
+
+      - name: Validate and commit
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path("index.html").read_text(encoding="utf-8")
+          assert "const historyRows=rows.filter" in s
+          assert "'confirmed','arrival','dock','receiving','completed','rejected'" in s
+          assert "Još nema potvrđenih ili odbijenih najava." in s
+          PY
+          git config user.name "YARDIVO QA"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html .github/workflows/yardivo-supplier-history-filter.yml
+          git diff --cached --check
+          git rm .github/workflows/yardivo-supplier-history-filter.yml
+          git commit -m "Show only confirmed or rejected supplier history"
+          git push origin HEAD:main
