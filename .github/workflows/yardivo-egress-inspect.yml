@@ -13,7 +13,7 @@ jobs:
         run: |
           from pathlib import Path
           s=Path("index.html").read_text(encoding="utf-8",errors="replace")
-          needles=["attachmentDataUrl","yardivo-sync","bootstrap","list_mine","list_internal","setInterval(","3000","1500"]
+          needles=["attachmentDataUrl","YardivoSupplierAttachments","data-yardivo-doc","openAnnouncementDetail","archive_document","get_archive_document","yardivo-sync","bootstrap","list_mine","list_internal","setInterval(","3000","1500"]
           for n in needles:
               print("\n===== "+n+" =====")
               start=0
