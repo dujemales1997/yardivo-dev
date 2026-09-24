@@ -27,7 +27,7 @@ jobs:
           b="Factory Zero briše poslovne podatke, konfiguraciju, Supplier/Gate podatke i sve Self Gate QR kodove/tokene. Prije izvršenja posebno biraš želiš li obrisati i korisničke accounte; Admin / Yard Manager dujemales se nikada ne briše."
           s=s.replace(a,b,1)
           s=s.replace("<span>BRIŠE SVE DRUGE KORISNIKE</span>","<span>ACCOUNTI: PO IZBORU · DUJEMALES OSTAJE</span>",1)
-          s=s.replace("OSTAJE SAMO: <strong id=\\"yardivoResetKeeperLabel\\">TRENUTNI ADMIN</strong> + aktivna autentikacijska sesija.","ZAŠTIĆENI ACCOUNT: <strong id=\\"yardivoResetKeeperLabel\\">TRENUTNI ADMIN</strong> + aktivna autentikacijska sesija.",1)
+          s=s.replace('OSTAJE SAMO: <strong id="yardivoResetKeeperLabel">TRENUTNI ADMIN</strong> + aktivna autentikacijska sesija.','ZAŠTIĆENI ACCOUNT: <strong id="yardivoResetKeeperLabel">TRENUTNI ADMIN</strong> + aktivna autentikacijska sesija.',1)
           
           vstart=s.index("async function verifyEmpty(keep){")
           vend=s.index("\\nasync function resetYardivo(){",vstart)
