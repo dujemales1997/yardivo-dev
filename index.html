@@ -34210,7 +34210,7 @@ function renderStatus(){
   const labels=['NAJAVA','POTVRDA','DOLAZAK','RAMPA','ZAPRIMANJE','ZAVRŠENO'];
   host.innerHTML=deliveries.map(x=>{
     const idx=progressIndex(x.status);
-    const qr=x.qrUrl?'<div class="ysps-qr-live"><div class="ysps-qr-canvas" data-yv-server-qr-canvas="'+esc(x.id)+'"></div><div class="ysps-qr-copy"><strong>▣ QR ZA VOZAČA JE SPREMAN</strong><p>Ovaj QR pošalji vozaču za Gate check-in i rampu.</p><div class="ysps-qr-actions"><button type="button" class="btn-primary" data-yv-server-qr-open="'+esc(x.id)+'">OTVORI QR</button><button type="button" class="btn-secondary" data-yv-server-qr-pdf="'+esc(x.id)+'">PREUZMI QR · PDF</button></div></div></div>':'<div class="ysps-noqr">QR još nije izdan od strane YARDIVO zaliha.</div>';
+    const qr=x.qrUrl?'<div class="ysps-qr-live"><div class="ysps-qr-canvas" data-yv-server-qr-canvas="'+esc(x.id)+'"></div><div class="ysps-qr-copy"><strong>▣ QR DOCK JE SPREMAN</strong><p>Ovaj QR Dock pošalji vozaču za potvrdu na Docku / Prijamu. Gate Check-In se radi posebnim QR-om na ulazu.</p><div class="ysps-qr-actions"><button type="button" class="btn-primary" data-yv-server-qr-open="'+esc(x.id)+'">OTVORI QR</button><button type="button" class="btn-secondary" data-yv-server-qr-pdf="'+esc(x.id)+'">PREUZMI QR · PDF</button></div></div></div>':'<div class="ysps-noqr">QR Dock još nije izdan od strane YARDIVO zaliha.</div>';
     const editable=!terminal.has(statusKey(x.status));
     const editor=editable?'<details class="ysps-edit"><summary>UREDI VOZILO / VOZAČA</summary><div class="ysps-edit-grid">'+
       '<label>REGISTRACIJA VOZILA<input data-yv-supplier-plate="'+esc(x.id)+'" value="'+esc(x.plate)+'" placeholder="npr. ZG1234AB"></label>'+
@@ -44089,11 +44089,11 @@ function ensureIssuePreviewModal(){
   m=document.createElement('div');m.id='yardivoGateQrIssuePreviewV583';
   m.innerHTML=`<div class="ygq-card">
     <img class="ygq-logo" alt="YARDIVO">
-    <h2>QR · CHECK-IN</h2>
+    <h2>QR DOCK</h2>
     <div class="ygq-sub">Pregled QR koda prije slanja dobavljaču</div>
     <div class="ygq-qr" id="yardivoGateQrIssueCanvasV583"></div>
     <div class="ygq-meta" id="yardivoGateQrIssueMetaV583"></div>
-    <div class="ygq-warning">QR još NIJE poslan dobavljaču. Klikom na POTVRDI aktivira se Gate Pass i QR se odmah objavljuje u Supplier Povijesti najava.</div>
+    <div class="ygq-warning">QR Dock još NIJE poslan dobavljaču. Klikom na POTVRDI QR Dock se odmah objavljuje u Stanje najave / Isporuke.</div>
     <div class="ygq-actions">
       <button type="button" data-ygq-issue-cancel>ODUSTANI</button>
       <button type="button" class="primary" data-ygq-issue-confirm>POTVRDI I POŠALJI DOBAVLJAČU</button>
@@ -44143,8 +44143,8 @@ async function confirmPreparedIssue(){
     try{Promise.resolve(window.YardivoSupplierPlannerV580?.refresh?.(true)).catch(()=>{})}catch(_){}
     try{window.dispatchEvent(new CustomEvent('yardivo:gate-qr-issued',{detail:{id:String(row.id),announcementId:String(ann.id),supplier:String(row.supplier_username||'')}}))}catch(_){}
     try{
-      if(typeof showYmsToast==='function')showYmsToast('success','QR POSLAN DOBAVLJAČU','QR · CHECK-IN je objavljen u Stanje najave / Isporuke.',4200);
-      else alert('QR · CHECK-IN je potvrđen i poslan dobavljaču.');
+      if(typeof showYmsToast==='function')showYmsToast('success','QR POSLAN DOBAVLJAČU','QR DOCK je objavljen u Stanje najave / Isporuke.',4200);
+      else alert('QR DOCK je potvrđen i poslan dobavljaču.');
     }catch(_){}
   }catch(e){
     alert('QR nije moguće potvrditi / poslati:\n'+(e?.message||e));
@@ -44153,7 +44153,7 @@ async function confirmPreparedIssue(){
   }
 }
 async function issue(id){
-  if(!['inventory','admin'].includes(role()))return alert('QR · CHECK-IN može poslati Upravljanje zalihama ili Admin.');
+  if(!['inventory','admin'].includes(role()))return alert('QR DOCK može poslati Upravljanje zalihama ili Admin.');
   const rows=window.YardivoSupplierPlannerV580?.getRows?.()||[];
   let row=rows.find(x=>String(x.id)===String(id));
   if(!row){try{const a=await window.YardivoSupplierLiveSync.call('list_internal');row=(a||[]).find(x=>String(x.id)===String(id))}catch(_){}}
@@ -44161,7 +44161,7 @@ async function issue(id){
   let ann=canonicalForSupplier(id);
   if(!ann)ann={id:'SUPDEL-'+String(id),status:'confirmed'};
   const st=String(ann.status||'').toLowerCase();
-  if(!['najavljen','u dolasku','confirmed',''].includes(st))return alert('Vozilo je već u operativnom procesu. Novi Gate QR se više ne izdaje.');
+  if(!['najavljen','u dolasku','confirmed',''].includes(st))return alert('Vozilo je već u operativnom procesu. Novi QR Dock se više ne izdaje.');
   const btn=document.querySelector(`[data-yardivo-send-gate-qr="${CSS.escape(String(id))}"]`);
   if(btn){btn.disabled=true;btn.textContent='PRIPREMAM QR…'}
   try{
@@ -44206,7 +44206,7 @@ function pushSupplierQrNotification(row,meta){
     id:'SUPPLIER_QR-'+String(row.id)+'-'+String(meta.issuedAt||Date.now()),
     event:'SUPPLIER_QR_READY',
     type:'success',
-    title:'STIGAO JE QR · CHECK-IN',
+    title:'STIGAO JE QR DOCK',
     body:`${warehouseBusinessName(row.warehouse)} · ${row.date||''} ${row.time||''} · QR je spreman u Stanje najave / Isporuke.`,
     at:new Date().toISOString(),createdAt:new Date().toISOString(),
     roles:['supplier'],supplierDeliveryId:String(row.id),readBy:{}
@@ -44221,7 +44221,7 @@ function pushSupplierQrNotification(row,meta){
     window.YardivoNotifications?.render?.();
   }catch(_){}
   try{
-    if(typeof showYmsToast==='function')showYmsToast('success','STIGAO JE QR · CHECK-IN','Otvori Povijest najava i preuzmi QR.',5200);
+    if(typeof showYmsToast==='function')showYmsToast('success','STIGAO JE QR DOCK','Otvori Povijest najava i preuzmi QR.',5200);
   }catch(_){}
   try{window.dispatchEvent(new CustomEvent('yardivo:supplier-qr-ready',{detail:{id:String(row.id)}}))}catch(_){}
 }
@@ -61818,7 +61818,7 @@ function renderQrInto(el,url,size=300){
 function ensureQrModal(){
   let m=document.getElementById('yardivoSupplierQrCanonicalV583');if(m)return m;
   m=document.createElement('div');m.id='yardivoSupplierQrCanonicalV583';
-  m.innerHTML='<div class="yvqc-card"><h2>YARDIVO QR · CHECK-IN</h2><div class="yvqc-sub">QR za vozača · Gate ulaz i potvrda na rampi</div><div class="yvqc-qr" id="yvqcQrCanvas"></div><div class="yvqc-meta" id="yvqcMeta"></div><div class="yvqc-actions"><button type="button" data-yvqc-close>ZATVORI</button><button type="button" class="primary" data-yvqc-pdf>PREUZMI QR · PDF</button></div></div>';
+  m.innerHTML='<div class="yvqc-card"><h2>YARDIVO QR DOCK</h2><div class="yvqc-sub">QR za konkretnu isporuku · koristi se na Docku / Prijamu</div><div class="yvqc-qr" id="yvqcQrCanvas"></div><div class="yvqc-meta" id="yvqcMeta"></div><div class="yvqc-actions"><button type="button" data-yvqc-close>ZATVORI</button><button type="button" class="primary" data-yvqc-pdf>PREUZMI QR · PDF</button></div></div>';
   document.body.appendChild(m);
   m.querySelector('[data-yvqc-close]').onclick=()=>m.classList.remove('open');
   m.onclick=e=>{if(e.target===m)m.classList.remove('open')};
@@ -61840,12 +61840,12 @@ function downloadQrPdf(id){
     renderQrInto(holder,x.qrUrl,700);
     const node=holder.querySelector('canvas,img');const data=node?.tagName==='CANVAS'?node.toDataURL('image/png'):node?.src||'';holder.remove();
     const {jsPDF}=window.jspdf,pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    pdf.setTextColor(18,30,38);pdf.setFont('helvetica','bold');pdf.setFontSize(18);pdf.text('YARDIVO QR · CHECK-IN',105,24,{align:'center'});
+    pdf.setTextColor(18,30,38);pdf.setFont('helvetica','bold');pdf.setFontSize(18);pdf.text('YARDIVO QR DOCK',105,24,{align:'center'});
     pdf.setFont('helvetica','normal');pdf.setFontSize(10);pdf.text(String(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id),105,32,{align:'center'});
     if(data)pdf.addImage(data,'PNG',50,42,110,110);
     pdf.setFontSize(10);pdf.text((x.date||'')+' · '+(x.time||'')+' · '+whLabel(x.warehouse)+(x.dock?' · '+(/^R/i.test(x.dock)?x.dock:'R'+x.dock):''),105,163,{align:'center'});
     pdf.text('PO: '+(x.order||'—'),105,170,{align:'center'});
-    pdf.save(String(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+'-QR.pdf')
+    pdf.save(String(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+'-QR-DOCK.pdf')
   }catch(e){console.error(e);window.open(x.qrUrl,'_blank','noopener')}
 }
 function normalized(x){
@@ -61931,7 +61931,7 @@ function renderStatus(){
   const labels=['NAJAVA','POTVRDA','DOLAZAK','RAMPA','ZAPRIMANJE','ZAVRŠENO'];
   host.innerHTML=active.map(x=>{
     const idx=progressIndex(x.status);
-    const qr=x.qrUrl?'<div class="ysps-qr-live"><div class="ysps-qr-canvas" data-yv-server-qr-canvas="'+esc(x.id)+'"></div><div class="ysps-qr-copy"><strong>▣ QR ZA VOZAČA JE SPREMAN</strong><p>Ovaj QR pošalji vozaču za Gate check-in i rampu.</p><div class="ysps-qr-actions"><button type="button" class="btn-primary" data-yv-server-qr-open="'+esc(x.id)+'">OTVORI QR</button><button type="button" class="btn-secondary" data-yv-server-qr-pdf="'+esc(x.id)+'">PREUZMI QR · PDF</button></div></div></div>':'<div class="ysps-noqr">QR još nije izdan od strane YARDIVO zaliha.</div>';
+    const qr=x.qrUrl?'<div class="ysps-qr-live"><div class="ysps-qr-canvas" data-yv-server-qr-canvas="'+esc(x.id)+'"></div><div class="ysps-qr-copy"><strong>▣ QR DOCK JE SPREMAN</strong><p>Ovaj QR Dock pošalji vozaču za potvrdu na Docku / Prijamu. Gate Check-In se radi posebnim QR-om na ulazu.</p><div class="ysps-qr-actions"><button type="button" class="btn-primary" data-yv-server-qr-open="'+esc(x.id)+'">OTVORI QR</button><button type="button" class="btn-secondary" data-yv-server-qr-pdf="'+esc(x.id)+'">PREUZMI QR · PDF</button></div></div></div>':'<div class="ysps-noqr">QR Dock još nije izdan od strane YARDIVO zaliha.</div>';
     return '<article class="ysps-card">'+
       '<div><div class="ysps-title"><strong>'+esc(window.YardivoAnnouncementNumberV583?.displayId?.(x.id)||x.id)+' · '+esc(x.order||'BEZ PO')+'</strong><span class="ysph-status '+statusClass(x.status)+'">'+esc(statusLabel(x.status))+'</span></div>'+
       '<div class="ysps-grid">'+
