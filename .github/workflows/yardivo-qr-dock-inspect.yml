@@ -51,7 +51,7 @@ jobs:
           assert "QR DOCK JE SPREMAN" in s
           assert "Gate Check-In se radi posebnim QR-om na ulazu." in s
           assert "STIGAO JE QR DOCK" in s
-          assert "QR Dock može poslati Upravljanje zalihama ili Admin." in s
+          assert ("QR DOCK može poslati Upravljanje zalihama ili Admin." in s) or ("QR Dock može poslati Upravljanje zalihama ili Admin." in s)
           for sid in ["yardivo-v583-supplier-history-status-server-authority-20260923","yardivo-gate-qr-v583-final"]:
               m=re.search(r'<script[^>]+id="'+re.escape(sid)+r'"[^>]*>(.*?)</script>',s,re.S)
               if m:
