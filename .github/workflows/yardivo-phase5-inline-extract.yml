@@ -1,0 +1,118 @@
+name: YARDIVO Phase 5 inline extraction
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/yardivo-phase5-inline-extract.yml'
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    if: github.event.head_commit.message == 'Add one-time YARDIVO phase 5 inline extraction'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Externalize remaining classic inline JavaScript
+        shell: python
+        run: |
+          import re, pathlib, subprocess
+
+          root = pathlib.Path(".")
+          p = root / "index.html"
+          original = p.read_text(encoding="utf-8")
+          s = original
+
+          rx = re.compile(r"<script([^>]*)>([\s\S]*?)</script>", re.I)
+          matches = list(rx.finditer(s))
+          created = []
+          replacements = []
+
+          def domain(script_id, body):
+              x = (script_id + " " + body[:1600]).lower()
+              if any(k in x for k in ["supplier", "dobavlj"]): return "modules/supplier/runtime"
+              if any(k in x for k in ["master", "warehouse", "ramp", "location"]): return "modules/master-data/runtime"
+              if any(k in x for k in ["help-chat", "operational-chat", "chat"]): return "modules/chat/runtime"
+              if any(k in x for k in ["notification", "notif", "toast"]): return "modules/notifications/runtime"
+              if any(k in x for k in ["receiving", "prijam"]): return "modules/receiving/runtime"
+              if any(k in x for k in ["gate", "qr", "driver"]): return "modules/gate/runtime"
+              if any(k in x for k in ["setting", "theme", "palette", "dark", "light"]): return "modules/settings/runtime"
+              if any(k in x for k in ["overview", "analytics", "control-tower", "chart"]): return "modules/analytics/runtime"
+              if any(k in x for k in ["ai-", "voice", "assistant"]): return "modules/ai/runtime"
+              if any(k in x for k in ["supabase", "sync", "auth", "login", "logout", "session"]): return "services/runtime"
+              return "modules/ui/runtime"
+
+          used = set()
+          for i, m in enumerate(matches):
+              attrs, body = m.group(1), m.group(2)
+              if re.search(r"\bsrc\s*=", attrs, re.I) or not body.strip():
+                  continue
+              mt = re.search(r"\btype=[\"']([^\"']+)", attrs, re.I)
+              if mt and mt.group(1).lower() not in ("text/javascript", "application/javascript"):
+                  continue
+
+              mid = re.search(r"\bid=[\"']([^\"']+)", attrs, re.I)
+              sid = mid.group(1) if mid else f"inline-{i:03d}"
+              slug = re.sub(r"[^a-zA-Z0-9._-]+", "-", sid).strip("-").lower() or f"inline-{i:03d}"
+              d = domain(sid, body)
+              rel = f"{d}/phase5-{i:03d}-{slug}.js"
+              n = 1
+              while rel in used or (root / rel).exists():
+                  rel = f"{d}/phase5-{i:03d}-{slug}-{n}.js"
+                  n += 1
+              used.add(rel)
+
+              out = root / rel
+              out.parent.mkdir(parents=True, exist_ok=True)
+              out.write_text(body, encoding="utf-8")
+              created.append(rel)
+
+              new_attrs = attrs.rstrip() + f' src="./{rel}"'
+              replacements.append((m.start(), m.end(), f"<script{new_attrs}></script>"))
+
+          for a, b, repl in reversed(replacements):
+              s = s[:a] + repl + s[b:]
+
+          p.write_text(s, encoding="utf-8")
+
+          remaining = []
+          for m in rx.finditer(s):
+              attrs, body = m.group(1), m.group(2)
+              if re.search(r"\bsrc\s*=", attrs, re.I) or not body.strip():
+                  continue
+              mt = re.search(r"\btype=[\"']([^\"']+)", attrs, re.I)
+              if not mt or mt.group(1).lower() in ("text/javascript", "application/javascript"):
+                  remaining.append((attrs, len(body)))
+
+          if remaining:
+              raise SystemExit(f"Classic inline scripts remain: {remaining[:10]}")
+          if len(s.encode("utf-8")) >= len(original.encode("utf-8")):
+              raise SystemExit("index.html did not shrink")
+          if len(s.encode("utf-8")) > 130000:
+              raise SystemExit(f"index.html above phase-5 budget: {len(s.encode('utf-8'))} bytes")
+
+          for rel in created:
+              subprocess.run(["node", "--check", rel], check=True)
+
+          print(f"externalized={len(created)} index_bytes_before={len(original.encode('utf-8'))} index_bytes_after={len(s.encode('utf-8'))}")
+
+      - name: Commit extraction
+        run: |
+          git config user.name "YARDIVO Modularizer"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html modules services
+          git diff --cached --check
+          git commit -m "Externalize remaining inline runtime without behavior changes [skip ci]"
+          git push
+
+      - name: Remove one-time workflow
+        run: |
+          git rm .github/workflows/yardivo-phase5-inline-extract.yml
+          git commit -m "Remove one-time phase 5 extraction workflow [skip ci]"
+          git push
