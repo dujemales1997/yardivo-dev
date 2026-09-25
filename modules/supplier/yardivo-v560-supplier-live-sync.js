@@ -3,41 +3,8 @@
 'use strict';
 
 async function call(action,payload={}){
-  const c=await window.YardivoAuth.client();
-  let session=null;
-  try{
-    const gs=await c.auth.getSession();
-    session=gs?.data?.session||null;
-    if(!session?.access_token){
-      const rr=await c.auth.refreshSession();
-      session=rr?.data?.session||null;
-    }
-  }catch(_){}
-  const accessToken=session?.access_token||window.__yardivoSupplierAccessToken||'';
-  if(!accessToken){
-    throw new Error('ONLINE PRIJAVA NIJE AKTIVNA. Odjavite se i ponovno prijavite u YARDIVO.');
-  }
-  const res=await fetch('https://rskticdbiovvgyocpzoc.supabase.co/functions/v1/yardivo-supplier-deliveries',{
-    method:'POST',
-    headers:{
-      apikey:'sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy',
-      Authorization:'Bearer '+accessToken,
-      'Content-Type':'application/json'
-    },
-    body:JSON.stringify({action,...payload})
-  });
-  const raw=await res.text();
-  let data={};
-  try{data=raw?JSON.parse(raw):{}}catch(_){data={error:raw||('Supplier sync HTTP '+res.status)}}
-  if(!res.ok||data?.ok===false||data?.error){
-    const e=data?.error??data?.message??('Supplier sync HTTP '+res.status);
-    let msg='';
-    if(typeof e==='string')msg=e;
-    else if(e&&typeof e==='object')msg=String(e.message||e.details||e.code||JSON.stringify(e));
-    else msg=String(e||('Supplier sync HTTP '+res.status));
-    throw new Error(msg);
-  }
-  return data?.data??data;
+  if(!window.YardivoSupplierService?.deliveries)throw new Error('Supplier data service nije spreman.');
+  return await window.YardivoSupplierService.deliveries(action,payload);
 }
 function role(){
   let r='';
