@@ -1,0 +1,219 @@
+name: YARDIVO modular phase 2
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  modularize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Externalize embedded assets and remaining runtime blocks
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, json, hashlib, base64
+
+          index_path=Path("index.html")
+          source=index_path.read_text(encoding="utf-8")
+          original=source
+
+          # 1) The same YARDIVO logo is embedded three times as a 390 KB PNG.
+          data_re=re.compile(r'data:image/png;base64,([A-Za-z0-9+/=]+)')
+          matches=list(data_re.finditer(source))
+          if len(matches) != 3:
+              raise SystemExit(f"Expected exactly 3 embedded PNGs, found {len(matches)}")
+          payloads=[m.group(1) for m in matches]
+          if len(set(payloads)) != 1:
+              raise SystemExit("Embedded PNGs are not identical; refusing unsafe asset consolidation")
+          logo_bytes=base64.b64decode(payloads[0], validate=True)
+          assets=Path("assets")
+          assets.mkdir(exist_ok=True)
+          logo_path=assets/"yardivo-logo.png"
+          logo_path.write_bytes(logo_bytes)
+          source=data_re.sub("assets/yardivo-logo.png", source)
+
+          # 2) Remove styles that are explicitly disabled and therefore never applied.
+          disabled_style_re=re.compile(r'<style\b(?=[^>]*\bmedia=["\']not all["\'])[^>]*>[\s\S]*?</style>\s*', re.I)
+          removed_disabled_styles=len(disabled_style_re.findall(source))
+          source=disabled_style_re.sub("", source)
+
+          # 3) Externalize executable inline JS >= 1 KB, preserving exact DOM execution position.
+          script_re=re.compile(r'<script(?P<attrs>[^>]*)>(?P<body>[\s\S]*?)</script>', re.I)
+          entries=[]
+          counter=0
+
+          def category(script_id, body):
+              t=(script_id+" "+body[:1800]).lower()
+              if re.search(r'help-chat|operational-chat|\bchat\b',t): return "chat"
+              if re.search(r'supplier|dobavlja',t): return "supplier"
+              if re.search(r'master|warehouse|location|ramp|capacity',t): return "master-data"
+              if re.search(r'supabase|online-sync|realtime|browser-storage|cloudstate|cloud-state',t): return "sync"
+              if re.search(r'gate|\bqr\b|driver',t): return "gate"
+              if re.search(r'receiv|prijam',t): return "receiving"
+              if re.search(r'notification|toast|bell',t): return "notifications"
+              if re.search(r'settings|theme|dark|light',t): return "settings"
+              if re.search(r'analytics|overview|control-tower|\bkpi\b',t): return "analytics"
+              if re.search(r'\bai\b|voice',t): return "ai"
+              return "ui"
+
+          def safe_name(v):
+              v=re.sub(r'[^A-Za-z0-9._-]+','-',v).strip('-').lower()
+              return v or "runtime"
+
+          def replace_script(m):
+              nonlocal_counter=None
+              attrs=m.group("attrs")
+              body=m.group("body")
+              if re.search(r'\bsrc\s*=',attrs,re.I):
+                  return m.group(0)
+              tm=re.search(r'\btype=["\']([^"\']+)',attrs,re.I)
+              typ=(tm.group(1).lower().strip() if tm else "")
+              if typ and typ not in ("text/javascript","application/javascript","module"):
+                  return m.group(0)
+              if len(body) < 1000:
+                  return m.group(0)
+
+              global counter
+              counter += 1
+              im=re.search(r'\bid=["\']([^"\']+)',attrs,re.I)
+              sid=im.group(1) if im else f"phase2-script-{counter:03d}"
+              cat=category(sid,body)
+              folder=Path("modules")/cat
+              folder.mkdir(parents=True,exist_ok=True)
+              candidate=folder/(safe_name(sid)+".js")
+              if candidate.exists():
+                  existing=candidate.read_text(encoding="utf-8",errors="ignore")
+                  if existing != body.strip()+"\n":
+                      candidate=folder/(safe_name(sid)+"-phase2.js")
+              js=body.strip()+"\n"
+              candidate.write_text(js,encoding="utf-8")
+              entries.append({
+                  "id":sid,
+                  "path":candidate.as_posix(),
+                  "bytes":len(js.encode("utf-8")),
+                  "sha256":hashlib.sha256(js.encode("utf-8")).hexdigest(),
+                  "category":cat
+              })
+              # Keep all original attributes so execution semantics/order stay the same.
+              return f'<script{attrs} src="{candidate.as_posix()}"></script>'
+
+          source=script_re.sub(replace_script, source)
+          index_path.write_text(source,encoding="utf-8")
+
+          # 4) Extend the existing manifest without changing runtime behavior.
+          manifest_path=Path("app/module-manifest.json")
+          manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
+          existing_paths={x.get("path") for x in manifest.get("scripts",[])}
+          for e in entries:
+              if e["path"] not in existing_paths:
+                  manifest.setdefault("scripts",[]).append(e)
+          manifest["version"]="2026-09-25-phase2-safe-consolidation"
+          manifest["strategy"]="behavior-preserving externalization + domain ownership"
+          manifest["assets"]={
+              "yardivo_logo":{
+                  "path":"assets/yardivo-logo.png",
+                  "bytes":len(logo_bytes),
+                  "sha256":hashlib.sha256(logo_bytes).hexdigest(),
+                  "embedded_copies_removed":3
+              }
+          }
+
+          groups={}
+          for e in manifest.get("scripts",[]):
+              groups.setdefault(e.get("category","ui"),[]).append(e["path"])
+          manifest["groups"]={k:{"owner":f"modules/{k}/","files":sorted(set(v))} for k,v in sorted(groups.items())}
+          manifest_path.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+
+          # 5) Add a human-readable architecture contract.
+          arch=Path("docs/architecture.md")
+          arch.parent.mkdir(exist_ok=True)
+          arch.write_text("""# YARDIVO modular runtime
+
+YARDIVO remains a single web application opened through the same URL.
+
+## Ownership
+
+- services / sync: Supabase, Auth, Realtime and shared server synchronization
+- modules/supplier: supplier portal, booking, history and supplier-specific UI
+- modules/master-data: locations, warehouses, ramps, suppliers and responsible people
+- modules/chat: Help Chat and Operational Chat
+- modules/gate: QR, gate and driver flows
+- modules/receiving: receiving workflows
+- modules/notifications: notification presentation and policy
+- modules/settings: settings and visual preferences
+- modules/analytics: overview / analytics behavior
+- modules/ai: AI and voice behavior
+- modules/ui: shared presentation compatibility code
+
+Phase 2 intentionally preserves classic script execution order. A file is moved out of index.html only when the external script executes at the exact same point in the document. Semantic merging of patch generations must happen inside each domain only after its exported/global contract is covered by QA.
+
+New code must not add large inline scripts, base64 assets, retired scripts, or high-frequency network polling back to index.html.
+""",encoding="utf-8")
+
+          new_size=len(source.encode("utf-8"))
+          print({
+              "old_index_bytes":len(original.encode("utf-8")),
+              "new_index_bytes":new_size,
+              "externalized_scripts":len(entries),
+              "externalized_script_bytes":sum(e["bytes"] for e in entries),
+              "disabled_styles_removed":removed_disabled_styles,
+              "logo_bytes":len(logo_bytes)
+          })
+          if new_size >= 500000:
+              raise SystemExit(f"index.html remains above 500 KB: {new_size}")
+          PY
+
+      - name: Static QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          find modules services -name '*.js' -print0 2>/dev/null | xargs -0 -r -n1 node --check
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,json,sys
+          s=Path("index.html").read_text(encoding="utf-8")
+          errors=[]
+          if len(s.encode("utf-8")) >= 500000:
+              errors.append("index.html is not below 500 KB")
+          if "data:image/png;base64," in s:
+              errors.append("embedded PNG remains")
+          for m in re.finditer(r'<style([^>]*)>[\s\S]*?</style>',s,re.I):
+              if re.search(r'media=["\']not all["\']',m.group(1),re.I):
+                  errors.append("disabled style trash remains")
+          refs=set(re.findall(r'(?:src|href)=["\']([^"\']+)["\']',s,re.I))
+          for ref in refs:
+              q=ref.split('?',1)[0].split('#',1)[0]
+              if not q or q.startswith(("http://","https://","//","data:","#","mailto:","tel:")):
+                  continue
+              if not Path(q).exists():
+                  errors.append(f"missing local asset: {q}")
+          mf=json.loads(Path("app/module-manifest.json").read_text(encoding="utf-8"))
+          for item in mf.get("scripts",[]):
+              if not Path(item["path"]).exists():
+                  errors.append("manifest path missing: "+item["path"])
+          if errors:
+              print("\n".join("ERROR: "+e for e in errors))
+              sys.exit(1)
+          print({"index_bytes":len(s.encode("utf-8")),"manifest_scripts":len(mf.get("scripts",[]))})
+          PY
+
+      - name: Commit refactor
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/yardivo-modular-phase2.yml
+          git config user.name "YARDIVO Refactor"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html assets modules app docs .github/workflows/yardivo-modular-phase2.yml
+          git commit -m "Modularize YARDIVO runtime and remove embedded asset trash [skip ci]"
+          git push
