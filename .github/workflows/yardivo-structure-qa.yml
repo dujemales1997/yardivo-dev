@@ -26,8 +26,8 @@ jobs:
 
           # Keep the HTML shell from becoming monolithic again.
           size=len(s.encode("utf-8"))
-          if size > 2200000:
-              errors.append(f"index.html too large: {size} bytes (budget 2.2 MB)")
+          if size > 500000:
+              errors.append(f"index.html too large: {size} bytes (budget 500 KB)")
 
           # No active inline CSS: only deliberately disabled media=not all blocks may remain.
           for m in re.finditer(r'<style([^>]*)>([\s\S]*?)</style>',s,re.I):
@@ -47,8 +47,8 @@ jobs:
               typ=(tm.group(1).lower() if tm else "")
               if typ in ("application/yardivo-retired","application/x-yardivo-disabled","text/plain"):
                   errors.append(f"retired/disabled script left in index: {im.group(1) if im else typ}")
-              if not re.search(r'\bsrc\s*=',attrs,re.I) and len(body) >= 5000:
-                  errors.append(f"large inline script remains: {im.group(1) if im else 'anonymous'} ({len(body)} chars)")
+              if not re.search(r'\bsrc\s*=',attrs,re.I) and len(body) >= 3500:
+                  errors.append(f"oversized inline script remains: {im.group(1) if im else 'anonymous'} ({len(body)} chars)")
 
           # Every local runtime asset referenced by index must exist.
           refs=set(re.findall(r'(?:src|href)=["\']([^"\']+)["\']',s,re.I))
