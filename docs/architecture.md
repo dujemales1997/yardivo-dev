@@ -1,30 +1,32 @@
-# YARDIVO web architecture
+# YARDIVO modular runtime
 
-YARDIVO remains a browser web application served through the same public link.
+YARDIVO remains a single web application opened through the same URL.
 
-## Migration rule
+## Runtime ownership
 
-Production behavior comes first. The legacy monolithic HTML is being decomposed incrementally.
-Phase 1 externalizes large runtime blocks without changing their execution order or adding
-async/defer semantics.
+- `services/`: Supabase, Auth, Realtime and shared server synchronization
+- `modules/supplier/`: supplier portal, booking, history and supplier-specific UI
+- `modules/master-data/`: locations, warehouses, ramps, suppliers and responsible people
+- `modules/chat/`: Help Chat and Operational Chat
+- `modules/gate/`: QR, gate and driver flows
+- `modules/receiving/`: receiving workflows
+- `modules/notifications/`: notification presentation and policy
+- `modules/settings/`: settings and visual preferences
+- `modules/analytics/`: overview and analytics behavior
+- `modules/ai/`: AI and voice behavior
+- `modules/ui/`: shared presentation compatibility code
 
-## Directories
+## Phase 2 contract
 
-- `app/` — bootstrap metadata and module registry
-- `modules/` — feature runtime split by domain
-- `styles/` — cacheable application styles
-- `services/` / `modules/services/` — Supabase/Auth/sync runtime during transition
-- `docs/` — architecture and migration notes
+Phase 2 preserves classic script execution order. Runtime blocks are moved out of `index.html` only by replacing the inline body with an external `src` at the same document position.
 
-## Ownership target
+Three identical embedded YARDIVO PNG logos were consolidated into one cacheable `assets/yardivo-logo.svg` asset.
 
-Every feature should converge to one runtime owner. New fixes must modify the owner module
-instead of appending another `final/fix/hotfix/authority` script to `index.html`.
+New code must not reintroduce:
+- large inline JavaScript
+- base64 image assets in `index.html`
+- retired/disabled runtime blocks
+- high-frequency network polling
+- duplicate owners for the same feature
 
-## Next phases
-
-1. Consolidate Supplier into one public feature API.
-2. Consolidate Supabase/Auth/Realtime into one service layer.
-3. Consolidate Master Data owners.
-4. Move large static view markup to view templates/components.
-5. Add a production build that emits a small number of cacheable bundles.
+Semantic merging of older final/hotfix/authority generations should happen within one domain at a time, behind QA, after the compatibility globals are covered.
