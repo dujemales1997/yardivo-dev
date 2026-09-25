@@ -53814,7 +53814,7 @@ async function loadThreads(){if(!admin())return;try{threads=await invoke('list_t
 async function loadMessages(silent=false){if(busy)return;if(admin()&&!selectedThread){messages=[];renderMessages();return}busy=true;try{messages=await invoke('list_messages',admin()?{thread_user_id:selectedThread}:{});if(!Array.isArray(messages))messages=[];renderMessages();if(admin())await loadThreads();updateBadge(0,true)}catch(e){if(!silent){const h=document.getElementById('yhcMessages');if(h)h.innerHTML='<div class="yhc-empty">Help Chat nije dostupan: '+esc(e?.message||e)+'</div>'}}finally{busy=false}}
 async function send(){const input=document.getElementById('yhcInput'),btn=document.getElementById('yhcSend');if(!input||!btn)return;const body=input.value.trim();if(!body)return;if(admin()&&!selectedThread)return alert('Odaberi korisnika.');btn.disabled=true;try{await invoke('send',admin()?{thread_user_id:selectedThread,body}:{body});input.value='';await loadMessages()}catch(e){alert('Poruka nije poslana:\n'+(e?.message||e))}finally{btn.disabled=false;input.focus()}}
 async function who(){try{me=await invoke('whoami');return me}catch(e){console.error('[YARDIVO Help Chat] whoami',e);return null}}
-async function open(){ensure();opened=true;document.getElementById('yardivoHelpChatOverlay')?.classList.add('open');await who();const t=document.getElementById('yhcTitle'),s=document.getElementById('yhcSub'),inp=document.getElementById('yhcInput');if(admin()){if(t)t.textContent='HELP CHAT · ADMIN';if(s)s.textContent='Korisnici ↔ dujemales · Yard Manager';if(inp)inp.placeholder='Odgovori korisniku…';await loadThreads()}else{if(t)t.textContent='HELP CHAT';if(s)s.textContent='dujemales · Yard Manager';if(inp)inp.placeholder='Napiši poruku adminu…'}await loadMessages();clearInterval(chatTimer);chatTimer=setInterval(()=>{if(opened)loadMessages(true)},10000)}
+async function open(){ensure();opened=true;document.getElementById('yardivoHelpChatOverlay')?.classList.add('open');await who();const t=document.getElementById('yhcTitle'),s=document.getElementById('yhcSub'),inp=document.getElementById('yhcInput');if(admin()){if(t)t.textContent='HELP CHAT · ADMIN';if(s)s.textContent='Korisnici ↔ dujemales · Yard Manager';if(inp)inp.placeholder='Odgovori korisniku…';await loadThreads()}else{if(t)t.textContent='HELP CHAT';if(s)s.textContent='dujemales · Yard Manager';if(inp)inp.placeholder='Napiši poruku adminu…'}await loadMessages();clearInterval(chatTimer);chatTimer=setInterval(()=>{if(opened)loadMessages(true)},120000)}
 function close(){opened=false;document.getElementById('yardivoHelpChatOverlay')?.classList.remove('open');clearInterval(chatTimer);chatTimer=null}
 function updateBadge(n,forceZero=false){const count=forceZero?0:Number(n||0);document.querySelectorAll('[data-yv-help-badge],#yardivoHelpChatAdminTrigger .hc-badge').forEach(b=>{b.textContent=String(count);b.hidden=!count})}
 async function pollBadge(){try{if(!window.currentSession&&!document.body?.dataset?.yardivoRole)return;const x=await invoke('unread_count');updateBadge(x?.count||0)}catch(_){}}
@@ -53822,7 +53822,7 @@ document.addEventListener('click',e=>{const b=e.target.closest?.('[data-yv-help-
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&opened)close()});
 window.addEventListener('yardivo:logout',()=>{close();updateBadge(0,true)});
 window.addEventListener('yardivo:online-ready',()=>{ensure();pollBadge()});
-setTimeout(()=>{ensure();pollBadge()},1800);badgeTimer=setInterval(pollBadge,30000);
+setTimeout(()=>{ensure();pollBadge()},1800);badgeTimer=setInterval(pollBadge,180000);
 async function openThread(threadId){selectedThread=String(threadId||'');await open()}
 window.YardivoHelpChatV583={open,openThread,close,refresh:loadMessages};
 })();
@@ -53857,7 +53857,7 @@ function openThread(id){if(!id)return;window.YardivoHelpChatV583?.openThread?.(i
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-yhc-pop-thread]');if(!b)return;e.preventDefault();e.stopPropagation();openThread(b.dataset.yhcPopThread)},true);
 window.addEventListener('yardivo:logout',()=>{lastSig='';render([])});
 window.addEventListener('yardivo:online-ready',()=>{lastSig='';poll()});
-setTimeout(()=>{poll();clearInterval(timer);timer=setInterval(poll,30000)},2200);
+setTimeout(()=>{poll();clearInterval(timer);timer=setInterval(poll,180000)},2200);
 window.YardivoHelpChatAdminPopupsV583={refresh:poll};
 })();
 </script>
@@ -59265,11 +59265,11 @@ async function driverThreads(){if(role()!=='reception')return[];try{const d=awai
 async function refreshThreads(showPop=true){if(!allowed())return;ensure();try{const base=await invoke('list_threads')||[],drivers=await driverThreads();threads=[...base,...drivers].sort((a,b)=>String(b.last_at||'').localeCompare(String(a.last_at||'')));if(!selected&&threads[0])selected=threads[0].thread_key;renderTabs();const total=threads.reduce((s,x)=>s+Number(x.unread||0),0),b=document.querySelector('#yardivoOpChatFab .yoc-badge');if(b){b.textContent=String(total);b.style.display=total?'inline-flex':'none'}if(showPop&&!opened){const unread=threads.filter(x=>Number(x.unread||0)>0),sig=unread.map(x=>x.thread_key+':'+x.last_at).join('|');if(sig&&sig!==lastPopupSig){lastPopupSig=sig;document.getElementById('yardivoOpChatPopupStack').innerHTML=unread.slice(0,3).map(x=>'<button class="yoc-pop" data-yoc-pop="'+esc(x.thread_key)+'"><strong>'+esc(x.label)+'</strong><small>NOVA PORUKA</small><p>'+esc(x.last_message||'')+'</p></button>').join('')}}}catch(e){console.warn('[Operational Chat]',e)}}
 async function loadMessages(){const t=threads.find(x=>x.thread_key===selected);if(!t)return renderMessages();try{if(t.driver){messages=(t.row?.events||[]).slice().reverse();const ld=(t.row?.events||[]).find(e=>e.actor_role==='driver');if(ld)localStorage.setItem('yardivo_driver_chat_seen_'+t.row.id,String(ld.id))}else messages=await invoke('list_messages',{thread_key:selected})||[];renderMessages();await refreshThreads(false)}catch(e){document.getElementById('yocMsgs').innerHTML='<div class="yoc-empty">'+esc(e?.message||e)+'</div>'}}
 async function send(){const i=document.getElementById('yocInput'),body=String(i?.value||'').trim();if(!body||!selected)return;const t=threads.find(x=>x.thread_key===selected);try{if(t?.driver)await gate('reception_send',{id:t.row.id,message:body});else await invoke('send',{thread_key:selected,body,warehouse:wh()});i.value='';await refreshThreads(false);if(t?.driver){const d=await driverThreads();const n=d.find(x=>x.thread_key===selected);if(n)t.row=n.row}await loadMessages()}catch(e){alert('Poruka nije poslana: '+(e?.message||e))}}
-async function openPanel(key){ensure();opened=true;document.getElementById('yardivoOpChatPanel').classList.add('open');document.getElementById('yardivoOpChatPopupStack').innerHTML='';await refreshThreads(false);if(key)selected=key;renderTabs();await loadMessages();clearInterval(timer);timer=setInterval(()=>{if(opened)refreshThreads(false).then(loadMessages)},10000)}
+async function openPanel(key){ensure();opened=true;document.getElementById('yardivoOpChatPanel').classList.add('open');document.getElementById('yardivoOpChatPopupStack').innerHTML='';await refreshThreads(false);if(key)selected=key;renderTabs();await loadMessages();clearInterval(timer);timer=setInterval(()=>{if(opened)refreshThreads(false).then(loadMessages)},120000)}
 function closePanel(){opened=false;document.getElementById('yardivoOpChatPanel')?.classList.remove('open');clearInterval(timer);timer=null}
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-yoc-pop]');if(b){e.preventDefault();openPanel(b.dataset.yocPop)}},true);
 ['yardivo:login','yardivo:online-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{ensure();refreshThreads()},1000)));
-setTimeout(()=>{ensure();refreshThreads();setInterval(()=>{if(!document.hidden&&!opened)refreshThreads(true)},30000)},2200);
+setTimeout(()=>{ensure();refreshThreads();setInterval(()=>{if(!document.hidden&&!opened)refreshThreads(true)},180000)},2200);
 window.YardivoOperationalChatV583={open:openPanel,close:closePanel,refresh:refreshThreads};})();
 </script>
 
@@ -59346,5 +59346,56 @@ async function greet(mySeq){if(mySeq!==seq||!window.currentSession)return;try{if
 window.addEventListener('yardivo:login',()=>{const my=++seq;setTimeout(()=>greet(my),900)});
 window.addEventListener('yardivo:logout',()=>{seq++});
 })();
-</script>\n</body>
+</script>\n<script id="yardivo-v583-chat-realtime-signal-20260925">
+(()=>{
+'use strict';
+if(window.__YARDIVO_CHAT_REALTIME_SIGNAL_20260925__)return;
+window.__YARDIVO_CHAT_REALTIME_SIGNAL_20260925__=true;
+let channel=null,starting=false,lastEventAt=0;
+function refreshChatSurfaces(){
+  const now=Date.now();
+  if(now-lastEventAt<120)return;
+  lastEventAt=now;
+  try{window.YardivoHelpChatV583?.refresh?.(true)}catch(_){}
+  try{window.YardivoHelpChatAdminPopupsV583?.refresh?.()}catch(_){}
+  try{window.YardivoOperationalChatV583?.refresh?.(true)}catch(_){}
+}
+async function start(){
+  if(channel||starting)return channel;
+  starting=true;
+  try{
+    const c=await window.YardivoAuth?.client?.();
+    if(!c)return null;
+    const session=(await c.auth.getSession())?.data?.session||null;
+    if(!session?.access_token)return null;
+    try{await c.realtime?.setAuth?.(session.access_token)}catch(_){}
+    channel=c.channel('yardivo-chat-events',{config:{private:true,broadcast:{self:false}}});
+    channel.on('broadcast',{event:'changed'},refreshChatSurfaces);
+    channel.subscribe((status)=>{
+      if(String(status||'').toUpperCase()==='CHANNEL_ERROR'){
+        try{c.removeChannel(channel)}catch(_){}
+        channel=null;
+      }
+    });
+    return channel;
+  }catch(e){
+    console.warn('[YARDIVO CHAT REALTIME]',e);
+    channel=null;
+    return null;
+  }finally{starting=false}
+}
+async function stop(){
+  let c=null;try{c=await window.YardivoAuth?.client?.()}catch(_){}
+  const ch=channel;channel=null;
+  if(ch&&c){try{await c.removeChannel(ch)}catch(_){}}
+}
+['yardivo:login','yardivo:online-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(start,150)));
+window.addEventListener('focus',()=>setTimeout(start,250));
+window.addEventListener('yardivo:logout',()=>{void stop()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(start,250)});
+setTimeout(start,1200);
+window.YardivoChatRealtimeV583={start,stop,refresh:refreshChatSurfaces,status:()=>!!channel};
+})();
+</script>
+</body>
 </html>
