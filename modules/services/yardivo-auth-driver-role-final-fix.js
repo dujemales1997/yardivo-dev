@@ -38,18 +38,8 @@ function persistAppSession(session){
   try{window.currentSession=session;currentSession=session}catch(e){window.currentSession=session}
 }
 async function authClient(){
-  if(!window.supabase?.createClient)throw new Error('Supabase biblioteka nije učitana.');
-  if(window.YardivoSupabase?.client){
-    try{return await window.YardivoSupabase.client()}catch(e){}
-  }
-  if(!window.__yardivoAuthClient){
-    window.__yardivoAuthClient=window.supabase.createClient(
-      'https://rskticdbiovvgyocpzoc.supabase.co',
-      'sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy',
-      {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage,storageKey:(window.YardivoTabAuthV583?.storageKey||('yardivo-auth-'+Math.random().toString(36).slice(2))),lock:async(_name,_timeout,fn)=>await fn()}}
-    );
-  }
-  return window.__yardivoAuthClient;
+  if(!window.YardivoSupabaseClient?.client)throw new Error('Canonical Supabase client service nije učitan.');
+  return await window.YardivoSupabaseClient.client();
 }
 async function forcePasswordRotation(c,user){return true}
 async function loadServerProfile(c){
