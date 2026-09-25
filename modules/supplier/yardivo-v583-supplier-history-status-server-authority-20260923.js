@@ -3,7 +3,7 @@
 if(window.__YARDIVO_SUPPLIER_HISTORY_STATUS_SERVER_AUTH_20260923__)return;
 window.__YARDIVO_SUPPLIER_HISTORY_STATUS_SERVER_AUTH_20260923__=true;
 const $=id=>document.getElementById(id);
-let rows=[],busy=false,lastPull=0,timer=0,lastFingerprint='';
+let rows=[],busy=false,lastPull=0,lastFingerprint='';
 const terminal=new Set(['completed','rejected','cancelled','canceled']);
 function portal(){return $('yardivoSupplierPortal')}
 function isSupplier(){try{return String((typeof currentSession!=='undefined'?currentSession:window.currentSession)?.role||'').toLowerCase()==='supplier'}catch(_){return false}}
@@ -198,10 +198,7 @@ function hideFloatingSupplierUi(){
   const fs=$('yardivoSupplierRightMapFullscreenV583');if(fs)fs.style.setProperty('display','none','important')
 }
 function currentView(){return portal()?.querySelector('[data-ysp-view].active')?.dataset.yspView||''}
-function schedule(){
-  clearInterval(timer);
-  timer=setInterval(()=>{const v=currentView();if(!document.hidden&&isSupplier()&&(v==='status'||v==='history'))pull(false)},30000)
-}
+
 function ensureSupplierAdditionalModal(){
   let m=document.getElementById('yardivoSupplierAdditionalModalV583');if(m)return m;
   m=document.createElement('div');m.id='yardivoSupplierAdditionalModalV583';
@@ -267,8 +264,7 @@ document.addEventListener('click',e=>{
 ['yardivo:login','yardivo:supplier-qr-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(()=>{hideFloatingSupplierUi();pull(true)},180)));
 window.addEventListener('yardivo:supplier-mine-rows',()=>setTimeout(()=>{hideFloatingSupplierUi();pull(false)},0));
 window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>{hideFloatingSupplierUi();renderAll()},180));
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&isSupplier())pull(true)});
-window.addEventListener('load',()=>setTimeout(()=>{hideFloatingSupplierUi();pull(true);schedule()},700),{once:true});
-setTimeout(()=>{hideFloatingSupplierUi();pull(true);schedule()},250);
+window.addEventListener('load',()=>setTimeout(()=>{hideFloatingSupplierUi();pull(false)},700),{once:true});
+setTimeout(()=>{hideFloatingSupplierUi();pull(false)},250);
 window.YardivoSupplierHistoryStatusServerV583={pull,render:renderAll,rows:()=>rows.slice()};
 })();
