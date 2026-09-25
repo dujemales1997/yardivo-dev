@@ -1,0 +1,98 @@
+name: YARDIVO Phase 4 inline extraction
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/yardivo-phase4-inline-extract.yml'
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Externalize remaining classic inline runtime
+        shell: python
+        run: |
+          import re, pathlib, hashlib, subprocess
+
+          root = pathlib.Path(".")
+          p = root / "index.html"
+          s = p.read_text(encoding="utf-8")
+
+          rx = re.compile(r"<script([^>]*)>([\s\S]*?)</script>", re.I)
+          matches = list(rx.finditer(s))
+          created = []
+          replacements = []
+
+          def domain(script_id, body):
+              x = (script_id + " " + body[:1200]).lower()
+              if any(k in x for k in ["supplier", "dobavlj"]): return "modules/supplier/runtime"
+              if any(k in x for k in ["master", "warehouse", "ramp", "location"]): return "modules/master-data/runtime"
+              if any(k in x for k in ["help-chat", "operational-chat", "chat"]): return "modules/chat/runtime"
+              if any(k in x for k in ["notification", "notif", "toast"]): return "modules/notifications/runtime"
+              if any(k in x for k in ["receiving", "prijam"]): return "modules/receiving/runtime"
+              if any(k in x for k in ["gate", "qr", "driver"]): return "modules/gate/runtime"
+              if any(k in x for k in ["setting", "theme", "palette", "dark", "light"]): return "modules/settings/runtime"
+              if any(k in x for k in ["overview", "analytics", "control-tower", "chart"]): return "modules/analytics/runtime"
+              if any(k in x for k in ["ai-", "voice", "assistant"]): return "modules/ai/runtime"
+              if any(k in x for k in ["supabase", "sync", "auth", "login", "logout", "session"]): return "services/runtime"
+              return "modules/ui/runtime"
+
+          used = set()
+          for i, m in enumerate(matches):
+              attrs, body = m.group(1), m.group(2)
+              if re.search(r"\bsrc\s*=", attrs, re.I) or not body.strip():
+                  continue
+              mt = re.search(r"\btype=[\"']([^\"']+)", attrs, re.I)
+              if mt and mt.group(1).lower() not in ("text/javascript","application/javascript"):
+                  continue
+              # Keep tiny boot/bridge snippets inline; move substantial runtime only.
+              if len(m.group(0)) < 1000:
+                  continue
+              mid = re.search(r"\bid=[\"']([^\"']+)", attrs, re.I)
+              sid = mid.group(1) if mid else f"inline-{i:03d}"
+              slug = re.sub(r"[^a-zA-Z0-9._-]+", "-", sid).strip("-").lower() or f"inline-{i:03d}"
+              d = domain(sid, body)
+              rel = f"{d}/{slug}.js"
+              if rel in used or (root/rel).exists():
+                  rel = f"{d}/{slug}-{i:03d}.js"
+              used.add(rel)
+              out = root / rel
+              out.parent.mkdir(parents=True, exist_ok=True)
+              out.write_text(body.strip() + "\n", encoding="utf-8")
+              created.append(rel)
+              new_attrs = attrs.rstrip() + f' src="./{rel}"'
+              replacements.append((m.start(), m.end(), f"<script{new_attrs}></script>"))
+
+          for a,b,r in reversed(replacements):
+              s = s[:a] + r + s[b:]
+          p.write_text(s, encoding="utf-8")
+
+          # Safety checks: UI markup untouched except script bodies/attributes.
+          if "<style" in s.lower():
+              raise SystemExit("Inline CSS unexpectedly present")
+          if len(s.encode()) > 220000:
+              raise SystemExit(f"index.html still above phase-4 budget: {len(s.encode())} bytes")
+          for rel in created:
+              subprocess.run(["node","--check",rel], check=True, stdout=subprocess.DEVNULL)
+
+          print(f"externalized={len(created)} index_bytes={len(s.encode())}")
+
+      - name: Commit extraction
+        run: |
+          git config user.name "YARDIVO Modularizer"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html services modules
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Externalize remaining YARDIVO runtime without UI changes [skip ci]"
+          git push
