@@ -7275,58 +7275,7 @@ async function greet(mySeq){if(mySeq!==seq||!window.currentSession)return;try{if
 window.addEventListener('yardivo:login',()=>{const my=++seq;setTimeout(()=>greet(my),900)});
 window.addEventListener('yardivo:logout',()=>{seq++});
 })();
-</script>\n<script id="yardivo-v583-chat-realtime-signal-20260925">
-(()=>{
-'use strict';
-if(window.__YARDIVO_CHAT_REALTIME_SIGNAL_20260925__)return;
-window.__YARDIVO_CHAT_REALTIME_SIGNAL_20260925__=true;
-let channel=null,starting=false,lastEventAt=0;
-function refreshChatSurfaces(){
-  const now=Date.now();
-  if(now-lastEventAt<120)return;
-  lastEventAt=now;
-  try{window.YardivoHelpChatV583?.refresh?.(true)}catch(_){}
-  try{window.YardivoHelpChatAdminPopupsV583?.refresh?.()}catch(_){}
-  try{window.YardivoOperationalChatV583?.refresh?.(true)}catch(_){}
-}
-async function start(){
-  if(channel||starting)return channel;
-  starting=true;
-  try{
-    const c=await window.YardivoAuth?.client?.();
-    if(!c)return null;
-    const session=(await c.auth.getSession())?.data?.session||null;
-    if(!session?.access_token)return null;
-    try{await c.realtime?.setAuth?.(session.access_token)}catch(_){}
-    channel=c.channel('yardivo-chat-events',{config:{private:true,broadcast:{self:false}}});
-    channel.on('broadcast',{event:'changed'},refreshChatSurfaces);
-    channel.subscribe((status)=>{
-      if(String(status||'').toUpperCase()==='CHANNEL_ERROR'){
-        try{c.removeChannel(channel)}catch(_){}
-        channel=null;
-      }
-    });
-    return channel;
-  }catch(e){
-    console.warn('[YARDIVO CHAT REALTIME]',e);
-    channel=null;
-    return null;
-  }finally{starting=false}
-}
-async function stop(){
-  let c=null;try{c=await window.YardivoAuth?.client?.()}catch(_){}
-  const ch=channel;channel=null;
-  if(ch&&c){try{await c.removeChannel(ch)}catch(_){}}
-}
-['yardivo:login','yardivo:online-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(start,150)));
-window.addEventListener('focus',()=>setTimeout(start,250));
-window.addEventListener('yardivo:logout',()=>{void stop()});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(start,250)});
-setTimeout(start,1200);
-window.YardivoChatRealtimeV583={start,stop,refresh:refreshChatSurfaces,status:()=>!!channel};
-})();
-</script>
-<script id="yardivo-v583-chat-realtime-signal-final">
+</script>\n<script id="yardivo-v583-chat-realtime-signal-final">
 (()=>{'use strict';
 if(window.__YARDIVO_CHAT_REALTIME_SIGNAL_FINAL__)return;
 window.__YARDIVO_CHAT_REALTIME_SIGNAL_FINAL__=true;
