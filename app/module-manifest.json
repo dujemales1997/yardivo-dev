@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-25-phase2",
+  "version": "2026-09-25-phase2-canonical-owners",
   "strategy": "behavior-preserving externalization + domain ownership",
   "scripts": [
     {
@@ -242,10 +242,10 @@
     },
     {
       "id": "yardivo-online-sync-v2-20260902",
-      "path": "modules/supplier/yardivo-online-sync-v2-20260902.js",
+      "path": "services/sync/yardivo-online-sync-v2-20260902.js",
       "bytes": 26274,
       "sha256": "3469eb0a828d2a084de91850a2346f3db78f0695c296e794a0155119f925184c",
-      "category": "supplier"
+      "category": "sync"
     },
     {
       "id": "yardivo-canonical-login-router-v2-20260901",
@@ -445,10 +445,10 @@
     },
     {
       "id": "yardivo-master-data-registry-final-v583",
-      "path": "modules/supplier/yardivo-master-data-registry-final-v583.js",
+      "path": "modules/master-data/yardivo-master-data-registry.js",
       "bytes": 13084,
       "sha256": "c339cb5e1304152e8d1d293c187507d924078c92cf255f64aca7e5c8ac9babd1",
-      "category": "supplier"
+      "category": "master-data"
     },
     {
       "id": "yardivo-unified-dynamic-ramps-v583",
@@ -732,10 +732,10 @@
     },
     {
       "id": "yardivo-v583-help-chat-js",
-      "path": "modules/services/yardivo-v583-help-chat-js.js",
+      "path": "modules/chat/yardivo-v583-help-chat.js",
       "bytes": 7512,
       "sha256": "0a875c7254307d6512f76e4953d5e9c0c09d8b08292b291b91fe0a4590dfa24d",
-      "category": "services"
+      "category": "chat"
     },
     {
       "id": "yardivo-v583-supplier-context-actions",
@@ -823,10 +823,10 @@
     },
     {
       "id": "yardivo-v583-operational-chat",
-      "path": "modules/supplier/yardivo-v583-operational-chat.js",
+      "path": "modules/chat/yardivo-v583-operational-chat.js",
       "bytes": 7687,
       "sha256": "7f0a8c96f7c32a40f0b6c0609cca1930231cbc7a268cfe56dafb4b313d1e161b",
-      "category": "supplier"
+      "category": "chat"
     },
     {
       "id": "yardivo-delay-settings-v1",
@@ -1167,6 +1167,13 @@
         "modules/analytics/yardivo-overview-reset-empty-fix-v1-20260901-js.js"
       ]
     },
+    "chat": {
+      "owner": "modules/chat/",
+      "files": [
+        "modules/chat/yardivo-v583-help-chat.js",
+        "modules/chat/yardivo-v583-operational-chat.js"
+      ]
+    },
     "gate": {
       "owner": "modules/gate/",
       "files": [
@@ -1199,6 +1206,7 @@
         "modules/master-data/phase2-258-yardivo-v583-add-user-smart-system-toggle-js.js",
         "modules/master-data/phase2-319-yardivo-admin-master-restore-v11-js.js",
         "modules/master-data/script-024.js",
+        "modules/master-data/yardivo-master-data-registry.js",
         "modules/master-data/yardivo-myyard-webgl-v3.js",
         "modules/master-data/yardivo-operational-sync-v1-20260901.js",
         "modules/master-data/yardivo-saas-hardening-pass2-v583.js",
@@ -1258,7 +1266,6 @@
         "modules/services/yardivo-v583-bottom-minimap-assistant-js.js",
         "modules/services/yardivo-v583-document-archive-final.js",
         "modules/services/yardivo-v583-executive-context-control-tower.js",
-        "modules/services/yardivo-v583-help-chat-js.js",
         "modules/services/yardivo-v583-maps-header-smart-master-final-js.js",
         "modules/services/yardivo-v583-right-settings-drawer-js.js",
         "modules/services/yardivo-v583-ux-ramps-docs-weekload-hours.js",
@@ -1308,12 +1315,10 @@
         "modules/supplier/yardivo-manager-final-authority-v4.js",
         "modules/supplier/yardivo-manager-scope-popup-v2.js",
         "modules/supplier/yardivo-master-data-persistence-dropdown-warehouse-fix-v583.js",
-        "modules/supplier/yardivo-master-data-registry-final-v583.js",
         "modules/supplier/yardivo-master-upgrade-js.js",
         "modules/supplier/yardivo-myyard-focus-live-v1-20260901-js.js",
         "modules/supplier/yardivo-notifications-incidents-final.js",
         "modules/supplier/yardivo-notifications-timeline.js",
-        "modules/supplier/yardivo-online-sync-v2-20260902.js",
         "modules/supplier/yardivo-overview-3d-carousel-20260831.js",
         "modules/supplier/yardivo-overview-fullwidth-chart-v1-20260901-js.js",
         "modules/supplier/yardivo-overview-master-authority-v5.js",
@@ -1340,7 +1345,6 @@
         "modules/supplier/yardivo-v583-master-people-users-ui-final-js.js",
         "modules/supplier/yardivo-v583-master-users-stability-hotfix.js",
         "modules/supplier/yardivo-v583-notification-scope-supplier-transport-ui.js",
-        "modules/supplier/yardivo-v583-operational-chat.js",
         "modules/supplier/yardivo-v583-reception-ui-scope-clean-js.js",
         "modules/supplier/yardivo-v583-responsible-person-inventory-account-authority.js",
         "modules/supplier/yardivo-v583-settings-export-supplier-bulk-hard-fix.js",
@@ -1358,10 +1362,11 @@
       ]
     },
     "sync": {
-      "owner": "modules/sync/",
+      "owner": "services/sync/",
       "files": [
         "modules/sync/phase2-137-yardivo-notification-delete-read-style-v1-20260901-js.js",
-        "modules/sync/phase2-175-yardivo-v583-graphite-notifications-scanner-final.js"
+        "modules/sync/phase2-175-yardivo-v583-graphite-notifications-scanner-final.js",
+        "services/sync/yardivo-online-sync-v2-20260902.js"
       ]
     },
     "ui": {
