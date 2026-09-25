@@ -1,0 +1,43 @@
+name: YARDIVO modularize refactor branch
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/modular-webapp-20260925
+          fetch-depth: 0
+      - name: Run deterministic modularization
+        run: python3 scripts/modularize_phase1.py
+      - name: Parse-check extracted JS
+        run: find modules -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: QA generated assets
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re
+          s=Path('index.html').read_text(encoding='utf-8')
+          m=json.loads(Path('app/module-manifest.json').read_text())
+          assert len(m['scripts'])>=80
+          assert Path('styles/yardivo-runtime.css').stat().st_size>900000
+          assert len(s.encode())<3000000
+          assert 'async src="modules/' not in s
+          assert 'defer src="modules/' not in s
+          print({'index_bytes':len(s.encode()),'external_scripts':len(m['scripts']),'css_bytes':Path('styles/yardivo-runtime.css').stat().st_size})
+          PY
+      - name: Commit to refactor branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html app modules styles docs
+          git commit -m "Modularize YARDIVO web runtime phase 1 [skip ci]"
+          git push origin HEAD:refactor/modular-webapp-20260925
