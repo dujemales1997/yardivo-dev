@@ -368,11 +368,9 @@ Storage.prototype.removeItem=function(k){
 };
 
 async function getClient(){
-  if(!window.supabase?.createClient)return null;
-  if(!client){
-    client=window.__yardivoAuthClient||window.supabase.createClient(BASE,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.sessionStorage,storageKey:(window.YardivoTabAuthV583?.storageKey||('yardivo-auth-'+Math.random().toString(36).slice(2))),lock:async(_name,_timeout,fn)=>await fn()}});
-    window.__yardivoAuthClient=client;
-  }
+  if(!window.YardivoSupabaseClient?.client)throw new Error('Canonical Supabase client service nije učitan.');
+  const c=await window.YardivoSupabaseClient.client();
+  client=c;
   if(accessToken&&refreshToken){
     const {error}=await client.auth.setSession({access_token:accessToken,refresh_token:refreshToken});
     if(error)throw error;
