@@ -111,18 +111,12 @@ async function refresh(force=false){
 }
 async function healOnline(){
  if(role()==='supplier'||healBusy||!window.currentSession?.serverAuthorized)return;
- const api=window.YardivoSupabase;
- if(!api?.authenticate||!api?.status)return;
- const st=api.status();
- if(st?.ready)return;
+ const api=window.YardivoSync;
+ if(!api?.recover||!api?.status)return;
+ if(api.status()?.ready)return;
  healBusy=true;
  try{
-   const c=await window.YardivoAuth?.client?.();
-   let s=(await c?.auth?.getSession?.())?.data?.session||null;
-   if(!s?.access_token)s=(await c?.auth?.refreshSession?.())?.data?.session||null;
-   if(s?.access_token&&s?.refresh_token){
-     await api.authenticate(s.access_token,s.refresh_token);
-   }
+   await api.recover();
  }catch(e){
    console.warn('[YARDIVO ONLINE HEAL]',e);
  }finally{healBusy=false}
@@ -140,8 +134,6 @@ window.addEventListener('yardivo:data-synced',()=>setTimeout(()=>{bind();refresh
 window.addEventListener('focus',()=>setTimeout(()=>{refresh(false);healOnline()},120));
 window.addEventListener('load',()=>setTimeout(()=>{bind();refresh(true);healOnline()},900));
 setTimeout(()=>{bind();refresh(true);healOnline()},450);
-/* Stable polling only updates data; it never toggles the section/view. */
-setInterval(()=>{if(!document.hidden)healOnline()},60000);
 
 window.YardivoSupplierInboxStableFinalV583={refresh,healOnline};
 window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-supplier-inbox-stable-supabase-health-fixed-final';
