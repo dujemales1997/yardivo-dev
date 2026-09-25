@@ -54,10 +54,8 @@ function save(d){
     best-effort flush. Serialize writes so an older ramp configuration can never
     overtake a newer one in yardivo_app_state. */
  try{
-  if(typeof putCloudState==='function'){
-   masterCloudWrite=masterCloudWrite.catch(()=>{}).then(()=>Promise.resolve(putCloudState(KEY,JSON.stringify(payload)))).then(()=>Promise.resolve(window.YardivoSupabase?.flushQueue?.())).catch(e=>{console.error('YARDIVO MASTER cloud save failed',e);throw e});
-   window.__YARDIVO_MASTER_CLOUD_WRITE_V583__=masterCloudWrite;
-  }
+  masterCloudWrite=masterCloudWrite.catch(()=>{}).then(()=>Promise.resolve(window.YardivoSync?.flush?.())).catch(e=>{console.error('YARDIVO MASTER cloud save failed',e);throw e});
+  window.__YARDIVO_MASTER_CLOUD_WRITE_V583__=masterCloudWrite;
  }catch(e){console.error('YARDIVO MASTER cloud save schedule failed',e)}
  window.dispatchEvent(new CustomEvent('yardivo:master-data-changed',{detail:clone(payload)}));
  return payload;
