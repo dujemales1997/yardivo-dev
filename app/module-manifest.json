@@ -1,6 +1,6 @@
 {
-  "version": "2026-09-25-phase2-canonical-owners",
-  "strategy": "behavior-preserving externalization + domain ownership",
+  "version": "2026-09-25-phase3-domain-extraction",
+  "strategy": "behavior-preserving externalization + canonical domain ownership",
   "scripts": [
     {
       "id": "script-022",
@@ -1141,6 +1141,48 @@
       "bytes": 4066,
       "category": "master-data",
       "phase": 2
+    },
+    {
+      "id": "yardivo-v583-help-chat-admin-popups-js",
+      "path": "modules/chat/yardivo-v583-help-chat-admin-popups.js",
+      "bytes": 2768,
+      "category": "chat",
+      "phase": 3
+    },
+    {
+      "id": "yardivo-v583-chat-realtime-signal-final",
+      "path": "modules/chat/yardivo-v583-chat-realtime-signal-final.js",
+      "bytes": 1959,
+      "category": "chat",
+      "phase": 3
+    },
+    {
+      "id": "yardivo-v583-ai-assistant-supabase-v2-final-js",
+      "path": "modules/ai/yardivo-v583-ai-assistant-supabase-v2-final.js",
+      "bytes": 2046,
+      "category": "ai",
+      "phase": 3
+    },
+    {
+      "id": "yardivo-v583-login-ai-welcome-20260924",
+      "path": "modules/ai/yardivo-v583-login-ai-welcome-20260924.js",
+      "bytes": 2485,
+      "category": "ai",
+      "phase": 3
+    },
+    {
+      "id": "yardivo-v583-notifications-master-supplier-sanitizer",
+      "path": "modules/notifications/yardivo-v583-notifications-master-supplier-sanitizer.js",
+      "bytes": 2711,
+      "category": "notifications",
+      "phase": 3
+    },
+    {
+      "id": "yardivo-v583-dark-palette-full-ui-runtime",
+      "path": "modules/settings/yardivo-v583-dark-palette-full-ui-runtime.js",
+      "bytes": 2763,
+      "category": "settings",
+      "phase": 3
     }
   ],
   "css": {
@@ -1158,7 +1200,9 @@
     "ai": {
       "owner": "modules/ai/",
       "files": [
-        "modules/ai/yardivo-v583-minimap-assistant-ux-fix-final-js.js"
+        "modules/ai/yardivo-v583-minimap-assistant-ux-fix-final-js.js",
+        "modules/ai/yardivo-v583-ai-assistant-supabase-v2-final.js",
+        "modules/ai/yardivo-v583-login-ai-welcome-20260924.js"
       ]
     },
     "analytics": {
@@ -1171,7 +1215,9 @@
       "owner": "modules/chat/",
       "files": [
         "modules/chat/yardivo-v583-help-chat.js",
-        "modules/chat/yardivo-v583-operational-chat.js"
+        "modules/chat/yardivo-v583-operational-chat.js",
+        "modules/chat/yardivo-v583-help-chat-admin-popups.js",
+        "modules/chat/yardivo-v583-chat-realtime-signal-final.js"
       ]
     },
     "gate": {
@@ -1224,7 +1270,8 @@
     "notifications": {
       "owner": "modules/notifications/",
       "files": [
-        "modules/notifications/phase2-296-yardivo-v583-unified-ai-sound-settings-js.js"
+        "modules/notifications/phase2-296-yardivo-v583-unified-ai-sound-settings-js.js",
+        "modules/notifications/yardivo-v583-notifications-master-supplier-sanitizer.js"
       ]
     },
     "services": {
@@ -1279,7 +1326,8 @@
         "modules/settings/phase2-134-yardivo-theme-canonical-single-owner-v5-20260901.js",
         "modules/settings/phase2-150-yardivo-smart-admin-setting-v1-20260902.js",
         "modules/settings/phase2-311-yardivo-theme-full-authority-v4-js.js",
-        "modules/settings/yardivo-delay-settings-v1.js"
+        "modules/settings/yardivo-delay-settings-v1.js",
+        "modules/settings/yardivo-v583-dark-palette-full-ui-runtime.js"
       ]
     },
     "supplier": {
