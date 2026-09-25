@@ -1,0 +1,110 @@
+name: YARDIVO chat realtime cleanup
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-chat-realtime-cleanup.yml"
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch chat polling and add Realtime signal listener
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8")
+          def rep(old,new,label):
+              global s
+              n=s.count(old)
+              if n!=1:
+                  raise SystemExit(f"{label}: expected 1 match, got {n}")
+              s=s.replace(old,new)
+
+          rep("setInterval(()=>{if(opened)loadMessages(true)},10000)",
+              "setInterval(()=>{if(opened)loadMessages(true)},120000)",
+              "help chat open fallback")
+          rep("setInterval(pollBadge,30000)",
+              "setInterval(pollBadge,180000)",
+              "help chat badge fallback")
+          rep("timer=setInterval(poll,30000)",
+              "timer=setInterval(poll,180000)",
+              "help chat admin popup fallback")
+          rep("timer=setInterval(()=>{if(opened)refreshThreads(false).then(loadMessages)},10000)",
+              "timer=setInterval(()=>{if(opened)refreshThreads(false).then(loadMessages)},120000)",
+              "operational chat open fallback")
+          rep("setInterval(()=>{if(!document.hidden&&!opened)refreshThreads(true)},30000)",
+              "setInterval(()=>{if(!document.hidden&&!opened)refreshThreads(true)},180000)",
+              "operational chat closed fallback")
+
+          marker='</body>'
+          if s.count(marker)!=1:
+              raise SystemExit(f"body marker expected 1 match, got {s.count(marker)}")
+          module=r'''
+<script id="yardivo-v583-chat-realtime-signal-20260925">
+(()=>{
+'use strict';
+if(window.__YARDIVO_CHAT_REALTIME_SIGNAL_20260925__)return;
+window.__YARDIVO_CHAT_REALTIME_SIGNAL_20260925__=true;
+let channel=null,starting=false,lastEventAt=0;
+
+function refreshChatSurfaces(){
+  const now=Date.now();
+  if(now-lastEventAt<120)return;
+  lastEventAt=now;
+  try{window.YardivoHelpChatV583?.refresh?.(true)}catch(_){}
+  try{window.YardivoHelpChatAdminPopupsV583?.refresh?.()}catch(_){}
+  try{window.YardivoOperationalChatV583?.refresh?.(true)}catch(_){}
+}
+async function start(){
+  if(channel||starting)return channel;
+  starting=true;
+  try{
+    const c=await window.YardivoAuth?.client?.();
+    if(!c)return null;
+    const session=(await c.auth.getSession())?.data?.session||null;
+    if(!session?.access_token)return null;
+    try{await c.realtime?.setAuth?.(session.access_token)}catch(_){}
+    channel=c.channel('yardivo-chat-events',{
+      config:{private:true,broadcast:{self:false}}
+    });
+    channel.on('broadcast',{event:'changed'},refreshChatSurfaces);
+    channel.subscribe((status)=>{
+      if(String(status||'').toUpperCase()==='CHANNEL_ERROR'){
+        try{c.removeChannel(channel)}catch(_){}
+        channel=null;
+      }
+    });
+    return channel;
+  }catch(e){
+    console.warn('[YARDIVO CHAT REALTIME]',e);
+    channel=null;
+    return null;
+  }finally{starting=false}
+}
+async function stop(){
+  const c=await window.YardivoAuth?.client?.().catch?.(()=>null);
+  const ch=channel;channel=null;
+  if(ch&&c){try{await c.removeChannel(ch)}catch(_){}}
+}
+['yardivo:login','yardivo:online-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(start,150)));
+window.addEventListener('focus',()=>setTimeout(start,250));
+window.addEventListener('yardivo:logout',()=>{void stop()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(start,250)});
+setTimeout(start,1200);
+window.YardivoChatRealtimeV583={start,stop,refresh:refreshChatSurfaces,status:()=>!!channel};
+})();
+</script>
+'''
+          s=s.replace(marker,module+"\n"+marker)
+          p.write_text(s,encoding="utf-8")
+      - name: Commit chat cleanup
+        run: |
+          git config user.name "YARDIVO Cleanup"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Use Realtime signals for YARDIVO chats [skip ci]"
+          git push
