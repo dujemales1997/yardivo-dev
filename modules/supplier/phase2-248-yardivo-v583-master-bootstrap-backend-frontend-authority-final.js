@@ -26,7 +26,7 @@ async function hydrate(force=false){
   setLoading(true);
   try{
    const now=Date.now();
-   if(force||now-lastPullAt>500){lastPullAt=now;try{await Promise.resolve(window.YardivoSupabase?.fastPull?.())}catch(_){} }
+   if(force||now-lastPullAt>500){lastPullAt=now;try{await Promise.resolve(window.YardivoSync?.pull?.())}catch(_){} }
    const d=remember();
    if(hasStructure(d)){paint();return d}
    if(lastGood){try{localStorage.setItem(KEY,JSON.stringify(lastGood))}catch(_){};paint();return lastGood}
