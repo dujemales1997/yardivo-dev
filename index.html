@@ -6150,64 +6150,7 @@ document.addEventListener('click',()=>setTimeout(apply,0),true);
 setTimeout(apply,100);
 window.YardivoHeaderBellFinalV583={apply};
 })();
-</script><script id="yardivo-v583-notifications-master-supplier-sanitizer">
-(()=>{'use strict';
-if(window.__YARDIVO_NOTIFICATION_MASTER_SANITIZER__)return;
-window.__YARDIVO_NOTIFICATION_MASTER_SANITIZER__=true;
-function master(){try{return window.YardivoAppStateV583?.master?.()||JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')||{}}catch(_){return{}}}
-function norm(v){return String(v||'').trim().toLowerCase()}
-const CUT_KEY='yardivo_notification_clear_cutoff_v583';
-function cutoffMs(){try{const t=Date.parse(localStorage.getItem(CUT_KEY)||'');return Number.isFinite(t)?t:0}catch(_){return 0}}
-function eventMs(n){const t=Date.parse(String(n?.at||n?.createdAt||n?.updatedAt||n?.timestamp||''));return Number.isFinite(t)?t:0}
-function afterCutoff(n){const c=cutoffMs();if(!c)return true;const t=eventMs(n);return !!t&&t>c}
-function aliases(){
- const s=new Set();
- (Array.isArray(master().suppliers)?master().suppliers:[]).filter(x=>x&&x.active!==false).forEach(x=>{
-  [x.id,x.name,x.supplier_code,x.code].forEach(v=>{const n=norm(v);if(n)s.add(n)});
- });
- return s;
-}
-function supplierLike(n){const e=String(n?.event||'').toUpperCase(),t=String(n?.title||'').toUpperCase();return !!(n?.supplier||n?.supplier_id||e.includes('SUPPLIER')||t.includes('DOBAVLJA'))}
-function candidate(n){
- const d=[n?.supplier,n?.supplier_id,n?.supplier_name,n?.supplier_code].map(norm).find(Boolean);if(d)return d;
- const b=String(n?.body||'').trim();return b.includes('·')?norm(b.split('·')[0]):'';
-}
-function clean(list){
- if(!Array.isArray(list))return [];
- const a=aliases();
- return list.filter(n=>{
-   if(!afterCutoff(n))return false;
-   if(!supplierLike(n))return true;
-   const c=candidate(n);
-   return !c||a.has(c);
- });
-}
-function storage(){
- let changed=false;
- for(const k of ['yardivo_live_notifications_v1','yardivo_notifications_v1','yardivoNotifications']){
-  try{
-    const r=localStorage.getItem(k);if(!r)continue;
-    const p=JSON.parse(r);if(!Array.isArray(p))continue;
-    const c=clean(p);
-    if(c.length!==p.length){localStorage.setItem(k,JSON.stringify(c));changed=true}
-  }catch(_){}
- }
- return changed;
-}
-function patch(){
- const N=window.YardivoNotifications;if(!N||N.__masterClean)return;N.__masterClean=true;
- if(typeof N.load==='function'){const o=N.load.bind(N);N.load=()=>clean(o())}
- if(typeof N.save==='function'){const o=N.save.bind(N);N.save=list=>o(clean(list))}
-}
-function run(){
- const changed=storage();
- patch();
- if(changed){try{window.YardivoNotifications?.render?.()}catch(_){}}
-}
-['yardivo:login','yardivo:data-synced','yardivo:master-data-changed','yardivo:notifications-changed'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(run,20)));
-window.addEventListener('load',()=>setTimeout(run,700));setTimeout(run,100);
-})();
-</script><script id="yardivo-v583-global-visible-master-names">
+</script><script id="yardivo-v583-notifications-master-supplier-sanitizer" src="modules/notifications/yardivo-v583-notifications-master-supplier-sanitizer.js?v=20260925"></script><script id="yardivo-v583-global-visible-master-names">
 (()=>{'use strict';
 if(window.__YARDIVO_GLOBAL_VISIBLE_MASTER_NAMES__)return;
 window.__YARDIVO_GLOBAL_VISIBLE_MASTER_NAMES__=true;
@@ -6447,67 +6390,7 @@ setTimeout(clean,300);
 })();
 </script>
 
-<script id="yardivo-v583-ai-assistant-supabase-v2-final-js">
-(()=>{'use strict';
-if(window.__YV_AI_ASSISTANT_SUPABASE_V2_FINAL__)return;
-window.__YV_AI_ASSISTANT_SUPABASE_V2_FINAL__=true;
-
-let clearedForSession=false;
-
-function clearAutomaticContent(){
-  const box=document.getElementById('yardivoAssistantMessages');
-  if(!box)return;
-  if(!clearedForSession){
-    box.replaceChildren();
-    clearedForSession=true;
-  }
-  document.querySelectorAll('#yardivoSmartAssistant .yv-ai-suggestions').forEach(x=>x.remove());
-  const input=document.getElementById('yardivoAssistantInput');
-  if(input){
-    input.placeholder='Napiši poruku YARDIVO Assistantu...';
-    input.removeAttribute('readonly');
-    input.removeAttribute('disabled');
-  }
-}
-
-function translateAiError(text){
-  const t=String(text||'');
-  if(/AI provider nije konfiguriran|AI provider not configured|AI_PROVIDER_NOT_CONFIGURED|AI_NOT_CONFIGURED/i.test(t)){
-    return 'YARDIVO AI backend je aktivan, ali AI provider još nije konfiguriran u Supabase secrets.';
-  }
-  if(/AI_PROVIDER_ERROR/i.test(t)){
-    return 'YARDIVO AI provider trenutno nije odgovorio. Pokušaj ponovno.';
-  }
-  return t;
-}
-
-function patchMessages(){
-  const box=document.getElementById('yardivoAssistantMessages');
-  if(!box||box.dataset.yvAiV2Observer)return;
-  box.dataset.yvAiV2Observer='1';
-  const obs=new MutationObserver(()=>{
-    box.querySelectorAll('.yv-ai-msg.assistant').forEach(el=>{
-      const text=String(el.textContent||'');
-      const translated=translateAiError(text);
-      if(translated!==text)el.textContent=translated;
-    });
-  });
-  obs.observe(box,{childList:true,subtree:true,characterData:true});
-}
-
-function ensure(){
-  clearAutomaticContent();
-  patchMessages();
-}
-
-window.addEventListener('yardivo:login',()=>setTimeout(()=>{clearedForSession=false;ensure()},80));
-document.addEventListener('DOMContentLoaded',ensure,{once:true});
-window.addEventListener('load',()=>setTimeout(ensure,350),{once:true});
-setTimeout(ensure,250);
-
-window.YardivoAiAssistantSupabaseV2Final={clear:()=>{clearedForSession=false;clearAutomaticContent()}};
-})();
-</script>
+<script id="yardivo-v583-ai-assistant-supabase-v2-final-js" src="modules/ai/yardivo-v583-ai-assistant-supabase-v2-final.js?v=20260925"></script>
 
 
 
@@ -6523,56 +6406,7 @@ window.YardivoAiAssistantSupabaseV2Final={clear:()=>{clearedForSession=false;cle
 
 
 
-<script id="yardivo-v583-dark-palette-full-ui-runtime">
-(()=>{
-  const root=document.documentElement;
-  const isOn=()=>root.dataset.yardivoMainTheme==='dark' && ['black','silver','steel'].includes(root.dataset.yardivoDarkPalette||'');
-  const palette=()=>{
-    const v=root.dataset.yardivoDarkPalette;
-    return v==='black'?{s1:'#0d0f11',s2:'#111315',line:'#30353a',accent:'#707981',muted:'#9da5ab'}:
-      v==='silver'?{s1:'#23292e',s2:'#2a3137',line:'#4b555e',accent:'#a5b0b8',muted:'#b8c0c6'}:
-      {s1:'#172028',s2:'#1c2730',line:'#374852',accent:'#7897a8',muted:'#a2b2bb'};
-  };
-  const blueish=(c)=>{
-    const m=String(c||'').match(/rgba?\((\d+)[, ]+(\d+)[, ]+(\d+)/i);if(!m)return false;
-    const [r,g,b]=m.slice(1).map(Number);return b>=55 && b>r*1.18 && b>g*1.06;
-  };
-  const touched=new WeakMap();
-  const touchedEls=new Set();
-  function paint(el){
-    if(!isOn()||!el||el.nodeType!==1)return;
-    if(el.matches?.('.success,.danger,.warning,.error,.destructive,[data-status="success"],[data-status="danger"],[data-status="warning"],.status-green,.status-red,.status-amber'))return;
-    const cs=getComputedStyle(el), p=palette();
-    const rec=touched.get(el)||{};
-    let changed=false;
-    const set=(prop,val)=>{if(!(prop in rec))rec[prop]=el.style.getPropertyValue(prop);el.style.setProperty(prop,val,'important');changed=true};
-    if(blueish(cs.backgroundColor)) set('background-color',p.s1);
-    if(blueish(cs.borderTopColor)||blueish(cs.borderRightColor)||blueish(cs.borderBottomColor)||blueish(cs.borderLeftColor)) set('border-color',p.line);
-    if(blueish(cs.color) && !el.closest?.('.status,.badge,.pill,.legend')) set('color',p.muted);
-    if(changed){touched.set(el,rec);touchedEls.add(el)}
-  }
-  function restore(el){
-    const rec=touched.get(el);if(!rec)return;
-    for(const [prop,val] of Object.entries(rec)){if(val)el.style.setProperty(prop,val);else el.style.removeProperty(prop)}
-    touched.delete(el);touchedEls.delete(el);
-  }
-  function sweep(){
-    if(!document.body)return;
-    if(isOn()){
-      paint(document.body);
-      document.body.querySelectorAll('*').forEach(paint);
-    }else{
-      Array.from(touchedEls).forEach(restore);
-    }
-  }
-  const obs=new MutationObserver(ms=>{if(!isOn())return;for(const m of ms)for(const n of m.addedNodes){if(n.nodeType===1){paint(n);n.querySelectorAll?.('*').forEach(paint)}}});
-  function boot(){if(!document.body)return;obs.observe(document.body,{childList:true,subtree:true});sweep()}
-  const mo=new MutationObserver(()=>requestAnimationFrame(sweep));
-  mo.observe(root,{attributes:true,attributeFilter:['data-yardivo-main-theme','data-yardivo-dark-palette']});
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-  window.YardivoFullPalettePaint={apply:sweep};
-})();
-</script>
+<script id="yardivo-v583-dark-palette-full-ui-runtime" src="modules/settings/yardivo-v583-dark-palette-full-ui-runtime.js?v=20260925"></script>
 
 
 
@@ -6662,26 +6496,7 @@ document.addEventListener('keydown',function(e){
 
 
 
-<script id="yardivo-v583-help-chat-admin-popups-js">
-(()=>{
-'use strict';
-let timer=null,lastSig='';
-const role=()=>{let r=String(window.currentSession?.app_role||window.currentSession?.role||document.body?.dataset?.yardivoRole||'').toLowerCase().trim();if(r==='management'||r==='voditelj')r='manager';return r};
-const isAdmin=()=>role()==='admin';
-const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-function fmt(v){try{return new Intl.DateTimeFormat('hr-HR',{hour:'2-digit',minute:'2-digit'}).format(new Date(v))}catch(_){return''}}
-function ensureHost(){let h=document.getElementById('yardivoHelpChatPopupStack');if(!h){h=document.createElement('div');h.id='yardivoHelpChatPopupStack';h.setAttribute('aria-live','polite');h.setAttribute('aria-label','Nove Help Chat poruke');document.body.appendChild(h)}return h}
-async function invoke(action,payload={}){const c=await window.YardivoAuth?.client?.();if(!c)throw new Error('Auth nije spreman');const {data,error}=await c.functions.invoke('yardivo-help-chat',{body:{action,...payload}});if(error)throw error;if(data?.ok===false||data?.error)throw new Error(data?.error||'Help Chat greška');return data?.data??data}
-function render(rows){const h=ensureHost();const unread=(Array.isArray(rows)?rows:[]).filter(x=>Number(x?.unread||0)>0);const sig=unread.map(x=>`${x.thread_user_id}:${x.unread}:${x.last_at||''}`).join('|');if(sig===lastSig)return;lastSig=sig;if(!isAdmin()){h.replaceChildren();return}h.innerHTML=unread.map(t=>{const name=String(t.thread_username||'korisnik');const initial=(name.trim()[0]||'?').toUpperCase();return `<button type="button" class="yhc-pop" data-yhc-pop-thread="${esc(t.thread_user_id)}" title="Otvori Help Chat s ${esc(name)}"><span class="yhc-pop-avatar">${esc(initial)}</span><span class="yhc-pop-copy"><strong>${esc(name)}</strong><small>HELP CHAT · NOVA PORUKA</small><p>${esc(t.last_message||'Nova poruka')}</p></span><span><span class="yhc-pop-badge">${Number(t.unread||0)}</span><span class="yhc-pop-time">${esc(fmt(t.last_at))}</span></span></button>`}).join('')}
-async function poll(){if(!isAdmin()){render([]);return}try{const rows=await invoke('list_threads');render(rows)}catch(_){}}
-function openThread(id){if(!id)return;window.YardivoHelpChatV583?.openThread?.(id);setTimeout(poll,700)}
-document.addEventListener('click',e=>{const b=e.target.closest?.('[data-yhc-pop-thread]');if(!b)return;e.preventDefault();e.stopPropagation();openThread(b.dataset.yhcPopThread)},true);
-window.addEventListener('yardivo:logout',()=>{lastSig='';render([])});
-window.addEventListener('yardivo:online-ready',()=>{lastSig='';poll()});
-setTimeout(()=>{poll();clearInterval(timer);timer=setInterval(poll,180000)},2200);
-window.YardivoHelpChatAdminPopupsV583={refresh:poll};
-})();
-</script>
+<script id="yardivo-v583-help-chat-admin-popups-js" src="modules/chat/yardivo-v583-help-chat-admin-popups.js?v=20260925"></script>
 
 
 
@@ -7261,83 +7076,7 @@ window.addEventListener('yardivo:login',()=>{
 });
 })();
 </script>
-<script id="yardivo-v583-login-ai-welcome-20260924">
-(()=>{'use strict';
-if(window.__YARDIVO_LOGIN_AI_WELCOME_20260924__)return;
-window.__YARDIVO_LOGIN_AI_WELCOME_20260924__=true;
-let seq=0;
-function role(){let r=String(window.currentSession?.app_role||window.currentSession?.role||'').trim().toLowerCase();if(r==='voditelj'||r==='management')r='manager';if(r==='zalihe'||r.includes('zalih'))r='inventory';if(r==='prijam')r='reception';if(r==='porta'||r==='portir')r='gate';return r}
-function today(){const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
-function visibleLocalToday(){try{const d=today(),arr=Array.isArray(window.announcements)?window.announcements:(typeof announcements!=='undefined'&&Array.isArray(announcements)?announcements:[]),s=window.currentSession||{},allowed=new Set(Array.isArray(s.warehouses)?s.warehouses.map(String):[]);return arr.filter(a=>{const date=String(a?.date||a?.appointment_date||a?.payload?.date||'').slice(0,10),wh=String(a?.warehouse||a?.payload?.warehouse||''),scoped=s.all_warehouses===true||role()==='admin'||!allowed.size||allowed.has(wh),st=String(a?.status||a?.payload?.status||'').toLowerCase();return date===d&&scoped&&!['obrisano','deleted','cancelled','canceled'].includes(st)}).length}catch(_){return 0}}
-async function supplierToday(){try{const raw=await window.YardivoSupplierLiveSync?.call?.('list_mine');if(!Array.isArray(raw))return visibleLocalToday();const d=today();return raw.filter(x=>String(x?.delivery_date||'').slice(0,10)===d&&!['deleted','cancelled','canceled'].includes(String(x?.effective_status||x?.status||'').toLowerCase())).length}catch(_){return visibleLocalToday()}}
-async function countToday(){if(role()==='supplier')return await supplierToday();await new Promise(r=>setTimeout(r,700));return visibleLocalToday()}
-async function greet(mySeq){if(mySeq!==seq||!window.currentSession)return;try{if(localStorage.getItem('yardivo_notification_sound_mode_v2')==='off')return;const n=await countToday();if(mySeq!==seq||!window.currentSession)return;const word=n===1?'najavu':'najava',body='Dobrodošli u YARDIVO. Danas imate '+n+' '+word+'.',api=window.YardivoAIVoiceNotifications;if(api?.readNow)api.readNow({id:'YARDIVO-LOGIN-'+Date.now(),title:'',body});else if(api?.test)await api.test(body)}catch(e){console.warn('[YARDIVO login AI welcome]',e)}}
-window.addEventListener('yardivo:login',()=>{const my=++seq;setTimeout(()=>greet(my),900)});
-window.addEventListener('yardivo:logout',()=>{seq++});
-})();
-</script>\n<script id="yardivo-v583-chat-realtime-signal-final">
-(()=>{'use strict';
-if(window.__YARDIVO_CHAT_REALTIME_SIGNAL_FINAL__)return;
-window.__YARDIVO_CHAT_REALTIME_SIGNAL_FINAL__=true;
-let ch=null,reconnectTimer=0,refreshTimer=0;
-
-function scheduleRefresh(kind){
-  clearTimeout(refreshTimer);
-  refreshTimer=setTimeout(()=>{
-    if(kind==='help'||kind==='chat'){
-      try{window.YardivoHelpChatV583?.refresh?.(true)}catch(_){}
-      try{window.YardivoHelpChatAdminPopupsV583?.refresh?.()}catch(_){}
-    }
-    if(kind==='operational'||kind==='chat'){
-      try{window.YardivoOperationalChatV583?.refresh?.()}catch(_){}
-    }
-  },80);
-}
-
-async function connect(){
-  if(ch)return ch;
-  const c=await window.YardivoAuth?.client?.();
-  if(!c)return null;
-  try{
-    const session=(await c.auth.getSession())?.data?.session;
-    if(session?.access_token)await c.realtime?.setAuth?.(session.access_token);
-  }catch(_){}
-  const next=c.channel('yardivo-chat',{config:{private:true}});
-  next.on('broadcast',{event:'changed'},payload=>{
-    scheduleRefresh(String(payload?.payload?.kind||'chat'));
-  });
-  next.subscribe(status=>{
-    const st=String(status||'').toUpperCase();
-    if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'||st==='CLOSED'){
-      if(ch===next)ch=null;
-      clearTimeout(reconnectTimer);
-      reconnectTimer=setTimeout(connect,5000);
-    }
-  });
-  ch=next;
-  return ch;
-}
-
-async function disconnect(){
-  const c=await window.YardivoAuth?.client?.();
-  const old=ch;ch=null;
-  clearTimeout(reconnectTimer);
-  if(old&&c){try{await c.removeChannel(old)}catch(_){}}
-}
-
-['yardivo:login','yardivo:online-ready'].forEach(ev=>{
-  window.addEventListener(ev,()=>setTimeout(connect,120));
-});
-window.addEventListener('focus',()=>setTimeout(connect,120));
-window.addEventListener('yardivo:logout',()=>{void disconnect()});
-window.addEventListener('pagehide',()=>{void disconnect()},{once:true});
-setTimeout(connect,1200);
-
-window.YardivoChatRealtimeV583={
-  connect,disconnect,status:()=>ch?'ACTIVE':'OFF'
-};
-})();
-</script>
+<script id="yardivo-v583-login-ai-welcome-20260924" src="modules/ai/yardivo-v583-login-ai-welcome-20260924.js?v=20260925"></script>\n<script id="yardivo-v583-chat-realtime-signal-final" src="modules/chat/yardivo-v583-chat-realtime-signal-final.js?v=20260925"></script>
 
 </body>
 </html>
