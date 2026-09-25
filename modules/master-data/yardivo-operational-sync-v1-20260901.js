@@ -95,8 +95,11 @@ function applyWarehouse(wh,source){
   applying=true;
   setSharedWarehouse(wh);
   try{
-    /* activeWarehouse is the canonical warehouse for Reception + My Yard. */
-    try{activeWarehouse=wh}catch(_){}
+    /* Warehouse context ownership belongs to YardivoWarehouseSync. */
+    try{
+      if(window.YardivoWarehouseSync?.set)window.YardivoWarehouseSync.set(wh);
+      else window.YardivoAppStateV583?.setWarehouse?.(wh);
+    }catch(_){}
     const daily=document.getElementById('dailyMapWarehouseSelect');
     if(daily && source!=='dailyMap' && optionExists(daily,wh))daily.value=wh;
     const weekly=document.getElementById('weeklyMapWarehouse');
