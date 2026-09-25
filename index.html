@@ -8,57 +8,16 @@ Designed & Developed by YARDIVO
 <!-- YARDIVO BUILD 20260908-dev-v5.8.3-maps-fullscreen-day-drilldown -->
 <html lang="hr">
 <head>
-<script id="yardivo-zero-state-bootstrap-v583">(function(){'use strict';window.__YARDIVO_ZERO_STATE_BOOTSTRAP_DISABLED_V583__=true;/* Factory Zero is explicit-only. Never wipe business data on normal page load. */})();</script>
-<script id="yardivo-canonical-warehouse-helper-v583">
-function yardivoCanonicalWarehouseV583(){
- try{
-  const d=JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}');
-  const rows=Array.isArray(d.warehouses)?d.warehouses.filter(w=>w&&w.active!==false):[];
-  const active=String(window.activeWarehouse||'');
-  if(rows.some(w=>String(w.id)===active))return active;
-  const loc=String(window.currentSession?.location||'');
-  return rows.find(w=>!loc||String(w.location_id)===loc)?.id||rows[0]?.id||'';
- }catch(_){return''}
-}
-</script>
+<script id="yardivo-zero-state-bootstrap-v583" src="./modules/ui/runtime/phase5-000-yardivo-zero-state-bootstrap-v583.js"></script>
+<script id="yardivo-canonical-warehouse-helper-v583" src="./modules/master-data/runtime/phase5-001-yardivo-canonical-warehouse-helper-v583.js"></script>
 <meta content="20260912-dev-v5.8.3-master-runtime-sync-final" name="yardivo-build"/>
 <link href="./favicon-32.png?v=3" rel="icon" sizes="32x32" type="image/png"/>
 <script id="yardivo-production-bootstrap-guard-v4-20260902" src="./modules/settings/runtime/yardivo-production-bootstrap-guard-v4-20260902.js"></script>
 <script id="yardivo-first-paint-bootstrap-v1" src="./modules/settings/runtime/yardivo-first-paint-bootstrap-v1.js"></script>
-<script id="yardivo-first-visit-original-theme-v1-20260901">
-(function(){
-  'use strict';
-  try{
-    const FIRST='yardivo_first_theme_initialized_v1';
-    if(localStorage.getItem(FIRST)!=='1'){
-      localStorage.setItem('yardivo_main_theme_v2','dark');
-      localStorage.setItem('yardivo_dark_look_v2','original');
-      localStorage.setItem('yardivo_dark_style','original');
-      localStorage.setItem('yardivo_ux_style_v1','original');
-      localStorage.setItem(FIRST,'1');
-
-      document.documentElement.setAttribute('data-yardivo-main-theme','dark');
-      document.documentElement.setAttribute('data-yardivo-dark-look','original');
-      document.documentElement.setAttribute('data-yardivo-ux','original');
-    }
-  }catch(_){}
-})();
-</script>
+<script id="yardivo-first-visit-original-theme-v1-20260901" src="./modules/settings/runtime/phase5-004-yardivo-first-visit-original-theme-v1-20260901.js"></script>
 <link id="yardivo-runtime-styles" rel="stylesheet" href="styles/yardivo-runtime.css?v=20260925">
 <meta content="PROD-PROFESSIONAL-UX-V2-2026-08-31" name="yardivo-build"/>
-<script id="yardivo-rbac-session-migration">
-(function(){
-  try{
-    const K='yardivo_rbac_session_migrated_20260831';
-    if(localStorage.getItem(K)!=='1'){
-      localStorage.removeItem('yardivo_custom_session');
-      localStorage.removeItem('yardivo_remembered_session');
-      sessionStorage.removeItem('studenac_demo_session');
-      localStorage.setItem(K,'1');
-    }
-  }catch(e){}
-})();
-</script>
+<script id="yardivo-rbac-session-migration" src="./services/runtime/phase5-005-yardivo-rbac-session-migration.js"></script>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>YARDIVO DEV - YARD MANAGEMENT SYSTEM</title>
@@ -106,18 +65,7 @@ function yardivoCanonicalWarehouseV583(){
 
 
 
-<script id="yardivo-smart-prepaint-state">
-(function(){
-  try{
-    const c=JSON.parse(localStorage.getItem('yardivo_auto_replan_cfg_v1')||'{}');
-    const on=c.enabled===true && c.mode!=='PAUSED';
-    document.documentElement.classList.toggle('yardivo-smart-off',!on);
-    document.documentElement.classList.toggle('yardivo-smart-on',on);
-  }catch(e){
-    document.documentElement.classList.add('yardivo-smart-off');
-  }
-})();
-</script>
+<script id="yardivo-smart-prepaint-state" src="./modules/ui/runtime/phase5-011-yardivo-smart-prepaint-state.js"></script>
 
 <script id="yardivo-welcome-observer-guard-v1-20260901" src="./modules/ui/runtime/yardivo-welcome-observer-guard-v1-20260901.js"></script>
 
@@ -130,20 +78,9 @@ function yardivoCanonicalWarehouseV583(){
 
 <script id="yardivo-server-authoritative-browser-storage-v583" src="modules/master-data/phase2-013-yardivo-server-authoritative-browser-storage-v583.js"></script>
 <script id="yardivo-v583-master-x10-instant-boot-authority" src="./modules/supplier/runtime/yardivo-v583-master-x10-instant-boot-authority.js"></script>
-<script id="yardivo-factory-zero-bootstrap-v583">(function(){'use strict';window.__YARDIVO_FACTORY_ZERO_BOOTSTRAP_DISABLED_V583__=true;/* Factory Zero is explicit-only. Never wipe business data on normal page load. */})();</script>
+<script id="yardivo-factory-zero-bootstrap-v583" src="./modules/ui/runtime/phase5-015-yardivo-factory-zero-bootstrap-v583.js"></script>
 
-<script id="yardivo-v583-local-date-authority">
-(function(){
-'use strict';
-window.yardivoLocalDateV583=function(input){
-  const d=input instanceof Date?input:new Date(input==null?Date.now():input);
-  if(Number.isNaN(d.getTime()))return '';
-  return String(d.getFullYear()).padStart(4,'0')+'-'+
-         String(d.getMonth()+1).padStart(2,'0')+'-'+
-         String(d.getDate()).padStart(2,'0');
-};
-})();
-</script>
+<script id="yardivo-v583-local-date-authority" src="./services/runtime/phase5-016-yardivo-v583-local-date-authority.js"></script>
 
 
 
@@ -212,9 +149,7 @@ window.yardivoLocalDateV583=function(input){
 </div>
 <script id="yardivo-welcome-splash-script" src="modules/ui/phase2-017-yardivo-welcome-splash-script.js"></script>
 <script id="yardivo-early-runtime-helpers" src="./modules/gate/runtime/yardivo-early-runtime-helpers.js"></script>
-<script id="yardivo-early-session">
-var currentSession=null;
-</script>
+<script id="yardivo-early-session" src="./services/runtime/phase5-019-yardivo-early-session.js"></script>
 <div class="login-overlay" id="loginOverlay">
 <form class="login-card" id="loginForm">
 <div class="login-logo-combo">
@@ -1412,19 +1347,7 @@ AUTOMATSKA PREPORUKA</small>
 </div>
 <script src="./modules/ui/runtime/inline-020.js"></script>
 <script src="modules/supplier/script-022.js?v=20260925"></script>
-<script>
-document.addEventListener('DOMContentLoaded',()=>{
-  const infoCandidates=[...document.querySelectorAll('.panel,.card')];
-  const target=infoCandidates.find(el=>/terminal|info/i.test(el.textContent||''));
-  if(target){
-    const note=document.createElement('div');
-    note.style.marginTop='10px';
-    note.style.opacity='.85';
-    note.innerHTML='<strong>Zaprimanje robe:</strong> 06:00–13:00 &nbsp; • &nbsp; <strong>Broj rampi:</strong> 6';
-    target.appendChild(note);
-  }
-});
-</script>
+<script src="./modules/master-data/runtime/phase5-022-inline-022.js"></script>
 <dialog id="driverAnnouncementDialog">
 <form id="driverAnnouncementForm">
 <div class="modal-head">
@@ -1487,47 +1410,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 <script src="modules/master-data/script-024.js?v=20260925"></script>
 <script id="yardivo-driver-form-final-binding" src="modules/gate/phase2-024-yardivo-driver-form-final-binding.js"></script>
 <script id="yardivo-3d-camera-controls" src="./modules/master-data/runtime/yardivo-3d-camera-controls.js"></script>
-<script id="yardivo-overview-supplier-binding">
-(function(){
-  const sel=document.getElementById('overviewSupplierSelect');
-  if(sel && !sel.dataset.bound){
-    sel.dataset.bound='1';
-    sel.addEventListener('change',()=>{try{renderOverview()}catch(e){console.error(e)}});
-  }
-})();
-</script>
-<script id="yardivo-theme-switch">
-(function(){
-  const toggle=document.getElementById('themeToggle');
-  if(!toggle)return;
-
-  function storageGet(k){
-    try{
-      if(typeof safeStorage!=='undefined'&&safeStorage?.getItem)return safeStorage.getItem(k);
-      return localStorage.getItem(k);
-    }catch(e){return null}
-  }
-  function storageSet(k,v){
-    try{
-      if(typeof safeStorage!=='undefined'&&safeStorage?.setItem)return safeStorage.setItem(k,v);
-      localStorage.setItem(k,v);
-    }catch(e){}
-  }
-  function applyTheme(theme){
-    const light=theme==='light';
-    document.body.classList.toggle('light-mode',light);
-    toggle.checked=light;
-    document.documentElement.style.colorScheme=light?'light':'dark';
-    storageSet('yardivo_theme',light?'light':'dark');
-  }
-
-  const saved=storageGet('yardivo_theme');
-  const initial=saved==='light'?'light':'dark';
-  applyTheme(initial);
-
-  toggle.addEventListener('change',()=>applyTheme(toggle.checked?'light':'dark'));
-})();
-</script>
+<script id="yardivo-overview-supplier-binding" src="./modules/supplier/runtime/phase5-026-yardivo-overview-supplier-binding.js"></script>
+<script id="yardivo-theme-switch" src="./modules/settings/runtime/phase5-027-yardivo-theme-switch.js"></script>
 <div aria-hidden="true" class="timeline-modal" id="truckTimelineModal">
 <div class="timeline-dialog">
 <div class="timeline-head"><div><strong id="timelineTitle">TIJEK KAMIONA</strong><small id="timelineSub"></small></div><button id="timelineClose" type="button">×</button></div>
@@ -1535,33 +1419,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 </div>
 </div>
 <script id="yardivo-notifications-timeline" src="modules/supplier/yardivo-notifications-timeline.js?v=20260925"></script>
-<script id="yardivo-yard-truck-detail-click">
-(function(){
-  const yard=document.getElementById('yard');
-  if(!yard)return;
-  yard.addEventListener('click',function(e){
-    const truck=e.target.closest('.yard-clickable-truck');
-    if(!truck)return;
-    e.stopPropagation();
-    const slot=truck.closest('[data-announcement-id]');
-    if(!slot)return;
-    const id=Number(slot.dataset.announcementId);
-    if(!Number.isFinite(id))return;
-    try{openAnnouncementDetail(id,'yard')}catch(err){
-      const a=(typeof announcements!=='undefined'&&Array.isArray(announcements)?announcements:[]).find(x=>Number(x.id)===id);
-      if(a&&typeof openTruckTimeline==='function')openTruckTimeline(a);
-    }
-  });
-})();
-</script>
-<script id="yardivo-disable-yard-pan">
-(function(){
- const s=document.getElementById('yard3DStage');
- if(!s)return;
- s.addEventListener('contextmenu',e=>e.preventDefault());
- s.addEventListener('dragstart',e=>e.preventDefault());
-})();
-</script>
+<script id="yardivo-yard-truck-detail-click" src="./modules/ui/runtime/phase5-029-yardivo-yard-truck-detail-click.js"></script>
+<script id="yardivo-disable-yard-pan" src="./modules/ui/runtime/phase5-030-yardivo-disable-yard-pan.js"></script>
 <div aria-hidden="true" class="truck-inspector" id="truckInspector">
 <div class="truck-inspector-head">
 <div><strong id="truckInspectorTitle">KAMION</strong><small id="truckInspectorSub"></small></div>
@@ -1571,33 +1430,9 @@ document.addEventListener('DOMContentLoaded',()=>{
 </div>
 <script id="yardivo-smart-yard-brain" src="modules/master-data/yardivo-smart-yard-brain.js?v=20260925"></script>
 <script id="yardivo-final-truck-inspector-click" src="./modules/ui/runtime/yardivo-final-truck-inspector-click.js"></script>
-<script id="yardivo-final-inspector-close">
-(function(){
-  document.getElementById('truckInspectorClose')?.addEventListener('click',function(e){
-    e.preventDefault();e.stopPropagation();
-    document.getElementById('truckInspector')?.classList.remove('open');
-  });
-})();
-</script>
+<script id="yardivo-final-inspector-close" src="./modules/ui/runtime/phase5-033-yardivo-final-inspector-close.js"></script>
 <script id="yardivo-final-yard-click-mode" src="./modules/ui/runtime/yardivo-final-yard-click-mode.js"></script>
-<script id="yardivo-inspector-visibility-fix">
-(function(){
-  const old=window.openYardivoTruckInspector;
-  if(typeof old==='function'){
-    window.openYardivoTruckInspector=function(a){
-      old(a);
-      const p=document.getElementById('truckInspector');
-      if(p){
-        p.classList.add('open');
-        p.style.display='block';
-        p.style.visibility='visible';
-        p.style.opacity='1';
-        p.setAttribute('aria-hidden','false');
-      }
-    };
-  }
-})();
-</script>
+<script id="yardivo-inspector-visibility-fix" src="./modules/ui/runtime/phase5-035-yardivo-inspector-visibility-fix.js"></script>
 
 <script id="yardivo-master-upgrade-js" src="modules/supplier/yardivo-master-upgrade-js.js?v=20260925"></script>
 <script id="yardivo-settings-access-fix" src="./modules/settings/runtime/yardivo-settings-access-fix.js"></script>
@@ -1606,124 +1441,20 @@ document.addEventListener('DOMContentLoaded',()=>{
 <!-- removed insecure legacy role override: yardivo-manual-role-selection-final -->
 <!-- removed insecure legacy role override: yardivo-role-dropdown-authoritative-final -->
 <script id="yardivo-location-selection-final-fix" src="modules/services/yardivo-location-selection-final-fix.js?v=20260925"></script>
-<script id="yardivo-admin-create-user-case-fix">
-(function(){
-  function isAdmin(){
-    try{return String(currentSession?.role||window.currentSession?.role||'').toLowerCase()==='admin'}catch(e){return false}
-  }
-  function sync(){
-    const panel=document.getElementById('masterUserAdmin');
-    if(panel && isAdmin()) panel.style.display='block';
-    const btn=document.getElementById('muSave');
-    if(btn && isAdmin()){
-      btn.disabled=false;
-      btn.style.pointerEvents='auto';
-      btn.style.opacity='1';
-    }
-  }
-  setTimeout(sync,50);
-  setTimeout(sync,400);
-  document.addEventListener('click',e=>{
-    if(e.target.closest('[data-view="settings"],[data-home-target="settings"]'))setTimeout(sync,50);
-  });
-})();
-</script>
-<script id="yardivo-remove-obsolete-sections">
-(function(){
-  const removed=new Set(['plannerPro','weeklyDeliveries','trucks','shipments']);
-  function clean(){
-    document.querySelectorAll('[data-view],[data-home-target]').forEach(el=>{
-      const id=el.dataset.view||el.dataset.homeTarget;
-      if(removed.has(id))el.remove();
-    });
-    removed.forEach(id=>{
-      const view=document.getElementById(id);
-      if(view)view.remove();
-    });
-  }
-  clean();
-  document.addEventListener('DOMContentLoaded',clean);
-  window.addEventListener('load',clean);
-  setTimeout(clean,100);
-  setTimeout(clean,800);
-})();
-</script>
-<script id="yardivo-tab-auth-isolation-v583">
-(function(){
-'use strict';
-if(window.YardivoTabAuthV583)return;
-let id='';
-try{
-  id=String(window.name||'').match(/^yardivo-auth-tab-(.+)$/)?.[1]||'';
-  if(!id){
-    id=(crypto?.randomUUID?.()||('t'+Date.now().toString(36)+Math.random().toString(36).slice(2)));
-    window.name='yardivo-auth-tab-'+id;
-  }
-}catch(_){id='t'+Date.now().toString(36)+Math.random().toString(36).slice(2)}
-const safe=id.replace(/[^a-zA-Z0-9_-]/g,'').slice(0,80)||('t'+Date.now());
-window.YardivoTabAuthV583={id:safe,storageKey:'yardivo-auth-'+safe};
-})();
-</script>
+<script id="yardivo-admin-create-user-case-fix" src="./modules/master-data/runtime/phase5-039-yardivo-admin-create-user-case-fix.js"></script>
+<script id="yardivo-remove-obsolete-sections" src="./modules/ui/runtime/phase5-040-yardivo-remove-obsolete-sections.js"></script>
+<script id="yardivo-tab-auth-isolation-v583" src="./services/runtime/phase5-041-yardivo-tab-auth-isolation-v583.js"></script>
 <script id="yardivo-auth-driver-role-final-fix" src="modules/services/yardivo-auth-driver-role-final-fix.js?v=20260925"></script>
 
 <script id="yardivo-clean-operational-core" src="modules/supplier/yardivo-clean-operational-core.js?v=20260925"></script>
 
 <script id="yardivo-live-operational-notifications" src="modules/services/yardivo-live-operational-notifications.js?v=20260925"></script>
 
-<script id="yardivo-daily-map-scroll-controls">
-(function(){
-  function shell(){
-    const b=document.getElementById('dailyMapBoard');
-    return b?.closest('.daily-map-shell')||b?.parentElement;
-  }
-  // Shift + mouse wheel also moves the timeline horizontally.
-  document.addEventListener('wheel',e=>{
-    const s=shell(); if(!s||!s.contains(e.target)||!e.shiftKey)return;
-    if(s.scrollWidth<=s.clientWidth)return;
-    e.preventDefault();s.scrollLeft+=e.deltaY||e.deltaX;
-  },{passive:false});
-  window.YardivoDailyMapScroll={
-    start:()=>{const s=shell();if(s)s.scrollLeft=0},
-    end:()=>{const s=shell();if(s)s.scrollLeft=s.scrollWidth}
-  };
-})();
-</script>
+<script id="yardivo-daily-map-scroll-controls" src="./modules/ui/runtime/phase5-045-yardivo-daily-map-scroll-controls.js"></script>
 
-<script id="yardivo-daily-map-vertical-zoom-disable">
-(function(){
- const old=window.applyDailyMapZoom;
- window.applyDailyMapZoom=function(){
-   const board=document.getElementById('dailyMapBoard');
-   if(board?.querySelector('.daily-map-vertical-grid')){
-     const inner=board.closest('.daily-map-inner');
-     if(inner){inner.style.transform='none';inner.style.zoom='1'}
-     return;
-   }
-   if(typeof old==='function')return old.apply(this,arguments);
- };
-})();
-</script>
+<script id="yardivo-daily-map-vertical-zoom-disable" src="./modules/ui/runtime/phase5-046-yardivo-daily-map-vertical-zoom-disable.js"></script>
 
-<script id="yardivo-suppliers-classic-360-final">
-(function(){
-  function showAll(){
-    try{reloadAnnouncementsFromPersistentStorage?.()}catch(e){}
-    try{window.renderSuppliers(document.getElementById('supplierPretraži')?.value||'')}catch(e){}
-  }
-  document.addEventListener('click',e=>{
-    if(e.target.closest('[data-view="suppliers"],[data-home-target="suppliers"],#backToSuppliers'))setTimeout(showAll,25);
-    const b=e.target.closest('#supplierGrid .supplier-info-btn');
-    if(b){
-      e.preventDefault();e.stopImmediatePropagation();
-      const card=b.closest('.supplier-click-card'),idx=Number(card?.dataset.supplierIndex);
-      const name=card?.dataset.supplierName||(Number.isInteger(idx)?suppliers[idx]:'');
-      if(name)openSupplierProfile(name);
-    }
-  },true);
-  window.addEventListener('load',()=>setTimeout(showAll,120));
-  window.YardivoSuppliersClassic={showAll};
-})();
-</script>
+<script id="yardivo-suppliers-classic-360-final" src="./modules/supplier/runtime/phase5-047-yardivo-suppliers-classic-360-final.js"></script>
 
 <script id="yardivo-smart-timers-and-daily-forecast" src="modules/services/yardivo-smart-timers-and-daily-forecast.js?v=20260925"></script>
 
@@ -1749,33 +1480,8 @@ window.YardivoTabAuthV583={id:safe,storageKey:'yardivo-auth-'+safe};
 
 <script id="yardivo-epal-initial-stock" src="modules/services/yardivo-epal-initial-stock.js?v=20260925"></script>
 <script id="yardivo-control-tower-module" src="modules/supplier/yardivo-control-tower-module.js?v=20260925"></script>
-<script id="yardivo-manual-order-js">
-(function(){
- const input=document.getElementById('annOrderSuffix');
- if(input){
-   input.addEventListener('change',()=>{input.value=String(input.value||'').trim()});
- }
-})();
-</script>
-<script id="yardivo-order-number-decorator">
-(function(){
- function decorate(){
-   let list=[];try{list=announcements||[]}catch(e){}
-   document.querySelectorAll('[data-announcement-id]').forEach(el=>{
-     if(el.querySelector('.order-number-inline'))return;
-     const a=list.find(x=>Number(x.id)===Number(el.dataset.announcementId));
-     if(!a?.orderNumber)return;
-     const chip=document.createElement('span');
-     chip.className='order-number-inline';
-     chip.textContent='Narudžba '+a.orderNumber;
-     el.appendChild(chip);
-   });
- }
- document.addEventListener('click',()=>setTimeout(decorate,50),true);
- window.addEventListener('load',()=>setTimeout(decorate,400));
- setInterval(decorate,3000);
-})();
-</script>
+<script id="yardivo-manual-order-js" src="./modules/ui/runtime/phase5-060-yardivo-manual-order-js.js"></script>
+<script id="yardivo-order-number-decorator" src="./modules/ui/runtime/phase5-061-yardivo-order-number-decorator.js"></script>
 <script id="yardivo-order-search-module" src="modules/services/yardivo-order-search-module.js?v=20260925"></script>
 <script id="yardivo-final-context-delete-fix" src="./modules/ui/runtime/yardivo-final-context-delete-fix.js"></script>
 
@@ -1799,168 +1505,38 @@ window.YardivoTabAuthV583={id:safe,storageKey:'yardivo-auth-'+safe};
 <script id="yardivo-smart-replanning-v1" src="modules/services/yardivo-smart-replanning-v1.js?v=20260925"></script>
 <script id="yardivo-live-yard-truck-modal-v5-2" src="modules/master-data/phase2-078-yardivo-live-yard-truck-modal-v5-2.js"></script>
 <script id="yardivo-ann-map-availability-v3" src="modules/services/yardivo-ann-map-availability-v3.js?v=20260925"></script>
-<script id="yardivo-overview-methodology-note-v2">
-(function(){
-function ensure(){
- const chart=document.getElementById('overviewSupplierChart');if(!chart)return;
- const panel=chart.closest('.panel');if(!panel||panel.querySelector('.overview-reliability-legend-v2'))return;
- const x=document.createElement('div');x.className='overview-reliability-legend-v2';
- x.innerHTML='<i></i><strong>0–100% POUZDANOST</strong><span>crveno = rizično · žuto = srednje · zeleno = pouzdano</span><span>Formula: točnost 45% · uspjeh isporuke 25% · bez incidenata 15% · najavljen dolazak 5% · stabilnost termina 5% · završena evidencija 5%</span>';
- chart.insertAdjacentElement('beforebegin',x);
-}
-window.addEventListener('load',()=>setTimeout(ensure,900));
-document.addEventListener('click',e=>{if(e.target.closest('[data-view="overview"],[data-home-target="overview"]'))setTimeout(ensure,100)},true);
-})();
-</script>
+<script id="yardivo-overview-methodology-note-v2" src="./modules/supplier/runtime/phase5-080-yardivo-overview-methodology-note-v2.js"></script>
 <script id="yardivo-final-yard-v27" src="modules/services/yardivo-final-yard-v27.js?v=20260925"></script>
 <!-- YARDIVO v2.8 HYBRID 2D/3D PATCH: flat yard floor + 3D warehouse/ramps/trucks -->
 
 <script id="yardivo-v28-mode-switch-guard" src="./services/runtime/yardivo-v28-mode-switch-guard.js"></script>
 
-<script id="yardivo-v29-stable-rotation">
-(function(){
-'use strict';
-/* Throttle 3D camera visual updates to animation frames.
-   This prevents rapid DOM repainting that caused black blinking. */
-let raf=0;
-function stabilize(){
-  document.querySelectorAll('#yardivoFinalLiveYard .yf-world,#yardivoFinalWarYard .yf-world').forEach(function(w){
-    w.style.transition='none';
-    w.style.webkitBackfaceVisibility='hidden';
-    w.style.backfaceVisibility='hidden';
-  });
-}
-/* Stability styles are static. Re-applying them on every pointer move caused
-   expensive full-document queries/repaints in Safari. Apply only when needed. */
-window.addEventListener('load',function(){
-  stabilize();
-  setTimeout(stabilize,1200);
-  setTimeout(stabilize,5000);
-},{once:true});
-window.addEventListener('yardivo:warehouse-changed',stabilize);
-window.addEventListener('yardivo:login',function(){setTimeout(stabilize,120)});
-})();
-</script>
+<script id="yardivo-v29-stable-rotation" src="./modules/master-data/runtime/phase5-083-yardivo-v29-stable-rotation.js"></script>
 
-<script id="yardivo-v30-single-owner-guard">
-(function(){
- 'use strict';
- const legacy=['lyCanvas','yardivoReal3DHost','yardivoNative3D','yardivoV25Live','yardivoV26','yardivoWar3DHost','yardivoNativeWar3D','yardivoV25War'];
- function killLegacy(){legacy.forEach(id=>{const e=document.getElementById(id);if(e){e.style.setProperty('display','none','important');e.style.setProperty('visibility','hidden','important')}})}
- function refresh(){killLegacy();try{window.YardivoFinalYard?.live?.();window.YardivoFinalYard?.war?.()}catch(e){console.warn('YARDIVO final yard refresh',e)}}
- document.addEventListener('click',e=>{
-   if(e.target.closest('[data-view="liveYard"],[data-home-target="liveYard"],#yardivoWarButton'))setTimeout(refresh,80);
- },true);
- window.addEventListener('load',()=>setTimeout(refresh,1300));
- setInterval(killLegacy,2500);
- window.YardivoSingleYardEngine={refresh};
-})();
-</script>
+<script id="yardivo-v30-single-owner-guard" src="./modules/ui/runtime/phase5-084-yardivo-v30-single-owner-guard.js"></script>
 
 <script id="yardivo-v31-change-vehicle-driver" src="./modules/supplier/runtime/yardivo-v31-change-vehicle-driver.js"></script>
 
 <script id="yardivo-v32-my-announcements" src="modules/services/yardivo-v32-my-announcements.js?v=20260925"></script>
 
 <script id="yardivo-v35-my-yard" src="modules/master-data/yardivo-v35-my-yard.js?v=20260925"></script>
-<script id="yardivo-qr-mobile-setting-runtime-v34">
-(function(){
-  let lastRole='',lastValue='';
-  setInterval(function(){
-    try{
-      const role=String(window.currentSession?.role||currentSession?.role||'');
-      const val=(typeof yardivoQrMobileEnabled==='function'?(yardivoQrMobileEnabled()?'1':'0'):'');
-      if(role!==lastRole||val!==lastValue){
-        lastRole=role;lastValue=val;
-        if(typeof renderQrMobileAdminSetting==='function')renderQrMobileAdminSetting();
-        if(typeof renderReceiving==='function'&&document.getElementById('receiving')?.classList.contains('active'))renderReceiving();
-      }
-    }catch(e){}
-  },1200);
-})();
-</script>
+<script id="yardivo-qr-mobile-setting-runtime-v34" src="./modules/receiving/runtime/phase5-088-yardivo-qr-mobile-setting-runtime-v34.js"></script>
 
 <script id="yardivo-v36-remove-double-rampa" src="./modules/master-data/runtime/yardivo-v36-remove-double-rampa.js"></script>
-<script id="yardivo-v37-no-double-ramp-header">
-(function(){
-  function clean(){
-    document.querySelectorAll('#announcementSchedule > .yardivo-ramp-label-row, #yardivoExpandedSchedule .yardivo-ramp-label-row')
-      .forEach(x=>x.remove());
-  }
-  window.addEventListener('load',()=>setTimeout(clean,100));
-  document.addEventListener('click',e=>{
-    if(e.target.closest('[data-view="announcements"],[data-home-target="announcements"],#yardivoExpandScheduleBtn'))
-      setTimeout(clean,50);
-  },true);
-  const start=()=>{
-    const a=document.getElementById('announcementSchedule');
-    if(a)new MutationObserver(clean).observe(a,{childList:true});
-    clean();
-  };
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
-})();
-</script>
+<script id="yardivo-v37-no-double-ramp-header" src="./modules/master-data/runtime/phase5-090-yardivo-v37-no-double-ramp-header.js"></script>
 <script id="yardivo-v39-qa-role-workflow-fixes" src="modules/supplier/phase2-091-yardivo-v39-qa-role-workflow-fixes.js"></script>
 <script id="yardivo-final-settings-rbac-20260831" src="./modules/supplier/runtime/yardivo-final-settings-rbac-20260831.js"></script>
 
 
 <script id="yardivo-final-login-interaction-fix-js-20260831" src="./modules/supplier/runtime/yardivo-final-login-interaction-fix-js-20260831.js"></script>
 <script id="yardivo-final-login-stability-20260831" src="./services/runtime/yardivo-final-login-stability-20260831.js"></script>
-<script id="yardivo-welcome-before-login-lock-20260831">
-(function(){
-'use strict';
-function lock(){
- const splash=document.getElementById('yardivoWelcomeSplash');
- const login=document.getElementById('loginOverlay');
- if(!splash||!login)return;
- const active=document.body.classList.contains('yardivo-welcome-active') &&
-   splash.style.display!=='none' && !splash.classList.contains('hide');
- if(active){
-   login.style.display='none';
-   login.setAttribute('aria-hidden','true');
- }
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',lock,{once:true});else lock();
-setTimeout(lock,60);
-setTimeout(lock,250);
-setTimeout(lock,1000);
-})();
-</script>
+<script id="yardivo-welcome-before-login-lock-20260831" src="./services/runtime/phase5-095-yardivo-welcome-before-login-lock-20260831.js"></script>
 
-<script id="yardivo-final-theme-two-mode-cleanup-20260831">
-(function(){
-'use strict';
-function cleanup(){
-  document.getElementById('yardivoThemePresetBox')?.remove();
-  document.documentElement.removeAttribute('data-theme-preset');
-  try{localStorage.removeItem('yardivo_theme_preset_v1')}catch(e){}
-  const b=document.getElementById('yardivoThemeSwitch');
-  if(b){
-    b.style.display='flex';
-    b.removeAttribute('hidden');
-    b.setAttribute('aria-hidden','false');
-  }
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',cleanup,{once:true});else cleanup();
-window.addEventListener('load',cleanup);
-})();
-</script>
+<script id="yardivo-final-theme-two-mode-cleanup-20260831" src="./modules/settings/runtime/phase5-096-yardivo-final-theme-two-mode-cleanup-20260831.js"></script>
 
 <script id="yardivo-final-my-announcements-role-lock-20260831" src="./modules/receiving/runtime/yardivo-final-my-announcements-role-lock-20260831.js"></script>
 
-<script id="yardivo-global-font-scale-init-20260831">
-(function(){
-'use strict';
-function apply(){
- let p=100;
- try{p=Number((window.safeStorage||localStorage).getItem('yardivo_master_font_v1')||100)}catch(e){}
- p=Math.max(80,Math.min(150,p||100));
- document.documentElement.style.setProperty('--yardivo-ui-scale',String(p/100));
- document.documentElement.dataset.yardivoFontScale=String(p);
-}
-apply();
-window.addEventListener('load',apply);
-})();
-</script>
+<script id="yardivo-global-font-scale-init-20260831" src="./modules/master-data/runtime/phase5-098-yardivo-global-font-scale-init-20260831.js"></script>
 
 <dialog id="yardivoChangePasswordDialog">
 <form class="ycp-form" method="dialog" onsubmit="return false">
@@ -1991,42 +1567,11 @@ window.addEventListener('load',apply);
 </form>
 </dialog>
 
-<script id="yardivo-full-light-mode-sync-20260831">
-(function(){
-'use strict';
-function sync(){
- const light=document.body.classList.contains('light-mode');
- document.documentElement.classList.toggle('yardivo-full-light',light);
- document.documentElement.dataset.yardivoTheme=light?'light':'dark';
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});else sync();
-window.addEventListener('load',sync);
-document.addEventListener('change',e=>{
- if(e.target?.id==='yardivoThemeSwitch'||e.target?.closest?.('#yardivoThemeSwitch'))setTimeout(sync,0);
-});
-new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});
-})();
-</script>
+<script id="yardivo-full-light-mode-sync-20260831" src="./modules/settings/runtime/phase5-099-yardivo-full-light-mode-sync-20260831.js"></script>
 
 <script id="yardivo-dark-accent-choice-20260831" src="modules/gate/phase2-100-yardivo-dark-accent-choice-20260831.js"></script>
 
-<script id="yardivo-light-theme-class-bridge-20260831">
-(function(){
-'use strict';
-function bridge(){
-  const htmlLight=document.documentElement.getAttribute('data-theme')==='light';
-  const bodyLight=document.body.classList.contains('light-mode');
-  /* Existing theme controller is authoritative; this only keeps the two legacy
-     theme markers synchronized so every old CSS module receives light mode. */
-  if(htmlLight && !bodyLight)document.body.classList.add('light-mode');
-  if(bodyLight && !htmlLight)document.documentElement.setAttribute('data-theme','light');
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bridge,{once:true});else bridge();
-window.addEventListener('load',bridge);
-new MutationObserver(bridge).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-new MutationObserver(bridge).observe(document.body,{attributes:true,attributeFilter:['class']});
-})();
-</script>
+<script id="yardivo-light-theme-class-bridge-20260831" src="./modules/settings/runtime/phase5-101-yardivo-light-theme-class-bridge-20260831.js"></script>
 
 
 
@@ -2034,69 +1579,18 @@ new MutationObserver(bridge).observe(document.body,{attributes:true,attributeFil
 
 <script id="yardivo-myyard-webgl-v3" src="modules/master-data/yardivo-myyard-webgl-v3.js?v=20260925"></script>
 
-<script id="yardivo-hide-smart-allocation-card-20260831-js">
-(function(){
- function clean(){
-  document.querySelectorAll('#smartAllocationCard,.yardivo-smart-allocation,.smart-allocation-card,[data-smart-allocation="true"]').forEach(x=>x.remove());
-  document.querySelectorAll('body *').forEach(x=>{
-   if(x.children.length>40)return;
-   const t=(x.textContent||'').trim();
-   if(t.includes('YARDIVO SMART ALLOCATION')&&!t.includes('AUTOMATSKA PREPORUKA')){
-    let n=x;
-    while(n.parentElement && n.parentElement.textContent?.includes('YARDIVO SMART ALLOCATION') &&
-          !n.parentElement.textContent?.includes('AUTOMATSKA PREPORUKA')) n=n.parentElement;
-    n.remove();
-   }
-  });
- }
- window.addEventListener('load',()=>setTimeout(clean,250));
- /* stability: legacy global clean observer removed */
-})();
-</script>
+<script id="yardivo-hide-smart-allocation-card-20260831-js" src="./modules/master-data/runtime/phase5-104-yardivo-hide-smart-allocation-card-20260831-js.js"></script>
 
 
 <script id="yardivo-myyard-webgl-lighten-v1-20260831-js" src="./modules/settings/runtime/yardivo-myyard-webgl-lighten-v1-20260831-js.js"></script>
 
-<script id="yardivo-professional-redesign-v1-js">
-(function(){
- document.documentElement.dataset.yardivoDesign='professional-v1';
- function polish(){
-   document.querySelectorAll('button').forEach(b=>{if(!b.title&&b.textContent.trim().length<3)b.setAttribute('aria-label',b.textContent.trim()||'Akcija')});
- }
- window.addEventListener('load',polish);
-})();
-</script>
+<script id="yardivo-professional-redesign-v1-js" src="./modules/ui/runtime/phase5-106-yardivo-professional-redesign-v1-js.js"></script>
 
-<script id="yardivo-professional-redesign-v2-js">
-(function(){
- document.documentElement.dataset.yardivoDesign='professional-v2';
- function enhance(){
-   document.querySelectorAll('table').forEach(t=>t.setAttribute('data-yv-ui','operations-table'));
-   document.querySelectorAll('.kpi-card,.metric-card,.summary-card').forEach(x=>x.setAttribute('data-yv-ui','metric'));
- }
- window.addEventListener('load',enhance);
- /* YARDIVO V5.8.3 stability: global enhance observer removed; load/click hooks are sufficient. */
-})();
-</script>
+<script id="yardivo-professional-redesign-v2-js" src="./modules/ui/runtime/phase5-107-yardivo-professional-redesign-v2-js.js"></script>
 
 <script id="yardivo-ux-original-option-v1-20260831-js" src="./modules/settings/runtime/yardivo-ux-original-option-v1-20260831-js.js"></script>
 
-<script id="yardivo-professional-graphite-green-maps-v1-20260831-js">
-(function(){
- function applyGraphiteMapScene(){
-   if(document.documentElement.dataset.yardivoUx==='original')return;
-   try{
-     const e=window.__YARDIVO_MYYARD_ENGINE__,T=window.__YARDIVO_THREE_MODULE__;
-     if(!e||!T)return;
-     e.scene.background=new T.Color(0x263c31);
-     e.scene.fog=new T.FogExp2(0x263c31,.0065);
-     e.renderer.toneMappingExposure=1.18;
-   }catch(_){}
- }
- window.addEventListener('load',()=>setTimeout(applyGraphiteMapScene,1500));
- /* disabled by yardivo-myyard-flicker-fix-v1: competing periodic lighting writer */
-})();
-</script>
+<script id="yardivo-professional-graphite-green-maps-v1-20260831-js" src="./modules/settings/runtime/phase5-109-yardivo-professional-graphite-green-maps-v1-20260831-js.js"></script>
 
 <script id="yardivo-xlsx-export-complete-fix-v1-20260831" src="modules/supplier/phase2-110-yardivo-xlsx-export-complete-fix-v1-20260831.js"></script>
 
@@ -2115,49 +1609,8 @@ new MutationObserver(bridge).observe(document.body,{attributes:true,attributeFil
 <script id="yardivo-login-safe-isolation-v2-20260901-js" src="modules/ui/phase2-115-yardivo-login-safe-isolation-v2-20260901-js.js"></script>
 
 <script id="yardivo-login-unconditional-finalizer-v3-20260901" src="modules/ui/phase2-116-yardivo-login-unconditional-finalizer-v3-20260901.js"></script>
-<script id="yardivo-remove-studenac-legacy-v1-20260902">
-(function(){
- try{
-   const migrations=[
-     ['studenac'+'_yms_announcements','yardivo_yms_announcements_v1'],
-     ['studenac'+'_yms_incidents','yardivo_yms_incidents_v1']
-   ];
-   for(const [oldKey,newKey] of migrations){
-     const oldValue=localStorage.getItem(oldKey);
-     if(oldValue!=null && localStorage.getItem(newKey)==null)localStorage.setItem(newKey,oldValue);
-     localStorage.removeItem(oldKey);
-   }
-   for(const qk of ['yardivo_supabase_offline_queue_v1','yardivo_supabase_offline_queue_v2']){
-     localStorage.removeItem(qk);
-   }
- }catch(_){}
-})();
-</script>
-<script id="yardivo-v583-db-status-single-authority">
-(()=>{'use strict';
-if(window.YardivoDbStatusAuthorityV583)return;
-let lastText='',lastCls='',lastOk=0;
-function ensureEl(){
- let el=document.getElementById('yardivoDbStatus');
- if(!el){
-   el=document.createElement('div');
-   el.id='yardivoDbStatus';
-   el.setAttribute('aria-live','polite');
-   document.body?.appendChild(el);
- }
- return el;
-}
-function set(text,cls='',detail='',source='sync'){
- const now=Date.now();if(cls==='ok')lastOk=now;
- if((cls==='warn'||cls==='bad')&&source!=='health'&&now-lastOk<12000)return;
- const el=ensureEl();if(!el)return;
- text=String(text||'');cls=String(cls||'');detail=String(detail||'');
- if(text===lastText&&cls===lastCls&&el.title===detail)return;
- lastText=text;lastCls=cls;el.className=cls;el.textContent=text;el.title=detail;
-}
-window.YardivoDbStatusAuthorityV583={set,ensureEl,lastOk:()=>lastOk};
-})();
-</script><script id="yardivo-online-sync-v2-20260902" src="services/sync/yardivo-online-sync-v2-20260902.js?v=20260925"></script>
+<script id="yardivo-remove-studenac-legacy-v1-20260902" src="./services/runtime/phase5-117-yardivo-remove-studenac-legacy-v1-20260902.js"></script>
+<script id="yardivo-v583-db-status-single-authority" src="./services/runtime/phase5-118-yardivo-v583-db-status-single-authority.js"></script><script id="yardivo-online-sync-v2-20260902" src="services/sync/yardivo-online-sync-v2-20260902.js?v=20260925"></script>
 <script id="yardivo-canonical-login-router-v2-20260901" src="modules/supplier/yardivo-canonical-login-router-v2-20260901.js?v=20260925"></script>
 
 <script id="yardivo-post-auth-transition-fix-v1-20260901-js" src="./services/runtime/yardivo-post-auth-transition-fix-v1-20260901-js.js"></script>
@@ -2170,42 +1623,11 @@ window.YardivoDbStatusAuthorityV583={set,ensureEl,lastOk:()=>lastOk};
 <script id="yardivo-announcement-map-canonical-sync-v1-20260901" src="./modules/master-data/runtime/yardivo-announcement-map-canonical-sync-v1-20260901.js"></script>
 
 
-<script id="yardivo-full-white-light-mode-v1-20260901-js">
-(function(){
-'use strict';
-function normalize(){
-  const html=document.documentElement,body=document.body;if(!body)return;
-  const ds=html.dataset.yardivoMainTheme||html.dataset.theme||'';
-  const light=ds==='light'||html.classList.contains('light-mode')||body.classList.contains('light-mode');
-  if(light){
-    html.dataset.yardivoMainTheme='light';
-    html.dataset.theme='light';
-    html.classList.add('light-mode');
-    html.classList.remove('dark-mode');
-    body.classList.add('light-mode');
-    body.classList.remove('dark-mode');
-  }
-}
-window.addEventListener('yardivo:theme-change',normalize);
-document.addEventListener('click',e=>{
-  if(e.target.closest?.('[data-theme],[data-yardivo-theme],#themeToggle,#themeSwitch'))setTimeout(normalize,0);
-},true);
-window.addEventListener('load',normalize,{once:true});
-})();
-</script>
+<script id="yardivo-full-white-light-mode-v1-20260901-js" src="./modules/settings/runtime/phase5-125-yardivo-full-white-light-mode-v1-20260901-js.js"></script>
 
 
 <script id="yardivo-overview-fullwidth-chart-v1-20260901-js" src="modules/supplier/yardivo-overview-fullwidth-chart-v1-20260901-js.js?v=20260925"></script>
-<script id="yardivo-overview-fullchart-master-bridge-v1-20260901">
-(function(){
-'use strict';
-function ping(){window.dispatchEvent(new CustomEvent('yardivo:overview-refresh'))}
-window.addEventListener('yardivo:data-synced',()=>setTimeout(ping,120));
-document.addEventListener('click',e=>{
-  if(e.target.closest?.('[data-view="overview"],[data-home-target="overview"]'))setTimeout(ping,180);
-},true);
-})();
-</script>
+<script id="yardivo-overview-fullchart-master-bridge-v1-20260901" src="./modules/master-data/runtime/phase5-127-yardivo-overview-fullchart-master-bridge-v1-20260901.js"></script>
 
 
 
@@ -2220,19 +1642,7 @@ document.addEventListener('click',e=>{
 
 <script id="yardivo-myyard-360-orbit-final-v1-20260901-js" src="./services/runtime/yardivo-myyard-360-orbit-final-v1-20260901-js.js"></script>
 
-<script id="yardivo-light-absolute-white-v4-20260901-js">
-(function(){
-'use strict';
-function enforce(){
-  const html=document.documentElement,body=document.body;if(!body)return;
-  const light=html.dataset.yardivoMainTheme==='light'||html.dataset.theme==='light';
-  body.classList.toggle('light-mode',light);
-  body.classList.toggle('dark-mode',!light);
-  if(light)body.classList.remove('yardivo-light-green');
-}
-window.YardivoAbsoluteWhite={apply:enforce};
-})();
-</script>
+<script id="yardivo-light-absolute-white-v4-20260901-js" src="./modules/settings/runtime/phase5-133-yardivo-light-absolute-white-v4-20260901-js.js"></script>
 
 <script id="yardivo-theme-canonical-single-owner-v5-20260901" src="modules/settings/phase2-134-yardivo-theme-canonical-single-owner-v5-20260901.js"></script>
 
@@ -2260,12 +1670,7 @@ window.YardivoAbsoluteWhite={apply:enforce};
 <script id="yardivo-settings-cleanup-light-sheets-v1-20260901-js" src="./modules/settings/runtime/yardivo-settings-cleanup-light-sheets-v1-20260901-js.js"></script>
 
 
-<script id="yardivo-v581-user-profile-scope-fix">
-/* V5.8.1: expose warehouse selection helper outside legacy master IIFE. */
-window.yardivoSelectedInternalUserWarehouses = window.yardivoSelectedInternalUserWarehouses || function(){
-  return Array.from(document.querySelectorAll('#muWarehousePicker input[name="muWarehouse"]:checked')).map(function(x){ return x.value; });
-};
-</script>
+<script id="yardivo-v581-user-profile-scope-fix" src="./modules/master-data/runtime/phase5-144-yardivo-v581-user-profile-scope-fix.js"></script>
 <script id="yardivo-gate-and-users-final-v3-20260901-js" src="modules/services/yardivo-gate-and-users-final-v3-20260901-js.js?v=20260925"></script>
 
 <script id="yardivo-role-stability-final-v6-20260902-js" src="modules/supplier/yardivo-role-stability-final-v6-20260902-js.js?v=20260925"></script>
@@ -2284,29 +1689,13 @@ window.yardivoSelectedInternalUserWarehouses = window.yardivoSelectedInternalUse
 
 
 
-<script id="yardivo-dashboard-daily-xlsx-label-v1-20260902">(function(){function f(){const b=document.querySelector('#dashboard [data-xlsx-view="dashboard"]');if(b){b.innerHTML='📊 DNEVNO IZVJEŠĆE XLSX';b.title='Izvezi samo današnje stanje prijama i rezultate u Excel'}}document.addEventListener('DOMContentLoaded',f);window.addEventListener('load',()=>setTimeout(f,800));document.addEventListener('click',e=>{if(e.target.closest('[data-view="dashboard"],[data-home-target="dashboard"]'))setTimeout(f,100)},true)})();</script>
+<script id="yardivo-dashboard-daily-xlsx-label-v1-20260902" src="./modules/receiving/runtime/phase5-149-yardivo-dashboard-daily-xlsx-label-v1-20260902.js"></script>
 
 <script id="yardivo-smart-admin-setting-v1-20260902" src="modules/settings/phase2-150-yardivo-smart-admin-setting-v1-20260902.js"></script>
 <!-- YARDIVO DEV V5.2 · ADMIN SUPPLIER ACCOUNT -->
 
 <script id="yardivo-supplier-account-admin-v52" src="modules/supplier/yardivo-supplier-account-admin-v52.js?v=20260925"></script>
-<script id="yardivo-v535-internal-user-location-bind">
-(function(){
-  function bind(){
-    const loc=document.getElementById('muLocation');
-    if(loc && !loc.dataset.yardivoWhBind){
-      loc.dataset.yardivoWhBind='1';
-      loc.addEventListener('change',()=>yardivoRenderInternalUserWarehousePicker([]));
-      yardivoRenderInternalUserWarehousePicker([]);
-    }
-  }
-  document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,300));
-  window.addEventListener('yardivo:login',()=>setTimeout(bind,200));
-  document.addEventListener('click',e=>{
-    if(e.target.closest?.('[data-view="settings"],[data-home-target="settings"]'))setTimeout(bind,120);
-  },true);
-})();
-</script>
+<script id="yardivo-v535-internal-user-location-bind" src="./modules/master-data/runtime/phase5-152-yardivo-v535-internal-user-location-bind.js"></script>
 <script id="yardivo-v545-user-admin-controller" src="modules/supplier/yardivo-v545-user-admin-controller.js?v=20260925"></script>
 
 <script id="yardivo-v548-create-profile-hard-owner" src="modules/gate/phase2-154-yardivo-v548-create-profile-hard-owner.js"></script>
@@ -2520,30 +1909,7 @@ window.yardivoSelectedInternalUserWarehouses = window.yardivoSelectedInternalUse
 
 <script id="yardivo-v583-smart-engine-settings" src="./modules/supplier/runtime/yardivo-v583-smart-engine-settings.js"></script>
 
-<script id="yardivo-v583-stability-runtime-guard">
-(function(){
-'use strict';
-window.YARDIVO_DEV_BUILD='20260908-dev-v5.8.3-stability-login-theme-fix';
-/* Keep expensive refresh work away from the exact minute boundary. */
-let lastMinuteGuard=0;
-window.addEventListener('yardivo:data-synced',()=>{ lastMinuteGuard=performance.now(); },{passive:true});
-/* Freeze diagnostics: records long main-thread tasks without mutating app DOM. */
-try{
-  if('PerformanceObserver' in window){
-    const po=new PerformanceObserver(list=>{
-      for(const e of list.getEntries()){
-        if(e.duration>=120){
-          window.__YARDIVO_LONG_TASKS__=window.__YARDIVO_LONG_TASKS__||[];
-          window.__YARDIVO_LONG_TASKS__.push({at:Date.now(),duration:Math.round(e.duration)});
-          if(window.__YARDIVO_LONG_TASKS__.length>40)window.__YARDIVO_LONG_TASKS__.shift();
-        }
-      }
-    });
-    po.observe({entryTypes:['longtask']});
-  }
-}catch(_){ }
-})();
-</script>
+<script id="yardivo-v583-stability-runtime-guard" src="./modules/settings/runtime/phase5-177-yardivo-v583-stability-runtime-guard.js"></script>
 <div aria-hidden="true" class="yardivo-week-day-modal" id="weeklyDayDrilldown">
 <div class="yardivo-week-day-backdrop" data-week-day-close="1"></div>
 <section aria-labelledby="weeklyDayDrilldownTitle" aria-modal="true" class="yardivo-week-day-dialog" role="dialog">
@@ -2594,24 +1960,7 @@ try{
 
 <script id="yardivo-supplier-location-warehouse-binding-v583" src="modules/supplier/yardivo-supplier-location-warehouse-binding-v583.js?v=20260925"></script>
 
-<script id="yardivo-home-location-stability-final-v583">
-(function(){
-'use strict';
-if(window.__YARDIVO_HOME_LOCATION_STABILITY_FINAL_V583__)return;
-window.__YARDIVO_HOME_LOCATION_STABILITY_FINAL_V583__=true;
-
-function refresh(){
-  try{window.YardivoLocationLock?.apply?.()}catch(_){}
-}
-window.addEventListener('yardivo:master-data-changed',()=>setTimeout(refresh,30));
-window.addEventListener('yardivo:data-synced',()=>setTimeout(refresh,100));
-window.addEventListener('yardivo:login',()=>setTimeout(refresh,120));
-document.addEventListener('DOMContentLoaded',()=>setTimeout(refresh,120));
-window.addEventListener('load',()=>setTimeout(refresh,350));
-window.YardivoHomeLocationFinalV583={refresh};
-window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-home-location-selector-final-fix';
-})();
-</script>
+<script id="yardivo-home-location-stability-final-v583" src="./modules/master-data/runtime/phase5-196-yardivo-home-location-stability-final-v583.js"></script>
 
 <script id="yardivo-location-state-single-source-v583" src="modules/services/yardivo-location-state-single-source-v583.js?v=20260925"></script>
 <script id="yardivo-disable-legacy-flicker-observers-v583" src="./modules/master-data/runtime/yardivo-disable-legacy-flicker-observers-v583.js"></script>
@@ -2624,25 +1973,7 @@ window.YARDIVO_DEV_BUILD='20260911-dev-v5.8.3-home-location-selector-final-fix';
 
 <script id="yardivo-saas-hardening-pass2-v583" src="modules/master-data/yardivo-saas-hardening-pass2-v583.js?v=20260925"></script>
 
-<script id="yardivo-masterdata-single-warehouse-owner-guard-v583">
-(function(){
-'use strict';
-if(window.__YARDIVO_MASTERDATA_SINGLE_WAREHOUSE_OWNER_V583__)return;
-window.__YARDIVO_MASTERDATA_SINGLE_WAREHOUSE_OWNER_V583__=true;
-function enforce(){
-  const legacy=document.getElementById('yardivoWarehouseAdmin');
-  if(legacy) legacy.remove();
-}
-document.addEventListener('DOMContentLoaded',enforce,{once:true});
-window.addEventListener('load',enforce,{once:true});
-window.addEventListener('yardivo:login',enforce);
-window.YardivoWarehouseOwnershipV583={
-  owner:'MASTER PODACI',
-  createWarehouse:'MASTER PODACI → SKLADIŠTA',
-  configureRamps:'PRIJAM & RAMPE'
-};
-})();
-</script>
+<script id="yardivo-masterdata-single-warehouse-owner-guard-v583" src="./modules/master-data/runtime/phase5-203-yardivo-masterdata-single-warehouse-owner-guard-v583.js"></script>
 
 <script id="yardivo-unannounced-location-flicker-fix-v583" src="modules/master-data/phase2-204-yardivo-unannounced-location-flicker-fix-v583.js"></script>
 <script id="yardivo-zero-state-runtime-v583" src="modules/supplier/phase2-205-yardivo-zero-state-runtime-v583.js"></script>
@@ -2652,17 +1983,7 @@ window.YardivoWarehouseOwnershipV583={
 
 <script id="yardivo-master-admin-settings-v583" src="modules/services/yardivo-master-admin-settings-v583.js?v=20260925"></script>
 <script id="yardivo-home-saved-count-authority-v583" src="./services/runtime/yardivo-home-saved-count-authority-v583.js"></script>
-<script id="yardivo-dashboard-vs-yesterday-diagnostic-v583">
-(function(){
-'use strict';
-window.YardivoDashboardVsYesterdayV583={
-  previousDate:function(date){
-    try{return dashboardPreviousDate(date||window.yardivoLocalDateV583())}catch(_){return null}
-  },
-  refresh:function(){try{renderDashboardSimple()}catch(_){}}
-};
-})();
-</script>
+<script id="yardivo-dashboard-vs-yesterday-diagnostic-v583" src="./modules/ui/runtime/phase5-210-yardivo-dashboard-vs-yesterday-diagnostic-v583.js"></script>
 
 <script id="yardivo-gate-qr-supplier-v583" src="modules/supplier/yardivo-gate-qr-supplier-v583.js?v=20260925"></script>
 
@@ -2674,30 +1995,7 @@ window.YardivoDashboardVsYesterdayV583={
 <script id="yardivo-v583-supplier-slot-map-fix" src="modules/supplier/yardivo-v583-supplier-slot-map-fix.js?v=20260925"></script>
 
 
-<script id="yardivo-v583-realtime-x10-effective-final">
-(function(){
-'use strict';
-window.YARDIVO_DEV_BUILD='20260912-dev-v5.8.3-realtime-x10';
-window.YardivoRealtimeX10V583={
-  version:'20260912-dev-v5.8.3-realtime-x10',
-  targetMs:3000,
-  coreSafetyMs:2200,
-  supplierSafetyMs:2300,
-  status:()=>({
-    build:window.YARDIVO_DEV_BUILD,
-    targetMs:3000,
-    core:window.YardivoRealtimeLatencyV583?.status?.()||null,
-    supplierBusy:window.YardivoSupplierLiveSync?.busy?.()||false,
-    realtimeBus:window.YardivoRealtimeBusV583?.stats?.()||null
-  }),
-  force:async()=>{
-    const a=window.YardivoRealtimeLatencyV583?.force?.();
-    const b=window.YardivoSupplierLiveSync?.syncNow?.();
-    return await Promise.allSettled([a,b]);
-  }
-};
-})();
-</script>
+<script id="yardivo-v583-realtime-x10-effective-final" src="./modules/supplier/runtime/phase5-213-yardivo-v583-realtime-x10-effective-final.js"></script>
 
 <script id="yardivo-v583-deep-qa-diagnostics-x10" src="./modules/settings/runtime/yardivo-v583-deep-qa-diagnostics-x10.js"></script>
 
@@ -2716,58 +2014,11 @@ window.YardivoRealtimeX10V583={
 
 <script id="yardivo-v583-final-product-spec-controller" src="modules/supplier/yardivo-v583-final-product-spec-controller.js?v=20260925"></script>
 
-<script id="yardivo-v583-final-test-seal">
-(function(){
-'use strict';
-const BUILD='20260912-dev-v5.8.3-final-test';
-const REQUIRED='admin1';
-function validateAdmin(){
- const s=window.currentSession;if(!s)return;
- if(String(s.role||'').toLowerCase()==='admin'&&String(s.username||s.user||'').toLowerCase()!==REQUIRED){
-   console.warn('[YARDIVO FINAL TEST] Admin identity is not admin1.');
- }
-}
-window.addEventListener('yardivo:login',()=>setTimeout(validateAdmin,80));
-window.YARDIVO_DEV_BUILD=BUILD;
-window.YardivoFinalTestV583={build:BUILD,requiredAdmin:REQUIRED};
-})();
-</script>
+<script id="yardivo-v583-final-test-seal" src="./services/runtime/phase5-222-yardivo-v583-final-test-seal.js"></script>
 
-<script id="yardivo-v583-admin-global-scope-final">
-(function(){
-'use strict';
-const BUILD='20260912-dev-v5.8.3-admin-global-scope-final';
-function enforce(){
- const modal=document.getElementById('yardivoFixedUserModal');
- const title=String(document.getElementById('yufTitle')?.textContent||'').toUpperCase();
- const isAdmin=title.includes('ADMIN');
- if(modal)modal.dataset.roleAdmin=isAdmin?'1':'0';
- const scope=document.getElementById('yufScopeSection');
- if(scope&&isAdmin)scope.style.setProperty('display','none','important');
- document.getElementById('yardivoAdmin1MigrationBannerV583')?.remove();
-}
-document.addEventListener('click',e=>{
- if(e.target.closest?.('[data-yucr-role="admin"]'))setTimeout(enforce,20);
-},true);
-window.addEventListener('load',()=>setTimeout(enforce,300),{once:true});
-window.addEventListener('yardivo:login',()=>setTimeout(enforce,120));
-window.YardivoAdminGlobalScopeV583={enforce,build:BUILD};
-window.YARDIVO_DEV_BUILD=BUILD;
-})();
-</script>
+<script id="yardivo-v583-admin-global-scope-final" src="./services/runtime/phase5-223-yardivo-v583-admin-global-scope-final.js"></script>
 <script id="yardivo-v583-master-runtime-sync-final-authority" src="./modules/supplier/runtime/yardivo-v583-master-runtime-sync-final-authority.js"></script>
-<script id="yardivo-v583-canonical-master-context-final-authority">
-(function(){
-'use strict';
-function master(){try{return JSON.parse(localStorage.getItem('yardivo_master_data_registry_v583')||'{}')}catch(_){return {locations:[],warehouses:[]}}}
-function wh(id){return (master().warehouses||[]).find(x=>x&&x.active!==false&&String(x.id)===String(id))||null}
-function locationForWarehouse(id){const w=wh(id);return w?String(w.location_id||''):''}
-window.yardivoCanonicalLocationForWarehouseV583=locationForWarehouse;
-/* Legacy global helper, when present, must resolve through Master instead of W1/W2 prefixes. */
-try{window.locationForWarehouse=locationForWarehouse}catch(_){}
-window.YardivoMasterAuthorityV583={master,warehouse:wh,locationForWarehouse};
-})();
-</script>
+<script id="yardivo-v583-canonical-master-context-final-authority" src="./modules/master-data/runtime/phase5-225-yardivo-v583-canonical-master-context-final-authority.js"></script>
 \n<script id="yardivo-v583-header-warehouse-dropdown-authority" src="./modules/master-data/runtime/yardivo-v583-header-warehouse-dropdown-authority.js"></script>\n
 <script id="yardivo-v583-master-location-and-supplier-account-authority-final" src="./modules/supplier/runtime/yardivo-v583-master-location-and-supplier-account-authority-final.js"></script>
 
@@ -2803,30 +2054,9 @@ window.YardivoMasterAuthorityV583={master,warehouse:wh,locationForWarehouse};
 <script id="yardivo-v583-settings-single-page-master-light-blue-authority" src="./modules/master-data/runtime/yardivo-v583-settings-single-page-master-light-blue-authority.js"></script>
 <!-- YARDIVO DEV V5.8.3 · HEADER CONTEXT + SETTINGS CONTRAST FINAL AUTHORITY · 2026-09-15 -->
 
-<script id="yardivo-v583-header-context-settings-contrast-final-authority">
-(()=>{'use strict';
-const BUILD='20260915-dev-v5.8.3-header-context-settings-contrast-final';
-function retireDuplicateContext(){
- for(const id of ['yardivoStableContextV583','yardivoGlobalContextV583']){const el=document.getElementById(id);if(el){el.hidden=true;el.setAttribute('aria-hidden','true')}}
-}
-function refresh(){retireDuplicateContext();try{window.YardivoHeaderHomeFinalV583?.refresh?.()}catch(_){}}
-['yardivo:login','yardivo:context-changed','yardivo:master-data-changed','yardivo:data-synced'].forEach(ev=>window.addEventListener(ev,()=>requestAnimationFrame(refresh)));
-document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(refresh),{once:true});
-window.addEventListener('load',()=>setTimeout(refresh,120),{once:true});
-window.YARDIVO_DEV_BUILD=BUILD;
-})();
-</script>
+<script id="yardivo-v583-header-context-settings-contrast-final-authority" src="./modules/master-data/runtime/phase5-240-yardivo-v583-header-context-settings-contrast-final-authority.js"></script>
 
-<script id="yardivo-v583-myyard-parking42-final-authority">
-(function(){
-'use strict';
-window.__YARDIVO_V583_MYYARD_PARKING42__='20260915-dev-v5.8.3-myyard-parking42-dock-confirmation';
-function cleanLegacy(){document.querySelectorAll('#myYard *').forEach(el=>{if(el.children.length===0&&/^NN\s*\/\s*NN$/i.test((el.textContent||'').trim()))el.remove()})}
-document.addEventListener('click',e=>{if(e.target.closest('[data-view="myYard"]'))requestAnimationFrame(cleanLegacy)},true);
-window.addEventListener('yardivo:context-changed',()=>{try{window.YardivoMyYard?.render?.()}catch(e){};requestAnimationFrame(cleanLegacy)});
-window.addEventListener('load',()=>setTimeout(cleanLegacy,250));
-})();
-</script>
+<script id="yardivo-v583-myyard-parking42-final-authority" src="./services/runtime/phase5-241-yardivo-v583-myyard-parking42-final-authority.js"></script>
 
 <script id="yardivo-v583-header-prompt-myyard-parking42-authority" src="./modules/master-data/runtime/yardivo-v583-header-prompt-myyard-parking42-authority.js"></script>
 
@@ -2843,24 +2073,12 @@ window.addEventListener('load',()=>setTimeout(cleanLegacy,250));
 
 
 \n
-<script id="yardivo-v583-header-clean-context-final">
-(()=>{'use strict';
-if(window.__YARDIVO_HEADER_CLEAN_CONTEXT_FINAL_V583__)return;
-window.__YARDIVO_HEADER_CLEAN_CONTEXT_FINAL_V583__=true;
-function clean(){const strip=document.getElementById('yvGlobalCapacityStrip');if(strip)strip.remove()}
-['yardivo:master-data-changed','yardivo:data-synced','yardivo:login'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(clean,0)));
-document.addEventListener('change',e=>{if(e.target?.id==='globalWarehouse'||e.target?.id==='globalLocation')setTimeout(clean,0)},true);
-setTimeout(clean,0);
-window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-header-clean-location-warehouse-final';
-})();
-</script>\n
+<script id="yardivo-v583-header-clean-context-final" src="./modules/master-data/runtime/phase5-243-yardivo-v583-header-clean-context-final.js"></script>\n
 
 \n\n
 \n
 <script id="yardivo-v583-shared-hours-dropdown-authority" src="./services/runtime/yardivo-v583-shared-hours-dropdown-authority.js"></script>\n
-<script id="yardivo-v583-master-active-edit-no-flicker-final">
-(()=>{'use strict';if(window.__YARDIVO_MASTER_ACTIVE_EDIT_NO_FLICKER_FINAL__)return;window.__YARDIVO_MASTER_ACTIVE_EDIT_NO_FLICKER_FINAL__=true;let editingUntil=0;const active=()=>{const r=document.getElementById('yardivoStableMasterEditorV583'),a=document.activeElement;return !!(r&&a&&r.contains(a)&&Date.now()<editingUntil)};const hold=()=>{editingUntil=Date.now()+8000};['focusin','input','keydown','pointerdown'].forEach(t=>document.addEventListener(t,e=>{if(e.target?.closest?.('#yardivoStableMasterEditorV583'))hold()},true));['yardivo:data-synced','yardivo:context-changed'].forEach(t=>window.addEventListener(t,e=>{if(active())e.stopImmediatePropagation()},true));})();
-</script>
+<script id="yardivo-v583-master-active-edit-no-flicker-final" src="./modules/master-data/runtime/phase5-245-yardivo-v583-master-active-edit-no-flicker-final.js"></script>
 
 <div aria-labelledby="ysmpTitle" aria-modal="true" id="yardivoSupplierMasterModalV583" role="dialog">
 <div class="ysmp-card">
@@ -2906,64 +2124,13 @@ window.YARDIVO_DEV_BUILD='20260916-dev-v5.8.3-header-clean-location-warehouse-fi
 <script id="yardivo-v583-add-user-smart-system-toggle-js" src="modules/master-data/phase2-258-yardivo-v583-add-user-smart-system-toggle-js.js"></script>
 
 <script id="yardivo-v583-login-home-no-flicker-js" src="./services/runtime/yardivo-v583-login-home-no-flicker-js.js"></script>
-<script id="yardivo-v583-stable-home-guard-js">
-(()=>{'use strict';
-if(window.__YARDIVO_STABLE_HOME_GUARD_FINAL__)return;
-window.__YARDIVO_STABLE_HOME_GUARD_FINAL__=true;
-function ensureHome(){
-  let sess=null;try{sess=typeof currentSession!=='undefined'?currentSession:window.currentSession}catch(_){}
-  if(!sess)return;
-  if(document.querySelector('.view.active'))return;
-  const h=document.getElementById('homeMenu');if(!h)return;
-  try{
-    if(window.YardivoRoleStableFinal?.open)window.YardivoRoleStableFinal.open('homeMenu');
-    else{document.body.classList.add('home-menu-mode');h.classList.add('active')}
-  }catch(_){}
-}
-/* Only auth events may repair an empty view. Data refresh must preserve current section. */
-['yardivo:login','yardivo:authenticated','yardivo:session-ready']
- .forEach(ev=>window.addEventListener(ev,()=>requestAnimationFrame(ensureHome)));
-window.YardivoStableHomeGuardV583={ensureHome};
-})();
-</script>
+<script id="yardivo-v583-stable-home-guard-js" src="./services/runtime/phase5-260-yardivo-v583-stable-home-guard-js.js"></script>
 
-<script id="yardivo-v583-stable-supplier-booking-marker">
-(()=>{'use strict';window.YARDIVO_DEV_BUILD='20260917-dev-v5.8.3-stable-login-supplier-booking-fixed-final';})();
-</script>
-<script id="yardivo-v583-qr-server-settings-refresh-js">
-(()=>{'use strict';
-document.addEventListener('click',e=>{
-  if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"],#navSettings,[data-settings-tab="qr"]')){
-    setTimeout(()=>{try{window.yardivoLoadQrScanSetting?.()}catch(_){}},120);
-  }
-},true);
-})();
-</script>
+<script id="yardivo-v583-stable-supplier-booking-marker" src="./modules/supplier/runtime/phase5-261-yardivo-v583-stable-supplier-booking-marker.js"></script>
+<script id="yardivo-v583-qr-server-settings-refresh-js" src="./modules/gate/runtime/phase5-262-yardivo-v583-qr-server-settings-refresh-js.js"></script>
 
-<script id="yardivo-v583-settings-smart-qr-master-zero-runtime">
-(()=>{'use strict';
-function onSettings(){
-  setTimeout(()=>{
-    try{window.YardivoSmartEngineSettingsV583?.render?.()}catch(_){}
-    try{window.yardivoLoadQrScanSetting?.()}catch(_){}
-    try{window.YardivoStableMasterV583?.render?.()}catch(_){}
-  },80);
-}
-document.addEventListener('click',e=>{
-  if(e.target?.closest?.('[data-view="settings"],[data-home-target="settings"],#navSettings,[data-settings-tab="qr"],[data-settings-tab="general"]'))onSettings();
-},true);
-window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-settings-smart-qr-master-factory-zero-final';
-})();
-</script>
-<script id="yardivo-v583-qr-public-authority-js">
-(()=>{'use strict';
-try{
- if(typeof yardivoLoadQrScanSetting==='function')window.yardivoLoadQrScanSetting=yardivoLoadQrScanSetting;
- if(typeof yardivoSetQrMobileEnabled==='function')window.yardivoSetQrMobileEnabled=yardivoSetQrMobileEnabled;
- if(typeof yardivoQrMobileEnabled==='function')window.yardivoQrMobileEnabled=yardivoQrMobileEnabled;
-}catch(_){}
-})();
-</script>
+<script id="yardivo-v583-settings-smart-qr-master-zero-runtime" src="./modules/master-data/runtime/phase5-263-yardivo-v583-settings-smart-qr-master-zero-runtime.js"></script>
+<script id="yardivo-v583-qr-public-authority-js" src="./modules/gate/runtime/phase5-264-yardivo-v583-qr-public-authority-js.js"></script>
 <script id="yardivo-v583-settings-master-separation-cleanup-js" src="./modules/master-data/runtime/yardivo-v583-settings-master-separation-cleanup-js.js"></script>
 <!-- YARDIVO DEV V5.8.3 · ADMIN HOME/CONTEXT + SETTINGS MASTER/USERS FINAL AUTHORITY · 2026-09-18 -->
 
@@ -2985,12 +2152,7 @@ try{
 
 
 
-<script id="yardivo-v583-supplier-booking-rebuilt-clean-authority" src="modules/supplier/yardivo-v583-supplier-booking-rebuilt-clean-authority.js?v=20260925"></script><script id="yardivo-v583-smart-operational-visibility-final-authority" src="./modules/master-data/runtime/yardivo-v583-smart-operational-visibility-final-authority.js"></script><script id="yardivo-v583-supplier-inbox-stable-health-final-authority" src="modules/supplier/yardivo-v583-supplier-inbox-stable-health-final-authority.js?v=20260925"></script><script id="yardivo-v583-header-bell-final-authority" src="./modules/master-data/runtime/yardivo-v583-header-bell-final-authority.js"></script><script id="yardivo-v583-notifications-master-supplier-sanitizer" src="modules/notifications/yardivo-v583-notifications-master-supplier-sanitizer.js?v=20260925"></script><script id="yardivo-v583-global-visible-master-names" src="./modules/master-data/runtime/yardivo-v583-global-visible-master-names.js"></script><script id="yardivo-v583-deep-ui-stability-final-authority">
-(()=>{'use strict';
-window.YardivoUiStabilityV583={build:'20260918-dev-v5.8.3-deep-ui-stability-final',owners:{views:'YardivoRoleStableFinal',supplierInbox:'YardivoSupplierInboxStableFinalV583',supplierPlanner:'YardivoSupplierPlannerV580',notificationBell:'YardivoHeaderBellFinalV583',databaseStatus:'YardivoDbStatusAuthorityV583',homeHeaderContext:'HomeHeaderMasterDwellFinal'}};
-window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-deep-ui-stability-final';
-})();
-</script><script id="yardivo-v583-hard-ui-stability-final-authority" src="./services/runtime/yardivo-v583-hard-ui-stability-final-authority.js"></script><script id="yardivo-v583-supabase-canonical-green-final-authority" src="./services/runtime/yardivo-v583-supabase-canonical-green-final-authority.js"></script>
+<script id="yardivo-v583-supplier-booking-rebuilt-clean-authority" src="modules/supplier/yardivo-v583-supplier-booking-rebuilt-clean-authority.js?v=20260925"></script><script id="yardivo-v583-smart-operational-visibility-final-authority" src="./modules/master-data/runtime/yardivo-v583-smart-operational-visibility-final-authority.js"></script><script id="yardivo-v583-supplier-inbox-stable-health-final-authority" src="modules/supplier/yardivo-v583-supplier-inbox-stable-health-final-authority.js?v=20260925"></script><script id="yardivo-v583-header-bell-final-authority" src="./modules/master-data/runtime/yardivo-v583-header-bell-final-authority.js"></script><script id="yardivo-v583-notifications-master-supplier-sanitizer" src="modules/notifications/yardivo-v583-notifications-master-supplier-sanitizer.js?v=20260925"></script><script id="yardivo-v583-global-visible-master-names" src="./modules/master-data/runtime/yardivo-v583-global-visible-master-names.js"></script><script id="yardivo-v583-deep-ui-stability-final-authority" src="./modules/supplier/runtime/phase5-277-yardivo-v583-deep-ui-stability-final-authority.js"></script><script id="yardivo-v583-hard-ui-stability-final-authority" src="./services/runtime/yardivo-v583-hard-ui-stability-final-authority.js"></script><script id="yardivo-v583-supabase-canonical-green-final-authority" src="./services/runtime/yardivo-v583-supabase-canonical-green-final-authority.js"></script>
 
 <script id="yardivo-v583-reception-ui-scope-clean-js" src="modules/supplier/yardivo-v583-reception-ui-scope-clean-js.js?v=20260925"></script>
 
@@ -3014,24 +2176,7 @@ window.YARDIVO_DEV_BUILD='20260918-dev-v5.8.3-deep-ui-stability-final';
 
 <script id="yardivo-v583-minimap-assistant-ux-fix-final-js" src="modules/ai/yardivo-v583-minimap-assistant-ux-fix-final-js.js?v=20260925"></script>
 
-<script id="yardivo-v583-real-ai-assistant-dom-final-js">
-(()=>{'use strict';
-function clean(){
-  document.querySelectorAll('#yardivoSmartAssistant .yv-ai-suggestions').forEach(x=>x.remove());
-  const input=document.getElementById('yardivoAssistantInput');
-  if(input)input.placeholder='Napiši poruku YARDIVO Assistantu...';
-  const msgs=document.getElementById('yardivoAssistantMessages');
-  if(msgs && msgs.children.length===1){
-    const t=String(msgs.firstElementChild?.textContent||'').toLowerCase();
-    if(t.includes('pozdrav. vidim samo yardivo podatke dopuštene')||t.includes('probajte:'))msgs.replaceChildren();
-  }
-}
-window.addEventListener('yardivo:login',()=>setTimeout(clean,80));
-window.addEventListener('load',()=>setTimeout(clean,500),{once:true});
-document.addEventListener('DOMContentLoaded',clean,{once:true});
-setTimeout(clean,300);
-})();
-</script>
+<script id="yardivo-v583-real-ai-assistant-dom-final-js" src="./modules/ai/runtime/phase5-288-yardivo-v583-real-ai-assistant-dom-final-js.js"></script>
 
 <script id="yardivo-v583-ai-assistant-supabase-v2-final-js" src="modules/ai/yardivo-v583-ai-assistant-supabase-v2-final.js?v=20260925"></script>
 
@@ -3125,29 +2270,7 @@ setTimeout(clean,300);
 
 
 
-<script id="yardivo-map-live-delay-refresh-v1">
-(function(){
-'use strict';
-if(window.__YARDIVO_MAP_LIVE_DELAY_REFRESH_V1__)return;
-window.__YARDIVO_MAP_LIVE_DELAY_REFRESH_V1__=true;
-
-function refreshVisibleMap(){
-  if(document.hidden)return;
-  const daily=document.getElementById('dailyMap');
-  const weekly=document.getElementById('weeklyMap');
-  try{
-    if(daily?.classList.contains('active')||daily?.classList.contains('manager-force-active')){
-      if(typeof renderDailyMap==='function')renderDailyMap();
-    }else if(weekly?.classList.contains('active')||weekly?.classList.contains('manager-force-active')){
-      if(typeof renderWeeklyMap==='function')renderWeeklyMap();
-    }
-  }catch(_){}
-}
-window.__yardivoMapLiveDelayTimerV1=setInterval(refreshVisibleMap,15000);
-window.addEventListener('focus',refreshVisibleMap);
-window.addEventListener('yardivo:data-synced',refreshVisibleMap);
-})();
-</script>
+<script id="yardivo-map-live-delay-refresh-v1" src="./services/runtime/phase5-310-yardivo-map-live-delay-refresh-v1.js"></script>
 
 
 
@@ -3159,21 +2282,7 @@ window.addEventListener('yardivo:data-synced',refreshVisibleMap);
 
 
 
-<script id="yardivo-light-full-white-v5-js">
-(function(){
-'use strict';
-if(window.__YARDIVO_LIGHT_FULL_WHITE_V5__)return;
-window.__YARDIVO_LIGHT_FULL_WHITE_V5__=true;
-function apply(){
-  const root=document.documentElement,body=document.body;if(!body)return;
-  const light=root.dataset.yardivoMainTheme==='light'||root.dataset.theme==='light';
-  body.classList.toggle('light-mode',light);
-  body.classList.toggle('dark-mode',!light);
-  if(light)body.classList.remove('yardivo-light-green');
-}
-window.YardivoLightFullWhiteV5={apply};
-})();
-</script>
+<script id="yardivo-light-full-white-v5-js" src="./modules/settings/runtime/phase5-312-yardivo-light-full-white-v5-js.js"></script>
 
 
 <script id="yardivo-master-warehouse-display-shield-v6" src="./modules/master-data/runtime/yardivo-master-warehouse-display-shield-v6.js"></script>
@@ -3200,23 +2309,7 @@ window.YardivoLightFullWhiteV5={apply};
 <script id="yardivo-final-qa-1-5-v10" src="./modules/master-data/runtime/yardivo-final-qa-1-5-v10.js"></script>
 
 
-<script id="yardivo-delay-label-sync-v10">
-(function(){
-'use strict';
-function sync(){
-  let t='14:00';
-  try{t=String(window.YardivoDelayRulesV1?.get?.().noShowAt||'14:00')}catch(_){}
-  const head=document.querySelector('#after14NoShowPanel .after14-alert-head strong');
-  if(head)head.textContent=`⚠ AUTOMATSKI NO-SHOW · ${t}`;
-  const ops=document.querySelector('#operationsPro .panel-head h2, #after14OperationsList')?.closest?.('.panel')?.querySelector?.('.panel-head h2');
-  if(ops&&/NO-SHOW/i.test(ops.textContent||''))ops.textContent=`AUTOMATSKI NO-SHOW · ${t}`;
-}
-window.addEventListener('yardivo:delay-rules-changed',sync);
-window.addEventListener('yardivo:view-opened',sync);
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});else sync();
-window.YardivoDelayLabelSyncV10={sync};
-})();
-</script>
+<script id="yardivo-delay-label-sync-v10" src="./services/runtime/phase5-318-yardivo-delay-label-sync-v10.js"></script>
 
 
 
@@ -3241,24 +2334,7 @@ window.YardivoDelayLabelSyncV10={sync};
 
 
 
-<script id="yardivo-v583-announcement-number-display-20260923">
-(()=>{'use strict';
-if(window.__YARDIVO_ANNOUNCEMENT_NUMBER_DISPLAY_20260923__)return;
-window.__YARDIVO_ANNOUNCEMENT_NUMBER_DISPLAY_20260923__=true;
-function hash6(v){
-  const s=String(v||'');let h=2166136261;
-  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}
-  return String(100000+((h>>>0)%900000)).padStart(6,'0')
-}
-function displayId(v){
-  const s=String(v||'').trim();
-  if(/^NAJ\d{6}$/i.test(s))return s.toUpperCase();
-  if(/^SUP(?:-|$)/i.test(s))return 'NAJ'+hash6(s);
-  return s;
-}
-window.YardivoAnnouncementNumberV583={displayId};
-})();
-</script>
+<script id="yardivo-v583-announcement-number-display-20260923" src="./modules/ui/runtime/phase5-323-yardivo-v583-announcement-number-display-20260923.js"></script>
 <script id="yardivo-v583-supplier-history-status-server-authority-20260923" src="modules/supplier/yardivo-v583-supplier-history-status-server-authority-20260923.js?v=20260925"></script>
 
 <script id="yardivo-v583-supplier-no-flicker-final-20260923" src="./modules/supplier/runtime/yardivo-v583-supplier-no-flicker-final-20260923.js"></script>
@@ -3268,29 +2344,7 @@ window.YardivoAnnouncementNumberV583={displayId};
 
 
 <script id="yardivo-v583-supplier-history-tombstone-voice-20260924" src="./modules/supplier/runtime/yardivo-v583-supplier-history-tombstone-voice-20260924.js"></script>
-<script id="yardivo-v583-notification-login-ai-voice-guard-20260924">
-(()=>{'use strict';
-if(window.__YARDIVO_NOTIFICATION_LOGIN_AI_VOICE_GUARD_20260924__)return;
-window.__YARDIVO_NOTIFICATION_LOGIN_AI_VOICE_GUARD_20260924__=true;
-function stopVoice(){
- try{window.speechSynthesis?.cancel?.()}catch(_){}
- try{window.YardivoAIVoiceNotifications?.setMode?.('off')}catch(_){}
-}
-window.addEventListener('yardivo:logout',()=>{
- try{sessionStorage.setItem('yardivo_ai_voice_resume_after_login',localStorage.getItem('yardivo_notification_sound_mode_v2')==='off'?'0':'1')}catch(_){}
- stopVoice();
-});
-window.addEventListener('yardivo:login',()=>{
- try{
-   const resume=sessionStorage.getItem('yardivo_ai_voice_resume_after_login');
-   if(resume==='1'){
-     sessionStorage.removeItem('yardivo_ai_voice_resume_after_login');
-     window.YardivoAIVoiceNotifications?.setMode?.('ai')
-   }
- }catch(_){}
-});
-})();
-</script>
+<script id="yardivo-v583-notification-login-ai-voice-guard-20260924" src="./modules/notifications/runtime/phase5-328-yardivo-v583-notification-login-ai-voice-guard-20260924.js"></script>
 <script id="yardivo-v583-login-ai-welcome-20260924" src="modules/ai/yardivo-v583-login-ai-welcome-20260924.js?v=20260925"></script>\n<script id="yardivo-v583-chat-realtime-signal-final" src="modules/chat/yardivo-v583-chat-realtime-signal-final.js?v=20260925"></script>
 
 </body>
