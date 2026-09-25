@@ -1,4 +1,3 @@
-
 (()=>{'use strict';
 if(window.__YARDIVO_CHAT_REALTIME_SIGNAL_FINAL__)return;
 window.__YARDIVO_CHAT_REALTIME_SIGNAL_FINAL__=true;
@@ -19,22 +18,30 @@ function scheduleRefresh(kind){
 
 async function connect(){
   if(ch)return ch;
-  const c=await window.YardivoAuth?.client?.();
-  if(!c)return null;
+  if(!window.YardivoRealtime?.connect)return null;
   try{
-    const session=(await c.auth.getSession())?.data?.session;
-    if(session?.access_token)await c.realtime?.setAuth?.(session.access_token);
+    const c=await window.YardivoAuth?.client?.();
+    const session=(await c?.auth?.getSession?.())?.data?.session;
+    if(session?.access_token)await window.YardivoRealtime.setAuth(session.access_token);
   }catch(_){}
-  const next=c.channel('yardivo-chat',{config:{private:true}});
-  next.on('broadcast',{event:'changed'},payload=>{
-    scheduleRefresh(String(payload?.payload?.kind||'chat'));
-  });
-  next.subscribe(status=>{
-    const st=String(status||'').toUpperCase();
-    if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'||st==='CLOSED'){
-      if(ch===next)ch=null;
-      clearTimeout(reconnectTimer);
-      reconnectTimer=setTimeout(connect,5000);
+
+  const next=await window.YardivoRealtime.connect({
+    key:'chat',
+    topic:'yardivo-chat',
+    channelOptions:{config:{private:true}},
+    setup(channel){
+      channel.on('broadcast',{event:'changed'},payload=>{
+        scheduleRefresh(String(payload?.payload?.kind||'chat'));
+      });
+    },
+    onStatus(status){
+      if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
+        if(ch===next)ch=null;
+        clearTimeout(reconnectTimer);
+        void window.YardivoRealtime.remove('chat').finally(()=>{
+          reconnectTimer=setTimeout(connect,5000);
+        });
+      }
     }
   });
   ch=next;
@@ -42,10 +49,9 @@ async function connect(){
 }
 
 async function disconnect(){
-  const c=await window.YardivoAuth?.client?.();
-  const old=ch;ch=null;
+  ch=null;
   clearTimeout(reconnectTimer);
-  if(old&&c){try{await c.removeChannel(old)}catch(_){}}
+  try{await window.YardivoRealtime?.remove?.('chat')}catch(_){}
 }
 
 ['yardivo:login','yardivo:online-ready'].forEach(ev=>{
@@ -53,10 +59,11 @@ async function disconnect(){
 });
 window.addEventListener('focus',()=>setTimeout(connect,120));
 window.addEventListener('yardivo:logout',()=>{void disconnect()});
-window.addEventListener('pagehide',()=>{void disconnect()},{once:true});
 setTimeout(connect,1200);
 
 window.YardivoChatRealtimeV583={
-  connect,disconnect,status:()=>ch?'ACTIVE':'OFF'
+  connect,
+  disconnect,
+  status:()=>window.YardivoRealtime?.status?.('chat')||'OFF'
 };
 })();
