@@ -1,0 +1,134 @@
+name: YARDIVO Supabase client owner consolidation
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/yardivo-supabase-client-owner.yml'
+permissions:
+  contents: write
+
+jobs:
+  consolidate:
+    if: github.event.head_commit.message == 'Add one-time Supabase client owner consolidation'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Consolidate Supabase browser client ownership
+        shell: python
+        run: |
+          import pathlib, re, subprocess
+
+          root = pathlib.Path(".")
+          service = root / "services" / "supabase.js"
+          service.parent.mkdir(parents=True, exist_ok=True)
+          service.write_text("""(function(){
+'use strict';
+if(window.YardivoSupabaseClient)return;
+
+const BASE='https://rskticdbiovvgyocpzoc.supabase.co';
+const KEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
+
+function options(){
+  return {
+    auth:{
+      persistSession:true,
+      autoRefreshToken:true,
+      detectSessionInUrl:false,
+      storage:window.sessionStorage,
+      storageKey:(window.YardivoTabAuthV583?.storageKey||('yardivo-auth-'+Math.random().toString(36).slice(2))),
+      lock:async(_name,_timeout,fn)=>await fn()
+    }
+  };
+}
+
+async function client(){
+  if(window.__yardivoAuthClient)return window.__yardivoAuthClient;
+  if(!window.supabase?.createClient)throw new Error('Supabase biblioteka nije učitana.');
+  window.__yardivoAuthClient=window.supabase.createClient(BASE,KEY,options());
+  return window.__yardivoAuthClient;
+}
+
+window.YardivoSupabaseClient={
+  base:BASE,
+  publishableKey:KEY,
+  options,
+  client
+};
+})();
+""", encoding="utf-8")
+
+          auth = root / "modules" / "services" / "yardivo-auth-driver-role-final-fix.js"
+          s = auth.read_text(encoding="utf-8")
+          pattern = re.compile(r"async function authClient\(\)\{[\s\S]*?\n\}\nasync function forcePasswordRotation", re.M)
+          replacement = """async function authClient(){
+  if(!window.YardivoSupabaseClient?.client)throw new Error('Canonical Supabase client service nije učitan.');
+  return await window.YardivoSupabaseClient.client();
+}
+async function forcePasswordRotation"""
+          s2, n = pattern.subn(replacement, s, count=1)
+          if n != 1:
+            raise SystemExit(f"authClient replacement count={n}")
+          auth.write_text(s2, encoding="utf-8")
+
+          online = root / "services" / "sync" / "yardivo-online-sync-v2-20260902.js"
+          s = online.read_text(encoding="utf-8")
+          pattern = re.compile(r"async function getClient\(\)\{[\s\S]*?\n\}\n\nasync function factoryZeroServerResetIfPending", re.M)
+          replacement = """async function getClient(){
+  if(!window.YardivoSupabaseClient?.client)throw new Error('Canonical Supabase client service nije učitan.');
+  const c=await window.YardivoSupabaseClient.client();
+  client=c;
+  if(accessToken&&refreshToken){
+    const {error}=await client.auth.setSession({access_token:accessToken,refresh_token:refreshToken});
+    if(error)throw error;
+  }
+  return client;
+}
+
+async function factoryZeroServerResetIfPending"""
+          s2, n = pattern.subn(replacement, s, count=1)
+          if n != 1:
+            raise SystemExit(f"getClient replacement count={n}")
+          online.write_text(s2, encoding="utf-8")
+
+          idx = root / "index.html"
+          html = idx.read_text(encoding="utf-8")
+          marker = '<script id="yardivo-auth-driver-role-final-fix" src="modules/services/yardivo-auth-driver-role-final-fix.js?v=20260925"></script>'
+          if marker not in html:
+            raise SystemExit("auth driver script marker not found")
+          central = '<script id="yardivo-supabase-client-service" src="services/supabase.js?v=20260925"></script>\n'
+          if 'id="yardivo-supabase-client-service"' not in html:
+            html = html.replace(marker, central + marker, 1)
+          idx.write_text(html, encoding="utf-8")
+
+          for path in [service, auth, online]:
+            subprocess.run(["node","--check",str(path)], check=True)
+
+          if "createClient(" in auth.read_text(encoding="utf-8"):
+            raise SystemExit("auth module still creates a Supabase client")
+          if "createClient(" in online.read_text(encoding="utf-8"):
+            raise SystemExit("online sync still creates a Supabase client")
+          if html.count('id="yardivo-supabase-client-service"') != 1:
+            raise SystemExit("canonical service must be loaded exactly once")
+          if html.index('id="yardivo-supabase-client-service"') > html.index('id="yardivo-auth-driver-role-final-fix"'):
+            raise SystemExit("canonical service loads after auth module")
+
+      - name: Commit consolidation
+        run: |
+          git config user.name "YARDIVO Modularizer"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html services/supabase.js services/sync/yardivo-online-sync-v2-20260902.js modules/services/yardivo-auth-driver-role-final-fix.js
+          git diff --cached --check
+          git commit -m "Centralize Supabase browser client ownership [skip ci]"
+          git push
+
+      - name: Remove one-time workflow
+        run: |
+          git rm .github/workflows/yardivo-supabase-client-owner.yml
+          git commit -m "Remove one-time Supabase client owner workflow [skip ci]"
+          git push
