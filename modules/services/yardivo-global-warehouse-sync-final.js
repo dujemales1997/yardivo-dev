@@ -70,16 +70,28 @@
     try{renderIncidents?.()}catch(e){}
   }
 
+  function setCanonicalWarehouse(wh){
+    wh=String(wh||'').trim();
+    if(!wh)return false;
+    try{window.activeWarehouse=wh;activeWarehouse=wh}catch(_){window.activeWarehouse=wh}
+    try{safeStorage?.setItem?.('studenac_active_warehouse',wh)}catch(_){}
+    if(wh!=='ALL'){
+      try{
+        if(String(window.YardivoAppStateV583?.warehouse?.()||'')!==wh){
+          window.YardivoAppStateV583?.setWarehouse?.(wh);
+        }
+      }catch(_){}
+    }
+    return true;
+  }
+
   function applyGlobalWarehouse(){
     const sel=document.getElementById('globalWarehouse');
     if(!sel)return;
 
     // PORTA is the deliberate exception: one combined Lokacija 2 feed.
     if(role()==='gate'){
-      try{
-        activeWarehouse='ALL';
-        safeStorage?.setItem?.('studenac_active_warehouse','ALL');
-      }catch(e){}
+      setCanonicalWarehouse('ALL');
       const info=document.getElementById('globalWarehouseInfo');
       if(info){const n=window.YardivoAppStateV583?.locationName?.(window.YardivoAppStateV583?.location?.())||'LOKACIJA';info.textContent='SVA SKLADIŠTA · '+String(n).toUpperCase();}
       // Do not push W201/W203/W204 into Gate check-in filters.
@@ -92,14 +104,7 @@
     const wh=sel.value==='ALL'?selectedWarehouse():sel.value;
     if(!wh)return;
 
-    try{
-      activeWarehouse=wh;
-      safeStorage?.setItem?.('studenac_active_warehouse',wh);
-      /* Canonical context must follow the header dropdown as well. */
-      if(String(window.YardivoAppStateV583?.warehouse?.()||'')!==String(wh)){
-        window.YardivoAppStateV583?.setWarehouse?.(wh);
-      }
-    }catch(e){}
+    setCanonicalWarehouse(wh);
 
     const info=document.getElementById('globalWarehouseInfo');
     if(info)info.textContent=(typeof whLabel==='function'?whLabel(wh):wh).toUpperCase();
@@ -198,6 +203,7 @@
   window.YardivoWarehouseSync={
     apply:applyGlobalWarehouse,
     selected:selectedWarehouse,
-    gateWarehouses:locationWarehouses
+    gateWarehouses:locationWarehouses,
+    set:setCanonicalWarehouse
   };
 })();
