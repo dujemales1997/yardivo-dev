@@ -161,17 +161,11 @@ document.addEventListener('click',e=>{
   },60);
 },true);
 
-/* Explicitly refresh all dependent views after Reception status changes.
-   This covers manual status buttons and QR/Mobile calls that use the same setter. */
-if(typeof window.setReceivingAnnouncementStatus==='function'){
-  const original=window.setReceivingAnnouncementStatus;
-  window.setReceivingAnnouncementStatus=function(){
-    const result=original.apply(this,arguments);
-    setTimeout(refreshAll,0);
-    setTimeout(refreshAll,900); /* catches the existing ramp truck animation */
-    return result;
-  };
-}
+/* Receiving setter ownership lives in modules/receiving/service.js. */
+window.addEventListener('yardivo:receiving-status-changed',()=>{
+  setTimeout(refreshAll,0);
+  setTimeout(refreshAll,900);
+});
 if(typeof window.setContextAnnouncementStatus==='function'){
   const originalContext=window.setContextAnnouncementStatus;
   window.setContextAnnouncementStatus=function(){
