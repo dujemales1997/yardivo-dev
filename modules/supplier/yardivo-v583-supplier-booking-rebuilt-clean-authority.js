@@ -2,27 +2,14 @@
 (()=>{'use strict';
 if(window.__YARDIVO_SUPPLIER_BOOKING_REBUILT_CLEAN__)return;window.__YARDIVO_SUPPLIER_BOOKING_REBUILT_CLEAN__=true;
 const $=id=>document.getElementById(id);
-const BASE='https://rskticdbiovvgyocpzoc.supabase.co';
-const KEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
-const SCOPE=BASE+'/functions/v1/yardivo-user-scope';
-const AVAIL=BASE+'/functions/v1/yardivo-supplier-availability';
-const DELIV=BASE+'/functions/v1/yardivo-supplier-deliveries';
+const SCOPE='yardivo-user-scope';
+const AVAIL='yardivo-supplier-availability';
+const DELIV='yardivo-supplier-deliveries';
 let scope=null,scopeLocations=[],scopeWarehouses=[],month=new Date(),date='',loc='',wh='',availability=null,choice=null,recommended=null,pdf=null,timer=0;
 
-async function token(){
- const direct=String(window.__yardivoSupplierAccessToken||'').trim();if(direct)return direct;
- const c=await window.YardivoAuth?.client?.();if(!c)throw new Error('Auth nije spreman.');
- let s=null;try{s=(await c.auth.getSession())?.data?.session||null}catch(_){}
- if(!s?.access_token){try{s=(await c.auth.refreshSession())?.data?.session||null}catch(_){}}
- if(!s?.access_token)throw new Error('Prijava nije aktivna. Ponovno se prijavi.');
- return s.access_token;
-}
-async function edge(url,body){
- const t=await token();
- const r=await fetch(url,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify(body||{})});
- const raw=await r.text();let j={};try{j=raw?JSON.parse(raw):{}}catch(_){j={error:raw||('HTTP '+r.status)}}
- if(!r.ok||j?.ok===false||j?.error){const e=new Error(String(j?.error||j?.message||('HTTP '+r.status)));e.code=String(j?.code||'');throw e}
- return j?.data??j;
+async function edge(functionName,body){
+ if(!window.YardivoSupplierService?.call)throw new Error('Supplier data service nije spreman.');
+ return await window.YardivoSupplierService.call(functionName,body||{});
 }
 function status(t){if($('sbnStatus'))$('sbnStatus').textContent=t}
 function empty(title,text){$('sbnMap').innerHTML='<div class="sbn-empty"><strong>'+title+'</strong><span>'+text+'</span></div>'}
