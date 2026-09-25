@@ -165,18 +165,7 @@ function refreshReceiving(){
   }catch(e){console.warn('Receiving refresh',e)}
 }
 
-/* Guard manual status action at execution time too. */
-const originalSetStatus=window.setReceivingAnnouncementStatus;
-if(typeof originalSetStatus==='function'){
-  window.setReceivingAnnouncementStatus=function(id,status,source='manual'){
-    const wh=headerWarehouseId();
-    if(source==='manual'&&qrEnabledForWarehouse(wh)){
-      alert(`QR scanner je UKLJUČEN za ${warehouseName(wh)}. Ručna promjena statusa nije dopuštena.`);
-      return;
-    }
-    return originalSetStatus.apply(this,arguments);
-  };
-}
+/* Manual status guard ownership lives in modules/receiving/service.js. */
 
 /* ADMIN: LOCATION -> WAREHOUSE -> QR ON/OFF */
 function ensureAdminPanel(){
