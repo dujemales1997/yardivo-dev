@@ -16,9 +16,9 @@ YARDIVO remains a single web application opened through the same URL.
 - `modules/ai/`: AI and voice behavior
 - `modules/ui/`: shared presentation compatibility code
 
-## Phase 2 contract
+## Phase 3 contract
 
-Phase 2 preserves classic script execution order. Runtime blocks are moved out of `index.html` only by replacing the inline body with an external `src` at the same document position.
+Phase 3 preserves classic script execution order. Runtime blocks are moved out of `index.html` only by replacing the inline body with an external `src` at the same document position.
 
 Three identical embedded YARDIVO PNG logos were consolidated into one cacheable `assets/yardivo-logo.svg` asset.
 
@@ -30,3 +30,11 @@ New code must not reintroduce:
 - duplicate owners for the same feature
 
 Semantic merging of older final/hotfix/authority generations should happen within one domain at a time, behind QA, after the compatibility globals are covered.
+
+## Guardrails
+
+- `index.html` is kept under 500 KB by CI.
+- Active inline CSS is forbidden.
+- Inline JavaScript blocks >= 3.5 KB are rejected by CI.
+- Chat, AI, Notifications, Settings, Supplier, Master Data, Sync and shared services have canonical owner folders.
+- Externalized classic scripts stay at the same document position to preserve execution order and runtime behavior.
