@@ -1,0 +1,266 @@
+name: YARDIVO modular webapp phase 1
+
+on:
+  push:
+    branches:
+      - refactor/modular-webapp-20260925
+
+permissions:
+  contents: write
+
+jobs:
+  modularize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Extract cacheable assets without changing runtime order
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, json, hashlib
+
+          root = Path(".")
+          p = root / "index.html"
+          original = p.read_text(encoding="utf-8")
+          html = original
+
+          # ---------- CSS ----------
+          # Keep intentionally disabled styles (media="not all") in place.
+          style_re = re.compile(r'<style([^>]*)>([\s\S]*?)</style>', re.I)
+          active_styles = []
+          first_active_span = None
+          for m in style_re.finditer(original):
+              attrs = m.group(1)
+              body = m.group(2)
+              if re.search(r'\bmedia=["\']not all["\']', attrs, re.I):
+                  continue
+              sid = (re.search(r'\bid=["\']([^"\']+)', attrs, re.I) or [None, ""])[1]
+              active_styles.append((m.start(), m.end(), sid, attrs, body))
+              if first_active_span is None:
+                  first_active_span = (m.start(), m.end())
+
+          css_parts = []
+          for _, _, sid, attrs, body in active_styles:
+              css_parts.append(f"\n/* YARDIVO STYLE: {sid or 'anonymous'} */\n")
+              css_parts.append(body)
+              css_parts.append("\n")
+          css = "".join(css_parts)
+          Path("styles").mkdir(exist_ok=True)
+          Path("styles/yardivo-runtime.css").write_text(css, encoding="utf-8")
+
+          # Replace active styles in one reverse pass. First active style becomes the link;
+          # all other active styles are removed. Disabled styles remain untouched.
+          link = '<link id="yardivo-runtime-styles" rel="stylesheet" href="styles/yardivo-runtime.css?v=20260925">'
+          active_spans = [(a,b) for a,b,_,_,_ in active_styles]
+          if active_spans:
+              first_start, first_end = active_spans[0]
+              for a,b in reversed(active_spans[1:]):
+                  html = html[:a] + html[b:]
+              html = html[:first_start] + link + html[first_end:]
+
+          # Re-read positions from CSS-transformed HTML for scripts.
+          # ---------- JS ----------
+          script_re = re.compile(r'<script([^>]*)>([\s\S]*?)</script>', re.I)
+
+          def slug(v):
+              v = re.sub(r'[^a-zA-Z0-9._-]+', '-', v).strip('-').lower()
+              return v[:150] or "script"
+
+          def category(sid, body):
+              t = (sid + " " + body[:800]).lower()
+              if "supplier" in t: return "supplier"
+              if any(x in t for x in ["supabase","online-sync","auth","login","session","user-scope"]): return "services"
+              if any(x in t for x in ["master","warehouse","location","ramp"]): return "master-data"
+              if "notification" in t: return "notifications"
+              if any(x in t for x in ["operational-chat","help-chat","chat"]): return "chat"
+              if any(x in t for x in ["self-gate","gate","qr"]): return "gate"
+              if any(x in t for x in ["receiving","reception"]): return "receiving"
+              if "inventory" in t: return "inventory"
+              if any(x in t for x in ["analytics","overview","control-tower"]): return "analytics"
+              if any(x in t for x in ["ai-","voice","assistant"]): return "ai"
+              if any(x in t for x in ["settings","theme","light-mode","dark-"]): return "settings"
+              return "legacy"
+
+          selected = []
+          for idx, m in enumerate(script_re.finditer(html), 1):
+              attrs, body = m.group(1), m.group(2)
+              if re.search(r'\bsrc\s*=', attrs, re.I):
+                  continue
+              typem = re.search(r'\btype=["\']([^"\']+)', attrs, re.I)
+              typ = typem.group(1) if typem else ""
+              if typ and typ.lower() not in ("text/javascript","application/javascript","module"):
+                  continue
+              if len(body) < 5000:
+                  continue
+              if "document.currentScript" in body:
+                  continue
+              sidm = re.search(r'\bid=["\']([^"\']+)', attrs, re.I)
+              sid = sidm.group(1) if sidm else f"script-{idx:03d}"
+              # This one has a known exact ID reference in runtime; keep inline for now.
+              if sid == "yardivo-delay-settings-v1":
+                  continue
+              cat = category(sid, body)
+              out = Path("modules") / cat / (slug(sid) + ".js")
+              selected.append((m.start(), m.end(), attrs, body, sid, out))
+
+          # Guarantee unique paths.
+          seen = {}
+          normalized = []
+          for item in selected:
+              a,b,attrs,body,sid,out = item
+              key = str(out)
+              n = seen.get(key, 0) + 1
+              seen[key] = n
+              if n > 1:
+                  out = out.with_name(out.stem + f"-{n}" + out.suffix)
+              normalized.append((a,b,attrs,body,sid,out))
+          selected = normalized
+
+          manifest = []
+          # Write files before modifying HTML.
+          for _,_,attrs,body,sid,out in selected:
+              out.parent.mkdir(parents=True, exist_ok=True)
+              out.write_text(body, encoding="utf-8")
+              manifest.append({
+                  "id": sid,
+                  "path": str(out).replace("\\","/"),
+                  "bytes": len(body.encode("utf-8")),
+                  "sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+                  "category": out.parent.name
+              })
+
+          # Replace selected script bodies in reverse order, retaining the original tag attrs.
+          for a,b,attrs,body,sid,out in reversed(selected):
+              src = str(out).replace("\\","/")
+              new_tag = f'<script{attrs} src="{src}?v=20260925"></script>'
+              html = html[:a] + new_tag + html[b:]
+
+          # Marker/meta to make architecture state visible.
+          marker = '\n<!-- YARDIVO MODULAR WEBAPP PHASE 1 · 2026-09-25 -->\n'
+          if marker.strip() not in html:
+              html = html.replace("</head>", marker + "</head>", 1)
+
+          p.write_text(html, encoding="utf-8")
+
+          Path("app").mkdir(exist_ok=True)
+          Path("app/module-manifest.json").write_text(
+              json.dumps({
+                  "version":"2026-09-25-phase1",
+                  "strategy":"behavior-preserving externalization",
+                  "scripts":manifest,
+                  "css":{
+                      "path":"styles/yardivo-runtime.css",
+                      "source_style_blocks":len(active_styles),
+                      "bytes":len(css.encode("utf-8"))
+                  }
+              }, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8"
+          )
+
+          Path("docs").mkdir(exist_ok=True)
+          Path("docs/architecture.md").write_text("""# YARDIVO web architecture
+
+          YARDIVO remains a browser web application served through the same public link.
+
+          ## Migration rule
+
+          Production behavior comes first. The legacy monolithic HTML is being decomposed incrementally.
+          Phase 1 externalizes large runtime blocks without changing their execution order or adding
+          async/defer semantics.
+
+          ## Directories
+
+          - `app/` — bootstrap metadata and module registry
+          - `modules/` — feature runtime split by domain
+          - `styles/` — cacheable application styles
+          - `services/` / `modules/services/` — Supabase/Auth/sync runtime during transition
+          - `docs/` — architecture and migration notes
+
+          ## Ownership target
+
+          Every feature should converge to one runtime owner. New fixes must modify the owner module
+          instead of appending another `final/fix/hotfix/authority` script to `index.html`.
+
+          ## Next phases
+
+          1. Consolidate Supplier into one public feature API.
+          2. Consolidate Supabase/Auth/Realtime into one service layer.
+          3. Consolidate Master Data owners.
+          4. Move large static view markup to view templates/components.
+          5. Add a production build that emits a small number of cacheable bundles.
+          """.strip() + "\n", encoding="utf-8")
+
+          # ---------- Static invariants ----------
+          new_html = p.read_text(encoding="utf-8")
+          assert len(manifest) >= 80, f"Expected broad JS extraction, got {len(manifest)}"
+          assert 'yardivo-online-sync-v2-20260902' in new_html
+          assert 'yardivo-v560-supplier-live-sync' in new_html
+          assert 'yardivo-v583-supplier-history-status-server-authority-20260923' in new_html
+          assert 'yardivo-v583-operational-chat' in new_html
+          assert 'media="not all"' in new_html, "Disabled CSS blocks must remain disabled"
+
+          # Every externalized body is byte-identical to its source body.
+          for item, src_item in zip(manifest, selected):
+              body = src_item[3]
+              disk = Path(item["path"]).read_text(encoding="utf-8")
+              assert disk == body, item["id"]
+              assert hashlib.sha256(disk.encode("utf-8")).hexdigest() == item["sha256"]
+
+          # All generated src refs exist.
+          for src in re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', new_html, re.I):
+              clean = src.split("?",1)[0]
+              if clean.startswith(("http://","https://","//")):
+                  continue
+              assert Path(clean).exists(), clean
+
+          print(json.dumps({
+              "before_bytes":len(original.encode("utf-8")),
+              "after_bytes":len(new_html.encode("utf-8")),
+              "externalized_scripts":len(manifest),
+              "externalized_script_bytes":sum(x["bytes"] for x in manifest),
+              "css_blocks_externalized":len(active_styles),
+              "css_bytes":len(css.encode("utf-8"))
+          }))
+          PY
+
+      - name: Syntax check extracted JavaScript
+        shell: bash
+        run: |
+          set -e
+          find modules -name '*.js' -print0 | xargs -0 -n1 node --check
+
+      - name: Verify key runtime and size budget
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, json
+          s=Path("index.html").read_text(encoding="utf-8")
+          size=len(s.encode("utf-8"))
+          assert size < 3000000, f"index.html still too large after phase 1: {size}"
+          assert len(re.findall(r'<script',s,re.I)) >= 250
+          assert Path("styles/yardivo-runtime.css").stat().st_size > 900000
+          m=json.loads(Path("app/module-manifest.json").read_text())
+          assert len(m["scripts"]) >= 80
+          print("index bytes:",size)
+          print("external scripts:",len(m["scripts"]))
+          print("css bytes:",Path("styles/yardivo-runtime.css").stat().st_size)
+          PY
+
+      - name: Commit modular webapp phase 1
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html app modules styles docs
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Modularize YARDIVO web runtime phase 1 [skip ci]"
+          git push
