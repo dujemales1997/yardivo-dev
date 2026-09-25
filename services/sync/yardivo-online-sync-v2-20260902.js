@@ -65,7 +65,7 @@ async function refreshAccess(){
   setTokens(d.access_token,d.refresh_token||refreshToken);
   if(client){
     await client.auth.setSession({access_token:accessToken,refresh_token:refreshToken});
-    try{await client.realtime?.setAuth?.(accessToken)}catch(_){}
+    try{await window.YardivoRealtime?.setAuth?.(accessToken)}catch(_){}
   }
 }
 async function token(){
@@ -230,39 +230,43 @@ async function startRealtime(){
   if(realtimeChannel)return realtimeChannel;
   const c=await getClient();
   if(!c)return null;
-  try{if(accessToken)await c.realtime?.setAuth?.(accessToken)}catch(_){}
+  try{if(accessToken)await window.YardivoRealtime?.setAuth?.(accessToken)}catch(_){}
   realtimeStatus='CONNECTING';
-  const ch=c.channel('yardivo-live-sync-v583-fast',{config:{broadcast:{self:false,ack:true}}});
-  ch.on('broadcast',{event:'data-changed'},requestRealtimePull);
-  /* Server-authoritative changes (Gate QR, mobile actions, another workstation)
-     must reach open YARDIVO clients even when the originating client did not
-     send a browser Broadcast. If Postgres Changes is enabled, these are instant. */
-  for(const table of ['yardivo_announcements','yardivo_incidents','yardivo_app_state']){
-    ch.on('postgres_changes',{event:'*',schema:'public',table},(payload)=>{
-      try{
-        window.dispatchEvent(new CustomEvent('yardivo:server-change',{
-          detail:{table,eventType:payload?.eventType||'',ts:Date.now()}
-        }));
-      }catch(_){}
-      requestRealtimePull({payload:{source:'server:'+table,reason:'postgres-change',ts:Date.now()}});
-    });
-  }
-  ch.subscribe((st)=>{
-    realtimeStatus=String(st||'').toUpperCase();
-    if(realtimeStatus==='SUBSCRIBED'){
-      console.info('[YARDIVO REALTIME] LIVE');
-      if(realtimePendingSignal)setTimeout(()=>broadcastChange('pending-sync'),0);
-    }else if(realtimeStatus==='CHANNEL_ERROR'||realtimeStatus==='TIMED_OUT'){
-      console.warn('[YARDIVO REALTIME]',realtimeStatus,'— FAST safety sync ostaje aktivan.');
+  const ch=await window.YardivoRealtime.connect({
+    key:'core-sync',
+    topic:'yardivo-live-sync-v583-fast',
+    channelOptions:{config:{broadcast:{self:false,ack:true}}},
+    setup(channel){
+      channel.on('broadcast',{event:'data-changed'},requestRealtimePull);
+      for(const table of ['yardivo_announcements','yardivo_incidents','yardivo_app_state']){
+        channel.on('postgres_changes',{event:'*',schema:'public',table},(payload)=>{
+          try{
+            window.dispatchEvent(new CustomEvent('yardivo:server-change',{
+              detail:{table,eventType:payload?.eventType||'',ts:Date.now()}
+            }));
+          }catch(_){}
+          requestRealtimePull({payload:{source:'server:'+table,reason:'postgres-change',ts:Date.now()}});
+        });
+      }
+    },
+    onStatus(st){
+      realtimeStatus=String(st||'').toUpperCase();
+      if(realtimeStatus==='SUBSCRIBED'){
+        console.info('[YARDIVO REALTIME] LIVE');
+        if(realtimePendingSignal)setTimeout(()=>broadcastChange('pending-sync'),0);
+      }else if(realtimeStatus==='CHANNEL_ERROR'||realtimeStatus==='TIMED_OUT'){
+        console.warn('[YARDIVO REALTIME]',realtimeStatus,'— 60 s safety sync ostaje aktivan.');
+      }
     }
   });
   realtimeChannel=ch;
   return ch;
 }
 async function stopRealtime(){
-  const ch=realtimeChannel;realtimeChannel=null;realtimeStatus='OFF';
+  realtimeChannel=null;
+  realtimeStatus='OFF';
   clearTimeout(realtimePullTimer);clearTimeout(realtimeRetryTimer);
-  if(ch&&client){try{await client.removeChannel(ch)}catch(_){}}
+  try{await window.YardivoRealtime?.remove?.('core-sync')}catch(_){}
 }
 async function pull(){
   if(!ready||pulling||pushing||dirtyAnn||dirtyInc||dirtyState.size)return false;
