@@ -91,17 +91,25 @@ jobs:
 
                 if(role==='inventory'){
                   await page.evaluate(()=>{
+                    window.activeWarehouse='W001';
+                    try{localStorage.setItem('yardivo_active_warehouse','W001')}catch(_){}
                     const n={
                       id:'QA-SUPREQ-1',
                       event:'SUPPLIER_REQUEST',
                       title:'NOVA NAJAVA DOBAVLJAČA',
                       body:'QA Dobavljač · 2026-09-26 14:30',
                       warehouse:'W001',
-                      createdAt:new Date().toISOString()
+                      createdAt:new Date().toISOString(),
+                      at:new Date().toISOString(),
+                      readBy:{}
                     };
-                    window.dispatchEvent(new CustomEvent('yardivo:visible-toast',{detail:{notification:n,source:'qa'}}));
+                    const list=window.YardivoNotifications?.load?.()||[];
+                    window.YardivoNotifications?.save?.([...list.filter(x=>x.id!=='QA-SUPREQ-1'),n]);
+                    window.dispatchEvent(new CustomEvent('yardivo:data-synced',{detail:{source:'qa-supplier-request'}}));
                   });
-                  await page.waitForTimeout(80);
+                  await page.waitForTimeout(220);
+                  const toastCount=await page.locator('.y5-toast').count();
+                  if(toastCount<1)errors.push('Inventory supplier request did not create side toast');
                 }
                 const voiceReads=await page.evaluate(()=>window.__qaVoiceReads||[]);
                 const forecastReads=voiceReads.filter(n=>/Danas imate/i.test(String(n?.body||'')));
