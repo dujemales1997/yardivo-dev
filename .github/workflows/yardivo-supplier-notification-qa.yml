@@ -39,6 +39,19 @@ jobs:
             const page=await browser.newPage({viewport:{width:1440,height:1000}});
             const pageErrors=[];
             page.on('pageerror',e=>pageErrors.push(String(e.stack||e.message||e)));
+            await page.addInitScript(()=>{
+              window.__yardivoSupplierAccessToken='qa-token';
+              window.Audio=class{
+                constructor(){this.volume=1;this.preload='auto';this.onended=null;this.onerror=null}
+                async play(){setTimeout(()=>this.onended?.(),10)}
+                pause(){}
+              };
+            });
+            await page.route('**/functions/v1/yardivo-voice',route=>route.fulfill({
+              status:200,
+              contentType:'audio/mpeg',
+              body:Buffer.from([0x49,0x44,0x33])
+            }));
             await page.goto('http://127.0.0.1:4173/',{waitUntil:'domcontentloaded',timeout:30000});
             await page.waitForTimeout(2200);
 
@@ -68,13 +81,13 @@ jobs:
               ];
               localStorage.setItem('yardivo_live_notifications_v1',JSON.stringify(old));
 
-              const pending=[
+              window.__qaPendingRows=[
                 {id:'p1',status:'pending',supplier_name:'S1',warehouse:'W001',delivery_date:'2026-09-27',requested_time:'08:00'},
                 {id:'p2',status:'pending',supplier_name:'S2',warehouse:'W001',delivery_date:'2026-09-27',requested_time:'09:00'},
                 {id:'c1',status:'confirmed',supplier_name:'S3',warehouse:'W001',delivery_date:'2026-09-27',requested_time:'10:00'}
               ];
               if(window.YardivoSupplierLiveSync){
-                window.YardivoSupplierLiveSync.internalRows=()=>pending;
+                window.YardivoSupplierLiveSync.internalRows=()=>window.__qaPendingRows;
                 window.YardivoSupplierLiveSync.call=async(action,payload)=>{
                   if(action==='delete_internal')return {tombstone:true,status:'cancelled',deleted_id:String(payload?.id||'')};
                   return [];
@@ -95,12 +108,14 @@ jobs:
             assert(loginState.badge==='2','Supplier badge expected 2 pending rows, got '+loginState.badge);
 
             await page.evaluate(()=>{
-              const rows=JSON.parse(localStorage.getItem('yardivo_live_notifications_v1')||'[]');
-              rows.push({id:'SUPREQ-new4',event:'SUPPLIER_REQUEST',title:'NOVA NAJAVA DOBAVLJAČA',body:'S4 · 2026-09-27 11:00',warehouse:'W001',createdAt:new Date().toISOString(),at:new Date().toISOString(),readBy:{}});
-              localStorage.setItem('yardivo_live_notifications_v1',JSON.stringify(rows));
-              window.dispatchEvent(new CustomEvent('yardivo:data-synced',{detail:{source:'qa-new-supplier'}}));
+              window.__qaPendingRows.push({
+                id:'new4',status:'pending',supplier_name:'S4',supplier_username:'S4',
+                warehouse:'W001',location:'LOC001',delivery_date:'2026-09-27',requested_time:'11:00',
+                created_at:new Date().toISOString()
+              });
+              window.dispatchEvent(new CustomEvent('yardivo:supplier-internal-rows',{detail:{rows:window.__qaPendingRows}}));
             });
-            await page.waitForTimeout(500);
+            await page.waitForTimeout(900);
             const newToast=await page.evaluate(()=>(window.__qaVisibleToasts||[]).filter(n=>String(n?.event||'').toUpperCase()==='SUPPLIER_REQUEST'&&String(n?.id||'')==='SUPREQ-new4').length);
             const newVoice=await page.evaluate(()=>(window.__qaVoiceReads||[]).filter(n=>String(n?.event||'').toUpperCase()==='SUPPLIER_REQUEST'&&String(n?.id||'')==='SUPREQ-new4'&&n?.priority===true&&String(n?.role||'')==='inventory').length);
             assert(newToast===1,'New Supplier request expected exactly 1 side toast, got '+newToast);
@@ -146,6 +161,10 @@ jobs:
             }
             const deleteCalls=await page.evaluate(()=>window.__qaDeleteCalls||[]);
             assert(deleteCalls.some(x=>x.action==='delete_internal'&&String(x.payload?.id)==='p1'),'delete_internal was not called for Supplier request');
+            const deletedNotificationStillPresent=await page.evaluate(()=>
+              (window.YardivoNotifications?.load?.()||[]).some(n=>String(n?.id)==='SUPREQ-p1'||String(n?.supplierDeliveryId||'')==='p1')
+            );
+            assert(!deletedNotificationStillPresent,'Deleted Supplier request notification remained in local notification store');
 
             assert(pageErrors.length===0,'Page errors: '+pageErrors.join(' | '));
             console.log('SUPPLIER_NOTIFICATION_QA='+JSON.stringify({loginState,newToast,newVoice,deleteCalls,pageErrors}));
