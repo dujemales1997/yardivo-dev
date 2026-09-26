@@ -221,6 +221,7 @@ function reconcileCanonical(rows){
   }catch(e){console.error('YARDIVO supplier canonical reconcile',e);return false}
 }
 async function quietLoad(force=false){
+  if(!window.currentSession?.serverAuthorized)return;
   if(!window.YardivoSupplierLiveSync?.call||refreshing)return;
   refreshing=true;
   const body=document.getElementById('ysrBody');
