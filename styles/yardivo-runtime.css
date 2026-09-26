@@ -4003,7 +4003,7 @@ html[data-theme="light"] body.light-mode .user-chip{
 html[data-theme="light"] body.light-mode .user-chip *{color:#173247!important}
 /* There must be only one theme control: #yardivoThemeSwitch. */
 .theme-switch-wrap,.theme-switch,#themeToggle{display:none!important}
-#yardivoThemeSwitch{display:flex!important}
+
 
 
 /* YARDIVO STYLE: yardivo-light-mode-contrast-v5 */
@@ -8150,7 +8150,7 @@ body.yv-minimap-open #yardivoMiniMapDock{
 /* YARDIVO STYLE: yardivo-v583-ai-assistant-supabase-v2-final-css */
 
 /* Final AI chat state: empty until the user sends the first message. */
-#yardivoSmartAssistant .yv-ai-suggestions{display:none!important}
+
 #yardivoSmartAssistant .yv-ai-body{
   font-size:12px!important;
 }
@@ -8809,7 +8809,7 @@ html.yardivo-home-ready #homeMenuGrid{visibility:visible!important}
   backdrop-filter:blur(8px);
 }
 #yardivoBrandFooter strong{color:#9eb6c8;font-weight:950}
-body{padding-bottom:24px!important}
+
 @media(max-width:650px){
   #yardivoBrandFooter{font-size:7px;letter-spacing:.2px}
 }
@@ -14576,7 +14576,7 @@ body[data-yardivo-role="gate"] [data-home-target="epal"]{
 html.yardivo-home-ready #homeMenuGrid{visibility:visible}
 html[data-yardivo-role="gate"] .nav-btn[data-view="controlTower"],
 html[data-yardivo-role="gate"] .nav-btn[data-view="controltower"],
-html[data-yardivo-role="gate"] .nav-btn[data-view="epal"]{display:none!important}
+
 
 
 /* YARDIVO STYLE: yardivo-settings-inventory-visible-fix-v2-20260902 */
@@ -14627,7 +14627,7 @@ body[data-yardivo-role="reception"] #settings #yardivoNonWorkingDaysSettings{dis
 html[data-yardivo-role="gate"] [data-view="settings"],
 html[data-yardivo-role="gate"] [data-home-target="settings"],
 body[data-yardivo-role="gate"] [data-view="settings"],
-body[data-yardivo-role="gate"] [data-home-target="settings"]{display:none!important}
+
 
 
 /* YARDIVO STYLE: yardivo-xlsx-all-important-sections-v2-20260902 */
@@ -17051,7 +17051,7 @@ body.home-menu-mode #homeLocationStatus:not(.ready){color:#ffba66!important}
 /* YARDIVO STYLE: yardivo-factory-zero-ui-v583-style */
 
 #unannouncedApprovalPanel{display:none!important}
-[data-yardivo-duplicate-unannounced="1"]{display:none!important}
+
 
 
 /* YARDIVO STYLE: yardivo-master-admin-settings-v583-style */
@@ -17482,7 +17482,7 @@ body.light-mode #yardivoMasterSystemAuthorityV583 .yms-safe{
 #yardivoMasterSystemAuthorityV583,
 #yardivoMasterOperationalConfigV583,
 #adminCapacitySettings,
-#receptionRampSettings{display:none!important}
+
 
 #yardivoMasterFoundationV583{display:grid;gap:16px;margin-top:14px}
 #yardivoMasterFoundationV583 .ymf-hero{
@@ -18004,7 +18004,7 @@ body.light-mode #epalMasterInitialBreakdownV583,body.light-mode #epalMasterIniti
 
 /* YARDIVO STYLE: yardivo-v583-ramp-context-clean-style */
 
-#receptionRampSettings{display:none!important}
+
 #yardivoStableMasterEditorV583 .ysm-ramp-management h4{font-size:10px!important;color:#9ad2ff!important}
 
 
@@ -18866,7 +18866,7 @@ html[data-theme="light"] body.light-mode #yardivoSupplierPortal :is(.ysp-card,.c
 /* YARDIVO STYLE: yardivo-v583-warehouse-master-ramps-header-repair-style */
 
 /* FINAL V5.8.3 authority: one clean Settings owner, clean header, canonical ramp controls. */
-#yardivoSettingsTabsFinal{display:none!important}
+
 #yardivoMasterAdminSettingsV583{display:flex!important;gap:8px!important;align-items:center!important;flex-wrap:wrap!important;margin:12px 0 14px!important;padding:7px!important;border:1px solid #d8e5f2!important;border-radius:14px!important;background:#f7fbff!important}
 #yardivoMasterAdminSettingsV583 button{min-height:38px!important;padding:0 16px!important;border:1px solid transparent!important;border-radius:10px!important;background:transparent!important;color:#506984!important;font-weight:950!important;letter-spacing:.02em!important;cursor:pointer!important}
 #yardivoMasterAdminSettingsV583 button.active{background:#176fe8!important;color:#fff!important;box-shadow:0 5px 14px rgba(23,111,232,.18)!important}
@@ -19019,7 +19019,7 @@ body.home-menu-mode #yardivoHomeContextV583{display:flex!important;justify-conte
 
 /* HOME has no operational header context; only right-side account + theme. */
 body.home-menu-mode .topbar .warehouse-toolbar{display:none!important}
-body.home-menu-mode .topbar{justify-content:flex-end!important}
+
 body.home-menu-mode .topbar #currentUserChip{margin-left:auto!important}
 
 /* Restore original home hierarchy: LOGO -> location selector -> selected location name -> cards. */
@@ -19113,7 +19113,7 @@ body.light-mode:not(.home-menu-mode) .topbar .warehouse-toolbar select{backgroun
 body.home-menu-mode .topbar .warehouse-toolbar,
 body.home-menu-mode #yardivoStableContextV583,
 body.home-menu-mode #yardivoGlobalContextV583{display:none!important}
-body.home-menu-mode .topbar{justify-content:flex-end!important}
+
 body.home-menu-mode #homeMenu .home-top-actions{display:flex!important;justify-content:center!important;width:100%!important}
 body.home-menu-mode #homeMenu .home-location-box{display:flex!important;justify-content:center!important}
 body.home-menu-mode #homeMenu #homeLocationSelect{display:block!important}
@@ -19456,7 +19456,7 @@ body:not(.yardivo-is-admin-v583) #yardivoMasterPopupLaunchV583{display:none!impo
 /* Old duplicate Master owners stay retired. */
 #settings #masterUserAdmin,
 #settings #adminCapacitySettings,
-#settings #receptionRampSettings{display:none!important}
+#settings 
 
 /* Admin account administration is separate from Master. */
 body:not(.yardivo-is-admin-v583) #yardivoSettingsAdminPaneV583{display:none!important}
@@ -19538,7 +19538,7 @@ body.dark-mode #yardivoUnifiedSettingsV583 .yv-unified-card{background:#0d1d2d;c
 /* Retire known duplicate/obsolete configuration owners, keep canonical editors. */
 #yardivoMasterDataRegistryV583,#yardivoMasterSystemAuthorityV583,#yardivoMasterFoundationV583,
 #yardivoMasterOperationalConfigV583,#yardivoMasterAdminSettingsV583,#masterUserAdmin,
-#adminCapacitySettings,#receptionRampSettings{display:none!important}
+#adminCapacitySettings,
 @media(max-width:760px){#yardivoUnifiedSettingsV583 .yv-unified-row{align-items:flex-start;flex-direction:column}}
 
 
@@ -20819,7 +20819,7 @@ body[data-yardivo-role="manager"] [data-home-target="settings"]{
 }
 
 /* Reception ramp settings are retired for everybody. */
-#receptionRampSettings{display:none!important}
+
 
 /* Dedicated manager popups — never open the Admin Settings page. */
 #yardivoManagerPopupV2{
