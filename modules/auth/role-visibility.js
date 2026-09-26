@@ -17,7 +17,8 @@ const CARD_META={
   myYard:['▥','My Yard','Pregled dvorišta, rampi i trenutnog stanja.'],
   checkin:['▤','Prijava dolaska','Prijavi i obradi dolazak kamiona na porti.'],
   docks:['▥','Rampe','Pregled zauzetosti i stanja rampi.'],
-  unannounced:['⚠','Nenajavljeni dolasci','Pregled i obrada kamiona bez postojeće najave.']
+  unannounced:['⚠','Nenajavljeni dolasci','Pregled i obrada kamiona bez postojeće najave.'],
+  epal:['▦','Stanje europaleta','Saldo EPAL paleta po dobavljaču i skladištu.']
 };
 
 function norm(v){
@@ -69,6 +70,8 @@ function ensureRoleCards(r){
     ['controlTower','analytics','myYard'].forEach(ensureCard);
   }else if(r==='gate'){
     ['checkin','unannounced','myYard','docks'].forEach(ensureCard);
+  }else if(r==='reception'){
+    ['epal'].forEach(ensureCard);
   }
 }
 function apply(){
