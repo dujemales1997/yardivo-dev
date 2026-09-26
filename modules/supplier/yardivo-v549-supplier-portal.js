@@ -195,7 +195,7 @@ function progressIndex(x){
 }
 function renderStatus(){
   const host=document.getElementById('yspStatusList');if(!host)return;
-  const deliveries=rows.slice();
+  const deliveries=loadRows().slice();
   if(!deliveries.length){host.innerHTML='<div class="ysph-empty">Još nema najava ni isporuka u YARDIVO bazi.</div>';return}
   const labels=['NAJAVA','POTVRDA','DOLAZAK','RAMPA','ZAPRIMANJE','ZAVRŠENO'];
   host.innerHTML=deliveries.map(x=>{
