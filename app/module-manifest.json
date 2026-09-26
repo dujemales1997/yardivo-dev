@@ -1183,6 +1183,12 @@
       "bytes": 2763,
       "category": "settings",
       "phase": 3
+    },
+    {
+      "id": "yardivo-role-visibility-authority",
+      "path": "modules/auth/role-visibility.js",
+      "bytes": 4720,
+      "category": "auth"
     }
   ],
   "css": {
@@ -1426,7 +1432,8 @@
     "auth": {
       "owner": "modules/auth/",
       "files": [
-        "modules/auth/role-ui.js"
+        "modules/auth/role-ui.js",
+        "modules/auth/role-visibility.js"
       ]
     },
     "receiving": {
