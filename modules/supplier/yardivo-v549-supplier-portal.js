@@ -390,6 +390,12 @@ async function submit(){
   if(!allowed.includes(String(warehouse).toUpperCase())){
     alert(lang==='en'?'This warehouse is not assigned to your account.':'Ovo skladište nije dodijeljeno vašem accountu.');return;
   }
+  const langNow=lang;
+  const confirmed=window.confirm(langNow==='en'
+    ?'Send this announcement to YARDIVO?'
+    :'POSLATI NAJAVU U YARDIVO?');
+  if(!confirmed)return;
+
   let attachment=null;
   try{attachment=await supplierAttachmentFromInput()}catch(e){alert(e?.message||e);return}
   const rows=loadRows(),now=new Date();
@@ -419,13 +425,34 @@ async function submit(){
       const serverRow=await window.YardivoSupplierLiveSync.pushSupplierRow(row);
       if(serverRow?.id)row.serverId=serverRow.id;
     }
-  }catch(e){alert((lang==='en'?'Announcement was not sent to YARDIVO:\n':'Najava nije poslana u YARDIVO:\n')+(e?.message||e));return}
+  }catch(e){
+    /* A network/client response error can happen after the Edge Function has already
+       committed the delivery. Verify authoritative server state before telling the
+       supplier that the announcement failed. */
+    let verified=null;
+    try{
+      const mine=await window.YardivoSupplierLiveSync?.call?.('list_mine');
+      if(Array.isArray(mine)){
+        verified=mine.find(x=>String(x?.client_id||'')===String(row.id));
+      }
+    }catch(_){}
+    if(verified){
+      if(verified.id)row.serverId=verified.id;
+    }else{
+      alert((lang==='en'?'Announcement was not sent to YARDIVO:\n':'Najava nije poslana u YARDIVO:\n')+(e?.message||e));
+      return;
+    }
+  }
   rows.push(row);saveRows(rows);try{window.dispatchEvent(new CustomEvent('yardivo:supplier-request-updated',{detail:{id:row.serverId||row.id,warehouse:row.warehouse,source:'supplier-submit'}}))}catch(_){};
   if(attachment){
     localStorage.setItem(supplierAttachmentKey(id),JSON.stringify(attachment));
     try{await window.YardivoSupabase?.flush?.()}catch(_){}
   }
-  clearForm();render();alert(t('created'));show('history');
+  clearForm();render();
+  try{
+    if(typeof showYmsToast==='function')showYmsToast('success',lang==='en'?'ANNOUNCEMENT SENT':'NAJAVA POSLANA',lang==='en'?'Announcement was sent to YARDIVO.':'Najava je uspješno poslana u YARDIVO.',3200);
+  }catch(_){}
+  show('history');
 }
 function open(){
   if(role()!=='supplier')return false;
