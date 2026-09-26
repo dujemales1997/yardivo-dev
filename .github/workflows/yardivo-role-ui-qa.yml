@@ -57,9 +57,14 @@ jobs:
                   try{currentSession=window.currentSession}catch(_){}
                   document.documentElement.dataset.yardivoRole=role;
                   document.body.dataset.yardivoRole=role;
-                  const ov=document.getElementById('loginOverlay'); if(ov)ov.style.display='none';
-                  const shell=document.querySelector('.app-shell'); if(shell)shell.style.display='';
+                  document.body.classList.remove('yardivo-role-switching');
+                  [...document.body.classList].filter(x=>/^yv-role-.*-v583$/.test(x)).forEach(x=>document.body.classList.remove(x));
+                  document.body.classList.add('yv-role-'+role+'-v583');
+                  const ov=document.getElementById('loginOverlay'); if(ov)ov.style.setProperty('display','none','important');
+                  const splash=document.getElementById('yardivoWelcomeSplash'); if(splash)splash.style.setProperty('display','none','important');
+                  const shell=document.querySelector('.app-shell'); if(shell){shell.style.setProperty('visibility','visible','important');shell.style.setProperty('display','grid','important');}
                   window.dispatchEvent(new CustomEvent('yardivo:login',{detail:{session:window.currentSession}}));
+                  document.body.classList.remove('yardivo-role-switching');
                 },{session:sessions[role],role});
                 await page.waitForTimeout(1500);
 
