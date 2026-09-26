@@ -3,7 +3,17 @@
 'use strict';
 const MENU_ID='yardivoSupplierContextMenuV583';
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function role(){try{return String((window.currentSession||currentSession||{}).role||'').toLowerCase().trim()}catch(_){return String(window.currentSession?.role||'').toLowerCase().trim()}}
+function role(){
+  let r='';
+  try{r=String((window.currentSession||currentSession||{}).app_role||(window.currentSession||currentSession||{}).role||'').toLowerCase().trim()}
+  catch(_){r=String(window.currentSession?.app_role||window.currentSession?.role||'').toLowerCase().trim()}
+  if(r==='zalihe'||r==='upravljanje zalihama'||r.includes('zalih'))r='inventory';
+  if(r==='voditelj'||r==='management')r='manager';
+  if(r==='prijam')r='reception';
+  if(r==='porta'||r==='portir')r='gate';
+  if(r==='dobavljac'||r==='dobavljač')r='supplier';
+  return r;
+}
 function canAct(){return ['inventory','admin'].includes(role())}
 function rows(){try{return window.YardivoSupplierPlannerV580?.getRows?.()||[]}catch(_){return[]}}
 function rowById(id){return rows().find(x=>String(x.id)===String(id))||null}
