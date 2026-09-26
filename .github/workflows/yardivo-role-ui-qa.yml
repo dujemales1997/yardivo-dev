@@ -74,6 +74,10 @@ jobs:
                   document.body.classList.remove('yardivo-role-switching');
                 },{session:sessions[role],role});
                 await page.waitForTimeout(1500);
+                if(role==='manager'){
+                  await page.evaluate(()=>window.YardivoRoleStableFinal?.open?.('homeMenu'));
+                  await page.waitForTimeout(250);
+                }
 
                 const snap=await page.evaluate(()=>{
                   const visible=el=>{
