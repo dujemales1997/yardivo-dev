@@ -49,9 +49,12 @@ jobs:
               document.body.dataset.yardivoRole='inventory';
               document.documentElement.dataset.yardivoRole='inventory';
               localStorage.setItem('yardivo_active_warehouse','W001');
+              localStorage.setItem('yardivo_notification_sound_mode_v2','ai');
 
               window.__qaVoiceReads=[];
+              window.__qaVisibleToasts=[];
               window.addEventListener('yardivo:voice-enqueued',e=>window.__qaVoiceReads.push(e.detail||{}));
+              window.addEventListener('yardivo:visible-toast',e=>window.__qaVisibleToasts.push(e.detail?.notification||{}));
 
 
               const old=[
@@ -94,7 +97,9 @@ jobs:
               window.dispatchEvent(new CustomEvent('yardivo:data-synced',{detail:{source:'qa-new-supplier'}}));
             });
             await page.waitForTimeout(500);
+            const newToast=await page.evaluate(()=>(window.__qaVisibleToasts||[]).filter(n=>String(n?.event||'').toUpperCase()==='SUPPLIER_REQUEST'&&String(n?.id||'')==='SUPREQ-new4').length);
             const newVoice=await page.evaluate(()=>(window.__qaVoiceReads||[]).filter(n=>String(n?.event||'').toUpperCase()==='SUPPLIER_REQUEST'&&String(n?.id||'')==='SUPREQ-new4'&&n?.priority===true&&String(n?.role||'')==='inventory').length);
+            assert(newToast===1,'New Supplier request expected exactly 1 side toast, got '+newToast);
             assert(newVoice===1,'New Supplier request expected exactly 1 AI voice event, got '+newVoice);
 
             // Delete UI: create a representative pending row and verify the delete action
@@ -139,7 +144,7 @@ jobs:
             assert(deleteCalls.some(x=>x.action==='delete_internal'&&String(x.payload?.id)==='p1'),'delete_internal was not called for Supplier request');
 
             assert(pageErrors.length===0,'Page errors: '+pageErrors.join(' | '));
-            console.log('SUPPLIER_NOTIFICATION_QA='+JSON.stringify({loginState,newVoice,deleteCalls,pageErrors}));
+            console.log('SUPPLIER_NOTIFICATION_QA='+JSON.stringify({loginState,newToast,newVoice,deleteCalls,pageErrors}));
             await browser.close();
             if(failures.length){console.error('QA_FAILURES='+JSON.stringify(failures));process.exit(1)}
             console.log('YARDIVO_SUPPLIER_NOTIFICATION_QA_PASS');
