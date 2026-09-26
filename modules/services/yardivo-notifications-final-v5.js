@@ -336,6 +336,12 @@ function toast(n){
   try{window.dispatchEvent(new CustomEvent('yardivo:visible-toast',{detail:{notification:n,source:'notification-center'}}))}catch(_){}
   setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),250)},ua?4500:3000);
 }
+function baselineVisible(){
+  if(prelogin())return;
+  const s=seen();
+  all().forEach(n=>s.add(String(n.id)));
+  saveSeen(s);
+}
 function checkNew(){
   if(prelogin())return;
   const s=seen();
@@ -393,7 +399,9 @@ window.addEventListener('yardivo:login',()=>{
   setTimeout(()=>{
     setPhaseClasses();
     render();
-    checkNew();
+    /* Existing unread notifications remain visible in the center/badge, but are
+       baseline history for this login and must not replay as a burst of "new" toasts. */
+    baselineVisible();
   },220);
 });
 ['yardivo:data-synced','yardivo:online-ready'].forEach(ev=>window.addEventListener(ev,()=>{
