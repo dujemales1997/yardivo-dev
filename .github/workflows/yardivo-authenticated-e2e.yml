@@ -33,33 +33,52 @@ jobs:
           const KEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
           const roles=['admin','manager','inventory','reception','gate','supplier'];
           const users={};
+          const bootstrapEmail='qa.e2e.bootstrap.20260926.1223@gmail.com';
+          const bootstrapPassword='Qa!'+Math.random().toString(36).slice(2)+'A9#'+Date.now().toString(36);
           function rnd(){return 'Qa!'+Math.random().toString(36).slice(2)+'A9#'+Date.now().toString(36)}
           async function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
-          (async()=>{
-            const root=createClient(BASE,KEY,{auth:{persistSession:false,autoRefreshToken:false}});
-            for(const role of roles){
-              const username='qa_e2e_'+role;
-              const email=username+'@yardivo.local';
-              const password=rnd();
-              const {data,error}=await root.auth.signUp({email,password});
-              if(error) throw new Error(role+' signup: '+error.message);
-              users[role]={username,email,password,id:data.user?.id||''};
+          const {data:boot,error:bootErr}=await root.auth.signUp({email:bootstrapEmail,password:bootstrapPassword});
+          if(bootErr)throw new Error('bootstrap signup: '+bootErr.message);
+          if(!boot.user?.id)throw new Error('bootstrap signup returned no user');
+          console.log('QA_BOOTSTRAP_CREATED='+JSON.stringify({id:boot.user.id,email:bootstrapEmail,hasSession:!!boot.session}));
+          let bootstrapReady=false, bootstrapClient=null;
+          for(let attempt=0;attempt<90&&!bootstrapReady;attempt++){
+            const c=createClient(BASE,KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+            const {data,error}=await c.auth.signInWithPassword({email:bootstrapEmail,password:bootstrapPassword});
+            if(!error&&data.session){
+              const {data:p}=await c.rpc('yardivo_my_profile');
+              const row=Array.isArray(p)?p[0]:p;
+              if(row?.active&&String(row.app_role)==='admin'){bootstrapReady=true;bootstrapClient=c;break}
             }
-            console.log('QA_USERS_CREATED='+JSON.stringify(Object.fromEntries(Object.entries(users).map(([r,u])=>[r,{id:u.id,email:u.email}]))));
+            await sleep(2000);
+          }
+          if(!bootstrapReady||!bootstrapClient)throw new Error('bootstrap profile was not bound in time');
+          for(const role of roles){
+            const username='qa_e2e_'+role;
+            const password=rnd();
+            const body={action:'create',username,password,role};
+            if(role!=='admin'&&role!=='supplier'&&role!=='inventory'){body.location='LOC001';body.warehouses=['W001']}
+            if(role==='supplier')body.supplier_id='SUP001';
+            if(role==='inventory')body.responsible_person_id='RP001';
+            const {data,error}=await bootstrapClient.functions.invoke('yardivo-admin-users',{body});
+            if(error||data?.ok===false||data?.error)throw new Error(role+' create: '+String(error?.message||data?.error||'unknown'));
+            users[role]={username,password,id:data?.data?.auth_user_id||''};
+          }
+          console.log('QA_USERS_CREATED='+JSON.stringify(Object.fromEntries(Object.entries(users).map(([r,u])=>[r,{id:u.id,username:u.username}]))));
             let ready=false;
-            for(let attempt=0;attempt<90 && !ready;attempt++){
+            for(let attempt=0;attempt<30 && !ready;attempt++){
               ready=true;
               for(const role of roles){
                 const c=createClient(BASE,KEY,{auth:{persistSession:false,autoRefreshToken:false}});
-                const {data,error}=await c.auth.signInWithPassword({email:users[role].email,password:users[role].password});
+                const {data,error}=await c.auth.signInWithPassword({email:users[role].username+'@yardivo.local',password:users[role].password});
                 if(error||!data.session){ready=false;break}
                 const {data:p}=await c.rpc('yardivo_my_profile');
                 const row=Array.isArray(p)?p[0]:p;
                 if(!row||String(row.app_role)!==role||!row.active){ready=false;break}
               }
-              if(!ready)await sleep(2000);
+              if(!ready)await sleep(1000);
             }
-            if(!ready)throw new Error('QA profiles were not bound in time');
+            if(!ready)throw new Error('QA users were not ready in time');
 
             const browser=await chromium.launch({headless:true});
             const failures=[],results=[];
@@ -104,6 +123,20 @@ jobs:
                 await context.close();
               }
             }finally{await browser.close()}
+
+            // Cleanup non-admin QA users through the existing admin API.
+            for(const role of ['manager','inventory','reception','gate','supplier']){
+              const id=users[role]?.id;
+              if(id){
+                const {data,error}=await bootstrapClient.functions.invoke('yardivo-admin-users',{body:{action:'delete',auth_user_id:id}});
+                if(error||data?.error)failures.push('cleanup '+role+': '+String(error?.message||data?.error));
+              }
+            }
+            // Deactivate QA admin; bootstrap is deactivated externally after the run.
+            if(users.admin?.id){
+              const {data,error}=await bootstrapClient.functions.invoke('yardivo-admin-users',{body:{action:'update',auth_user_id:users.admin.id,role:'admin',active:false}});
+              if(error||data?.error)failures.push('cleanup admin deactivate: '+String(error?.message||data?.error));
+            }
             console.log('AUTH_E2E_RESULTS='+JSON.stringify(results));
             if(failures.length){console.error('AUTH_E2E_FAILURES='+JSON.stringify(failures));process.exit(1)}
             console.log('YARDIVO_AUTHENTICATED_E2E_PASS');
