@@ -1,0 +1,104 @@
+name: YARDIVO role UI QA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/yardivo-role-ui-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  role-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --save-dev playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Run role UI audit
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/yardivo-http.log 2>&1 &
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          const roles=['admin','manager','inventory','reception','gate','supplier'];
+          const viewports=[
+            {name:'desktop',width:1440,height:1000},
+            {name:'mobile',width:390,height:844}
+          ];
+          const sessions={
+            admin:{user:'qa_admin',username:'qa_admin',role:'admin',location:'ALL',warehouses:[],serverAuthorized:true},
+            manager:{user:'qa_manager',username:'qa_manager',role:'manager',location:'LOC001',warehouses:['W001'],serverAuthorized:true},
+            inventory:{user:'qa_inventory',username:'qa_inventory',role:'inventory',location:'LOC001',warehouses:['W001'],serverAuthorized:true},
+            reception:{user:'qa_reception',username:'qa_reception',role:'reception',location:'LOC001',warehouses:['W001'],serverAuthorized:true},
+            gate:{user:'qa_gate',username:'qa_gate',role:'gate',location:'LOC001',warehouses:['W001'],serverAuthorized:true},
+            supplier:{user:'qa_supplier',username:'qa_supplier',role:'supplier',location:'LOC001',warehouses:['W001'],serverAuthorized:true}
+          };
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const all=[];
+            for(const vp of viewports){
+              for(const role of roles){
+                const context=await browser.newContext({viewport:{width:vp.width,height:vp.height}});
+                const page=await context.newPage();
+                const errors=[];
+                page.on('pageerror',e=>errors.push(String(e.stack||e.message||e)));
+                await page.goto('http://127.0.0.1:4173/',{waitUntil:'domcontentloaded',timeout:30000});
+                await page.waitForTimeout(2200);
+                await page.evaluate(({session,role})=>{
+                  window.currentSession={...session};
+                  try{currentSession=window.currentSession}catch(_){}
+                  document.documentElement.dataset.yardivoRole=role;
+                  document.body.dataset.yardivoRole=role;
+                  const ov=document.getElementById('loginOverlay'); if(ov)ov.style.display='none';
+                  const shell=document.querySelector('.app-shell'); if(shell)shell.style.display='';
+                  window.dispatchEvent(new CustomEvent('yardivo:login',{detail:{session:window.currentSession}}));
+                },{session:sessions[role],role});
+                await page.waitForTimeout(1500);
+
+                const snap=await page.evaluate(()=>{
+                  const visible=el=>{
+                    if(!el)return false;
+                    const s=getComputedStyle(el);
+                    const r=el.getBoundingClientRect();
+                    return s.display!=='none'&&s.visibility!=='hidden'&&s.opacity!=='0'&&r.width>0&&r.height>0;
+                  };
+                  const txt=el=>(el?.innerText||el?.textContent||'').replace(/\s+/g,' ').trim();
+                  const nav=[...document.querySelectorAll('.nav-btn')].filter(visible).map(el=>({view:el.dataset.view||'',text:txt(el)}));
+                  const home=[...document.querySelectorAll('[data-home-target]')].filter(visible).map(el=>({target:el.dataset.homeTarget||'',text:txt(el)}));
+                  const visibleSettings=[...document.querySelectorAll('#settings .panel, #settings [data-settings-tab], #settings button, #settings select, #settings input')]
+                    .filter(visible).slice(0,80).map(el=>txt(el)).filter(Boolean);
+                  const ids=[...document.querySelectorAll('[id]')].map(el=>el.id);
+                  const dup=[...new Set(ids.filter((id,i)=>ids.indexOf(id)!==i))];
+                  const body=document.body;
+                  const html=document.documentElement;
+                  return {
+                    nav,home,visibleSettings,dupIds:dup,
+                    overflowX:Math.max(body.scrollWidth,html.scrollWidth)-window.innerWidth,
+                    viewport:{w:innerWidth,h:innerHeight},
+                    loginVisible:visible(document.getElementById('loginOverlay')),
+                    shellVisible:visible(document.querySelector('.app-shell')),
+                    pageTitle:txt(document.getElementById('pageTitle')),
+                    userLabel:txt(document.getElementById('currentUserLabel')),
+                    warehouseVisible:visible(document.getElementById('globalWarehouse')),
+                    warehouseOptions:[...document.querySelectorAll('#globalWarehouse option')].map(o=>({value:o.value,text:txt(o)})),
+                    bodyRole:document.body.dataset.yardivoRole||'',
+                    htmlRole:document.documentElement.dataset.yardivoRole||''
+                  };
+                });
+                all.push({viewport:vp.name,role,errors,snap});
+                await context.close();
+              }
+            }
+            await browser.close();
+            console.log('ROLE_UI_RESULTS='+JSON.stringify(all));
+            console.log('YARDIVO_ROLE_UI_QA_DONE');
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
