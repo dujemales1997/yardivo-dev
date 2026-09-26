@@ -16,9 +16,9 @@ function accounts(){
  if(!wrap){wrap=document.createElement('section');wrap.id='yardivoAccountAdminRestoredV583';wrap.className='yv-unified-card';
  wrap.innerHTML='<div class="yv-unified-row"><div><h3>KORISNIČKI RAČUNI</h3><p>Dodavanje i upravljanje YARDIVO korisnicima. Lista se učitava sa Supabase servera.</p></div></div><div class="yv-account-actions"><button type="button" class="btn btn-primary" id="yardivoAddUserRestoredBtnV583">+ DODAJ KORISNIKA</button></div><div id="yardivoExistingAccountHostV583"></div>';
  host.appendChild(wrap)}
- else if(wrap.parentElement!==host)host.appendChild(wrap);
+ else if(wrap.parentElement!==host&&!wrap.contains(host))host.appendChild(wrap);
  const existing=$('yardivoSettingsAdminPaneV583'),eh=$('yardivoExistingAccountHostV583');
- if(existing&&eh&&existing.parentElement!==eh){existing.hidden=false;existing.style.setProperty('display','block','important');eh.appendChild(existing)}
+ if(existing&&eh&&existing.parentElement!==eh&&!existing.contains(eh)){existing.hidden=false;existing.style.setProperty('display','block','important');eh.appendChild(existing)}
 }
 function openExistingCreate(){
  const candidates=[
