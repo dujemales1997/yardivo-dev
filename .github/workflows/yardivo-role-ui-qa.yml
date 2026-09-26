@@ -59,6 +59,14 @@ jobs:
                 page.on('pageerror',e=>errors.push(String(e.stack||e.message||e)));
                 await page.goto('http://127.0.0.1:4173/',{waitUntil:'domcontentloaded',timeout:30000});
                 await page.waitForTimeout(2200);
+                await page.evaluate(()=>{
+                  window.__qaVoiceReads=[];
+                  const api=window.YardivoAIVoiceNotifications;
+                  if(api){
+                    api.readNow=n=>{window.__qaVoiceReads.push(n)};
+                    api.test=async text=>{window.__qaVoiceReads.push({body:String(text||'')});return 'qa'};
+                  }
+                });
                 await page.evaluate(({session,role})=>{
                   window.currentSession={...session};
                   try{currentSession=window.currentSession}catch(_){}
@@ -71,6 +79,8 @@ jobs:
                   const splash=document.getElementById('yardivoWelcomeSplash'); if(splash)splash.style.setProperty('display','none','important');
                   const shell=document.querySelector('.app-shell'); if(shell){shell.style.setProperty('visibility','visible','important');shell.style.setProperty('display','grid','important');}
                   window.dispatchEvent(new CustomEvent('yardivo:login',{detail:{session:window.currentSession}}));
+                  window.dispatchEvent(new CustomEvent('yardivo:data-synced'));
+                  window.dispatchEvent(new CustomEvent('yardivo:online-ready'));
                   document.body.classList.remove('yardivo-role-switching');
                 },{session:sessions[role],role});
                 await page.waitForTimeout(1500);
@@ -78,6 +88,11 @@ jobs:
                   await page.evaluate(()=>window.YardivoRoleStableFinal?.open?.('homeMenu'));
                   await page.waitForTimeout(250);
                 }
+
+                const voiceReads=await page.evaluate(()=>window.__qaVoiceReads||[]);
+                const forecastReads=voiceReads.filter(n=>/Danas imate/i.test(String(n?.body||'')));
+                if(role==='reception'&&forecastReads.length!==1)errors.push('Reception login forecast voice count='+forecastReads.length);
+                if(role!=='reception'&&forecastReads.length!==0)errors.push(role+' received Reception-only login forecast voice');
 
                 const snap=await page.evaluate(()=>{
                   const visible=el=>{
