@@ -135,6 +135,13 @@ function activate(view){
  const target=document.getElementById(view);
  if(!target)return false;
 
+ if(role()==='manager'&&typeof window.YardivoManagerFinalV4?.forceView==='function'){
+   window.YardivoManagerFinalV4.forceView(view);
+   apply();
+   try{window.dispatchEvent(new CustomEvent('yardivo:view-opened',{detail:{view,role:'manager'}}))}catch(_){}
+   return true;
+ }
+
  setChromeForView(view);
 
  /* Exactly one application view may be active at any time. */
