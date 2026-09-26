@@ -34,9 +34,11 @@ function itemsFor(x){
    h+=actionButton('ODOBRI TERMIN','primary',{'data-v583-approve-request':x.id},'✓');
    h+=actionButton('PREDLOŽI DRUGI TERMIN','',{'data-v580-plan':x.id},'↔');
    h+=actionButton('ODBIJ','danger',{'data-v580-reject':x.id},'✕');
+   h+=actionButton('IZBRIŠI NAJAVU','danger',{'data-v583-delete-supplier-request':x.id},'🗑');
  }else if(['revision_requested','proposal_sent'].includes(s)){
    h+=actionButton(s==='proposal_sent'?'IZMIJENI PRIJEDLOG':'PREDLOŽI DRUGI TERMIN','',{'data-v580-plan':x.id},'↔');
    h+=actionButton('ODBIJ','danger',{'data-v580-reject':x.id},'✕');
+   h+=actionButton('IZBRIŠI NAJAVU','danger',{'data-v583-delete-supplier-request':x.id},'🗑');
  }else if(s==='confirmed'){
    let meta=null;try{meta=window.YardivoGateQrV583?.qrMetaFromRow?.(x)||null}catch(_){meta=null}
    const rr=(x?.reschedule_request&&typeof x.reschedule_request==='object')?x.reschedule_request:null;
@@ -46,6 +48,7 @@ function itemsFor(x){
    h+=actionButton('PROMIJENI TERMIN','',{'data-v580-plan':x.id},'↔');
    h+=actionButton('UREDI PODATKE','',{'data-v583-edit-confirmed':x.id},'✎');
    h+=actionButton('ODBIJ','danger',{'data-v580-reject':x.id},'✕');
+   h+=actionButton('IZBRIŠI NAJAVU','danger',{'data-v583-delete-supplier-request':x.id},'🗑');
  }
  return h;
 }
