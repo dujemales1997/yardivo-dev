@@ -6,6 +6,12 @@ on:
   push:
     paths:
       - ".github/workflows/yardivo-role-ui-qa.yml"
+      - "modules/auth/**"
+      - "modules/supplier/**"
+      - "modules/gate/**"
+      - "modules/receiving/**"
+      - "styles/**"
+      - "index.html"
 
 permissions:
   contents: read
