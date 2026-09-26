@@ -120,6 +120,11 @@ function enqueueNotification(n,{force=false,priority=false}={}){
     clearQueue();stopCurrent();
     queue.unshift(item);
   }else queue.push(item);
+  try{
+    window.dispatchEvent(new CustomEvent('yardivo:voice-enqueued',{detail:{
+      id:String(n?.id||''),event:String(n?.event||''),role:role(),priority:!!priority
+    }}));
+  }catch(_){}
   processQueue();
 }
 function forceRead(n){enqueueNotification(n,{force:true,priority:true})}
