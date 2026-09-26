@@ -70,7 +70,7 @@ function ensureRoleCards(r){
     ['controlTower','analytics','myYard'].forEach(ensureCard);
   }else if(r==='gate'){
     ['checkin','unannounced','myYard','docks'].forEach(ensureCard);
-  }else if(r==='reception'){
+  }else if(r==='reception'||r==='inventory'){
     ['epal'].forEach(ensureCard);
   }
 }
