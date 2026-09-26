@@ -165,7 +165,14 @@ function observeVisibleToasts(){
 
 /* New toast = begin Gemini generation immediately. */
 window.addEventListener('yardivo:visible-toast',e=>{
-  const n=e?.detail?.notification;if(n)enqueueNotification(n);
+  const n=e?.detail?.notification;
+  if(!n)return;
+  const ev=String(n?.event||'').toUpperCase();
+  if(role()==='inventory'&&ev==='SUPPLIER_REQUEST'){
+    forceRead(n);
+    return;
+  }
+  enqueueNotification(n);
 });
 
 /* Clicking any notification intentionally reads it again, even if already seen/read. */
@@ -194,7 +201,12 @@ window.addEventListener('load',()=>{
   observeVisibleToasts();
   setTimeout(prewarmTest,700);
 },{once:true});
-['yardivo:login','yardivo:data-synced'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(prewarmTest,250)));
+window.addEventListener('yardivo:login',()=>{
+  clearQueue();
+  stopCurrent();
+  setTimeout(prewarmTest,120);
+});
+window.addEventListener('yardivo:data-synced',()=>setTimeout(prewarmTest,250));
 document.addEventListener('DOMContentLoaded',observeVisibleToasts,{once:true});
 setTimeout(observeVisibleToasts,200);
 
