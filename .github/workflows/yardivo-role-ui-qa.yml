@@ -1,4 +1,5 @@
 name: YARDIVO role UI QA
+# rerun after canonical role visibility fix
 
 on:
   workflow_dispatch:
