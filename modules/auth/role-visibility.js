@@ -97,6 +97,7 @@ function schedule(){
   apply();
   setTimeout(apply,80);
   setTimeout(apply,350);
+  setTimeout(apply,1200);
 }
 window.addEventListener('yardivo:login',schedule);
 window.addEventListener('yardivo:data-synced',()=>setTimeout(apply,40));
@@ -106,6 +107,18 @@ window.addEventListener('load',()=>setTimeout(apply,900),{once:true});
 document.addEventListener('click',e=>{
   if(e.target.closest?.('[data-view],[data-home-target]'))setTimeout(apply,0);
 },true);
+
+/* Legacy modules may append role cards after login. Re-apply only on structural
+   changes; no polling and no attribute-observer feedback loop. */
+function observeLateRoleUi(){
+  const roots=[document.querySelector('.nav'),document.getElementById('homeMenuGrid')].filter(Boolean);
+  roots.forEach(root=>{
+    const observer=new MutationObserver(()=>setTimeout(apply,0));
+    observer.observe(root,{childList:true,subtree:true});
+  });
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observeLateRoleUi,{once:true});
+else observeLateRoleUi();
 
 window.YardivoRoleVisibility={owner:'modules/auth/role-visibility.js',apply,matrix:MATRIX,allowed:(v)=>allowed(role(),v)};
 })();
