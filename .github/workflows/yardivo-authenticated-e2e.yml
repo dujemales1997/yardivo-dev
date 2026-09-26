@@ -1,0 +1,111 @@
+name: YARDIVO authenticated E2E
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/yardivo-authenticated-e2e.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  auth-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright and Supabase client
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --save-dev playwright@1.55.0 @supabase/supabase-js@2.57.4
+          npx playwright install --with-deps chromium
+      - name: Run authenticated E2E
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/yardivo-http.log 2>&1 &
+          node <<'NODE'
+          const { createClient } = require('@supabase/supabase-js');
+          const { chromium } = require('playwright');
+          const BASE='https://rskticdbiovvgyocpzoc.supabase.co';
+          const KEY='sb_publishable_NWRcS2n-8GxF8qL7wXbZ-Q_-jIyfGoy';
+          const roles=['admin','manager','inventory','reception','gate','supplier'];
+          const users={};
+          function rnd(){return 'Qa!'+Math.random().toString(36).slice(2)+'A9#'+Date.now().toString(36)}
+          async function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+          (async()=>{
+            const root=createClient(BASE,KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+            for(const role of roles){
+              const username='qa_e2e_'+role;
+              const email=username+'@yardivo.local';
+              const password=rnd();
+              const {data,error}=await root.auth.signUp({email,password});
+              if(error) throw new Error(role+' signup: '+error.message);
+              users[role]={username,email,password,id:data.user?.id||''};
+            }
+            console.log('QA_USERS_CREATED='+JSON.stringify(Object.fromEntries(Object.entries(users).map(([r,u])=>[r,{id:u.id,email:u.email}]))));
+            let ready=false;
+            for(let attempt=0;attempt<90 && !ready;attempt++){
+              ready=true;
+              for(const role of roles){
+                const c=createClient(BASE,KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+                const {data,error}=await c.auth.signInWithPassword({email:users[role].email,password:users[role].password});
+                if(error||!data.session){ready=false;break}
+                const {data:p}=await c.rpc('yardivo_my_profile');
+                const row=Array.isArray(p)?p[0]:p;
+                if(!row||String(row.app_role)!==role||!row.active){ready=false;break}
+              }
+              if(!ready)await sleep(2000);
+            }
+            if(!ready)throw new Error('QA profiles were not bound in time');
+
+            const browser=await chromium.launch({headless:true});
+            const failures=[],results=[];
+            try{
+              for(const role of roles){
+                const context=await browser.newContext({viewport:{width:1440,height:1000}});
+                const page=await context.newPage();
+                const pageErrors=[];
+                page.on('pageerror',e=>pageErrors.push(String(e.stack||e.message||e)));
+                await page.goto('http://127.0.0.1:4173/',{waitUntil:'domcontentloaded',timeout:30000});
+                await page.waitForTimeout(2000);
+                await page.locator('#loginUser').fill(users[role].username);
+                await page.locator('#loginPass').fill(users[role].password);
+                await page.locator('#loginRole').selectOption(role);
+                await page.locator('#loginSubmitBtn').click();
+                await page.waitForTimeout(4500);
+                const session=await page.evaluate(()=>window.currentSession?{
+                  role:window.currentSession.role,
+                  user:window.currentSession.username||window.currentSession.user,
+                  location:window.currentSession.location,
+                  warehouses:window.currentSession.warehouses,
+                  serverAuthorized:window.currentSession.serverAuthorized
+                }:null);
+                if(!session)failures.push(role+': no currentSession after login');
+                else{
+                  if(session.role!==role)failures.push(role+': session role mismatch '+session.role);
+                  if(!session.serverAuthorized)failures.push(role+': serverAuthorized false');
+                }
+                if(pageErrors.length)failures.push(role+': page errors '+pageErrors.join(' | '));
+
+                await page.reload({waitUntil:'domcontentloaded'});
+                await page.waitForTimeout(2500);
+                const valid=await page.evaluate(async()=>await window.YardivoAuth?.validate?.());
+                if(!valid)failures.push(role+': session validation failed after reload');
+
+                const logout=await page.evaluate(async()=>await window.YardivoAuth?.logout?.());
+                if(!logout)failures.push(role+': logout returned false');
+                const after=await page.evaluate(()=>window.currentSession||null);
+                if(after)failures.push(role+': session remains after logout');
+
+                results.push({role,session,pageErrors});
+                await context.close();
+              }
+            }finally{await browser.close()}
+            console.log('AUTH_E2E_RESULTS='+JSON.stringify(results));
+            if(failures.length){console.error('AUTH_E2E_FAILURES='+JSON.stringify(failures));process.exit(1)}
+            console.log('YARDIVO_AUTHENTICATED_E2E_PASS');
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
