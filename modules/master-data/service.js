@@ -52,6 +52,16 @@ async function refresh(force=false){
 window.addEventListener('yardivo:data-synced',()=>cacheWrite());
 window.addEventListener('yardivo:master-data-changed',()=>cacheWrite());
 
+async function bootRefresh(){
+  installCachedIfEmpty();
+  if(hasData())return true;
+  try{await refresh(true)}catch(_){}
+  return hasData();
+}
+window.addEventListener('yardivo:login',()=>setTimeout(bootRefresh,0));
+window.addEventListener('load',()=>setTimeout(bootRefresh,250),{once:true});
+installCachedIfEmpty();
+
 window.YardivoMasterDataService={
   owner:'modules/master-data/service.js',
   key:KEY,
@@ -62,6 +72,11 @@ window.YardivoMasterDataService={
   cached,
   cacheWrite,
   installCachedIfEmpty,
-  refresh
+  refresh,
+  bootRefresh
+};
+window.YardivoMasterInstantBootV583={
+  ready:()=>hasData(),
+  refresh:bootRefresh
 };
 })();
