@@ -46,7 +46,7 @@
     },
     {
       "id": "yardivo-auth-driver-role-final-fix",
-      "path": "modules/services/yardivo-auth-driver-role-final-fix.js",
+      "path": "modules/auth/role-ui.js",
       "bytes": 9098,
       "sha256": "bf44cdb4000bcaf37d17652a79ebc04300be9fa14211ffe86d223ec052ecd6eb",
       "category": "services"
@@ -81,7 +81,7 @@
     },
     {
       "id": "yardivo-global-warehouse-sync-final",
-      "path": "modules/services/yardivo-global-warehouse-sync-final.js",
+      "path": "modules/master-data/warehouse-context.js",
       "bytes": 8554,
       "sha256": "f195eeb61c9d9b76ad6d512c005ddf6b8c82088b10a2ab3033533ae9161e6c70",
       "category": "services"
@@ -242,7 +242,7 @@
     },
     {
       "id": "yardivo-online-sync-v2-20260902",
-      "path": "services/sync/yardivo-online-sync-v2-20260902.js",
+      "path": "services/sync.js",
       "bytes": 26274,
       "sha256": "3469eb0a828d2a084de91850a2346f3db78f0695c296e794a0155119f925184c",
       "category": "sync"
@@ -746,7 +746,7 @@
     },
     {
       "id": "yardivo-receiving-header-warehouse-qr-v583",
-      "path": "modules/services/yardivo-receiving-header-warehouse-qr-v583.js",
+      "path": "modules/receiving/header-warehouse-qr.js",
       "bytes": 14326,
       "sha256": "c21a260d9ec527518886821352f345179270b2873d10c064c66be3055249a098",
       "category": "services"
@@ -767,7 +767,7 @@
     },
     {
       "id": "yardivo-self-gate-pass-v1",
-      "path": "modules/services/yardivo-self-gate-pass-v1.js",
+      "path": "modules/self-gate/service.js",
       "bytes": 29463,
       "sha256": "a1306d791eec087ebf75aff3064154a072ffdcd296992b4a9b3bc4748708b7b0",
       "category": "services"
@@ -1264,7 +1264,8 @@
         "modules/master-data/yardivo-v583-live-yard-3d-twin-js.js",
         "modules/master-data/yardivo-v583-master-foundation-final.js",
         "modules/master-data/yardivo-v583-master-system-fix-x10.js",
-        "modules/master-data/yardivo-v583-production-master-cleanup-final.js"
+        "modules/master-data/yardivo-v583-production-master-cleanup-final.js",
+        "modules/master-data/warehouse-context.js"
       ]
     },
     "notifications": {
@@ -1279,7 +1280,6 @@
       "files": [
         "modules/services/yardivo-ai-voice-notifications-v583.js",
         "modules/services/yardivo-ann-map-availability-v3.js",
-        "modules/services/yardivo-auth-driver-role-final-fix.js",
         "modules/services/yardivo-capacity-settings.js",
         "modules/services/yardivo-epal-initial-stock.js",
         "modules/services/yardivo-epal-module.js",
@@ -1287,7 +1287,6 @@
         "modules/services/yardivo-final-yard-v27.js",
         "modules/services/yardivo-full-data-v583.js",
         "modules/services/yardivo-gate-and-users-final-v3-20260901-js.js",
-        "modules/services/yardivo-global-warehouse-sync-final.js",
         "modules/services/yardivo-inventory-drag-reschedule-v1.js",
         "modules/services/yardivo-live-operational-notifications.js",
         "modules/services/yardivo-location-selection-final-fix.js",
@@ -1298,8 +1297,6 @@
         "modules/services/yardivo-order-search-module.js",
         "modules/services/yardivo-qr-admin-visible-v584.js",
         "modules/services/yardivo-qr-role-control-v586.js",
-        "modules/services/yardivo-receiving-header-warehouse-qr-v583.js",
-        "modules/services/yardivo-self-gate-pass-v1.js",
         "modules/services/yardivo-smart-replanning-v1.js",
         "modules/services/yardivo-smart-timers-and-daily-forecast.js",
         "modules/services/yardivo-total-operational-wipe-v2-20260901-js.js",
@@ -1410,11 +1407,11 @@
       ]
     },
     "sync": {
-      "owner": "services/sync/",
+      "owner": "services/",
       "files": [
         "modules/sync/phase2-137-yardivo-notification-delete-read-style-v1-20260901-js.js",
         "modules/sync/phase2-175-yardivo-v583-graphite-notifications-scanner-final.js",
-        "services/sync/yardivo-online-sync-v2-20260902.js"
+        "services/sync.js"
       ]
     },
     "ui": {
@@ -1424,6 +1421,24 @@
         "modules/ui/phase2-070-yardivo-incident-image-viewer-v1-script.js",
         "modules/ui/phase2-115-yardivo-login-safe-isolation-v2-20260901-js.js",
         "modules/ui/phase2-116-yardivo-login-unconditional-finalizer-v3-20260901.js"
+      ]
+    },
+    "auth": {
+      "owner": "modules/auth/",
+      "files": [
+        "modules/auth/role-ui.js"
+      ]
+    },
+    "receiving": {
+      "owner": "modules/receiving/",
+      "files": [
+        "modules/receiving/header-warehouse-qr.js"
+      ]
+    },
+    "self-gate": {
+      "owner": "modules/self-gate/",
+      "files": [
+        "modules/self-gate/service.js"
       ]
     }
   }
