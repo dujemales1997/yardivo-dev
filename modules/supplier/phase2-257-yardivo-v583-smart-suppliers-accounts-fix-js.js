@@ -27,8 +27,8 @@ async function toggleSmart(){
 }
 function ensure(){
  const host=$('yardivoUnifiedSettingsV583');if(!host)return;
- const supplier=$('yardivoMasterSuppliersV583');if(supplier){supplier.hidden=false;supplier.style.setProperty('display','block','important');if(supplier.parentElement!==host)host.appendChild(supplier)}
- const accounts=$('yardivoSettingsAdminPaneV583');if(accounts){accounts.hidden=false;accounts.style.setProperty('display','block','important');if(accounts.parentElement!==host)host.appendChild(accounts)}
+ const supplier=$('yardivoMasterSuppliersV583');if(supplier){supplier.hidden=false;supplier.style.setProperty('display','block','important');if(supplier.parentElement!==host&&!supplier.contains(host))host.appendChild(supplier)}
+ const accounts=$('yardivoSettingsAdminPaneV583');if(accounts){accounts.hidden=false;accounts.style.setProperty('display','block','important');if(accounts.parentElement!==host&&!accounts.contains(host))host.appendChild(accounts)}
  ensureSmart(host);
 }
 document.addEventListener('click',e=>{if(e.target?.closest?.('#yardivoUnifiedSmartDbSwitchV583')){e.preventDefault();toggleSmart()}},true);
