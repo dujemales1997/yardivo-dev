@@ -3,7 +3,7 @@
 'use strict';
 const MATRIX={
  admin:'ALL',
- manager:'ALL',
+ manager:new Set(['homeMenu','dashboard','controlTower','analytics','myYard','suppliers','overview','dailyMap','weeklyMap']),
  inventory:new Set(['homeMenu','dashboard','controlTower','suppliers','orderSearch','announcements','supplierRequests','dailyMap','weeklyMap','overview','incidents','documentArchive','unannounced','epal','myYard','reports','settings']),
  reception:new Set(['homeMenu','receiving','dailyMap','weeklyMap','suppliers','myYard','operations','incidents','incidentArchive','documentArchive','settings','unannounced','epal','liveYard']),
  gate:new Set(['homeMenu','checkin','unannounced','myYard','docks'])
@@ -30,9 +30,12 @@ function allowed(v){
  const r=role();
  if(r==='admin')return true;
  if(r==='manager'){
-   if(v==='homeMenu'||v==='documentArchive')return true;
+   const defaults=MATRIX.manager;
    const a=managerAccess();
-   return Array.isArray(a.sections)&&a.sections.includes(v);
+   if(Array.isArray(a.sections)&&a.sections.length){
+     return a.sections.includes(v)||v==='homeMenu';
+   }
+   return defaults.has(v);
  }
  return !!MATRIX[r]?.has(v);
 }
