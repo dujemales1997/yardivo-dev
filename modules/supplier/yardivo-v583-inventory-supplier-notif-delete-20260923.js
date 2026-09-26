@@ -59,8 +59,17 @@ function upsertLocalNotification(x){
     supplierDeliveryId:String(x.id),announcementId:'SUPDEL-'+String(x.id),
     warehouse:String(x.warehouse||''),location:String(x.location||''),readBy:{}
   });
-  try{window.YardivoNotifications?.save?.(list)}catch(_){try{localStorage.setItem('yardivo_live_notifications_v1',JSON.stringify(list))}catch(__){}}
-  try{window.YardivoNotifications?.render?.()}catch(_){}
+  const n=list[list.length-1];
+  try{
+    if(window.YardivoNotifications?.ingest){
+      window.YardivoNotifications.ingest(n,{announce:true});
+    }else{
+      window.YardivoNotifications?.save?.(list);
+      window.YardivoNotifications?.render?.();
+    }
+  }catch(_){
+    try{localStorage.setItem('yardivo_live_notifications_v1',JSON.stringify(list))}catch(__){}
+  }
 }
 function removeLocalNotification(id){
   const target=String(id);
