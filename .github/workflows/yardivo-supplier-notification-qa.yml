@@ -1,0 +1,146 @@
+name: YARDIVO Supplier notification regression QA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/yardivo-supplier-notification-qa.yml"
+      - "modules/supplier/**"
+      - "modules/services/yardivo-notifications-final-v5.js"
+      - "modules/services/yardivo-ai-voice-notifications-v583.js"
+      - "modules/ai/yardivo-v583-login-ai-welcome-20260924.js"
+
+permissions:
+  contents: read
+
+jobs:
+  supplier-notification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --save-dev playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Run Supplier notification regression
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/yardivo-http.log 2>&1 &
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          const failures=[];
+          const assert=(x,m)=>{if(!x)failures.push(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1440,height:1000}});
+            const pageErrors=[];
+            page.on('pageerror',e=>pageErrors.push(String(e.stack||e.message||e)));
+            await page.goto('http://127.0.0.1:4173/',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForTimeout(2200);
+
+            await page.evaluate(()=>{
+              const session={user:'qa_inventory',username:'qa_inventory',role:'inventory',app_role:'inventory',location:'LOC001',warehouses:['W001'],serverAuthorized:true};
+              window.currentSession=session;
+              try{currentSession=session}catch(_){}
+              document.body.dataset.yardivoRole='inventory';
+              document.documentElement.dataset.yardivoRole='inventory';
+              localStorage.setItem('yardivo_active_warehouse','W001');
+
+              window.__qaVoiceReads=[];
+              if(window.YardivoAIVoiceNotifications){
+                window.YardivoAIVoiceNotifications.readNow=n=>window.__qaVoiceReads.push(n);
+                window.YardivoAIVoiceNotifications.speak=n=>window.__qaVoiceReads.push(n);
+              }
+
+              const old=[
+                {id:'SUPREQ-old1',event:'SUPPLIER_REQUEST',title:'NOVA NAJAVA DOBAVLJAČA',body:'Old 1',warehouse:'W001',createdAt:'2026-09-25T08:00:00Z',at:'2026-09-25T08:00:00Z',readBy:{}},
+                {id:'SUPREQ-old2',event:'SUPPLIER_REQUEST',title:'NOVA NAJAVA DOBAVLJAČA',body:'Old 2',warehouse:'W001',createdAt:'2026-09-25T09:00:00Z',at:'2026-09-25T09:00:00Z',readBy:{}},
+                {id:'SUPREQ-old3',event:'SUPPLIER_REQUEST',title:'NOVA NAJAVA DOBAVLJAČA',body:'Old 3',warehouse:'W001',createdAt:'2026-09-25T10:00:00Z',at:'2026-09-25T10:00:00Z',readBy:{}}
+              ];
+              localStorage.setItem('yardivo_live_notifications_v1',JSON.stringify(old));
+
+              const pending=[
+                {id:'p1',status:'pending',supplier_name:'S1',warehouse:'W001',delivery_date:'2026-09-27',requested_time:'08:00'},
+                {id:'p2',status:'pending',supplier_name:'S2',warehouse:'W001',delivery_date:'2026-09-27',requested_time:'09:00'},
+                {id:'c1',status:'confirmed',supplier_name:'S3',warehouse:'W001',delivery_date:'2026-09-27',requested_time:'10:00'}
+              ];
+              if(window.YardivoSupplierLiveSync){
+                window.YardivoSupplierLiveSync.internalRows=()=>pending;
+                window.YardivoSupplierLiveSync.call=async(action,payload)=>{
+                  if(action==='delete_internal')return {tombstone:true,status:'cancelled',deleted_id:String(payload?.id||'')};
+                  return [];
+                };
+                window.YardivoSupplierLiveSync.pullInternal=async()=>true;
+              }
+              let badge=document.getElementById('supplierRequestsBadge');
+              if(!badge){badge=document.createElement('span');badge.id='supplierRequestsBadge';document.body.appendChild(badge)}
+              window.dispatchEvent(new CustomEvent('yardivo:login',{detail:{session}}));
+            });
+
+            await page.waitForTimeout(700);
+            let loginState=await page.evaluate(()=>({
+              voice:(window.__qaVoiceReads||[]).filter(n=>/NOVA NAJAVA|Old /i.test(String(n?.title||'')+' '+String(n?.body||''))).length,
+              badge:document.getElementById('supplierRequestsBadge')?.textContent||''
+            }));
+            assert(loginState.voice===0,'Historical Supplier notifications replayed as new voice/toast on Inventory login');
+            assert(loginState.badge==='2','Supplier badge expected 2 pending rows, got '+loginState.badge);
+
+            await page.evaluate(()=>{
+              const rows=JSON.parse(localStorage.getItem('yardivo_live_notifications_v1')||'[]');
+              rows.push({id:'SUPREQ-new4',event:'SUPPLIER_REQUEST',title:'NOVA NAJAVA DOBAVLJAČA',body:'S4 · 2026-09-27 11:00',warehouse:'W001',createdAt:new Date().toISOString(),at:new Date().toISOString(),readBy:{}});
+              localStorage.setItem('yardivo_live_notifications_v1',JSON.stringify(rows));
+              window.dispatchEvent(new CustomEvent('yardivo:data-synced',{detail:{source:'qa-new-supplier'}}));
+            });
+            await page.waitForTimeout(500);
+            const newVoice=await page.evaluate(()=>(window.__qaVoiceReads||[]).filter(n=>String(n?.event||'').toUpperCase()==='SUPPLIER_REQUEST'&&String(n?.id||'')==='SUPREQ-new4').length);
+            assert(newVoice===1,'New Supplier request expected exactly 1 AI voice event, got '+newVoice);
+
+            // Delete UI: create a representative pending row and verify the delete action
+            // calls delete_internal and removes its local notification.
+            await page.evaluate(()=>{
+              let root=document.getElementById('supplierRequests');
+              if(!root){
+                root=document.createElement('section');root.id='supplierRequests';
+                root.innerHTML='<table><tbody id="ysrBody"></tbody></table>';
+                document.body.appendChild(root);
+              }
+              let body=document.getElementById('ysrBody');
+              body.innerHTML='<tr data-ysr-detail="p1"><td>Supplier request</td></tr>';
+              if(window.YardivoSupplierContextActionsV583){
+                window.YardivoSupplierContextActionsV583.rowById=id=>({id,status:'pending',supplier_name:'S1',warehouse:'W001',delivery_date:'2026-09-27',requested_time:'08:00'});
+              }
+              window.__qaDeleteCalls=[];
+              const ls=window.YardivoSupplierLiveSync;
+              if(ls){
+                ls.call=async(action,payload)=>{
+                  window.__qaDeleteCalls.push({action,payload});
+                  if(action==='delete_internal')return {tombstone:true,status:'cancelled',deleted_id:String(payload?.id||'')};
+                  return [];
+                };
+                ls.pullInternal=async()=>true;
+              }
+            });
+            const row=page.locator('#ysrBody tr[data-ysr-detail="p1"]');
+            await row.click({button:'right'});
+            await page.waitForTimeout(150);
+            const del=page.locator('[data-v583-delete-supplier-request="p1"]');
+            assert(await del.count()===1,'Delete Supplier request action not available in context menu');
+            if(await del.count()){
+              page.on('dialog',async d=>await d.accept());
+              await del.click();
+              await page.waitForTimeout(350);
+            }
+            const deleteCalls=await page.evaluate(()=>window.__qaDeleteCalls||[]);
+            assert(deleteCalls.some(x=>x.action==='delete_internal'&&String(x.payload?.id)==='p1'),'delete_internal was not called for Supplier request');
+
+            assert(pageErrors.length===0,'Page errors: '+pageErrors.join(' | '));
+            console.log('SUPPLIER_NOTIFICATION_QA='+JSON.stringify({loginState,newVoice,deleteCalls,pageErrors}));
+            await browser.close();
+            if(failures.length){console.error('QA_FAILURES='+JSON.stringify(failures));process.exit(1)}
+            console.log('YARDIVO_SUPPLIER_NOTIFICATION_QA_PASS');
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
