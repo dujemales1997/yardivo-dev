@@ -1,0 +1,138 @@
+name: YARDIVO browser smoke QA
+
+on:
+  push:
+    paths:
+      - ".github/workflows/yardivo-browser-smoke-qa.yml"
+      - "index.html"
+      - "services/**"
+      - "modules/**"
+      - "styles/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Playwright Chromium
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --save-dev playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Run local HTTP server
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/yardivo-http.log 2>&1 &
+          echo $! > /tmp/yardivo-http.pid
+
+      - name: Browser smoke tests
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright');
+
+          const failures = [];
+          const findings = [];
+          const assert = (cond, msg) => { if (!cond) failures.push(msg); };
+
+          async function runViewport(browser, name, viewport) {
+            const context = await browser.newContext({ viewport });
+            const page = await context.newPage();
+            const pageErrors = [];
+            const consoleErrors = [];
+            const badResponses = [];
+
+            page.on('pageerror', e => pageErrors.push(String(e.message || e)));
+            page.on('console', m => {
+              if (m.type() === 'error') consoleErrors.push(m.text());
+            });
+            page.on('response', r => {
+              const u = r.url();
+              if (u.startsWith('http://127.0.0.1:4173/') && r.status() >= 400) {
+                badResponses.push({ status: r.status(), url: u });
+              }
+            });
+
+            const resp = await page.goto('http://127.0.0.1:4173/', {
+              waitUntil: 'domcontentloaded',
+              timeout: 30000
+            });
+            assert(resp && resp.ok(), `${name}: index HTTP response not OK`);
+
+            await page.waitForTimeout(3500);
+
+            assert(await page.locator('#loginUser').count() === 1, `${name}: #loginUser missing`);
+            assert(await page.locator('#loginPass').count() === 1, `${name}: #loginPass missing`);
+            assert(await page.locator('#loginRole').count() === 1, `${name}: #loginRole missing`);
+            assert(await page.locator('#loginSubmitBtn').count() === 1, `${name}: #loginSubmitBtn missing`);
+
+            const roles = await page.locator('#loginRole option').evaluateAll(opts =>
+              opts.map(o => o.value).filter(Boolean)
+            );
+            for (const role of ['admin','manager','inventory','reception','gate','supplier']) {
+              assert(roles.includes(role), `${name}: login role missing: ${role}`);
+            }
+
+            const globals = await page.evaluate(() => ({
+              supabase: !!window.YardivoSupabaseClient,
+              auth: !!window.YardivoAuth,
+              realtime: !!window.YardivoRealtime,
+              sync: !!window.YardivoSync,
+              supplier: !!window.YardivoSupplierService,
+              master: !!window.YardivoMasterDataService,
+              receiving: !!window.YardivoReceivingService
+            }));
+            for (const [k,v] of Object.entries(globals)) assert(v, `${name}: canonical global missing: ${k}`);
+
+            // Invalid login must fail safely and keep user on login screen.
+            await page.locator('#loginUser').fill('qa_invalid_user');
+            await page.locator('#loginPass').fill('definitely-wrong-password');
+            await page.locator('#loginRole').selectOption('admin');
+            await page.locator('#loginSubmitBtn').click();
+            await page.waitForTimeout(1800);
+            const errorText = (await page.locator('#loginError').textContent().catch(()=>'')) || '';
+            assert(errorText.trim().length > 0, `${name}: invalid login did not show an error`);
+            assert(await page.locator('#loginUser').isVisible(), `${name}: invalid login left login screen unexpectedly`);
+
+            assert(badResponses.length === 0, `${name}: local assets returned HTTP errors: ${JSON.stringify(badResponses)}`);
+            assert(pageErrors.length === 0, `${name}: page errors: ${pageErrors.join(' | ')}`);
+
+            // Filter known third-party/network console noise; local JS runtime errors remain blockers.
+            const localConsoleErrors = consoleErrors.filter(x =>
+              /ReferenceError|TypeError|SyntaxError|Failed to load resource.*127\.0\.0\.1/i.test(x)
+            );
+            assert(localConsoleErrors.length === 0, `${name}: blocking console errors: ${localConsoleErrors.join(' | ')}`);
+
+            findings.push({ name, viewport, roles, globals, pageErrors, consoleErrors, badResponses, errorText });
+            await context.close();
+          }
+
+          (async()=>{
+            const browser = await chromium.launch({ headless: true });
+            try {
+              await runViewport(browser, 'desktop', { width: 1440, height: 1000 });
+              await runViewport(browser, 'mobile', { width: 390, height: 844 });
+            } finally {
+              await browser.close();
+            }
+
+            console.log('QA_FINDINGS=' + JSON.stringify(findings));
+            if (failures.length) {
+              console.error('QA_FAILURES=' + JSON.stringify(failures));
+              process.exit(1);
+            }
+            console.log('YARDIVO_BROWSER_SMOKE_PASS');
+          })().catch(e => {
+            console.error(e);
+            process.exit(1);
+          });
+          NODE
