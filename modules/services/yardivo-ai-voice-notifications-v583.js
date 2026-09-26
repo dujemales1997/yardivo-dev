@@ -204,6 +204,8 @@ window.addEventListener('load',()=>{
 window.addEventListener('yardivo:login',()=>{
   clearQueue();
   stopCurrent();
+  tokenCache='';
+  tokenCachedAt=0;
   setTimeout(prewarmTest,120);
 });
 window.addEventListener('yardivo:data-synced',()=>setTimeout(prewarmTest,250));
