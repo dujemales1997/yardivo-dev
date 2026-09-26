@@ -51,10 +51,8 @@ jobs:
               localStorage.setItem('yardivo_active_warehouse','W001');
 
               window.__qaVoiceReads=[];
-              if(window.YardivoAIVoiceNotifications){
-                window.YardivoAIVoiceNotifications.readNow=n=>window.__qaVoiceReads.push(n);
-                window.YardivoAIVoiceNotifications.speak=n=>window.__qaVoiceReads.push(n);
-              }
+              window.addEventListener('yardivo:voice-enqueued',e=>window.__qaVoiceReads.push(e.detail||{}));
+
 
               const old=[
                 {id:'SUPREQ-old1',event:'SUPPLIER_REQUEST',title:'NOVA NAJAVA DOBAVLJAČA',body:'Old 1',warehouse:'W001',createdAt:'2026-09-25T08:00:00Z',at:'2026-09-25T08:00:00Z',readBy:{}},
@@ -96,7 +94,7 @@ jobs:
               window.dispatchEvent(new CustomEvent('yardivo:data-synced',{detail:{source:'qa-new-supplier'}}));
             });
             await page.waitForTimeout(500);
-            const newVoice=await page.evaluate(()=>(window.__qaVoiceReads||[]).filter(n=>String(n?.event||'').toUpperCase()==='SUPPLIER_REQUEST'&&String(n?.id||'')==='SUPREQ-new4').length);
+            const newVoice=await page.evaluate(()=>(window.__qaVoiceReads||[]).filter(n=>String(n?.event||'').toUpperCase()==='SUPPLIER_REQUEST'&&String(n?.id||'')==='SUPREQ-new4'&&n?.priority===true&&String(n?.role||'')==='inventory').length);
             assert(newVoice===1,'New Supplier request expected exactly 1 AI voice event, got '+newVoice);
 
             // Delete UI: create a representative pending row and verify the delete action
@@ -110,9 +108,10 @@ jobs:
               }
               let body=document.getElementById('ysrBody');
               body.innerHTML='<tr data-ysr-detail="p1"><td>Supplier request</td></tr>';
-              if(window.YardivoSupplierContextActionsV583){
-                window.YardivoSupplierContextActionsV583.rowById=id=>({id,status:'pending',supplier_name:'S1',warehouse:'W001',delivery_date:'2026-09-27',requested_time:'08:00'});
-              }
+              window.YardivoSupplierPlannerV580=window.YardivoSupplierPlannerV580||{};
+              window.YardivoSupplierPlannerV580.getRows=()=>[
+                {id:'p1',status:'pending',supplier_name:'S1',warehouse:'W001',delivery_date:'2026-09-27',requested_time:'08:00'}
+              ];
               window.__qaDeleteCalls=[];
               const ls=window.YardivoSupplierLiveSync;
               if(ls){
