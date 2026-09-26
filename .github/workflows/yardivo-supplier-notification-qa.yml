@@ -48,6 +48,10 @@ jobs:
               try{currentSession=session}catch(_){}
               document.body.dataset.yardivoRole='inventory';
               document.documentElement.dataset.yardivoRole='inventory';
+              const login=document.getElementById('loginOverlay')||document.getElementById('loginScreen');
+              if(login)login.style.setProperty('display','none','important');
+              const splash=document.getElementById('yardivoWelcomeSplash');
+              if(splash)splash.style.setProperty('display','none','important');
               localStorage.setItem('yardivo_active_warehouse','W001');
               localStorage.setItem('yardivo_notification_sound_mode_v2','ai');
 
