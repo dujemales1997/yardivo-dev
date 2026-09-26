@@ -26,11 +26,22 @@ function isUnreadSupplier(n){
   const rb=n?.readBy&&typeof n.readBy==='object'?n.readBy:{};
   return !rb[user()];
 }
+function pendingRows(){
+  try{
+    const rows=window.YardivoSupplierLiveSync?.internalRows?.();
+    return Array.isArray(rows)?rows.filter(x=>String(x?.status||'').toLowerCase()==='pending'):[];
+  }catch(_){return[]}
+}
 function syncSupplierBadge(){
   if(!inventory())return;
-  const n=notifications().filter(isUnreadSupplier).length;
+  const rows=pendingRows();
+  const n=rows.length;
   const b=document.getElementById('supplierRequestsBadge');
-  if(b){b.textContent=String(n);b.style.setProperty('display',n>0?'inline-flex':'none','important')}
+  if(b){
+    b.textContent=String(n);
+    b.style.setProperty('display',n>0?'inline-flex':'none','important');
+    b.setAttribute('aria-label',n+' novih Supplier najava koje čekaju obradu');
+  }
   try{window.YardivoNotifications?.render?.()}catch(_){}
 }
 function upsertLocalNotification(x){
@@ -80,9 +91,10 @@ async function deleteRequest(id){
   if(!confirm('Trajno izbrisati '+label+'?'))return;
   if(!confirm('Potvrdi brisanje Supplier najave. Ova radnja se ne može poništiti.'))return;
   try{
-    await window.YardivoSupplierLiveSync.call('delete_internal',{id:String(id)});
+    const result=await window.YardivoSupplierLiveSync.call('delete_internal',{id:String(id)});
+    if(result?.status!=='cancelled'&&result?.tombstone!==true)throw new Error('Server nije potvrdio brisanje najave.');
     removeLocalNotification(id);
-    try{await window.YardivoSupplierLiveSync.pullInternal?.()}catch(_){}
+    try{await window.YardivoSupplierLiveSync.pullInternal?.(true)}catch(_){}
     try{await window.YardivoSupplierRequests?.load?.()}catch(_){}
     try{await window.YardivoSupplierPlannerV580?.refresh?.(true)}catch(_){}
     try{window.YardivoSupplierContextActionsV583?.close?.()}catch(_){}
@@ -96,11 +108,12 @@ document.addEventListener('contextmenu',e=>{
   const tr=e.target.closest?.('#supplierRequests #ysrBody tr[data-ysr-detail]');
   if(!tr||(!inventory()&&role()!=='admin'))return;
   const id=String(tr.dataset.ysrDetail||'');
+  if(!id)return;
   setTimeout(()=>{
     const menu=document.getElementById('yardivoSupplierContextMenuV583');
     const x=window.YardivoSupplierContextActionsV583?.rowById?.(id)||null;
     const st=String(x?.status||'').toLowerCase();
-    if(!menu?.classList.contains('open')||!x||['arrival','dock','receiving','completed'].includes(st))return;
+    if(!menu?.classList.contains('open')||['arrival','dock','receiving','completed'].includes(st))return;
     if(menu.querySelector('[data-v583-delete-supplier-request]'))return;
     const b=document.createElement('button');
     b.type='button';b.className='danger';b.dataset.v583DeleteSupplierRequest=id;
