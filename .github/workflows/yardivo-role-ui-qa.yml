@@ -89,10 +89,28 @@ jobs:
                   await page.waitForTimeout(250);
                 }
 
+                if(role==='inventory'){
+                  await page.evaluate(()=>{
+                    const n={
+                      id:'QA-SUPREQ-1',
+                      event:'SUPPLIER_REQUEST',
+                      title:'NOVA NAJAVA DOBAVLJAČA',
+                      body:'QA Dobavljač · 2026-09-26 14:30',
+                      warehouse:'W001',
+                      createdAt:new Date().toISOString()
+                    };
+                    window.dispatchEvent(new CustomEvent('yardivo:visible-toast',{detail:{notification:n,source:'qa'}}));
+                  });
+                  await page.waitForTimeout(80);
+                }
                 const voiceReads=await page.evaluate(()=>window.__qaVoiceReads||[]);
                 const forecastReads=voiceReads.filter(n=>/Danas imate/i.test(String(n?.body||'')));
                 if(role==='reception'&&forecastReads.length!==1)errors.push('Reception login forecast voice count='+forecastReads.length);
                 if(role!=='reception'&&forecastReads.length!==0)errors.push(role+' received Reception-only login forecast voice');
+                if(role==='inventory'){
+                  const supplierReads=voiceReads.filter(n=>String(n?.event||'').toUpperCase()==='SUPPLIER_REQUEST'||/NOVA NAJAVA DOBAVLJAČA/i.test(String(n?.title||'')));
+                  if(supplierReads.length!==1)errors.push('Inventory supplier-request priority voice count='+supplierReads.length);
+                }
 
                 const snap=await page.evaluate(()=>{
                   const visible=el=>{
