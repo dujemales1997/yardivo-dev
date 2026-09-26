@@ -69,7 +69,18 @@ function isNotificationNoise(n){
   if(n?.field==='warehouse')return semanticWarehouse(n?.from)===semanticWarehouse(n?.to);
   return false;
 }
-function filterCleared(a){return Array.isArray(a)?a.filter(afterClearCutoff).filter(n=>!isNotificationNoise(n)):[]}
+function filterCleared(a){
+  if(!Array.isArray(a))return[];
+  const map=new Map();
+  for(const n of a.filter(afterClearCutoff).filter(n=>!isNotificationNoise(n))){
+    const id=String(n?.id||'').trim();
+    if(!id)continue;
+    const prev=map.get(id);
+    const t=notificationTimeMs(n),pt=prev?notificationTimeMs(prev):-1;
+    if(!prev||t>=pt)map.set(id,n);
+  }
+  return [...map.values()];
+}
 function load(){try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return filterCleared(a)}catch(e){return[]}}
 function save(a){
   const clean=filterCleared(a);
@@ -342,6 +353,21 @@ function baselineVisible(){
   all().forEach(n=>s.add(String(n.id)));
   saveSeen(s);
 }
+function ingest(n,{announce=true}={}){
+  if(!n||!n.id)return false;
+  const list=load();
+  const id=String(n.id);
+  const next=[...list.filter(x=>String(x?.id)!==id),n];
+  save(next);
+  render();
+  if(announce&&visible(n)&&!prelogin()){
+    const s=seen();
+    if(!s.has(id)){
+      s.add(id);saveSeen(s);toast(n);
+    }
+  }
+  return true;
+}
 function checkNew(){
   if(prelogin())return;
   const s=seen();
@@ -441,7 +467,7 @@ document.addEventListener('change',e=>{
 },true);
 
 window.YardivoNotifications={
-  load,save,markRead,markAllRead:markAll,unreadCount,render,open:openReader,
+  load,save,ingest,markRead,markAllRead:markAll,unreadCount,render,open:openReader,
   visible,notificationClass,resolvedWarehouse,activeWarehouse:activeWh,
   visibleAll:all
 };
