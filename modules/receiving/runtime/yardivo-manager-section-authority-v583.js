@@ -1,6 +1,7 @@
 (function(){
 'use strict';
 const PREFIX='yardivo_manager_access_';
+const DEFAULT_SECTIONS=new Set(['dashboard','controlTower','analytics','myYard','suppliers','overview','dailyMap','weeklyMap']);
 function norm(r){
   r=String(r||'').toLowerCase().trim();
   if(r==='management'||r==='voditelj')return'manager';
@@ -24,7 +25,10 @@ function allowed(section){
   if(r!=='manager')return null; // null = use normal role logic
   if(section==='homeMenu')return true;
   const a=access();
-  return !!(a&&Array.isArray(a.sections)&&a.sections.includes(String(section||'')));
+  if(a&&Array.isArray(a.sections)&&a.sections.length){
+    return a.sections.includes(String(section||''));
+  }
+  return DEFAULT_SECTIONS.has(String(section||''));
 }
 window.YardivoManagerSectionAuthority={allowed,access,norm};
 window.yardivoManagerSectionAllowed=allowed;
